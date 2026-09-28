@@ -27,7 +27,7 @@ if grep -q stopped "$OUT/bench-status.txt"; then echo "!! start the bench first:
 { echo "twi-tacra $(git -C "$HERE" rev-parse --short=12 HEAD)$(git -C "$HERE" diff --quiet HEAD -- platform cai bundle rrp e2e/cmd || echo -dirty)"
   echo "globalsign-est $(git -C "$HOME/dev/globalsign-est" rev-parse --short=12 HEAD)"
   echo "veraison-services $(git -C "$HOME/dev/veraison-services-der" rev-parse --short=12 HEAD)"; } > "$OUT/code-revs.txt"
-for f in est-server ca-gateway vault-gateway rup; do wc -l < "$B/$f.log" > "$OUT/bench-logs/.$f.start"; done
+for f in est-server ca-gateway vault-gateway rup tdx-verifier; do wc -l < "$B/$f.log" > "$OUT/bench-logs/.$f.start"; done
 wc -l < "$HOME/veraison-deployment/logs/vts.log" > "$OUT/bench-logs/.vts.start"
 
 echo "== build (linux/amd64)"
@@ -127,7 +127,7 @@ trap 'rm -rf "$BIN"' EXIT
 cleanup
 
 echo "== bench logs for the run"
-for f in est-server ca-gateway vault-gateway rup; do tail -n +"$(( $(cat "$OUT/bench-logs/.$f.start") + 1 ))" "$B/$f.log" > "$OUT/bench-logs/$f.log"; done
+for f in est-server ca-gateway vault-gateway rup tdx-verifier; do tail -n +"$(( $(cat "$OUT/bench-logs/.$f.start") + 1 ))" "$B/$f.log" | grep -v "TLS handshake error" > "$OUT/bench-logs/$f.log" || true; done
 tail -n +"$(( $(cat "$OUT/bench-logs/.vts.start") + 1 ))" "$HOME/veraison-deployment/logs/vts.log" | grep -v DEBUG > "$OUT/bench-logs/veraison-vts.log" || true
 rm -f "$OUT"/bench-logs/.*.start
 python3 - "$OUT/results.json" <<'PY'
