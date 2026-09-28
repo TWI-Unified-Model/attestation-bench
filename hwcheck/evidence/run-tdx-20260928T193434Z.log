@@ -1,0 +1,32 @@
+== build hwrun (linux/amd64) and rrpverify
+== RRP mints the Freshness Handles
+== create tacra-hwcheck-2609281934 (us-central1-a, c3-standard-4, TDX)
+WARNING: You have selected a disk size of under [200GB]. This may result in poor I/O performance. For more information, see: https://developers.google.com/compute/docs/disks#performance.
+Created [https://www.googleapis.com/compute/v1/projects/rats-probe/zones/us-central1-a/instances/tacra-hwcheck-2609281934].
+WARNING: Some requests generated warnings:
+ - Disk size: '20 GB' is larger than image size: '10 GB'. You might need to resize the root repartition manually if the operating system does not support automatic resizing. See https://cloud.google.com/compute/docs/disks/add-persistent-disk#resize_pd for details.
+
+== wait for ssh
+== provision: tdx_guest, configfs-tsm
+crw------- 1 root root 10, 263 Sep 28 19:35 /dev/tdx_guest
+drwxr-xr-x 2 root root       0 Sep 28 19:35 /sys/kernel/config/tsm/report
+7.0.0-1011-gcp
+== copy hwrun and the handles
+== run hwrun as root
+enroll-present-nonce           42.0 ms    4966 B  TDX quote 
+retrieve-present-nonce         41.5 ms    4966 B  TDX quote 
+enroll-present-epoch           41.0 ms    4966 B  TDX quote 
+retrieve-present-epoch         40.9 ms    4966 B  TDX quote 
+enroll-absent-epoch            40.6 ms    4966 B  TDX quote 
+retrieve-absent-epoch          39.5 ms    4966 B  TDX quote 
+enroll-absent-timestamp        39.4 ms    4966 B  TDX quote 
+retrieve-absent-timestamp      39.3 ms    4966 B  TDX quote 
+enroll-absent-none             39.1 ms    4966 B  TDX quote 
+retrieve-absent-none           39.2 ms    4966 B  TDX quote 
+burst of 30: min 38.8 ms, median 39.3 ms, p95 40.2 ms, max 41.8 ms
+== copy the output back
+== delete tacra-hwcheck-2609281934
+== tacra-hwcheck-2609281934 is gone
+== RRP verification (go-tdx-guest, Intel PCS collateral)
+82 checks, 0 not as expected; written /Users/serhiinikolaichuk/dev/twi-tacra/hwcheck/evidence/20260928T193434Z-gcp-tdx/rrpverify-tdx.json
+== evidence in /Users/serhiinikolaichuk/dev/twi-tacra/hwcheck/evidence/20260928T193434Z-gcp-tdx
