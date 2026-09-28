@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Runs hwrun in a live AMD SEV-SNP guest on AWS EC2 (shared tenancy: reports are VLEK-signed) and verifies what it
-# wrote with rrpverify against the veraison-services fork as it is and with the DER fix. Creates a throwaway key
-# pair and a security group that admits SSH from this machine's address only, launches one instance with
-# AmdSevSnp=enabled, runs hwrun as root (configfs-tsm), copies the output back, terminates the instance, deletes
-# the key pair and the group, and checks that all three are gone.
+# wrote with rrpverify against the veraison-services fork as it is and with the DER and signer-info fixes. Creates
+# a throwaway key pair and a security group that admits SSH from this machine's address only, launches one
+# instance with AmdSevSnp=enabled, runs hwrun as root (configfs-tsm), copies the output back, terminates the
+# instance, deletes the key pair and the group, and checks that all three are gone.
 #
 #   hwcheck/scripts/aws-snp-hwcheck.sh [REGION] [AZ]
 #
@@ -29,10 +29,11 @@ ID="" SG="" KEY="$NAME"
 
 echo "== build hwrun (linux/amd64) and rrpverify (both Veraison builds)"
 (cd "$HW" && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -o "$BIN/hwrun" ./cmd/hwrun)
-(cd "$HW" && go build -o "$BIN/rrpverify-fork" ./cmd/rrpverify && go build -modfile=go.patched.mod -o "$BIN/rrpverify-derfix" ./cmd/rrpverify)
+(cd "$HW" && go build -o "$BIN/rrpverify-fork" ./cmd/rrpverify && go build -modfile=go.patched.mod -o "$BIN/rrpverify-fixed" ./cmd/rrpverify)
 shasum -a 256 "$BIN/hwrun" | awk '{print $1"  hwrun (linux/amd64)"}' > "$OUT/binaries.sha256"
 { echo "veraison-services fork: $(git -C "$REPO/../veraison-services" rev-parse --short=12 HEAD)";
-  echo "veraison-services DER fix: $(git -C "$REPO/../veraison-services-der" rev-parse --short=12 HEAD)"; } > "$OUT/veraison-revs.txt"
+  echo "veraison-services DER fix: $(git -C "$REPO/../veraison-services-der" rev-parse --short=12 HEAD)";
+  echo "go-gen-ref signer-info fix: $(git -C "$REPO/../go-gen-ref-v123" rev-parse --short=12 HEAD)"; } > "$OUT/veraison-revs.txt"
 
 echo "== RRP mints the Freshness Handles; AMD KDS chain for VLEK (ASVK, ARK)"
 "$BIN/rrpverify-fork" mint -out "$OUT/handles.json"
@@ -120,8 +121,8 @@ echo "== copy the output back"
 trap 'rm -rf "$BIN"' EXIT
 cleanup
 
-echo "== RRP verification: Veraison fork as it is, then with the DER fix"
-for v in fork derfix; do
+echo "== RRP verification: Veraison fork as it is, then with the DER and signer-info fixes"
+for v in fork fixed; do
   "$BIN/rrpverify-$v" verify -in "$OUT" -handles "$OUT/handles.json" -ark "$OUT/amd-kds-milan-vlek-cert_chain.pem" \
     -not-before "$NB" -not-after "$NA" -out "$OUT/rrpverify-veraison-$v.json" | tee "$OUT/rrpverify-veraison-$v.txt"
 done

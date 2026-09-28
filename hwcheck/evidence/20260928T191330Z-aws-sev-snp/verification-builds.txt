@@ -1,0 +1,7 @@
+Which Veraison build produced which rrpverify output (the RRP side runs on the Mac after the VM is gone):
+
+rrpverify-veraison-fork.*    TWI-Unified-Model/veraison-services f997c5275c30, as it is (go-gen-ref v1.2.3)
+rrpverify-veraison-derfix.*  + local DER fix 516bf94ce32f (go-gen-ref v1.2.3 unchanged)
+rrpverify-veraison-fixed.*   + local DER fix 516bf94ce32f + go-gen-ref v1.2.3 with the SIGNER_INFO fix 3c8603164fbd
+
+The fixed outputs were produced on 28.09.2026 after the run, from the same files; the Evidence did not change.

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Runs hwrun in a live AMD SEV-SNP guest on Google Cloud and verifies what it wrote with rrpverify against the
-# veraison-services fork as it is and with the DER fix. Creates the VM, mints the Freshness Handles (RRP side),
-# copies hwrun and the handles in, runs it as root (configfs-tsm), copies the output back, deletes the VM and
-# checks that it is gone.
+# veraison-services fork as it is and with the DER and signer-info fixes. Creates the VM, mints the Freshness
+# Handles (RRP side), copies hwrun and the handles in, runs it as root (configfs-tsm), copies the output back,
+# deletes the VM and checks that it is gone.
 #
 #   hwcheck/scripts/gcp-snp-hwcheck.sh [PROJECT] [ZONE]
 #
@@ -23,10 +23,11 @@ echo "$CODE_REV" > "$OUT/code-rev.txt"
 
 echo "== build hwrun (linux/amd64) and rrpverify (both Veraison builds)"
 (cd "$HW" && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -o "$BIN/hwrun" ./cmd/hwrun)
-(cd "$HW" && go build -o "$BIN/rrpverify-fork" ./cmd/rrpverify && go build -modfile=go.patched.mod -o "$BIN/rrpverify-derfix" ./cmd/rrpverify)
+(cd "$HW" && go build -o "$BIN/rrpverify-fork" ./cmd/rrpverify && go build -modfile=go.patched.mod -o "$BIN/rrpverify-fixed" ./cmd/rrpverify)
 shasum -a 256 "$BIN/hwrun" | awk '{print $1"  hwrun (linux/amd64)"}' > "$OUT/binaries.sha256"
 { echo "veraison-services fork: $(git -C "$REPO/../veraison-services" rev-parse --short=12 HEAD)";
-  echo "veraison-services DER fix: $(git -C "$REPO/../veraison-services-der" rev-parse --short=12 HEAD)"; } > "$OUT/veraison-revs.txt"
+  echo "veraison-services DER fix: $(git -C "$REPO/../veraison-services-der" rev-parse --short=12 HEAD)";
+  echo "go-gen-ref signer-info fix: $(git -C "$REPO/../go-gen-ref-v123" rev-parse --short=12 HEAD)"; } > "$OUT/veraison-revs.txt"
 
 echo "== RRP mints the Freshness Handles"
 "$BIN/rrpverify-fork" mint -out "$OUT/handles.json"
@@ -81,9 +82,9 @@ gcloud compute scp --recurse "$NAME:~/hwrun-out/*" "$OUT/" --project="$PROJECT" 
 trap 'rm -rf "$BIN"' EXIT
 cleanup
 
-echo "== RRP verification: Veraison fork as it is, then with the DER fix"
+echo "== RRP verification: Veraison fork as it is, then with the DER and signer-info fixes"
 cp "$HW/evidence/amd-kds-milan-cert_chain.pem" "$OUT/amd-kds-milan-cert_chain.pem"
-for v in fork derfix; do
+for v in fork fixed; do
   "$BIN/rrpverify-$v" verify -in "$OUT" -handles "$OUT/handles.json" -ark "$OUT/amd-kds-milan-cert_chain.pem" \
     -not-before "$NB" -not-after "$NA" -out "$OUT/rrpverify-veraison-$v.json" | tee "$OUT/rrpverify-veraison-$v.txt"
 done
