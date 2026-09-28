@@ -1,0 +1,102 @@
+/Users/serhiinikolaichuk/dev/veraison-services-der/deployments/native//deployment.sh -e quick-init-all
+make[2]: Nothing to be done for `all'.
+make[2]: Nothing to be done for `all'.
+make[3]: Nothing to be done for `all'.
+CGO_ENABLED=1 go build -o coserv-service -ldflags \
+	"-X 'github.com/veraison/services/config.Version=+cd2afab' \
+	 -X 'github.com/veraison/services/config.SchemeLoader=plugins'"
+make[2]: Nothing to be done for `all'.
+make[2]: Nothing to be done for `all'.
+make[2]: Nothing to be done for `all'.
+make[3]: Nothing to be done for `all'.
+CGO_ENABLED=1 go build -o management-service -ldflags \
+	"-X 'github.com/veraison/services/config.Version=+cd2afab' \
+	 -X 'github.com/veraison/services/config.SchemeLoader=plugins'"
+make -C redshirt
+CGO_ENABLED=1 go build  -o ../bin/redshirt.plugin
+make -C trooper
+CGO_ENABLED=1 go build  -o ../bin/trooper.plugin
+make[2]: Nothing to be done for `all'.
+protoc --go_out=. --go_opt=paths=source_relative --proto_path=. \
+		 \
+		--go-grpc_out=. --go-grpc_opt=paths=source_relative \
+		--go-json_out=. --go-json_opt=paths=source_relative token.proto evidence.proto appraisal_context.proto state.proto vts.proto status.proto endorsement_query.proto scheme.proto
+scheme.proto:4:1: warning: Import google/protobuf/struct.proto is unused.
+make[3]: Nothing to be done for `all'.
+make[3]: Nothing to be done for `all'.
+/Applications/Xcode.app/Contents/Developer/usr/bin/make -C ../../../proto protogen
+make[4]: `protogen' is up to date.
+CGO_ENABLED=1 go build -o provisioning-service -ldflags \
+	"-X 'github.com/veraison/services/config.Version=+cd2afab' \
+	 -X 'github.com/veraison/services/config.SchemeLoader=plugins'"
+make[3]: Nothing to be done for `all'.
+CGO_ENABLED=1 go build  -o ../../bin/scheme-arm-cca.plugin
+CGO_ENABLED=1 go build  -o ../../bin/scheme-parsec-cca.plugin
+CGO_ENABLED=1 go build  -o ../../bin/scheme-parsec-tpm.plugin
+CGO_ENABLED=1 go build  -o ../../bin/scheme-psa-iot.plugin
+CGO_ENABLED=1 go build  -o ../../bin/scheme-riot.plugin
+CGO_ENABLED=1 go build  -o ../../bin/scheme-sevsnp.plugin
+CGO_ENABLED=1 go build  -o ../../bin/scheme-tpm-enacttrust.plugin
+CGO_ENABLED=1 go build  -o ../../bin/coserv-amd-kds.plugin
+CGO_ENABLED=1 go build  -o ../../bin/coserv-nvidia.plugin
+make[3]: Nothing to be done for `all'.
+make[3]: Nothing to be done for `all'.
+make[3]: Nothing to be done for `all'.
+CGO_ENABLED=1 go build -o verification-service -ldflags \
+	"-X 'github.com/veraison/services/config.Version=+cd2afab' \
+	 -X 'github.com/veraison/services/config.SchemeLoader=plugins'"
+make[3]: Nothing to be done for `all'.
+make[3]: Nothing to be done for `all'.
+CGO_ENABLED=1 go build -o vts-service -ldflags \
+	"-X 'github.com/veraison/services/config.Version=+cd2afab' \
+	 -X 'github.com/veraison/services/config.SchemeLoader=plugins'"
+make[2]: Nothing to be done for `all'.
+go: downloading github.com/veraison/evcli/v2 v2.1.0
+go: downloading github.com/spf13/viper v1.11.0
+go: downloading github.com/veraison/apiclient v0.3.1-0.20240827095125-ab8774ee8e6d
+go: downloading github.com/spf13/afero v1.8.2
+go: downloading github.com/veraison/ccatoken v1.3.1
+go: downloading github.com/spf13/cobra v1.4.0
+go: downloading github.com/veraison/psatoken v1.2.1-0.20240719122628-26fe500fd5d4
+go: downloading github.com/fxamacker/cbor/v2 v2.5.0
+go: downloading golang.org/x/crypto v0.21.0
+go: downloading github.com/veraison/cmw v0.1.0
+go: downloading golang.org/x/oauth2 v0.11.0
+go: downloading github.com/fsnotify/fsnotify v1.5.1
+go: downloading github.com/spf13/cast v1.4.1
+go: downloading golang.org/x/text v0.14.0
+go: downloading github.com/subosito/gotenv v1.2.0
+go: downloading gopkg.in/ini.v1 v1.66.4
+go: downloading github.com/pelletier/go-toml v1.9.4
+go: downloading golang.org/x/sys v0.18.0
+creating /Users/serhiinikolaichuk/veraison-deployment/config/evcli/config.yaml
+go: downloading github.com/veraison/cocli v1.0.0-alpha0.0.20260313151307-405ce39d50b6
+go: downloading github.com/spf13/viper v1.9.0
+go: downloading github.com/spf13/afero v1.9.2
+go: downloading github.com/spf13/cobra v1.2.1
+go: downloading github.com/google/uuid v1.3.0
+go: downloading github.com/veraison/apiclient v0.3.1-0.20240807160142-9141ad363e45
+go: downloading github.com/veraison/corim v1.1.3-0.20260309101151-2fa49d7c02e3
+go: downloading github.com/magiconair/properties v1.8.5
+go: downloading gopkg.in/ini.v1 v1.63.2
+go: downloading golang.org/x/sys v0.28.0
+go: downloading golang.org/x/crypto v0.31.0
+creating /Users/serhiinikolaichuk/veraison-deployment/config/cocli/config.yaml
+go: downloading github.com/veraison/pocli v0.2.0
+go: downloading github.com/spf13/cobra v1.7.0
+go: downloading github.com/spf13/viper v1.16.0
+go: downloading github.com/fsnotify/fsnotify v1.6.0
+go: downloading github.com/magiconair/properties v1.8.7
+go: downloading github.com/spf13/cast v1.5.1
+go: downloading github.com/spf13/afero v1.9.5
+go: downloading github.com/pelletier/go-toml/v2 v2.0.8
+go: downloading github.com/subosito/gotenv v1.4.2
+go: downloading golang.org/x/sys v0.11.0
+go: downloading golang.org/x/text v0.12.0
+creating /Users/serhiinikolaichuk/veraison-deployment/config/pocli/config.yaml
+go: downloading golang.org/x/text v0.28.0
+go: downloading golang.org/x/mod v0.30.0
+go: downloading golang.org/x/sys v0.38.0
+go: downloading golang.org/x/crypto v0.37.0
+go: downloading golang.org/x/sync v0.16.0
+creating /Users/serhiinikolaichuk/veraison-deployment/config/corim-store/config.yaml
