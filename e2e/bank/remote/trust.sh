@@ -21,8 +21,8 @@ FRAUD=https://fraud-api.demobank.example
 install() {
   mkdir -p "$D/logs"
   apt-get update -qq
-  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq jq sqlite3 protobuf-compiler make gettext-base openssl git \
-    jose netcat-openbsd unzip python3 >/dev/null
+  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq jq sqlite3 protobuf-compiler make gcc libc6-dev gettext-base \
+    openssl git jose netcat-openbsd unzip python3 >/dev/null   # gcc: Veraison's sqlite stores use cgo
   if [ ! -x /usr/local/go/bin/go ]; then
     curl -sfL -o /tmp/go.tgz "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz"
     tar -C /usr/local -xzf /tmp/go.tgz && rm /tmp/go.tgz
@@ -167,7 +167,7 @@ start_one() {
 wait_port() { for _ in $(seq 1 240); do nc -z 127.0.0.1 "$1" 2>/dev/null && return 0; sleep 0.25; done; echo "!! port $1 not up"; return 1; }
 
 vault_init() {
-  if ! "$D/bin/vault" status -format=json 2>/dev/null | python3 -c 'import sys,json; sys.exit(0 if json.load(sys.stdin)["initialized"] else 1)'; then
+  if ! { "$D/bin/vault" status -format=json 2>/dev/null || true; } | python3 -c 'import sys,json; sys.exit(0 if json.load(sys.stdin)["initialized"] else 1)'; then
     (umask 077; "$D/bin/vault" operator init -key-shares=1 -key-threshold=1 -format=json > "$D/secrets/vault-init.json")
   fi
   if { "$D/bin/vault" status 2>/dev/null || true; } | grep -q "Sealed *true"; then
@@ -192,9 +192,10 @@ start() {
     [ "$s" = vts ] && sleep 2
   done
   wait_port 9443; wait_port 8443
-  if ! grep -q success "$D/logs/corim-submit.json" 2>/dev/null; then   # AMD's ARK and the approved launches, as on the bench
+  # AMD's ARK and the approved launches, as on the bench; the media type is the one VTS lists at start for sevsnp
+  if ! grep -q success "$D/logs/corim-submit.json" 2>/dev/null; then
     curl -sS --cacert "$V/certs/rootCA.crt" -X POST \
-      -H 'Content-Type: application/corim-unsigned+cbor; profile="tag:amd.com,2024:snp-corim-profile"' \
+      -H 'Content-Type: application/rim+cbor; profile="tag:amd.com,2024:snp-corim-profile"' \
       --data-binary @"$D/src/corim-milan.cbor" https://localhost:9443/endorsement-provisioning/v1/submit > "$D/logs/corim-submit.json"
     grep -q success "$D/logs/corim-submit.json" || { echo "!! CoRIM not accepted: $(cat "$D/logs/corim-submit.json")"; exit 1; }
   fi

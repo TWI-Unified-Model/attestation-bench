@@ -7,7 +7,7 @@
 #   payment service   in a confidential VM (GCP SEV-SNP, GCP TDX, AWS SEV-SNP), holding no credential of its own
 #   controls          the same service on an ordinary VM, and on a genuine SEV-SNP VM of an unapproved configuration
 #
-#   e2e/bank/demo-bank.sh up
+#   e2e/bank/demo-bank.sh up                (then provision again after a fix: e2e/bank/demo-bank.sh provision)
 #   e2e/bank/demo-bank.sh pay gcp-snp | gcp-tdx | aws-snp | ordinary | unapproved
 #   e2e/bank/demo-bank.sh audit
 #   e2e/bank/demo-bank.sh down
@@ -89,6 +89,13 @@ up() {
   gssh "$TRUST" "sudo mkdir -p $D/src $D/bin && sudo cp ~/trust/bin/* $D/bin/ && sudo cp ~/trust/trust.sh $D/ && sudo cp ~/trust/src/corim-milan.cbor $D/src/ \
     && sudo tar -C $D/src -xzf ~/trust/src/veraison-services.tgz && sudo tar -C $D/src -xzf ~/trust/src/go-gen-ref-v123.tgz && rm -rf ~/trust"
   gssh "$CORE" "sudo mkdir -p $D/bin $D/public && sudo cp ~/core/bin/* $D/bin/ && sudo cp ~/core/core.sh $D/ && rm -rf ~/core"
+  provision
+}
+
+# install, configure and start both machines; every step is safe to repeat
+provision() {
+  gscp "$HERE/e2e/bank/remote/trust.sh" "$TRUST:~/trust.sh"; gssh "$TRUST" "sudo cp ~/trust.sh $D/trust.sh && rm ~/trust.sh"
+  gscp "$HERE/e2e/bank/remote/core.sh" "$CORE:~/core.sh"; gssh "$CORE" "sudo cp ~/core.sh $D/core.sh && rm ~/core.sh"
   log "install both (Veraison builds on the trust zone)"
   local tp cp code=0
   gssh "$TRUST" "sudo bash $D/trust.sh install" > "$OUT/up/trust-install.txt" 2>&1 & tp=$!
@@ -105,7 +112,7 @@ up() {
   gscp "$CORE:$D/public/core-tls-root.crt" "$OUT/public/"
   log "the fraud service's API key goes to the bank's Vault (piped machine to machine, never written here)"
   gssh "$CORE" "sudo cat $D/secrets/fraud-api-key" | gssh "$TRUST" "sudo bash -c 'umask 077; cat > $D/secrets/fraud-api-key'"
-  [ "$(gssh "$TRUST" "sudo wc -c < $D/secrets/fraud-api-key" | tr -d '[:space:]')" = 59 ] || { echo "!! the key did not arrive"; exit 1; }
+  [ "$(gssh "$TRUST" "sudo cat $D/secrets/fraud-api-key | wc -c" | tr -d '[:space:]')" = 59 ] || { echo "!! the key did not arrive"; exit 1; }
   log "trust zone: start"
   gssh "$TRUST" "sudo bash $D/trust.sh start" | tee "$OUT/up/trust-start.txt"
   gscp "$TRUST:$D/public/origin-keys.json" "$OUT/public/"
@@ -142,10 +149,10 @@ slice_logs() { # run dir
   local spec
   spec="$(tr '\n' ' ' < "$1/.trust-marks")"
   gssh "$TRUST" "set -- $spec; while [ \$# -gt 0 ]; do echo \"### \$1\"; sudo tail -n +\$((\$2 + 1)) $D/logs/\$1.log 2>/dev/null | grep -v 'TLS handshake error' || true; shift 2; done" \
-    | awk -v dir="$1/trust-logs" '/^### /{f=dir "/" $2 ".log"; printf "" > f; next} {print >> f}'
+    | awk -v dir="$1/trust-logs" '/^### /{f=dir "/" $2 ".log"; printf "" > f; next} f != "" {print >> f}'
   spec="$(tr '\n' ' ' < "$1/.core-marks")"
   gssh "$CORE" "set -- $spec; echo '### postgresql'; sudo tail -n +\$((\$2 + 1)) /var/log/postgresql/postgresql-16-main.log; echo '### fraud-api'; sudo tail -n +\$((\$4 + 1)) $D/logs/fraud-api.log" \
-    | awk -v dir="$1/core-logs" '/^### /{f=dir "/" $2 ".log"; printf "" > f; next} {print >> f}'
+    | awk -v dir="$1/core-logs" '/^### /{f=dir "/" $2 ".log"; printf "" > f; next} f != "" {print >> f}'
   rm -f "$1"/.trust-marks "$1"/.core-marks
 }
 
@@ -301,6 +308,7 @@ down() {
 
 case "${1:-}" in
   up) up ;;
+  provision) provision ;;
   pay) shift; pay "$@" ;;
   audit) audit ;;
   down) down ;;

@@ -13,6 +13,13 @@ PG=/etc/postgresql/16/main
 export PATH="$D/bin:$PATH"
 HINT=payments.workload.demobank.example
 
+running() { [ -f "$D/logs/$1.pid" ] && kill -0 "$(cat "$D/logs/$1.pid")" 2>/dev/null; }
+pg_up() {   # the umbrella unit reports success even when the cluster fails to start; ask the server itself
+  systemctl start postgresql@16-main || true
+  for _ in $(seq 1 60); do su postgres -c "pg_isready -q" && return 0; sleep 0.5; done
+  echo "!! PostgreSQL did not start"; tail -20 /var/log/postgresql/postgresql-16-main.log; return 1
+}
+
 install() {
   mkdir -p "$D/logs"
   apt-get update -qq
@@ -36,10 +43,10 @@ setup() {
   # the fraud service's key: made by the "partner", handed once to the bank's Vault administrator (see demo-bank.sh)
   [ -s "$D/secrets/fraud-api-key" ] || (umask 077; echo "dbk_fraud_$(openssl rand -hex 24)" > "$D/secrets/fraud-api-key")
 
-  install -d -o postgres -g postgres -m 700 "$PG/tls"
-  install -o postgres -g postgres -m 600 "$D/tls/server.crt" "$PG/tls/server.crt"
-  install -o postgres -g postgres -m 600 "$D/tls/server.key" "$PG/tls/server.key"
-  install -o postgres -g postgres -m 644 "$D/public/workload-ca.pem" "$PG/tls/workload-ca.pem"
+  command install -d -o postgres -g postgres -m 700 "$PG/tls"
+  command install -o postgres -g postgres -m 600 "$D/tls/server.crt" "$PG/tls/server.crt"
+  command install -o postgres -g postgres -m 600 "$D/tls/server.key" "$PG/tls/server.key"
+  command install -o postgres -g postgres -m 644 "$D/public/workload-ca.pem" "$PG/tls/workload-ca.pem"
   cat > "$PG/conf.d/demobank.conf" <<EOF
 listen_addresses = '*'
 ssl = on
@@ -62,7 +69,8 @@ host    all   all       ::/0           reject
 EOF
   printf 'workload  %s  payments\n' "$HINT" > "$PG/pg_ident.conf"
   chown postgres:postgres "$PG/pg_hba.conf" "$PG/pg_ident.conf" "$PG/conf.d/demobank.conf"
-  systemctl start postgresql
+  systemctl restart postgresql@16-main || true
+  pg_up
   if ! su postgres -c "psql -tAc \"SELECT 1 FROM pg_database WHERE datname = 'bank'\"" | grep -q 1; then
     su postgres -c "psql -v ON_ERROR_STOP=1 -q" <<'SQL'
 CREATE ROLE payments LOGIN;                 -- no password: the certificate is the only way in
@@ -103,10 +111,9 @@ SQL
   echo "setup done"
 }
 
-running() { [ -f "$D/logs/$1.pid" ] && kill -0 "$(cat "$D/logs/$1.pid")" 2>/dev/null; }
 
 start() {
-  systemctl start postgresql
+  pg_up
   if ! running fraud-api; then
     nohup "$D/bin/fraud-api" -listen :8444 -cert "$D/tls/server.crt" -key "$D/tls/server.key" \
       -api-key-file "$D/secrets/fraud-api-key" >> "$D/logs/fraud-api.log" 2>&1 &
@@ -119,12 +126,12 @@ start() {
 stop() {
   if running fraud-api; then kill "$(cat "$D/logs/fraud-api.pid")"; fi
   rm -f "$D/logs/fraud-api.pid"
-  systemctl stop postgresql
+  systemctl stop postgresql@16-main
 }
 
 status() {
   if running fraud-api; then echo "fraud-api running"; else echo "fraud-api STOPPED"; fi
-  if systemctl is-active -q postgresql; then echo "postgresql running"; else echo "postgresql STOPPED"; fi
+  if su postgres -c "pg_isready -q"; then echo "postgresql running"; else echo "postgresql STOPPED"; fi
   ss -ltnp | awk 'NR>1 {print $4}' | sort -u | tr '\n' ' '; echo
 }
 
