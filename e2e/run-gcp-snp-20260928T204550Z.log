@@ -1,0 +1,50 @@
+== bench
+vts running (91700)
+provisioning running (91730)
+verification running (91732)
+management running (91734)
+step-ca running (98199)
+vault running (98201)
+ca-gateway running (98213)
+vault-gateway running (98214)
+est-server running (98225)
+rup running (99186)
+== build (linux/amd64)
+== guest configuration (public material only)
+== create tacra-e2e-2609282045 (us-central1-c, sev-snp)
+WARNING: You have selected a disk size of under [200GB]. This may result in poor I/O performance. For more information, see: https://developers.google.com/compute/docs/disks#performance.
+Created [https://www.googleapis.com/compute/v1/projects/rats-probe/zones/us-central1-c/instances/tacra-e2e-2609282045].
+WARNING: Some requests generated warnings:
+ - Disk size: '20 GB' is larger than image size: '10 GB'. You might need to resize the root repartition manually if the operating system does not support automatic resizing. See https://cloud.google.com/compute/docs/disks/add-persistent-disk#resize_pd for details.
+
+== wait for ssh
+drwxr-xr-x 2 root root 0 Sep 28 20:46 /sys/kernel/config/tsm/report
+7.0.0-1011-gcp
+== copy the workload, the CAS Client and the public configuration
+== reverse tunnel to the bench (EST server 18443, mTLS service 19443)
+== run in the guest
+2026/09/28 20:47:34 https://db-nonce.tacra.example           x509    acquired in   705.5 ms (1 attempt(s)); relying party answered 200
+2026/09/28 20:47:35 https://db-epoch.tacra.example           x509    acquired in   582.1 ms (1 attempt(s)); relying party answered 200
+2026/09/28 20:47:36 https://db-lepoch.tacra.example          x509    acquired in   564.2 ms (1 attempt(s)); relying party answered 200
+2026/09/28 20:47:36 https://db-time.tacra.example            x509    acquired in   541.8 ms (1 attempt(s)); relying party answered 200
+2026/09/28 20:47:37 https://db-none.tacra.example            x509    acquired in   562.7 ms (1 attempt(s)); relying party answered 200
+2026/09/28 20:47:38 https://ledger-nonce.tacra.example       api-key acquired in   576.0 ms (1 attempt(s)); relying party answered 200
+2026/09/28 20:47:38 https://ledger-epoch.tacra.example       api-key acquired in   577.6 ms (1 attempt(s)); relying party answered 200
+2026/09/28 20:47:39 https://ledger-lepoch.tacra.example      api-key acquired in   510.9 ms (1 attempt(s)); relying party answered 200
+2026/09/28 20:47:40 https://ledger-time.tacra.example        api-key acquired in   549.6 ms (1 attempt(s)); relying party answered 200
+2026/09/28 20:47:40 https://ledger-none.tacra.example        api-key acquired in   453.0 ms (1 attempt(s)); relying party answered 200
+== delete tacra-e2e-2609282045
+== tacra-e2e-2609282045 is gone
+== bench logs for the run
+10 of 10 Targets: credential acquired and admitted by the relying party
+ok  https://db-nonce.tacra.example         x509        705.5 ms 200 
+ok  https://db-epoch.tacra.example         x509        582.1 ms 200 
+ok  https://db-lepoch.tacra.example        x509        564.2 ms 200 
+ok  https://db-time.tacra.example          x509        541.8 ms 200 
+ok  https://db-none.tacra.example          x509        562.7 ms 200 
+ok  https://ledger-nonce.tacra.example     api-key     576.0 ms 200 
+ok  https://ledger-epoch.tacra.example     api-key     577.6 ms 200 
+ok  https://ledger-lepoch.tacra.example    api-key     510.9 ms 200 
+ok  https://ledger-time.tacra.example      api-key     549.6 ms 200 
+ok  https://ledger-none.tacra.example      api-key     453.0 ms 200 
+== evidence in /Users/serhiinikolaichuk/dev/twi-tacra/e2e/evidence/20260928T204550Z-gcp-sev-snp-e2e
