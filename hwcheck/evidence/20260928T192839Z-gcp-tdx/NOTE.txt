@@ -1,0 +1,6 @@
+This run produced no Evidence. The run step's command line in scripts/gcp-tdx-hwcheck.sh had been corrupted by an
+edit of the script (an unescaped "&" in a sed replacement turned "-burst 30 2>&1" into
+"-burst 30 2>sudo ~/hwrun ... 2>&11"), so the remote shell failed on file descriptor 11 with its error redirected
+away, and the script stopped with no message. The VM was deleted (vm-deleted.txt). A hand run of the same binary on
+a separate VM (tacra-tdx-debug, deleted afterwards) produced ten TDX quotes, so the fault was the script line. The
+line was repaired and the run repeated.

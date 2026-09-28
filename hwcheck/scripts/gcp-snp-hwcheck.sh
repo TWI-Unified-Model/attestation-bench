@@ -73,7 +73,7 @@ set -e
 sudo ~/hwrun -handles ~/handles.json -out /root/hwrun-out -burst 100 2>&1
 sudo sh -c 'cd /root/hwrun-out && uname -a > kernel.txt && (dmesg 2>/dev/null | grep -i -E \"sev|snp|tsm\" > dmesg-sev.txt || true) && (curl -s -H Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/machine-type > machine-type.txt || true) && date -u +%s > guest-clock.txt'
 sudo chmod -R a+rX /root/hwrun-out; rm -rf ~/hwrun-out; sudo cp -r /root/hwrun-out ~/hwrun-out; sudo chown -R \$(id -u):\$(id -g) ~/hwrun-out
-" | tee "$OUT/hwrun-stdout.txt"
+" 2>>"$OUT/run-ssh.stderr" | tee "$OUT/hwrun-stdout.txt"
 NA="$(date -u +%s)"
 echo "$NB $NA" > "$OUT/rrp-clock-window.txt"
 

@@ -1,0 +1,17 @@
+== build hwrun (linux/amd64) and rrpverify
+== RRP mints the Freshness Handles
+== create tacra-hwcheck-2609281928 (us-central1-a, c3-standard-4, TDX)
+WARNING: You have selected a disk size of under [200GB]. This may result in poor I/O performance. For more information, see: https://developers.google.com/compute/docs/disks#performance.
+Created [https://www.googleapis.com/compute/v1/projects/rats-probe/zones/us-central1-a/instances/tacra-hwcheck-2609281928].
+WARNING: Some requests generated warnings:
+ - Disk size: '20 GB' is larger than image size: '10 GB'. You might need to resize the root repartition manually if the operating system does not support automatic resizing. See https://cloud.google.com/compute/docs/disks/add-persistent-disk#resize_pd for details.
+
+== wait for ssh
+== provision: tdx_guest, configfs-tsm
+crw------- 1 root root 10, 263 Sep 28 19:29 /dev/tdx_guest
+drwxr-xr-x 2 root root       0 Sep 28 19:29 /sys/kernel/config/tsm/report
+7.0.0-1011-gcp
+== copy hwrun and the handles
+== run hwrun as root
+== delete tacra-hwcheck-2609281928
+== tacra-hwcheck-2609281928 is gone
