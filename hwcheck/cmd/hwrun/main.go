@@ -1,6 +1,7 @@
-// Command hwrun is the Attester side of the hardware check: in an AMD SEV-SNP guest it drives the SEV-SNP platform
-// plug-in the way the CAI does (keys, CSR, GenerateEvidence) for Enrollment and Retrieval in all five Freshness Kinds,
-// and writes each Evidence with what the Relying Party needs to recompute the binding. Run as root (configfs-tsm).
+// Command hwrun is the Attester side of the hardware check: in an AMD SEV-SNP or Intel TDX guest it drives the
+// platform plug-in the way the CAI does (keys, CSR, GenerateEvidence) for Enrollment and Retrieval in all five
+// Freshness Kinds, and writes each Evidence with what the Relying Party needs to recompute the binding. Run as root
+// (configfs-tsm).
 package main
 
 import (
@@ -21,6 +22,12 @@ import (
 
 	"github.com/TWI-Unified-Model/tacra/platform"
 )
+
+// backend is a hardware platform plug-in: the CAI's Plugin plus the freshness element it binds.
+type backend interface {
+	platform.Plugin
+	FreshnessElement(platform.EvidenceRequest) ([]byte, error)
+}
 
 // handles are the Freshness Handles an RRP hands out at Initiate (JSON: base64).
 type handles struct {
@@ -53,6 +60,7 @@ func main() {
 	rrpVault := flag.String("rrp-vault", "https://vault1.tacra.example", "RRP identifier for Retrieval")
 	handlesPath := flag.String("handles", "", "Freshness Handles minted by the RRP (rrpverify mint); random if empty")
 	burst := flag.Int("burst", 0, "after the cases, time this many present-nonce Enrollment reports")
+	tee := flag.String("tee", "sev-snp", "sev-snp or tdx")
 	flag.Parse()
 	must(os.MkdirAll(*out, 0o755))
 
@@ -63,7 +71,16 @@ func main() {
 		must(json.Unmarshal(b, &h))
 	}
 	epoch := h.Epoch
-	p, err := platform.NewSEVSNP(platform.WithLocalEpoch(epoch))
+	var p backend
+	var err error
+	switch *tee {
+	case "sev-snp":
+		p, err = platform.NewSEVSNP(platform.WithLocalEpoch(epoch))
+	case "tdx":
+		p, err = platform.NewTDX(platform.WithLocalEpoch(epoch))
+	default:
+		err = fmt.Errorf("unknown -tee %q", *tee)
+	}
 	must(err)
 	kinds := []struct {
 		name string
@@ -131,7 +148,7 @@ func main() {
 				m.TokenBytes = len(ev.Token)
 				must(os.WriteFile(filepath.Join(dir, "evidence.tsm.cbor"), ev.Token, 0o644))
 				must(os.WriteFile(filepath.Join(dir, "claims.cbor"), ev.Claims, 0o644))
-				fillReportFields(&m, ev.Token)
+				fillReportFields(&m, ev.Token, *tee)
 			}
 			all = append(all, m)
 			b, _ := json.MarshalIndent(m, "", " ")
@@ -151,7 +168,7 @@ func main() {
 }
 
 // timeBurst times n GenerateEvidence calls (present-nonce, Enrollment, a fresh nonce and CSR each time).
-func timeBurst(p *platform.SEVSNP, n int, target, rrp, path string) {
+func timeBurst(p backend, n int, target, rrp, path string) {
 	csk, err := p.GenerateCSK(platform.SigningAlgorithmECDSAP256)
 	must(err)
 	signer, err := csk.Signer()
@@ -179,14 +196,20 @@ func timeBurst(p *platform.SEVSNP, n int, target, rrp, path string) {
 		sorted[len(sorted)-1])
 }
 
-// fillReportFields reads SIGNING_KEY (48h bits 4:2) and CHIP_ID (1A0h) from the report inside the TSM token.
-func fillReportFields(m *caseMeta, token []byte) {
+// fillReportFields reads SIGNING_KEY (48h bits 4:2) and CHIP_ID (1A0h) from an SEV-SNP report, or MRTD from a TDX
+// quote (offset 48 + 136), inside the TSM token.
+func fillReportFields(m *caseMeta, token []byte, tee string) {
 	rep, err := platform.ReportFromTSMToken(token)
 	if err != nil || len(rep) < 0x1E0 {
 		return
 	}
 	sum := sha256.Sum256(rep)
 	m.ReportSHA256 = hex.EncodeToString(sum[:])
+	if tee == "tdx" {
+		m.SigningKey = "TDX quote"
+		m.ChipIDPrefix = "MRTD " + hex.EncodeToString(rep[48+136:48+144])
+		return
+	}
 	switch (binary.LittleEndian.Uint32(rep[0x48:]) >> 2) & 7 {
 	case 0:
 		m.SigningKey = "VCEK"

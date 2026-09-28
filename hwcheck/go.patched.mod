@@ -94,6 +94,7 @@ replace github.com/TWI-Unified-Model/tacra/platform => ../platform
 
 require (
 	github.com/fxamacker/cbor/v2 v2.9.3
+	github.com/google/go-tdx-guest v0.3.1
 	github.com/veraison/corim v1.1.3-0.20260430132037-b8653a7359da
 	github.com/veraison/ear v1.1.4-0.20260213122616-3034258cda59
 	github.com/veraison/services v0.0.2501

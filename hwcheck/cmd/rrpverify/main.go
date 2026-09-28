@@ -77,6 +77,8 @@ func main() {
 		mint(os.Args[2:])
 	case "verify":
 		verify(os.Args[2:])
+	case "tdx-preflight":
+		tdxPreflight(os.Args[2:])
 	default:
 		fmt.Fprintln(os.Stderr, "usage: rrpverify mint|verify ...")
 		os.Exit(2)
@@ -111,9 +113,21 @@ func verify(args []string) {
 	b, err := os.ReadFile(*handlesPath)
 	must(err)
 	must(json.Unmarshal(b, &h))
-	ark, ask := kdsChain(*arkPath)
-	ta := trustAnchor(ark)
-	otherTA := trustAnchor(ask) // a genuine AMD certificate that is not the ARK
+	var ark, ask []byte
+	var ta, otherTA []*comid.KeyTriple
+	if *arkPath != "" {
+		ark, ask = kdsChain(*arkPath)
+		ta = trustAnchor(ark)
+		otherTA = trustAnchor(ask) // a genuine AMD certificate that is not the ARK
+	}
+	var tdxOtherRoots *x509.CertPool // made on first use
+	var tdxGolden map[string][]byte
+	tdxGoldenFrom := ""
+	type tdxPassing struct {
+		name string
+		meas map[string][]byte
+	}
+	var tdxPassed []tdxPassing
 
 	var metas []caseMeta
 	b, err = os.ReadFile(filepath.Join(*in, "cases.json"))
@@ -160,6 +174,60 @@ func verify(args []string) {
 		}
 		flipped := append([]byte(nil), subject...)
 		flipped[len(flipped)-1] ^= 1
+
+		if tokenProvider(token) == "tdx_guest" {
+			if tdxOtherRoots == nil {
+				tdxOtherRoots = otherRoots()
+			}
+			bv := func(e []byte, r, t string, subj []byte) []byte {
+				v := platform.BindingValue(e, r, t, subj)
+				return v[:]
+			}
+			honestPassed := false
+			for _, c := range []struct {
+				name, want, reason string
+				bv                 []byte
+				roots              *x509.CertPool
+			}{
+				{"honest", "pass", "", bv(elem, rrp, *target, subject), nil},
+				{"other Target", "fail", reportDataRefusal, bv(elem, rrp, "https://other.tacra.example", subject), nil},
+				{"other RRP identifier", "fail", reportDataRefusal, bv(elem, otherRRP, *target, subject), nil},
+				{"other CSR / CEKpub", "fail", reportDataRefusal, bv(elem, rrp, *target, flipped), nil},
+				{"other freshness element", "fail", reportDataRefusal, bv(otherElem, rrp, *target, subject), nil},
+				{"trust anchor = a root not Intel's", "fail", "certificate signed by unknown authority",
+					bv(elem, rrp, *target, subject), tdxOtherRoots},
+			} {
+				t0 := time.Now()
+				err := verifyTDX(token, c.bv, c.roots)
+				r := outcome(m.Case, "tdx-quote", c.name, c.want, err, float64(time.Since(t0).Microseconds())/1000)
+				if c.name == "honest" {
+					honestPassed = err == nil
+					if honestPassed {
+						meas := tdxMeasurements(token)
+						if tdxGolden == nil {
+							tdxGolden, tdxGoldenFrom = meas, m.Case
+						}
+						tdxPassed = append(tdxPassed, tdxPassing{m.Case, meas})
+					}
+				}
+				switch {
+				case c.reason != "" && !honestPassed:
+					r.Got, r.OK = "inconclusive", false
+					r.Comment = "the honest Evidence is refused too, so a refusal here proves nothing"
+				case c.reason != "" && err != nil && !strings.Contains(err.Error(), c.reason):
+					r.Got, r.OK = "refused for another reason", false
+					r.Comment = "inconclusive: the refusal is not the one this check tests"
+				}
+				r.Comment = strings.TrimSpace(r.Comment + " verifier: go-tdx-guest (no TDX scheme in veraison-services)")
+				results = append(results, r)
+			}
+			continue
+		}
+		if ta == nil {
+			results = append(results, result{Case: m.Case, Check: "honest", Want: "pass", Got: "fail",
+				Error: "SEV-SNP Evidence, but no AMD chain given (-ark)"})
+			continue
+		}
 
 		tables := map[string][]byte{"as-delivered": token}
 		if norm, converted, _, err := rewriteTable(token, nil, nil); err != nil {
@@ -250,6 +318,33 @@ func verify(args []string) {
 					if *st == ear.TrustTierAffirming {
 						r.Got = "affirming"
 					}
+				}
+				r.OK = r.Got == r.Want
+				results = append(results, r)
+			}
+		}
+	}
+
+	// TDX appraisal (hwcheck's own comparison; no Veraison TDX scheme): the quote body fields of the first quote
+	// that verified are the reference (trust on first use, stated as such); a copy with MRTD one byte different
+	// must not match.
+	if tdxGolden != nil {
+		bad := map[string][]byte{}
+		for k, v := range tdxGolden {
+			bad[k] = append([]byte(nil), v...)
+		}
+		bad["MRTD"][0] ^= 1
+		for _, p := range tdxPassed {
+			for _, rv := range []struct {
+				name, want string
+				ref        map[string][]byte
+			}{{"appraise: reference values of this launch", "affirming", tdxGolden},
+				{"appraise: MRTD one byte different", "not affirming", bad}} {
+				r := result{Case: p.name + " / tdx-quote", Check: rv.name, Want: rv.want, Got: "affirming",
+					Comment: "hwcheck comparison of MRSEAM, TDATTRIBUTES, XFAM, MRTD, MRCONFIGID, MROWNER, " +
+						"MROWNERCONFIG, RTMR0-3; reference values from " + tdxGoldenFrom}
+				if d := matchTDX(rv.ref, p.meas); len(d) > 0 {
+					r.Got, r.Error = "not affirming", "differs: "+strings.Join(d, ", ")
 				}
 				r.OK = r.Got == r.Want
 				results = append(results, r)

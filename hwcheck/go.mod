@@ -78,7 +78,6 @@ require (
 	github.com/virtee/sev-snp-measure-go v0.0.0-20241128091219-920346c42ecb // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	go.uber.org/zap v1.27.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/arch v0.7.0 // indirect
 	golang.org/x/crypto v0.52.0 // indirect
@@ -95,9 +94,11 @@ replace github.com/TWI-Unified-Model/tacra/platform => ../platform
 
 require (
 	github.com/fxamacker/cbor/v2 v2.9.3
+	github.com/google/go-tdx-guest v0.3.1
 	github.com/veraison/corim v1.1.3-0.20260430132037-b8653a7359da
 	github.com/veraison/ear v1.1.4-0.20260213122616-3034258cda59
 	github.com/veraison/services v0.0.2501
+	go.uber.org/zap v1.27.0
 )
 
 replace github.com/veraison/services => ../../veraison-services
