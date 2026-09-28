@@ -144,7 +144,11 @@ w("```\n" + (read("audit", "ledger.txt").strip() or "(not taken)") + "\n```\n")
 w("## Teardown\n")
 w("```\n" + (read("teardown.txt").strip() or "(not yet)") + "\n```\n")
 w("## Notes\n")
-w("- step-ca logs the one-time token of each signing request; the tokens are redacted in `trust-logs/step-ca.log` "
+w("- Provisioning, not the protocol: the fraud service's API key was handed once from the core VM to the trust zone's "
+  "Vault by piping it through the operator's console (`gcloud compute ssh ... | gcloud compute ssh ...`), never written "
+  "to the console's disk; the file on the trust zone was deleted after loading into Vault. Every payment then got the "
+  "key only through TACRA.\n"
+  "- step-ca logs the one-time token of each signing request; the tokens are redacted in `trust-logs/step-ca.log` "
   "(single-use, expired, and the CA no longer exists) and the per-run `sha256sums.txt` were computed after redaction.\n"
   "- `TLS handshake error from 127.0.0.1` lines in the fraud service's log are the start script's port checks.\n"
   "- Transfer 1 recorded the issuer with `ssl_issuer_dn()`, which PostgreSQL cuts at 63 bytes; later transfers record "

@@ -432,6 +432,7 @@ GCP disks: 0, GCP addresses: 0, AWS us-east-2 volumes: 0 (checked 2026-09-28T22:
 
 ## Notes
 
+- Provisioning, not the protocol: the fraud service's API key was handed once from the core VM to the trust zone's Vault by piping it through the operator's console (`gcloud compute ssh ... | gcloud compute ssh ...`), never written to the console's disk; the file on the trust zone was deleted after loading into Vault. Every payment then got the key only through TACRA.
 - step-ca logs the one-time token of each signing request; the tokens are redacted in `trust-logs/step-ca.log` (single-use, expired, and the CA no longer exists) and the per-run `sha256sums.txt` were computed after redaction.
 - `TLS handshake error from 127.0.0.1` lines in the fraud service's log are the start script's port checks.
 - Transfer 1 recorded the issuer with `ssl_issuer_dn()`, which PostgreSQL cuts at 63 bytes; later transfers record the issuer's common name with `ssl_issuer_field('commonName')`.
