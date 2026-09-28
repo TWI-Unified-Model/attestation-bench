@@ -95,6 +95,17 @@ func (s *Store) Epoch() []byte {
 	return append([]byte(nil), s.epoch...)
 }
 
+// SetEpoch installs an epoch marker distributed out of band, shared by the deployment's RRPs.
+func (s *Store) SetEpoch(marker []byte) error {
+	if n := len(marker); n < 8 || n > 64 {
+		return fmt.Errorf("%w: an epoch marker is 8 to 64 octets, got %d", ErrMalformed, n)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.epoch = append([]byte(nil), marker...)
+	return nil
+}
+
 // RotateEpoch starts a new epoch; markers of earlier epochs are refused from then on.
 func (s *Store) RotateEpoch() {
 	s.mu.Lock()

@@ -135,6 +135,9 @@ func main() {
 	g := &gateway.Gateway{Config: &fc.Config, Mode: "enroll", Fresh: fresh.New(nil),
 		EAR: &ear.Verifier{Key: key, MaxAge: time.Duration(fc.EAR.MaxAgeS) * time.Second,
 			Skew: time.Duration(fc.EAR.SkewS) * time.Second, Submods: fc.EAR.Submods}}
+	if err := g.LoadEpoch(); err != nil {
+		log.Fatal(err)
+	}
 	srv := &http.Server{Addr: fc.Listen, Handler: (&server{g: g, ca: ca}).routes(), ReadHeaderTimeout: 10 * time.Second,
 		TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12}}
 	log.Printf("ca-gateway %s listening on %s", fc.RRPID, fc.Listen)

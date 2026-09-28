@@ -38,6 +38,24 @@ type Config struct {
 		Submods []string `json:"submods"`
 	} `json:"ear"`
 	Targets map[string]*Target `json:"targets"`
+	// EpochFile holds the deployment's current epoch marker (hex), shared by its RRPs; absent: a marker of this RRP.
+	EpochFile string `json:"epoch_file,omitempty"`
+}
+
+// LoadEpoch installs the epoch marker of EpochFile, if one is configured.
+func (g *Gateway) LoadEpoch() error {
+	if g.Config.EpochFile == "" {
+		return nil
+	}
+	raw, err := os.ReadFile(g.Config.EpochFile)
+	if err != nil {
+		return err
+	}
+	m, err := hex.DecodeString(strings.TrimSpace(string(raw)))
+	if err != nil {
+		return fmt.Errorf("gateway: %s: not hex", g.Config.EpochFile)
+	}
+	return g.Fresh.SetEpoch(m)
 }
 
 // Target is the policy for one Target.
