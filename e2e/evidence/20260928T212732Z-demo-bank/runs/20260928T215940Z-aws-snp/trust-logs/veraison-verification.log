@@ -1,0 +1,12 @@
+INFO	gin	[GIN] 2026/09/28 - 22:00:51 | 201 |     4.79265ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=hQRvLrbpBStJwYRH6SFuI0VeB1Ms3saubxZy1e0x2j4ByrgvIV70iZ1cuov1dD_Ym9dlCkWjrjoHhAQYUirWbg%3D%3D"
+INFO	gin	
+INFO	gin	[GIN] 2026/09/28 - 22:00:52 | 200 |   23.385809ms |       127.0.0.1 | POST     "/challenge-response/v1/session/122973b0-bb88-11f1-bb44-373262646431"
+INFO	gin	
+INFO	gin	[GIN] 2026/09/28 - 22:00:52 | 204 |        6.07µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/122973b0-bb88-11f1-bb44-373262646431"
+INFO	gin	
+INFO	gin	[GIN] 2026/09/28 - 22:00:52 | 201 |     5.01553ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=ZKj1yf1NmY3movxv3FRVUZY6dU1f6aVuQ8OoFlo3bn3GT_5vGU_sJ2hVbOrDe8T_lrl2pmzf21iE7IlFmmJOfA%3D%3D"
+INFO	gin	
+INFO	gin	[GIN] 2026/09/28 - 22:00:52 | 200 |   24.214979ms |       127.0.0.1 | POST     "/challenge-response/v1/session/1257c036-bb88-11f1-bb44-373262646431"
+INFO	gin	
+INFO	gin	[GIN] 2026/09/28 - 22:00:52 | 204 |        6.29µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/1257c036-bb88-11f1-bb44-373262646431"
+INFO	gin	

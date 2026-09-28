@@ -1,0 +1,3 @@
+drwxr-xr-x 2 root root 0 Sep 28 21:45 /sys/kernel/config/tsm/report
+2026/09/28 21:46:21 ok  attestation plug-in and CAI            49.3 ms  tdx 
+2026/09/28 21:46:22 NO  TACRA: ledger certificate             548.9 ms   cai: EnrollCredential: 403 RRP ca: attestation: ear: not affirming: TDX is "contraindicated"

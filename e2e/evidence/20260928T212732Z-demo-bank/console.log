@@ -1,0 +1,47 @@
+== build (linux/amd64)
+== create demobank-trust-2609282127 (SEV-SNP n2d-standard-4) and demobank-core-2609282127 (e2-standard-2) in us-central1-c
+== copy programs and sources
+== install both (Veraison builds on the trust zone)
+== install both (Veraison builds on the trust zone)
+== trust zone: keys, CA, stores, policy
+== core: the ledger trusts the bank's workload CA for client logins
+== install both (Veraison builds on the trust zone)
+== trust zone: keys, CA, stores, policy
+== core: the ledger trusts the bank's workload CA for client logins
+== the fraud service's API key goes to the bank's Vault (piped machine to machine, never written here)
+== install both (Veraison builds on the trust zone)
+== trust zone: keys, CA, stores, policy
+== core: the ledger trusts the bank's workload CA for client logins
+== the fraud service's API key goes to the bank's Vault (piped machine to machine, never written here)
+== trust zone: start
+== install both (Veraison builds on the trust zone)
+== trust zone: keys, CA, stores, policy
+== core: the ledger trusts the bank's workload CA for client logins
+== the fraud service's API key goes to the bank's Vault (piped machine to machine, never written here)
+== trust zone: start
+== up: demobank-trust-2609282127, demobank-core-2609282127
+== gcp-snp: create demobank-pay-282141-gcp-snp (--machine-type=n2d-standard-2 --min-cpu-platform=AMD Milan --confidential-compute-type=SEV_SNP --maintenance-policy=TERMINATE)
+== gcp-snp: run the payment service
+== gcp-snp: delete demobank-pay-282141-gcp-snp
+== gcp-tdx: create demobank-pay-282145-gcp-tdx (--machine-type=c3-standard-4 --confidential-compute-type=TDX --maintenance-policy=TERMINATE)
+== gcp-tdx: run the payment service
+== gcp-tdx: delete demobank-pay-282145-gcp-tdx
+== gcp-tdx: create demobank-pay-282153-gcp-tdx (--machine-type=c3-standard-4 --confidential-compute-type=TDX --maintenance-policy=TERMINATE)
+== gcp-tdx: run the payment service
+== gcp-tdx: delete demobank-pay-282153-gcp-tdx
+== approve tdx f21e6b48743fe14c2d090078ca1197f09ae4c99438677f2c79901ef80e2aeefe2f9a7eb6e3eb3b5047c4f1511731e5d3: Google's endorsement, verified against the pinned GCE TCB root
+== trust zone: new policy, restart the verifier and the gateways
+== gcp-tdx: create demobank-pay-282157-gcp-tdx (--machine-type=c3-standard-4 --confidential-compute-type=TDX --maintenance-policy=TERMINATE)
+== gcp-tdx: run the payment service
+== gcp-tdx: delete demobank-pay-282157-gcp-tdx
+== aws-snp: key pair, security group (SSH from this address only), c6a.large with AmdSevSnp=enabled
+== aws-snp: GCP firewall rule demobank-aws-215940 admits 18.216.111.184 to the EST server, the ledger and the fraud service only
+== aws-snp: run the payment service (over the internet to the bank in GCP)
+== aws-snp: terminate, delete the security group, key pair and firewall rule
+== ordinary: create demobank-pay-282201-ordinary (--machine-type=e2-small)
+== ordinary: run the payment service
+== ordinary: delete demobank-pay-282201-ordinary
+== unapproved: create demobank-pay-282204-unapproved (--machine-type=n2d-standard-4 --min-cpu-platform=AMD Milan --confidential-compute-type=SEV_SNP --maintenance-policy=TERMINATE)
+== unapproved: run the payment service
+== unapproved: delete demobank-pay-282204-unapproved
+== delete demobank-trust-2609282127 and demobank-core-2609282127

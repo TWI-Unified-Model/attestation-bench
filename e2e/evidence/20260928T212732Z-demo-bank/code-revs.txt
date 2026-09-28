@@ -1,0 +1,9 @@
+twi-tacra 6ef5810099c5
+globalsign-est b2934d169a73
+veraison-services cd2afab5270a
+go-gen-ref 3c8603164fbd
+step-ca v0.30.2, step v0.30.2, vault 2.1.1 (official release, SHA-256 checked on the VM)
+during the run (the payment runs used these; see the commits for the changes):
+  twi-tacra a3f7d12  deployment fixes (gcc on the trust zone, CoRIM media type, core install/pg_isready), before the first payment
+  twi-tacra 261e9bc  tdx-verifier logs the unmatched MRTD (binary sha256 1de0520207eb1cb4f2a3e0af559fa865610eeb71c0f7ed5e970a154a3a291863,
+                     deployed at 21:52Z, before the second TDX run); gce-endorsement; approve step (policy change at 21:56Z)

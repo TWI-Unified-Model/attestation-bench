@@ -1,0 +1,6 @@
+2026-09-28 22:00:45.181 UTC [7757] LOG:  checkpoint starting: time
+2026-09-28 22:00:45.913 UTC [7757] LOG:  checkpoint complete: wrote 8 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.706 s, sync=0.009 s, total=0.733 s; sync files=8, longest=0.005 s, average=0.002 s; distance=1 kB, estimate=156 kB; lsn=0/1995940, redo lsn=0/1995908
+2026-09-28 22:00:52.486 UTC [8617] [unknown]@[unknown] 18.216.111.184(49872) LOG:  connection received: host=18.216.111.184 port=49872
+2026-09-28 22:00:52.593 UTC [8617] payments@bank 18.216.111.184(49872) LOG:  connection authenticated: identity="CN=payments.workload.demobank.example" method=cert (/etc/postgresql/16/main/pg_hba.conf:2)
+2026-09-28 22:00:52.593 UTC [8617] payments@bank 18.216.111.184(49872) LOG:  connection authorized: user=payments database=bank SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)
+2026-09-28 22:00:53.037 UTC [8617] payments@bank 18.216.111.184(49872) LOG:  disconnection: session time: 0:00:00.551 user=payments database=bank host=18.216.111.184 port=49872

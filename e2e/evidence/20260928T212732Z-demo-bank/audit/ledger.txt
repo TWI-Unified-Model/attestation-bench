@@ -1,0 +1,63 @@
+    id    |          holder           | currency | balance 
+----------+---------------------------+----------+---------
+ ACC-1001 | Demo customer (fictional) | USD      | 4623.50
+ ACC-2002 | Demo merchant (fictional) | USD      | 1376.50
+(2 rows)
+
+ id | from_account | to_account | amount |    fraud_ref     |   tee   |             client_cn              |           client_cert_serial            |                       client_cert_issuer                        | db_user  |          created_at           
+----+--------------+------------+--------+------------------+---------+------------------------------------+-----------------------------------------+-----------------------------------------------------------------+----------+-------------------------------
+  1 | ACC-1001     | ACC-2002   | 125.50 | FRD-DA9DF0F28CC6 | sev-snp | payments.workload.demobank.example | 100505483510910569057168939122081688056 | /O=Demo Bank workload CA/CN=Demo Bank workload CA Intermediate  | payments | 2026-09-28 21:43:05.497613+00
+  2 | ACC-1001     | ACC-2002   | 125.50 | FRD-BB7AA5BB3333 | tdx     | payments.workload.demobank.example | 86483529528201231764414630934768045297  | Demo Bank workload CA Intermediate CA                           | payments | 2026-09-28 21:58:21.243451+00
+  3 | ACC-1001     | ACC-2002   | 125.50 | FRD-71233F5C2BAB | sev-snp | payments.workload.demobank.example | 189772737761729131886305290792578568672 | Demo Bank workload CA Intermediate CA                           | payments | 2026-09-28 22:00:52.626285+00
+(3 rows)
+
+--- ledger log: connections
+2026-09-28 21:40:45.076 UTC [7766] postgres@template1 [local] LOG:  connection authorized: user=postgres database=template1 application_name=psql
+2026-09-28 21:40:45.595 UTC [7769] [unknown]@[unknown] [local] LOG:  connection received: host=[local]
+2026-09-28 21:40:45.596 UTC [7769] postgres@template1 [local] LOG:  connection authenticated: identity="postgres" method=peer (/etc/postgresql/16/main/pg_hba.conf:1)
+2026-09-28 21:40:45.596 UTC [7769] postgres@template1 [local] LOG:  connection authorized: user=postgres database=template1 application_name=psql
+2026-09-28 21:40:46.110 UTC [7772] [unknown]@[unknown] [local] LOG:  connection received: host=[local]
+2026-09-28 21:40:46.112 UTC [7772] postgres@template1 [local] LOG:  connection authenticated: identity="postgres" method=peer (/etc/postgresql/16/main/pg_hba.conf:1)
+2026-09-28 21:40:46.112 UTC [7772] postgres@template1 [local] LOG:  connection authorized: user=postgres database=template1 application_name=psql
+2026-09-28 21:40:46.209 UTC [7778] [unknown]@[unknown] [local] LOG:  connection received: host=[local]
+2026-09-28 21:40:46.211 UTC [7778] postgres@postgres [local] LOG:  connection authenticated: identity="postgres" method=peer (/etc/postgresql/16/main/pg_hba.conf:1)
+2026-09-28 21:40:46.211 UTC [7778] postgres@postgres [local] LOG:  connection authorized: user=postgres database=postgres application_name=pg_isready
+2026-09-28 21:40:46.296 UTC [7782] [unknown]@[unknown] [local] LOG:  connection received: host=[local]
+2026-09-28 21:40:46.297 UTC [7782] postgres@postgres [local] LOG:  connection authenticated: identity="postgres" method=peer (/etc/postgresql/16/main/pg_hba.conf:1)
+2026-09-28 21:40:46.297 UTC [7782] postgres@postgres [local] LOG:  connection authorized: user=postgres database=postgres application_name=psql
+2026-09-28 21:40:46.428 UTC [7788] [unknown]@[unknown] [local] LOG:  connection received: host=[local]
+2026-09-28 21:40:46.429 UTC [7788] postgres@postgres [local] LOG:  connection authenticated: identity="postgres" method=peer (/etc/postgresql/16/main/pg_hba.conf:1)
+2026-09-28 21:40:46.429 UTC [7788] postgres@postgres [local] LOG:  connection authorized: user=postgres database=postgres application_name=pg_isready
+2026-09-28 21:40:46.444 UTC [7793] [unknown]@[unknown] 127.0.0.1(48112) LOG:  connection received: host=127.0.0.1 port=48112
+2026-09-28 21:40:46.524 UTC [7798] [unknown]@[unknown] [local] LOG:  connection received: host=[local]
+2026-09-28 21:40:46.525 UTC [7798] postgres@postgres [local] LOG:  connection authenticated: identity="postgres" method=peer (/etc/postgresql/16/main/pg_hba.conf:1)
+2026-09-28 21:40:46.525 UTC [7798] postgres@postgres [local] LOG:  connection authorized: user=postgres database=postgres application_name=pg_isready
+2026-09-28 21:43:05.488 UTC [7975] [unknown]@[unknown] 10.128.15.232(32996) LOG:  connection received: host=10.128.15.232 port=32996
+2026-09-28 21:43:05.495 UTC [7975] payments@bank 10.128.15.232(32996) LOG:  connection authenticated: identity="CN=payments.workload.demobank.example" method=cert (/etc/postgresql/16/main/pg_hba.conf:2)
+2026-09-28 21:43:05.495 UTC [7975] payments@bank 10.128.15.232(32996) LOG:  connection authorized: user=payments database=bank SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)
+2026-09-28 21:44:57.099 UTC [8099] [unknown]@[unknown] [local] LOG:  connection received: host=[local]
+2026-09-28 21:44:57.101 UTC [8099] postgres@bank [local] LOG:  connection authenticated: identity="postgres" method=peer (/etc/postgresql/16/main/pg_hba.conf:1)
+2026-09-28 21:44:57.101 UTC [8099] postgres@bank [local] LOG:  connection authorized: user=postgres database=bank application_name=psql
+2026-09-28 21:44:57.208 UTC [8102] [unknown]@[unknown] [local] LOG:  connection received: host=[local]
+2026-09-28 21:44:57.209 UTC [8102] postgres@bank [local] LOG:  connection authenticated: identity="postgres" method=peer (/etc/postgresql/16/main/pg_hba.conf:1)
+2026-09-28 21:44:57.209 UTC [8102] postgres@bank [local] LOG:  connection authorized: user=postgres database=bank application_name=psql
+2026-09-28 21:58:21.232 UTC [8480] [unknown]@[unknown] 10.128.0.28(54598) LOG:  connection received: host=10.128.0.28 port=54598
+2026-09-28 21:58:21.240 UTC [8480] payments@bank 10.128.0.28(54598) LOG:  connection authenticated: identity="CN=payments.workload.demobank.example" method=cert (/etc/postgresql/16/main/pg_hba.conf:2)
+2026-09-28 21:58:21.241 UTC [8480] payments@bank 10.128.0.28(54598) LOG:  connection authorized: user=payments database=bank SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)
+2026-09-28 22:00:52.486 UTC [8617] [unknown]@[unknown] 18.216.111.184(49872) LOG:  connection received: host=18.216.111.184 port=49872
+2026-09-28 22:00:52.593 UTC [8617] payments@bank 18.216.111.184(49872) LOG:  connection authenticated: identity="CN=payments.workload.demobank.example" method=cert (/etc/postgresql/16/main/pg_hba.conf:2)
+2026-09-28 22:00:52.593 UTC [8617] payments@bank 18.216.111.184(49872) LOG:  connection authorized: user=payments database=bank SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)
+2026-09-28 22:03:10.657 UTC [8747] [unknown]@[unknown] 10.128.0.29(60534) LOG:  connection received: host=10.128.0.29 port=60534
+2026-09-28 22:03:10.663 UTC [8747] payments@bank 10.128.0.29(60534) FATAL:  connection requires a valid client certificate
+2026-09-28 22:07:52.821 UTC [9000] [unknown]@[unknown] [local] LOG:  connection received: host=[local]
+2026-09-28 22:07:52.822 UTC [9000] postgres@bank [local] LOG:  connection authenticated: identity="postgres" method=peer (/etc/postgresql/16/main/pg_hba.conf:1)
+2026-09-28 22:07:52.822 UTC [9000] postgres@bank [local] LOG:  connection authorized: user=postgres database=bank application_name=psql
+--- fraud service log
+2026/09/28 21:37:36 fraud-api listening on :8444
+2026/09/28 21:37:36 http: TLS handshake error from 127.0.0.1:32780: EOF
+2026/09/28 21:38:51 http: TLS handshake error from 127.0.0.1:36116: EOF
+2026/09/28 21:40:46 http: TLS handshake error from 127.0.0.1:35240: EOF
+2026/09/28 21:43:05 score FRD-DA9DF0F28CC6: ACC-1001 -> ACC-2002 12550 cents: approve (0)
+2026/09/28 21:58:21 score FRD-BB7AA5BB3333: ACC-1001 -> ACC-2002 12550 cents: approve (0)
+2026/09/28 22:00:52 score FRD-71233F5C2BAB: ACC-1001 -> ACC-2002 12550 cents: approve (0)
+2026/09/28 22:03:10 score refused from 10.128.0.29:33220: wrong or missing API key

@@ -1,0 +1,29 @@
+{
+ "tee": "sev-snp",
+ "caapi": "127.0.0.1:50061",
+ "hint": "payments.workload.demobank.example",
+ "ledger": {
+  "target": "https://ledger-db.demobank.example",
+  "host": "core.demobank.internal",
+  "port": 5432,
+  "database": "bank",
+  "user": "payments",
+  "server_ca_pem": "-----BEGIN CERTIFICATE-----\nMIIBhjCCAS2gAwIBAgIQD2MEeXUrp+INksgu9YPNTzAKBggqhkjOPQQDAjAiMSAw\nHgYDVQQDExdEZW1vIEJhbmsgY29yZSBUTFMgcm9vdDAeFw0yNjA5MjgyMTM1NDha\nFw0yNjEwMjgyMTM1NDhaMCIxIDAeBgNVBAMTF0RlbW8gQmFuayBjb3JlIFRMUyBy\nb290MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEUumdD9WiY46iVJvxwM3ILtEr\naoxugW6cofrmMomu402Y0BtD6RoR3VR6WcuI0pN3OjJBE5X1TX/gJPJZ30NocqNF\nMEMwDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYBAf8CAQEwHQYDVR0OBBYE\nFHUZ2E13ZSIMSI1UGlvRFzC/xDtUMAoGCCqGSM49BAMCA0cAMEQCIAV6kbPk821N\nglmO04IdzIZhfmbtDXp6wArsbKVY0bdhAiAKp0WIKn5mHY/SsMPvfJPjwByZpzpB\naQCp3Tzlt2mxFQ==\n-----END CERTIFICATE-----\n"
+ },
+ "fraud": {
+  "target": "https://fraud-api.demobank.example",
+  "url": "https://core.demobank.internal:8444",
+  "server_ca_pem": "-----BEGIN CERTIFICATE-----\nMIIBhjCCAS2gAwIBAgIQD2MEeXUrp+INksgu9YPNTzAKBggqhkjOPQQDAjAiMSAw\nHgYDVQQDExdEZW1vIEJhbmsgY29yZSBUTFMgcm9vdDAeFw0yNjA5MjgyMTM1NDha\nFw0yNjEwMjgyMTM1NDhaMCIxIDAeBgNVBAMTF0RlbW8gQmFuayBjb3JlIFRMUyBy\nb290MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEUumdD9WiY46iVJvxwM3ILtEr\naoxugW6cofrmMomu402Y0BtD6RoR3VR6WcuI0pN3OjJBE5X1TX/gJPJZ30NocqNF\nMEMwDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYBAf8CAQEwHQYDVR0OBBYE\nFHUZ2E13ZSIMSI1UGlvRFzC/xDtUMAoGCCqGSM49BAMCA0cAMEQCIAV6kbPk821N\nglmO04IdzIZhfmbtDXp6wArsbKVY0bdhAiAKp0WIKn5mHY/SsMPvfJPjwByZpzpB\naQCp3Tzlt2mxFQ==\n-----END CERTIFICATE-----\n"
+ },
+ "relying_parties": {
+  "https://ledger-db.demobank.example": "https://ca.demobank.example",
+  "https://fraud-api.demobank.example": "https://vault.demobank.example"
+ },
+ "vault_origins": {
+  "https://vault.demobank.example": {
+   "DHKEM(P-256, HKDF-SHA256)": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEM6LkEn5XHNzFAF5tp-p7p36LxCwH00sJqgRfCxTqQfMR8oFDw_ynmMed5UbCcP6gwsnj_IVpzSecXvH8K05afQ",
+   "DHKEM(X25519, HKDF-SHA256)": "MCowBQYDK2VuAyEABsvUb3pXozY3VIIcunoo3PRTO4RAKDt2-NV2QFJ2UVQ"
+  }
+ },
+ "local_epoch_hex": "4741ed52b9674a906074b04d9f86301279e046df3f265f02996e9d88c0d634d8"
+}

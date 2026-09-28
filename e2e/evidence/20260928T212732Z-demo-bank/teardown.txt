@@ -1,0 +1,7 @@
+GCP instances labelled purpose=demo-bank: 0
+GCP instances in rats-probe: 0
+GCP firewall rules demobank-*: 0
+AWS us-east-2 instances tagged purpose=demo-bank, not terminated: 0
+AWS us-east-2 key pairs demobank-*: 0
+AWS us-east-2 security groups demobank-*: 0
+GCP disks: 0, GCP addresses: 0, AWS us-east-2 volumes: 0 (checked 2026-09-28T22:09:34Z)

@@ -1,0 +1,18 @@
+{
+ "mode": "payment",
+ "tee": "tdx",
+ "steps": [
+  {
+   "step": "attestation plug-in and CAI",
+   "ok": true,
+   "ms": 42.724,
+   "note": "tdx"
+  },
+  {
+   "step": "TACRA: ledger certificate",
+   "ok": false,
+   "ms": 515.293,
+   "error": "cai: EnrollCredential: 403 RRP ca: attestation: ear: not affirming: TDX is \"contraindicated\"\n"
+  }
+ ]
+}

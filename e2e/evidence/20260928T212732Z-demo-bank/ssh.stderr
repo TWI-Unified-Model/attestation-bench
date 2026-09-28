@@ -1,0 +1,156 @@
+WARNING: You have selected a disk size of under [200GB]. This may result in poor I/O performance. For more information, see: https://developers.google.com/compute/docs/disks#performance.
+Created [https://www.googleapis.com/compute/v1/projects/rats-probe/zones/us-central1-c/instances/demobank-trust-2609282127].
+WARNING: Some requests generated warnings:
+ - Disk size: '30 GB' is larger than image size: '10 GB'. You might need to resize the root repartition manually if the operating system does not support automatic resizing. See https://cloud.google.com/compute/docs/disks/add-persistent-disk#resize_pd for details.
+
+WARNING: You have selected a disk size of under [200GB]. This may result in poor I/O performance. For more information, see: https://developers.google.com/compute/docs/disks#performance.
+Created [https://www.googleapis.com/compute/v1/projects/rats-probe/zones/us-central1-c/instances/demobank-core-2609282127].
+WARNING: Some requests generated warnings:
+ - Disk size: '30 GB' is larger than image size: '10 GB'. You might need to resize the root repartition manually if the operating system does not support automatic resizing. See https://cloud.google.com/compute/docs/disks/add-persistent-disk#resize_pd for details.
+
+ssh: connect to host 34.41.130.86 port 22: Connection refused
+
+Recommendation: To check for possible causes of SSH connectivity issues and get
+recommendations, rerun the ssh command with the --troubleshoot option.
+
+gcloud compute ssh demobank-trust-2609282127 --project=rats-probe --zone=us-central1-c --troubleshoot
+
+Or, to investigate an IAP tunneling issue:
+
+gcloud compute ssh demobank-trust-2609282127 --project=rats-probe --zone=us-central1-c --troubleshoot --tunnel-through-iap
+
+ERROR: (gcloud.compute.ssh) [/usr/bin/ssh] exited with return code [255].
+Warning: Permanently added 'compute.7006680478574404924' (ED25519) to the list of known hosts.
+nikolaichuk_s_f_gmail_com@34.41.130.86: Permission denied (publickey).
+
+Recommendation: To check for possible causes of SSH connectivity issues and get
+recommendations, rerun the ssh command with the --troubleshoot option.
+
+gcloud compute ssh demobank-trust-2609282127 --project=rats-probe --zone=us-central1-c --troubleshoot
+
+Or, to investigate an IAP tunneling issue:
+
+gcloud compute ssh demobank-trust-2609282127 --project=rats-probe --zone=us-central1-c --troubleshoot --tunnel-through-iap
+
+ERROR: (gcloud.compute.ssh) [/usr/bin/ssh] exited with return code [255].
+Warning: Permanently added 'compute.2401531941537408306' (ED25519) to the list of known hosts.
+
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+Your certificate has been saved in root.crt.
+Your private key has been saved in root.key.
+Your certificate has been saved in est-server.crt.
+Your private key has been saved in est-server.key.
+Your certificate has been saved in ca-gateway.crt.
+Your private key has been saved in ca-gateway.key.
+Your certificate has been saved in vault-gateway.crt.
+Your private key has been saved in vault-gateway.key.
+Your certificate has been saved in tdx-verifier.crt.
+Your private key has been saved in tdx-verifier.key.
+Your certificate has been saved in vault.crt.
+Your private key has been saved in vault.key.
+Your certificate has been saved in root.crt.
+Your private key has been saved in root.key.
+Your certificate has been saved in server.crt.
+Your private key has been saved in server.key.
+psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: No such file or directory
+	Is the server running locally and accepting connections on that socket?
+psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: No such file or directory
+	Is the server running locally and accepting connections on that socket?
+Connection to 127.0.0.1 5432 port [tcp/postgresql] succeeded!
+Connection to 127.0.0.1 8444 port [tcp/*] succeeded!
+bash: line 1: /opt/demobank/secrets/fraud-api-key: Permission denied
+Connection to 127.0.0.1 5432 port [tcp/postgresql] succeeded!
+Connection to 127.0.0.1 8444 port [tcp/*] succeeded!
+Connection to 127.0.0.1 5432 port [tcp/postgresql] succeeded!
+Connection to 127.0.0.1 8444 port [tcp/*] succeeded!
+WARNING: You have selected a disk size of under [200GB]. This may result in poor I/O performance. For more information, see: https://developers.google.com/compute/docs/disks#performance.
+Created [https://www.googleapis.com/compute/v1/projects/rats-probe/zones/us-central1-c/instances/demobank-pay-282141-gcp-snp].
+WARNING: Some requests generated warnings:
+ - Disk size: '30 GB' is larger than image size: '10 GB'. You might need to resize the root repartition manually if the operating system does not support automatic resizing. See https://cloud.google.com/compute/docs/disks/add-persistent-disk#resize_pd for details.
+
+Warning: Permanently added 'compute.5312580549072085482' (ED25519) to the list of known hosts.
+nikolaichuk_s_f_gmail_com@35.188.199.72: Permission denied (publickey).
+
+Recommendation: To check for possible causes of SSH connectivity issues and get
+recommendations, rerun the ssh command with the --troubleshoot option.
+
+gcloud compute ssh demobank-pay-282141-gcp-snp --project=rats-probe --zone=us-central1-c --troubleshoot
+
+Or, to investigate an IAP tunneling issue:
+
+gcloud compute ssh demobank-pay-282141-gcp-snp --project=rats-probe --zone=us-central1-c --troubleshoot --tunnel-through-iap
+
+ERROR: (gcloud.compute.ssh) [/usr/bin/ssh] exited with return code [255].
+WARNING: You have selected a disk size of under [200GB]. This may result in poor I/O performance. For more information, see: https://developers.google.com/compute/docs/disks#performance.
+Created [https://www.googleapis.com/compute/v1/projects/rats-probe/zones/us-central1-c/instances/demobank-pay-282145-gcp-tdx].
+WARNING: Some requests generated warnings:
+ - Disk size: '30 GB' is larger than image size: '10 GB'. You might need to resize the root repartition manually if the operating system does not support automatic resizing. See https://cloud.google.com/compute/docs/disks/add-persistent-disk#resize_pd for details.
+
+Warning: Permanently added 'compute.2780297659898355974' (ED25519) to the list of known hosts.
+nikolaichuk_s_f_gmail_com@34.134.189.154: Permission denied (publickey).
+
+Recommendation: To check for possible causes of SSH connectivity issues and get
+recommendations, rerun the ssh command with the --troubleshoot option.
+
+gcloud compute ssh demobank-pay-282145-gcp-tdx --project=rats-probe --zone=us-central1-c --troubleshoot
+
+Or, to investigate an IAP tunneling issue:
+
+gcloud compute ssh demobank-pay-282145-gcp-tdx --project=rats-probe --zone=us-central1-c --troubleshoot --tunnel-through-iap
+
+ERROR: (gcloud.compute.ssh) [/usr/bin/ssh] exited with return code [255].
+WARNING: You have selected a disk size of under [200GB]. This may result in poor I/O performance. For more information, see: https://developers.google.com/compute/docs/disks#performance.
+Created [https://www.googleapis.com/compute/v1/projects/rats-probe/zones/us-central1-c/instances/demobank-pay-282153-gcp-tdx].
+WARNING: Some requests generated warnings:
+ - Disk size: '30 GB' is larger than image size: '10 GB'. You might need to resize the root repartition manually if the operating system does not support automatic resizing. See https://cloud.google.com/compute/docs/disks/add-persistent-disk#resize_pd for details.
+
+Warning: Permanently added 'compute.180996500469800745' (ED25519) to the list of known hosts.
+WARNING: You have selected a disk size of under [200GB]. This may result in poor I/O performance. For more information, see: https://developers.google.com/compute/docs/disks#performance.
+Created [https://www.googleapis.com/compute/v1/projects/rats-probe/zones/us-central1-c/instances/demobank-pay-282157-gcp-tdx].
+WARNING: Some requests generated warnings:
+ - Disk size: '30 GB' is larger than image size: '10 GB'. You might need to resize the root repartition manually if the operating system does not support automatic resizing. See https://cloud.google.com/compute/docs/disks/add-persistent-disk#resize_pd for details.
+
+Warning: Permanently added 'compute.1810555350824737834' (ED25519) to the list of known hosts.
+Creating firewall...
+..Created [https://www.googleapis.com/compute/v1/projects/rats-probe/global/firewalls/demobank-aws-215940].
+done.
+WARNING: You have selected a disk size of under [200GB]. This may result in poor I/O performance. For more information, see: https://developers.google.com/compute/docs/disks#performance.
+Created [https://www.googleapis.com/compute/v1/projects/rats-probe/zones/us-central1-c/instances/demobank-pay-282201-ordinary].
+WARNING: Some requests generated warnings:
+ - Disk size: '30 GB' is larger than image size: '10 GB'. You might need to resize the root repartition manually if the operating system does not support automatic resizing. See https://cloud.google.com/compute/docs/disks/add-persistent-disk#resize_pd for details.
+
+Warning: Permanently added 'compute.6559504890489953590' (ED25519) to the list of known hosts.
+WARNING: You have selected a disk size of under [200GB]. This may result in poor I/O performance. For more information, see: https://developers.google.com/compute/docs/disks#performance.
+Created [https://www.googleapis.com/compute/v1/projects/rats-probe/zones/us-central1-c/instances/demobank-pay-282204-unapproved].
+WARNING: Some requests generated warnings:
+ - Disk size: '30 GB' is larger than image size: '10 GB'. You might need to resize the root repartition manually if the operating system does not support automatic resizing. See https://cloud.google.com/compute/docs/disks/add-persistent-disk#resize_pd for details.
+
+Warning: Permanently added 'compute.5955087457322490519' (ED25519) to the list of known hosts.

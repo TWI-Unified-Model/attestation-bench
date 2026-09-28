@@ -1,0 +1,6 @@
+INFO	gin	[GIN] 2026/09/28 - 22:06:11 | 201 |     5.04587ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=H9mWQVLhCUdXxIF7XhQXXpQvH6np6MwxNVTPLihMYAgBd8lXef9th9IxQgYQc0N_pnGdlMZEJt3ee91wuXPA1Q%3D%3D"
+INFO	gin	
+INFO	gin	[GIN] 2026/09/28 - 22:06:11 | 200 |   11.894239ms |       127.0.0.1 | POST     "/challenge-response/v1/session/d0b9cdae-bb88-11f1-bb44-373262646431"
+INFO	gin	
+INFO	gin	[GIN] 2026/09/28 - 22:06:11 | 204 |        5.01µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/d0b9cdae-bb88-11f1-bb44-373262646431"
+INFO	gin	

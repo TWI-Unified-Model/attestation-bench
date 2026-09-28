@@ -1,0 +1,15 @@
+5a135f9f6c613204ffbefe5d39afc9eb2e15ad2eb2b3d22b97b96fe262b00ccd  ./core/bin/fraud-api
+0dc6fa04c4137b1a2000fcc7458cbbe0a5f1ea37ac957ccd9d32630e451e76a1  ./core/bin/step
+732a28c4a743f704830208f897222ae1ece3607aaf8dbaae006fd5ae02d22af2  ./core/core.sh
+8d3d5beff6287506a8fd5a785f7a6c64efaf07760c27f7b95de8d17cc6d81851  ./trust/bin/ca-gateway
+cd72d306f0bfdae93820f781111110735e4b617eb920dd92d0987e16542ffa95  ./trust/bin/estserver
+0dc6fa04c4137b1a2000fcc7458cbbe0a5f1ea37ac957ccd9d32630e451e76a1  ./trust/bin/step
+1ce85f1fea16e2797d8f8f54cc644ad5e4b19f743a14aae43c2642de954e5121  ./trust/bin/step-ca
+870e328c55e299abb334d1669da81d4a28ee96eb57747665eb27735e9437457a  ./trust/bin/tdx-verifier
+9f354e99f8178b936df012b15e10235ab3929862860aea8822c45ed5bad831eb  ./trust/bin/vault-gateway
+77c4da9cec5c9213a8b5a8f9522cbafe7dc8c3cd762172dcc3d421040042166d  ./trust/src/corim-milan.cbor
+a8ca19dc59b15a553c9dcf56ab1792c93cbc26d3fbe8ffb883fd59b9c62f071a  ./trust/src/go-gen-ref-v123.tgz
+d2f56991725a78105ee251183c2dc6f00d7d6ebf3c06bd421d908cc8d36e29b6  ./trust/src/veraison-services.tgz
+064ef83f60dcf892ea6ca985678fd21b5d870a527f94db2c7ce8e074a47d5e77  ./trust/trust.sh
+c3582336aba8df2d8aa621c6cc7f65ee29b0c143b88f2c9e73d668f26d08b584  ./workload/caapi-est
+ada925f20c0c1a728925be582693ddea8078f524148e93ec98baf054b51bf266  ./workload/payments
