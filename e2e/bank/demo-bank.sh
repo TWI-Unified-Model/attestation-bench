@@ -9,6 +9,7 @@
 #
 #   e2e/bank/demo-bank.sh up                (then provision again after a fix: e2e/bank/demo-bank.sh provision)
 #   e2e/bank/demo-bank.sh pay gcp-snp | gcp-tdx | aws-snp | ordinary | unapproved
+#   e2e/bank/demo-bank.sh approve tdx|snp MEASUREMENT     (only on Google's signed endorsement)
 #   e2e/bank/demo-bank.sh audit
 #   e2e/bank/demo-bank.sh down
 set -euo pipefail
@@ -23,6 +24,9 @@ D=/opt/demobank
 # the same values as the bench, taken from the hardware runs in e2e/evidence and hwcheck/evidence
 SNP_MEASUREMENTS="ccdc5cf01ba25526bd65503d95931b787b4385a3277cfe4448addf9c3e894948ae8cf7b099620e3e22717de2fb5d26fa 7a89cceaaba0bbdddc4f775acca3ef15d1f9bf8abccdc6115cfad7fb8eae113df3ee0bb50efa34db9c53ae065b1dc766"
 TDX_MRTDS="c1ee9c16e3afc506cfe042c5b846a368528f3b37618eafb27469bc114cf914e9222c91618470e7f2b28ac360968270a5"
+# what the bank has approved since, each on Google's signed endorsement (demo-bank.sh approve)
+[ -s "$ST/approved-snp" ] && SNP_MEASUREMENTS="$(tr '\n' ' ' < "$ST/approved-snp")"
+[ -s "$ST/approved-tdx" ] && TDX_MRTDS="$(tr '\n' ' ' < "$ST/approved-tdx")"
 TRUST_LOGS="est-server est ca-gateway vault-gateway tdx-verifier veraison-vts veraison-verification step-ca"
 export CLOUDSDK_CORE_DISABLE_PROMPTS=1 GOWORK=off AWS_PAGER=""
 mkdir -p "$ST"
@@ -279,6 +283,26 @@ pay_aws() { # run dir
   verdict "$R" pay
 }
 
+# approve a launch measurement on Google's signed firmware endorsement, then have the trust zone apply the policy
+approve() { # tdx|snp MEASUREMENT
+  local tech="${1:?tdx or snp}" m="${2:?measurement}" f
+  (cd "$HERE/rrp" && GOWORK=off go build -o "$ST/gce-endorsement" ./cmd/gce-endorsement)
+  mkdir -p "$OUT/refvals"
+  log "approve $tech $m: Google's endorsement, verified against the pinned GCE TCB root"
+  "$ST/gce-endorsement" -root "$HERE/e2e/bank/refvals/GCE-cc-tcb-root_1.crt" "-$tech" "$m" -save "$OUT/refvals/$tech-$m.binarypb" \
+    | tee "$OUT/refvals/$tech-$m.json"   # exits non-zero unless Google endorses it
+  f="$ST/approved-$tech"
+  [ -s "$f" ] || { if [ "$tech" = tdx ]; then echo "$TDX_MRTDS"; else echo "$SNP_MEASUREMENTS"; fi; } | tr ' ' '\n' | grep . > "$f"
+  grep -qx "$m" "$f" || echo "$m" >> "$f"
+  [ -s "$ST/approved-snp" ] && SNP_MEASUREMENTS="$(tr '\n' ' ' < "$ST/approved-snp")"
+  [ -s "$ST/approved-tdx" ] && TDX_MRTDS="$(tr '\n' ' ' < "$ST/approved-tdx")"
+  log "trust zone: new policy, restart the verifier and the gateways"
+  gscp "$HERE/e2e/bank/remote/trust.sh" "$TRUST:~/trust.sh"; gssh "$TRUST" "sudo cp ~/trust.sh $D/trust.sh && rm ~/trust.sh"
+  gssh "$TRUST" "sudo INTERNAL_IP=$TRUST_INT EXTERNAL_IP=$TRUST_EXT SNP_MEASUREMENTS='$SNP_MEASUREMENTS' TDX_MRTDS='$TDX_MRTDS' bash $D/trust.sh setup \
+    && sudo bash $D/trust.sh restart tdx-verifier ca-gateway vault-gateway" | tee -a "$OUT/refvals/policy-changes.txt"
+  gscp "$TRUST:$D/public/policy.json" "$OUT/public/policy.json"
+}
+
 audit() {
   mkdir -p "$OUT/audit"
   gssh "$CORE" "sudo bash $D/core.sh audit" | tee "$OUT/audit/ledger.txt"
@@ -310,6 +334,7 @@ case "${1:-}" in
   up) up ;;
   provision) provision ;;
   pay) shift; pay "$@" ;;
+  approve) shift; approve "$@" ;;
   audit) audit ;;
   down) down ;;
   *) echo "usage: $0 up | pay KIND | audit | down" >&2; exit 2 ;;

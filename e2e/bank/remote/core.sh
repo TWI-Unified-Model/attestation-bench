@@ -94,7 +94,7 @@ CREATE TABLE transfers (
   tee                text NOT NULL,                                        -- as the service reports it
   client_cn          text NOT NULL DEFAULT ssl_client_dn_field('commonName'), -- from the TLS session
   client_cert_serial text NOT NULL DEFAULT ssl_client_serial()::text,
-  client_cert_issuer text NOT NULL DEFAULT ssl_issuer_dn(),
+  client_cert_issuer text NOT NULL DEFAULT ssl_issuer_field('commonName'),  -- ssl_issuer_dn() stops at 63 bytes
   db_user            text NOT NULL DEFAULT current_user,
   created_at         timestamptz NOT NULL DEFAULT now(),
   CHECK (from_account <> to_account)

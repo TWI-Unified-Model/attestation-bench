@@ -6,7 +6,7 @@
 #
 #   trust.sh install                        packages, Go, Vault, Veraison (sources in /opt/demobank/src)
 #   trust.sh setup                          env: INTERNAL_IP EXTERNAL_IP SNP_MEASUREMENTS TDX_MRTDS
-#   trust.sh start | stop | status
+#   trust.sh start | stop | status | restart SERVICE...
 set -euo pipefail
 D=/opt/demobank
 V=/root/veraison-deployment
@@ -212,6 +212,18 @@ start() {
   chmod 644 "$D/public/origin-keys.json"
   start_one est-server "$D/bin/estserver" -config "$D/config/est-server.json"; wait_port 18443
   status
+}
+
+restart() {   # the named services read their configuration again
+  local s
+  for s in "$@"; do
+    if running "$s"; then
+      kill "$(cat "$D/logs/$s.pid")"
+      for _ in $(seq 1 40); do running "$s" || break; sleep 0.25; done
+    fi
+    rm -f "$D/logs/$s.pid"
+  done
+  start
 }
 
 stop() {

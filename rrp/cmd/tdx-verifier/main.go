@@ -153,7 +153,7 @@ func (s *server) appraise(token, nonce []byte) (string, map[string]string, error
 		return "contraindicated", ann, errors.New("REPORTDATA is not the session nonce")
 	}
 	if !slices.Contains(s.cfg.MRTDs, ann["mrtd"]) {
-		return "contraindicated", ann, errors.New("MRTD matches no reference value")
+		return "contraindicated", ann, fmt.Errorf("MRTD %s matches no reference value", ann["mrtd"])
 	}
 	return "affirming", ann, nil
 }
