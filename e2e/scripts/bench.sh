@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # The local TACRA test bench: Veraison (verification), step-ca (workload credentials), HashiCorp Vault (secrets),
-# the Credential Authority and Secret Vault gateways (the RRPs) and the EST server (the conduit). Keys, passwords and
+# the Credential Authority and Secret Vault gateways (the RRPs), the EST server (the conduit) and an ordinary mTLS
+# service (the RATS-unaware Relying Party). Keys, passwords and
 # generated configuration live under ~/tacra-bench, outside git. Every listener is on 127.0.0.1.
 #
 #   e2e/scripts/bench.sh config    write the gateway and EST server configuration (measurements from MEASUREMENTS)
@@ -62,6 +63,7 @@ print("configuration written to", f"{B}/config")
 PY
   (cd "$HERE/rrp" && GOWORK=off go build -o "$BIN/ca-gateway" ./cmd/ca-gateway && GOWORK=off go build -o "$BIN/vault-gateway" ./cmd/vault-gateway)
   (cd "$EST" && GOWORK=off go build -o "$BIN/estserver" ./cmd/estserver)
+  (cd "$HERE/e2e" && GOWORK=off go build -o "$BIN/rup" ./cmd/rup)
   echo "binaries in $BIN"
 }
 
@@ -91,16 +93,18 @@ case "${1:-status}" in
     start_one vault-gateway "$BIN/vault-gateway" -config "$B/config/vault-gateway.json"
     wait_port 9101; wait_port 9102
     start_one est-server "$BIN/estserver" -config "$B/config/est-server.json"
-    wait_port 18443 ;;
+    start_one rup "$BIN/rup" -listen 127.0.0.1:19443 -cert "$B/tls/rup.crt" -key "$B/tls/rup.key" \
+      -client-ca "$B/workload-ca.pem" -allow payments.workload.tacra.example -api-key-file "$B/secrets/rup-api-key"
+    wait_port 18443; wait_port 19443 ;;
   stop)
-    for s in est-server vault-gateway ca-gateway vault step-ca; do
+    for s in rup est-server vault-gateway ca-gateway vault step-ca; do
       if running "$s"; then pid="$(cat "$B/$s.pid")"; kill "$pid"; for _ in 1 2 3 4 5 6 7 8 9 10; do kill -0 "$pid" 2>/dev/null || break; sleep 0.5; done; echo "$s stopped"; fi
       rm -f "$B/$s.pid"
     done
     "$HERE/e2e/scripts/veraison-local.sh" stop ;;
   status)
     "$HERE/e2e/scripts/veraison-local.sh" status
-    for s in step-ca vault ca-gateway vault-gateway est-server; do
+    for s in step-ca vault ca-gateway vault-gateway est-server rup; do
       if running "$s"; then echo "$s running ($(cat "$B/$s.pid"))"; else echo "$s stopped"; fi
     done ;;
   *) echo "usage: $0 config|start|stop|status" >&2; exit 2 ;;

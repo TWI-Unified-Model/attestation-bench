@@ -89,6 +89,11 @@ message InitiateCredentialAcquisitionResponse {
 
     // CEK algorithm for Retrieval. Present when mode is retrieve.
     optional EncryptionAlgorithm encryption_algorithm = 5;
+
+    // Identifier of the RATS Relying Party that will rely on the Evidence
+    // (draft-novak-lamps-tacra-est, rrp_id). The CAI binds the identifier it
+    // holds for the Target if it holds one, and otherwise this one.
+    optional string rrp_id = 6;
 }
 
 message EnrollCredentialRequest {
@@ -107,6 +112,18 @@ message EnrollCredentialRequest {
 
     // CSK algorithm from Initiate-Credential-Acquisition.
     optional SigningAlgorithm signing_algorithm = 6;
+
+    // Freshness Kind from Initiate-Credential-Acquisition.
+    FreshnessKind freshness_kind = 7;
+
+    // The freshness element the Evidence binds: the Handle (present-*), the
+    // local epoch marker (absent-epoch), or eight octets of the Attester's
+    // time (absent-timestamp); absent for absent-none. Hardware Evidence does
+    // not carry it, so the CAS forwards it (the EST handle field).
+    optional bytes freshness_element = 8;
+
+    // Format of evidence, e.g. application/vnd.veraison.tsm-report+cbor.
+    optional string evidence_profile = 9;
 }
 
 message EnrollCredentialResponse {
@@ -127,6 +144,19 @@ message RetrieveCredentialRequest {
 
     // CEK algorithm from Initiate-Credential-Acquisition.
     optional EncryptionAlgorithm encryption_algorithm = 5;
+
+    // Freshness Kind from Initiate-Credential-Acquisition.
+    FreshnessKind freshness_kind = 6;
+
+    // The freshness element the Evidence binds (as for Enrollment).
+    optional bytes freshness_element = 7;
+
+    // Format of evidence.
+    optional string evidence_profile = 8;
+
+    // CEKpub as DER SubjectPublicKeyInfo. Hardware Evidence carries only a
+    // digest over it (the binding input), so the Secret Vault needs it here.
+    bytes cek_pub = 9;
 }
 
 message RetrieveCredentialResponse {

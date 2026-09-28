@@ -10,7 +10,11 @@ import (
 	"github.com/TWI-Unified-Model/tacra/platform"
 )
 
-func createCSR(csk *platform.KeyPair, target string) ([]byte, error) {
+// createCSR makes the CSR that proves possession of the CSK. Given a name
+// (the Credential Hint, with WithCSRNamingHint) the CSR carries only that as
+// its common name and leaves the other names to the Credential Authority's
+// policy; otherwise it names the Target.
+func createCSR(csk *platform.KeyPair, target, name string) ([]byte, error) {
 	signer, err := csk.Signer()
 	if err != nil {
 		return nil, fmt.Errorf("cai: CSR: %w", err)
@@ -18,7 +22,9 @@ func createCSR(csk *platform.KeyPair, target string) ([]byte, error) {
 	tmpl := &x509.CertificateRequest{
 		Subject: pkix.Name{CommonName: truncateCN(target)},
 	}
-	if u, err := url.Parse(target); err == nil && u.Scheme != "" && u.Host != "" {
+	if name != "" {
+		tmpl.Subject.CommonName = truncateCN(name)
+	} else if u, err := url.Parse(target); err == nil && u.Scheme != "" && u.Host != "" {
 		tmpl.URIs = []*url.URL{u}
 	}
 	der, err := x509.CreateCertificateRequest(rand.Reader, tmpl, signer)

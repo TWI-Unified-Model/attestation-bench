@@ -3,6 +3,7 @@ package cai
 import (
 	"context"
 	"crypto"
+	"crypto/x509"
 	"fmt"
 
 	caapiv1 "github.com/TWI-Unified-Model/tacra/gen/go/caapi/v1"
@@ -73,6 +74,9 @@ type AcquisitionRequest struct {
 	Handle              []byte
 	SigningAlgorithm    SigningAlgorithm
 	EncryptionAlgorithm EncryptionAlgorithm
+	// RelyingParty is the RRP identifier the Evidence binds: the one the CAI
+	// holds for the Target, else the Initiate response's.
+	RelyingParty string
 }
 
 // Client is the CAI implementation: one AcquireCredential call that drives
@@ -80,18 +84,59 @@ type AcquisitionRequest struct {
 type Client struct {
 	plugin platform.Plugin
 	caapi  caapiv1.CredentialAcquisitionServiceClient
+
+	// relyingParties holds, per Target, the identifier of the RRP the
+	// deployment intends; Evidence binds it (draft-novak-lamps-tacra-est).
+	relyingParties map[string]string
+	// vaultOrigins holds, per RRP identifier and DHKEM, the Secret Vault's
+	// static KEM key (SubjectPublicKeyInfo DER) the hpke-auth container must
+	// be sealed with.
+	vaultOrigins map[string]map[string][]byte
+	// csrNamesHint makes the CSR name the Credential Hint instead of the
+	// Target, leaving the certificate's names to the CA's policy.
+	csrNamesHint bool
+}
+
+// WithCSRNamingHint makes the CSR carry only the Credential Hint as its
+// common name, for a Credential Authority that assigns the certificate's
+// names by policy (the test bench's CA gateway does).
+func WithCSRNamingHint() Option { return func(c *Client) { c.csrNamesHint = true } }
+
+// Option configures a Client.
+type Option func(*Client)
+
+// WithRelyingParty makes the CAI bind rrpID for target, whatever the
+// Initiate response names.
+func WithRelyingParty(target, rrpID string) Option {
+	return func(c *Client) { c.relyingParties[target] = rrpID }
+}
+
+// WithVaultOrigin provisions the Secret Vault's origin key for rrpID and the
+// named DHKEM (for example "DHKEM(X25519, HKDF-SHA256)").
+func WithVaultOrigin(rrpID, kem string, spki []byte) Option {
+	return func(c *Client) {
+		if c.vaultOrigins[rrpID] == nil {
+			c.vaultOrigins[rrpID] = map[string][]byte{}
+		}
+		c.vaultOrigins[rrpID][kem] = append([]byte(nil), spki...)
+	}
 }
 
 // New constructs a CAI client. plugin must run in the Attester TEE; caapi is
 // the CAAPI gRPC client (CAS Client side).
-func New(plugin platform.Plugin, caapi caapiv1.CredentialAcquisitionServiceClient) (*Client, error) {
+func New(plugin platform.Plugin, caapi caapiv1.CredentialAcquisitionServiceClient, opts ...Option) (*Client, error) {
 	if plugin == nil {
 		return nil, ErrNilPlugin
 	}
 	if caapi == nil {
 		return nil, ErrNilCAAPI
 	}
-	return &Client{plugin: plugin, caapi: caapi}, nil
+	c := &Client{plugin: plugin, caapi: caapi, relyingParties: map[string]string{},
+		vaultOrigins: map[string]map[string][]byte{}}
+	for _, o := range opts {
+		o(c)
+	}
+	return c, nil
 }
 
 // Dial opens a gRPC connection to addr and returns a CAI client. The caller
@@ -143,6 +188,10 @@ func (c *Client) AcquireCredential(ctx context.Context, target string, credType 
 		Handle:              handle,
 		SigningAlgorithm:    initResp.GetSigningAlgorithm(),
 		EncryptionAlgorithm: initResp.GetEncryptionAlgorithm(),
+		RelyingParty:        initResp.GetRrpId(),
+	}
+	if held, ok := c.relyingParties[target]; ok {
+		req.RelyingParty = held
 	}
 	switch initResp.GetMode() {
 	case ModeRetrieve:
@@ -177,16 +226,26 @@ func (c *Client) retrieve(ctx context.Context, req AcquisitionRequest) (*Credent
 		BoundKey:        cek.Public(),
 		BoundKeyUse:     platform.BoundKeyUseEncrypt,
 		Target:          req.Target,
+		RelyingParty:    req.RelyingParty,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("cai: generate evidence: %w", err)
 	}
+	cekPub, err := x509.MarshalPKIXPublicKey(cek.Public())
+	if err != nil {
+		return nil, fmt.Errorf("cai: CEKpub: %w", err)
+	}
+	element := freshnessElement(ev, req.Handle)
 	resp, err := c.caapi.RetrieveCredential(ctx, &caapiv1.RetrieveCredentialRequest{
 		Target:              req.Target,
 		CredentialType:      req.Type,
 		CredentialHint:      optionalHint(req.Hint),
 		Evidence:            ev.Token,
 		EncryptionAlgorithm: new(req.EncryptionAlgorithm),
+		FreshnessKind:       req.Kind,
+		FreshnessElement:    element,
+		EvidenceProfile:     optionalHint(ev.MediaType),
+		CekPub:              cekPub,
 	})
 	if err != nil {
 		return nil, rpcError("RetrieveCredential", err)
@@ -194,7 +253,12 @@ func (c *Client) retrieve(ctx context.Context, req AcquisitionRequest) (*Credent
 	if len(resp.GetWrappedCredential()) == 0 {
 		return nil, ErrEmptyCredential
 	}
-	doc, err := UnwrapCredential(cek.Private, resp.GetWrappedCredential())
+	var doc []byte
+	if isHPKEAuth(resp.GetWrappedCredential()) {
+		doc, err = c.openHPKEAuth(resp.GetWrappedCredential(), cek.Private, req, element)
+	} else {
+		doc, err = UnwrapCredential(cek.Private, resp.GetWrappedCredential())
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +277,11 @@ func (c *Client) enroll(ctx context.Context, req AcquisitionRequest) (*Credentia
 	if err != nil {
 		return nil, fmt.Errorf("cai: CSK: %w", err)
 	}
-	csr, err := createCSR(csk, req.Target)
+	name := ""
+	if c.csrNamesHint {
+		name = req.Hint
+	}
+	csr, err := createCSR(csk, req.Target, name)
 	if err != nil {
 		return nil, err
 	}
@@ -224,6 +292,7 @@ func (c *Client) enroll(ctx context.Context, req AcquisitionRequest) (*Credentia
 		CSR:             csr,
 		BoundKeyUse:     platform.BoundKeyUseSign,
 		Target:          req.Target,
+		RelyingParty:    req.RelyingParty,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("cai: generate evidence: %w", err)
@@ -235,6 +304,9 @@ func (c *Client) enroll(ctx context.Context, req AcquisitionRequest) (*Credentia
 		Evidence:         ev.Token,
 		Csr:              csr,
 		SigningAlgorithm: new(req.SigningAlgorithm),
+		FreshnessKind:    req.Kind,
+		FreshnessElement: freshnessElement(ev, req.Handle),
+		EvidenceProfile:  optionalHint(ev.MediaType),
 	})
 	if err != nil {
 		return nil, rpcError("EnrollCredential", err)
