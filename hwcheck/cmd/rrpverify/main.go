@@ -79,6 +79,8 @@ func main() {
 		verify(os.Args[2:])
 	case "tdx-preflight":
 		tdxPreflight(os.Args[2:])
+	case "service":
+		serviceVerify(os.Args[2:])
 	default:
 		fmt.Fprintln(os.Stderr, "usage: rrpverify mint|verify ...")
 		os.Exit(2)
