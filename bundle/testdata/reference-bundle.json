@@ -1,0 +1,26 @@
+{
+ "cek_x25519": "iLNfCUWv_tTbiewQNlfjPEwY8_WnJeqGgQ5URedx1mI",
+ "vault_spki": "MCowBQYDK2VuAyEAVRKPDEnQ3OprzkQ0YFuvIlBcdtC_vWX9aeyVgbu3hXE",
+ "rrp_id": "https://vault1.tacra.example",
+ "target": "https://ledger.tacra.example",
+ "handle": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+ "credential_hint": "workload.tacra.example",
+ "bundle": {
+  "container": "hpke-auth",
+  "suite": {
+   "kem": "DHKEM(X25519, HKDF-SHA256)",
+   "kdf": "HKDF-SHA256",
+   "aead": "AES-256-GCM"
+  },
+  "enc": "3XYEL5_x4ddEJ4Gr8qgPokjBgc6ZTWxqfZjUAaoY5kw",
+  "ciphertext": "fz6kKVlyE-xFCnMlPZ1p2iJ99lDYz9hylwQhrOICNkWYwfheaCiJSSZ5HmBj3tVfGQnP_mC4N7yhYC4nQR83dY-9zvWBgM3tkSgPb8dz2L1ZwhbQFF4kgJ-q0ASCSG_CnKhL6kbP8cf5FQHuJw6uCRFJfGhZpSrVO4THlgSZPloVcPaoUpuGSRjEMTHkfDFvEBxeWgjxlOOUzOw3Qc2o7AGZopY4ZZq_OQCSo3N1xFTA5GVS_-U-AMpQEAqj3UWxGKeJIUIU5WiArKuHvBFGEoAqdIyP5Mqwpp_tk_PvZIGl30AAxZDkT9V_HvhOF6TrDBjqgVGoH1bnb6eLBMjQzmU8nFSRM-gOQ0zYfskXq7dPJwxzB_xqzIv0-M2qi0c7X3nEgg4jlUyEFHEBVuhfQiuZCp9zFLfoWDlj3yxRhAKnOYZ2715iIQ-isGHJH_f_-Fg3_bwiHD66Nm_FDPIZyIU7qhcUWwHJBLehLf5fOlDyNYE_BibzMCLQGu2KdsxHq_nUiCASbBSznvX3S5Fx-7MS",
+  "aad": {
+   "group_id": "7218af300f40805492a432e7bdd1138f3a9f03b006f5bbe74c09946f49113e1f",
+   "rrp_id": "https://vault1.tacra.example",
+   "target": "https://ledger.tacra.example",
+   "credential_hint": "workload.tacra.example",
+   "handle": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8"
+  },
+  "sender_pub": "MCowBQYDK2VuAyEAVRKPDEnQ3OprzkQ0YFuvIlBcdtC_vWX9aeyVgbu3hXE"
+ }
+}
