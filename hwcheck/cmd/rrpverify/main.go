@@ -16,6 +16,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -32,8 +33,10 @@ import (
 	"github.com/veraison/corim/comid"
 	"github.com/veraison/corim/corim"
 	"github.com/veraison/ear"
+	vlog "github.com/veraison/services/log"
 	"github.com/veraison/services/scheme/sevsnp"
 	"github.com/veraison/services/vts/appraisal"
+	"go.uber.org/zap/zapcore"
 )
 
 type handles struct {
@@ -102,6 +105,7 @@ func verify(args []string) {
 	window := fs.Int64("window", 300, "absent-timestamp acceptance window, seconds")
 	out := fs.String("out", "", "results file (default DIR/rrpverify-<veraison>.json)")
 	must(fs.Parse(args))
+	vlog.SetLevel(zapcore.InfoLevel)
 
 	var h handles
 	b, err := os.ReadFile(*handlesPath)
@@ -158,36 +162,56 @@ func verify(args []string) {
 		flipped[len(flipped)-1] ^= 1
 
 		tables := map[string][]byte{"as-delivered": token}
-		if norm, err := pemNormalised(token); err == nil {
-			tables["pem-normalised"] = norm
-		} else {
-			results = append(results, result{Case: m.Case, Check: "normalise certificate table", Want: "pass",
+		if norm, converted, _, err := rewriteTable(token, nil, nil); err != nil {
+			results = append(results, result{Case: m.Case, Check: "read certificate table", Want: "pass",
 				Got: "fail", Error: err.Error()})
+		} else if converted {
+			tables["pem-normalised"] = norm
 		}
-		for _, tbl := range []string{"as-delivered", "pem-normalised"} {
+		if done, _, added, err := rewriteTable(token, ask, ark); err == nil && added {
+			tables["chain-completed"] = done
+		}
+		for _, tbl := range []string{"as-delivered", "pem-normalised", "chain-completed"} {
 			tok, ok := tables[tbl]
 			if !ok {
 				continue
 			}
+			const nonceRefusal, taRefusal = "nonce in the evidence doesn't match", "doesn't match the provisioned one"
 			checks := []struct {
-				name string
-				want string
-				bv   [64]byte
-				ta   []*comid.KeyTriple
+				name   string
+				want   string
+				reason string // the refusal must say this, or the check proves nothing
+				bv     [64]byte
+				ta     []*comid.KeyTriple
 			}{
-				{"honest", "pass", platform.BindingValue(elem, rrp, *target, subject), ta},
-				{"other Target", "fail", platform.BindingValue(elem, rrp, "https://other.tacra.example", subject), ta},
-				{"other RRP identifier", "fail", platform.BindingValue(elem, otherRRP, *target, subject), ta},
-				{"other CSR / CEKpub", "fail", platform.BindingValue(elem, rrp, *target, flipped), ta},
-				{"other freshness element", "fail", platform.BindingValue(otherElem, rrp, *target, subject), ta},
-				{"trust anchor = ASK, not ARK", "fail", platform.BindingValue(elem, rrp, *target, subject), otherTA},
+				{"honest", "pass", "", platform.BindingValue(elem, rrp, *target, subject), ta},
+				{"other Target", "fail", nonceRefusal,
+					platform.BindingValue(elem, rrp, "https://other.tacra.example", subject), ta},
+				{"other RRP identifier", "fail", nonceRefusal, platform.BindingValue(elem, otherRRP, *target, subject), ta},
+				{"other CSR / CEKpub", "fail", nonceRefusal, platform.BindingValue(elem, rrp, *target, flipped), ta},
+				{"other freshness element", "fail", nonceRefusal,
+					platform.BindingValue(otherElem, rrp, *target, subject), ta},
+				{"trust anchor = ASK, not ARK", "fail", taRefusal,
+					platform.BindingValue(elem, rrp, *target, subject), otherTA},
 			}
+			honestPassed := false
 			for _, c := range checks {
 				ev := &appraisal.Evidence{Data: tok, MediaType: sevsnp.EvidenceMediaTypeTSMCbor, Nonce: c.bv[:]}
 				t0 := time.Now()
 				err := impl.ValidateEvidenceIntegrity(ev, c.ta, nil)
 				ms := float64(time.Since(t0).Microseconds()) / 1000
 				r := outcome(m.Case, tbl, c.name, c.want, err, ms)
+				if c.name == "honest" {
+					honestPassed = err == nil
+				}
+				switch {
+				case c.reason != "" && !honestPassed:
+					r.Got, r.OK = "inconclusive", false
+					r.Comment = "the honest Evidence is refused on this table too, so a refusal here proves nothing"
+				case c.reason != "" && err != nil && !strings.Contains(err.Error(), c.reason):
+					r.Got, r.OK = "refused for another reason", false
+					r.Comment = "inconclusive: the refusal is not the one this check tests"
+				}
 				if c.name == "honest" && err == nil {
 					claims, cerr := impl.ExtractClaims(ev, c.ta)
 					if cerr == nil {
@@ -291,19 +315,22 @@ func expectedElement(m caseMeta, h handles, notBefore, notAfter, window int64) (
 	return nil, nil, fmt.Errorf("unknown freshness kind %q", m.FreshnessKind)
 }
 
-// pemNormalised rewrites the certificate table inside a TSM token with every DER entry PEM-encoded, the form the
-// Veraison sevsnp scheme reads; the table is not covered by the report signature.
-func pemNormalised(token []byte) ([]byte, error) {
+// rewriteTable rewrites the certificate table inside a TSM token with every DER entry PEM-encoded (the form the
+// Veraison sevsnp scheme reads) and, when ask and ark are given, adds whichever of the ASK (or ASVK) and ARK entries
+// the host left out, from the RRP's own trust store. The table is not covered by the report signature. converted
+// reports that a DER entry was re-encoded, added that an entry was added.
+func rewriteTable(token, ask, ark []byte) (out []byte, converted, added bool, err error) {
 	var t map[string]any
 	if err := cborUnmarshal(token, &t); err != nil {
-		return nil, err
+		return nil, false, false, err
 	}
 	aux, _ := t["auxblob"].([]byte)
 	if len(aux) == 0 {
-		return nil, errors.New("no certificate table")
+		return nil, false, false, errors.New("no certificate table")
 	}
 	type entry struct{ guid, cert []byte }
 	var entries []entry
+	have := map[string]bool{}
 	for i := 0; i+24 <= len(aux); i += 24 {
 		g := aux[i : i+16]
 		if bytes.Equal(g, make([]byte, 16)) {
@@ -311,13 +338,24 @@ func pemNormalised(token []byte) ([]byte, error) {
 		}
 		off, n := binary.LittleEndian.Uint32(aux[i+16:]), binary.LittleEndian.Uint32(aux[i+20:])
 		if uint64(off)+uint64(n) > uint64(len(aux)) {
-			return nil, errors.New("certificate table entry out of range")
+			return nil, false, false, errors.New("certificate table entry out of range")
 		}
 		c := aux[off : off+n]
 		if len(c) > 0 && c[0] == 0x30 {
-			c = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: c})
+			c, converted = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: c}), true
 		}
+		have[fmt.Sprintf("%x", g)] = true
 		entries = append(entries, entry{append([]byte(nil), g...), c})
+	}
+	for _, add := range []struct {
+		guid string
+		der  []byte
+	}{{guidASK, ask}, {guidARK, ark}} {
+		if add.der != nil && !have[add.guid] {
+			g, _ := hex.DecodeString(add.guid)
+			entries = append(entries, entry{g, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: add.der})})
+			added = true
+		}
 	}
 	off := uint32(24 * (len(entries) + 1))
 	var head, body []byte
@@ -329,10 +367,17 @@ func pemNormalised(token []byte) ([]byte, error) {
 	}
 	head = append(head, make([]byte, 24)...)
 	t["auxblob"] = append(head, body...)
-	return cborMarshal(t)
+	out, err = cborMarshal(t)
+	return out, converted, added, err
 }
 
-// kdsChain returns the ARK (self-signed) and the ASK from a KDS cert_chain file.
+// GUIDs of the ASK (which also carries the ASVK) and ARK entries, in the byte order the host writes them.
+const (
+	guidASK = "4ab7b379bbac4fe4a02f05aef327c782"
+	guidARK = "c0b406a4a803495297433fb6014cd0ae"
+)
+
+// kdsChain returns the ARK (self-signed) and the ASK (or ASVK) from a KDS cert_chain file.
 func kdsChain(path string) (ark, ask []byte) {
 	b, err := os.ReadFile(path)
 	must(err)

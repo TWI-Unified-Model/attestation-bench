@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"github.com/TWI-Unified-Model/tacra/platform"
@@ -51,6 +52,7 @@ func main() {
 	rrpCA := flag.String("rrp-ca", "https://ca1.tacra.example", "RRP identifier for Enrollment")
 	rrpVault := flag.String("rrp-vault", "https://vault1.tacra.example", "RRP identifier for Retrieval")
 	handlesPath := flag.String("handles", "", "Freshness Handles minted by the RRP (rrpverify mint); random if empty")
+	burst := flag.Int("burst", 0, "after the cases, time this many present-nonce Enrollment reports")
 	flag.Parse()
 	must(os.MkdirAll(*out, 0o755))
 
@@ -139,10 +141,42 @@ func main() {
 	}
 	b, _ := json.MarshalIndent(all, "", " ")
 	must(os.WriteFile(filepath.Join(*out, "cases.json"), b, 0o644))
+	if *burst > 0 {
+		timeBurst(p, *burst, *target, *rrpCA, filepath.Join(*out, "burst.json"))
+	}
 	if pub := p.AttestationPublicKey(); pub != nil {
 		der, _ := x509.MarshalPKIXPublicKey(pub)
 		fmt.Printf("attestation key (from the host certificate table): SHA-256(SPKI) %x\n", sha256.Sum256(der))
 	}
+}
+
+// timeBurst times n GenerateEvidence calls (present-nonce, Enrollment, a fresh nonce and CSR each time).
+func timeBurst(p *platform.SEVSNP, n int, target, rrp, path string) {
+	csk, err := p.GenerateCSK(platform.SigningAlgorithmECDSAP256)
+	must(err)
+	signer, err := csk.Signer()
+	must(err)
+	var ms []float64
+	for i := 0; i < n; i++ {
+		csr, err := x509.CreateCertificateRequest(rand.Reader, &x509.CertificateRequest{
+			Subject: pkix.Name{CommonName: "workload.tacra.example"}}, signer)
+		must(err)
+		req := platform.EvidenceRequest{FreshnessKind: platform.FreshnessKindPresentNonce, FreshnessHandle: random(32),
+			Target: target, RelyingParty: rrp, BoundKey: csk.Public(), CSR: csr, BoundKeyUse: platform.BoundKeyUseSign}
+		t0 := time.Now()
+		_, err = p.GenerateEvidence(req)
+		must(err)
+		ms = append(ms, float64(time.Since(t0).Microseconds())/1000)
+	}
+	sorted := append([]float64(nil), ms...)
+	sort.Float64s(sorted)
+	q := func(f float64) float64 { return sorted[int(f*float64(len(sorted)-1))] }
+	sum := map[string]any{"n": n, "min_ms": sorted[0], "median_ms": q(0.5), "p95_ms": q(0.95), "max_ms": sorted[len(sorted)-1],
+		"samples_ms": ms}
+	b, _ := json.MarshalIndent(sum, "", " ")
+	must(os.WriteFile(path, b, 0o644))
+	fmt.Printf("burst of %d: min %.1f ms, median %.1f ms, p95 %.1f ms, max %.1f ms\n", n, sorted[0], q(0.5), q(0.95),
+		sorted[len(sorted)-1])
 }
 
 // fillReportFields reads SIGNING_KEY (48h bits 4:2) and CHIP_ID (1A0h) from the report inside the TSM token.
