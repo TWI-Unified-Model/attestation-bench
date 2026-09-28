@@ -176,6 +176,7 @@ func (c *Client) retrieve(ctx context.Context, req AcquisitionRequest) (*Credent
 		FreshnessHandle: req.Handle,
 		BoundKey:        cek.Public(),
 		BoundKeyUse:     platform.BoundKeyUseEncrypt,
+		Target:          req.Target,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("cai: generate evidence: %w", err)
@@ -222,6 +223,7 @@ func (c *Client) enroll(ctx context.Context, req AcquisitionRequest) (*Credentia
 		BoundKey:        csk.Public(),
 		CSR:             csr,
 		BoundKeyUse:     platform.BoundKeyUseSign,
+		Target:          req.Target,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("cai: generate evidence: %w", err)
