@@ -1,0 +1,264 @@
+// Command tdx-verifier is the test bench's Verifier for Intel TDX Evidence, which the Veraison deployment cannot
+// appraise (veraison-services has no TDX scheme). It offers the subset of Veraison's challenge-response API the EST
+// server uses: a session whose nonce the caller chooses, Evidence as a TSM report (provider tdx_guest), and an EAR
+// signed ES256 with its own key. The quote is verified with go-tdx-guest against Intel PCS collateral with
+// revocation checks; REPORTDATA must be the session nonce; MRTD must be one of the configured reference values.
+// It appraises and reports; it does not decide issuance or release.
+//
+//	tdx-verifier -config tdx-verifier.json
+package main
+
+import (
+	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/sha256"
+	"crypto/tls"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"flag"
+	"fmt"
+	"io"
+	"log"
+	"math/big"
+	"net/http"
+	"os"
+	"slices"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/fxamacker/cbor/v2"
+	"github.com/google/go-tdx-guest/abi"
+	tdxverify "github.com/google/go-tdx-guest/verify"
+	"github.com/google/go-tdx-guest/verify/trust"
+)
+
+const mediaType = "application/vnd.veraison.tsm-report+cbor"
+
+type config struct {
+	Listen  string   `json:"listen"`
+	TLSCert string   `json:"tls_cert"`
+	TLSKey  string   `json:"tls_key"`
+	KeyFile string   `json:"signing_key"` // ES256 private JWK; created if absent
+	MRTDs   []string `json:"reference_mrtd"`
+}
+
+type session struct {
+	nonce   []byte
+	expires time.Time
+	result  string
+}
+
+type server struct {
+	cfg      config
+	key      *ecdsa.PrivateKey
+	getter   *cachingGetter
+	mu       sync.Mutex
+	sessions map[string]*session
+}
+
+// cachingGetter fetches each Intel PCS document once per process lifetime (they are valid for days).
+type cachingGetter struct {
+	inner trust.HTTPSGetter
+	mu    sync.Mutex
+	m     map[string][3]any
+}
+
+func (g *cachingGetter) Get(url string) (map[string][]string, []byte, error) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if r, ok := g.m[url]; ok {
+		h, _ := r[0].(map[string][]string)
+		b, _ := r[1].([]byte)
+		e, _ := r[2].(error)
+		return h, b, e
+	}
+	h, b, err := g.inner.Get(url)
+	if err == nil {
+		g.m[url] = [3]any{h, b, nil}
+	}
+	return h, b, err
+}
+
+func loadOrCreateKey(path string) (*ecdsa.PrivateKey, error) {
+	enc := base64.RawURLEncoding
+	if raw, err := os.ReadFile(path); err == nil {
+		var j struct{ D, X, Y string }
+		if err := json.Unmarshal(raw, &j); err != nil {
+			return nil, err
+		}
+		d, _ := enc.DecodeString(j.D)
+		x, _ := enc.DecodeString(j.X)
+		y, _ := enc.DecodeString(j.Y)
+		return &ecdsa.PrivateKey{PublicKey: ecdsa.PublicKey{Curve: elliptic.P256(), X: new(big.Int).SetBytes(x),
+			Y: new(big.Int).SetBytes(y)}, D: new(big.Int).SetBytes(d)}, nil
+	}
+	k, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	raw, _ := json.Marshal(map[string]string{"kty": "EC", "crv": "P-256", "d": enc.EncodeToString(k.D.FillBytes(make([]byte, 32))),
+		"x": enc.EncodeToString(k.X.FillBytes(make([]byte, 32))), "y": enc.EncodeToString(k.Y.FillBytes(make([]byte, 32)))})
+	return k, os.WriteFile(path, raw, 0o600)
+}
+
+func (s *server) publicJWK() map[string]string {
+	enc := base64.RawURLEncoding
+	return map[string]string{"kty": "EC", "crv": "P-256", "alg": "ES256",
+		"x": enc.EncodeToString(s.key.X.FillBytes(make([]byte, 32))), "y": enc.EncodeToString(s.key.Y.FillBytes(make([]byte, 32)))}
+}
+
+func (s *server) sign(claims map[string]any) (string, error) {
+	enc := base64.RawURLEncoding
+	h, _ := json.Marshal(map[string]string{"alg": "ES256", "typ": "JWT"})
+	p, _ := json.Marshal(claims)
+	signing := enc.EncodeToString(h) + "." + enc.EncodeToString(p)
+	d := sha256.Sum256([]byte(signing))
+	r, sv, err := ecdsa.Sign(rand.Reader, s.key, d[:])
+	if err != nil {
+		return "", err
+	}
+	sig := make([]byte, 64)
+	r.FillBytes(sig[:32])
+	sv.FillBytes(sig[32:])
+	return signing + "." + enc.EncodeToString(sig), nil
+}
+
+// appraise verifies the quote and returns the EAR status and the annotated fields.
+func (s *server) appraise(token, nonce []byte) (string, map[string]string, error) {
+	var t struct {
+		OutBlob  []byte `cbor:"outblob"`
+		Provider string `cbor:"provider"`
+	}
+	if err := cbor.Unmarshal(token, &t); err != nil || strings.TrimSpace(t.Provider) != "tdx_guest" || len(t.OutBlob) < 48+584 {
+		return "", nil, errors.New("not a TSM report of a TDX quote")
+	}
+	q, err := abi.QuoteToProto(t.OutBlob)
+	if err != nil {
+		return "", nil, err
+	}
+	if err := tdxverify.TdxQuote(q, &tdxverify.Options{CheckRevocations: true, GetCollateral: true, Getter: s.getter,
+		Now: time.Now()}); err != nil {
+		return "contraindicated", nil, fmt.Errorf("quote: %w", err)
+	}
+	body := t.OutBlob[48 : 48+584]
+	ann := map[string]string{"mrtd": hex.EncodeToString(body[136:184]), "rtmr0": hex.EncodeToString(body[328:376]),
+		"rtmr1": hex.EncodeToString(body[376:424]), "rtmr2": hex.EncodeToString(body[424:472]),
+		"rtmr3": hex.EncodeToString(body[472:520]), "tee_tcb_svn": hex.EncodeToString(body[0:16])}
+	if !bytes.Equal(body[520:584], nonce) {
+		return "contraindicated", ann, errors.New("REPORTDATA is not the session nonce")
+	}
+	if !slices.Contains(s.cfg.MRTDs, ann["mrtd"]) {
+		return "contraindicated", ann, errors.New("MRTD matches no reference value")
+	}
+	return "affirming", ann, nil
+}
+
+func (s *server) routes() http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /.well-known/veraison/verification", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, 200, map[string]any{"ear-verification-key": s.publicJWK(), "media-types": []string{mediaType},
+			"service-state": "READY"})
+	})
+	mux.HandleFunc("POST /challenge-response/v1/newSession", func(w http.ResponseWriter, r *http.Request) {
+		nonce, err := base64.URLEncoding.DecodeString(r.URL.Query().Get("nonce"))
+		if err != nil || len(nonce) < 8 || len(nonce) > 64 {
+			http.Error(w, "nonce must be 8 to 64 octets, base64url", http.StatusBadRequest)
+			return
+		}
+		id := make([]byte, 16)
+		_, _ = rand.Read(id)
+		sid := hex.EncodeToString(id)
+		s.mu.Lock()
+		for k, v := range s.sessions {
+			if time.Now().After(v.expires) {
+				delete(s.sessions, k)
+			}
+		}
+		s.sessions[sid] = &session{nonce: nonce, expires: time.Now().Add(5 * time.Minute)}
+		s.mu.Unlock()
+		w.Header().Set("Location", "session/"+sid)
+		writeJSON(w, http.StatusCreated, map[string]any{"status": "waiting", "nonce": base64.URLEncoding.EncodeToString(nonce),
+			"accept": []string{mediaType}})
+	})
+	mux.HandleFunc("POST /challenge-response/v1/session/{id}", func(w http.ResponseWriter, r *http.Request) {
+		s.mu.Lock()
+		se, ok := s.sessions[r.PathValue("id")]
+		s.mu.Unlock()
+		if !ok || time.Now().After(se.expires) {
+			http.Error(w, "no such session", http.StatusNotFound)
+			return
+		}
+		if r.Header.Get("Content-Type") != mediaType {
+			http.Error(w, "unsupported media type", http.StatusUnsupportedMediaType)
+			return
+		}
+		token, _ := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+		status, ann, err := s.appraise(token, se.nonce)
+		if status == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"status": "failed", "detail": err.Error()})
+			return
+		}
+		if err != nil {
+			log.Printf("appraisal: %s: %v", status, err)
+		} else {
+			log.Printf("appraisal: affirming, MRTD %s…", ann["mrtd"][:16])
+		}
+		sub := map[string]any{"ear.status": status, "ear.appraisal-policy-id": "policy:TDX-reference-mrtd",
+			"ear.trustworthiness-vector": map[string]int{"hardware": 2, "runtime-opaque": 2, "executables": 0,
+				"configuration": 0, "file-system": 0, "instance-identity": 0, "sourced-data": 0, "storage-opaque": 0},
+			"ear.veraison.annotated-evidence": ann}
+		if status != "affirming" {
+			sub["ear.trustworthiness-vector"] = map[string]int{"hardware": 97, "runtime-opaque": 97}
+		}
+		ear, err := s.sign(map[string]any{"eat_profile": "tag:github.com,2023:veraison/ear", "iat": time.Now().Unix(),
+			"eat_nonce":       base64.RawURLEncoding.EncodeToString(se.nonce),
+			"ear.verifier-id": map[string]string{"developer": "TACRA test bench", "build": "tdx-verifier (go-tdx-guest)"},
+			"submods":         map[string]any{"TDX": sub}})
+		if err != nil {
+			http.Error(w, "signing failed", http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"status": "complete", "result": ear})
+	})
+	mux.HandleFunc("DELETE /challenge-response/v1/session/{id}", func(w http.ResponseWriter, r *http.Request) {
+		s.mu.Lock()
+		delete(s.sessions, r.PathValue("id"))
+		s.mu.Unlock()
+		w.WriteHeader(http.StatusNoContent)
+	})
+	return mux
+}
+
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(v)
+}
+
+func main() {
+	path := flag.String("config", "tdx-verifier.json", "configuration file")
+	flag.Parse()
+	raw, err := os.ReadFile(*path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var cfg config
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		log.Fatal(err)
+	}
+	key, err := loadOrCreateKey(cfg.KeyFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	s := &server{cfg: cfg, key: key, sessions: map[string]*session{},
+		getter: &cachingGetter{inner: trust.DefaultHTTPSGetter(), m: map[string][3]any{}}}
+	srv := &http.Server{Addr: cfg.Listen, Handler: s.routes(), ReadHeaderTimeout: 10 * time.Second,
+		TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12}}
+	log.Printf("tdx-verifier listening on %s; reference MRTDs %d", cfg.Listen, len(cfg.MRTDs))
+	log.Fatal(srv.ListenAndServeTLS(cfg.TLSCert, cfg.TLSKey))
+}

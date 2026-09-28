@@ -34,6 +34,7 @@ replace github.com/TWI-Unified-Model/tacra/platform => ../platform
 require (
 	github.com/TWI-Unified-Model/tacra/bundle v0.0.0
 	github.com/TWI-Unified-Model/tacra/platform v0.0.0-00010101000000-000000000000
+	github.com/google/go-tdx-guest v0.3.1
 )
 
 replace github.com/TWI-Unified-Model/tacra/bundle => ../bundle

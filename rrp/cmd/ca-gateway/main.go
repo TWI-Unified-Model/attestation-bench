@@ -124,17 +124,17 @@ func main() {
 	if err := fc.Validate(); err != nil {
 		log.Fatal(err)
 	}
-	key, err := ear.FetchVeraisonKey(fc.Veraison.URL, fc.Veraison.CA)
+	keys, err := fc.TrustedKeys()
 	if err != nil {
-		log.Fatalf("Veraison key: %v", err)
+		log.Fatal(err)
 	}
 	ca, err := newStepCA(fc.StepCA)
 	if err != nil {
 		log.Fatal(err)
 	}
 	g := &gateway.Gateway{Config: &fc.Config, Mode: "enroll", Fresh: fresh.New(nil),
-		EAR: &ear.Verifier{Key: key, MaxAge: time.Duration(fc.EAR.MaxAgeS) * time.Second,
-			Skew: time.Duration(fc.EAR.SkewS) * time.Second, Submods: fc.EAR.Submods}}
+		EAR: &ear.Verifier{Keys: keys, MaxAge: time.Duration(fc.EAR.MaxAgeS) * time.Second,
+			Skew: time.Duration(fc.EAR.SkewS) * time.Second}}
 	if err := g.LoadEpoch(); err != nil {
 		log.Fatal(err)
 	}

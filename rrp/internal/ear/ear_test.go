@@ -40,8 +40,8 @@ func load(t *testing.T) (*Verifier, string, []byte, []byte) {
 		}
 		iat = time.Unix(n, 0)
 	}
-	v := &Verifier{Key: key, MaxAge: 2 * time.Minute, Skew: 5 * time.Second, Submods: []string{"SEVSNP"},
-		Now: func() time.Time { return iat.Add(10 * time.Second) }}
+	v := &Verifier{Keys: []TrustedKey{{Key: key, Submods: []string{"SEVSNP"}}}, MaxAge: 2 * time.Minute,
+		Skew: 5 * time.Second, Now: func() time.Time { return iat.Add(10 * time.Second) }}
 	return v, strings.TrimSpace(string(jws)), bv, m
 }
 
@@ -77,9 +77,10 @@ func TestEARRefusals(t *testing.T) {
 	if _, err := late.Verify(jws, bv); !errors.Is(err, ErrStale) {
 		t.Fatalf("an hour later: %v", err)
 	}
+	// the key signs for SEVSNP only: an EAR it signed is not taken as TDX results
 	tdx := *v
-	tdx.Submods = []string{"TDX"}
+	tdx.Keys = []TrustedKey{{Key: v.Keys[0].Key, Submods: []string{"TDX"}}}
 	if _, err := tdx.Verify(jws, bv); !errors.Is(err, ErrNotAffirming) {
-		t.Fatalf("submodule not accepted: %v", err)
+		t.Fatalf("submodule not allowed for the key: %v", err)
 	}
 }

@@ -12,6 +12,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -37,13 +38,18 @@ var (
 // mKeyMeasurement is the SEV-SNP launch MEASUREMENT in the AMD CoRIM profile.
 const mKeyMeasurement = 641
 
-// Verifier holds the verifier's EAR signing key and the RRP's acceptance rules.
-type Verifier struct {
+// TrustedKey is a verifier's EAR signing key and the submodules it may speak for.
+type TrustedKey struct {
 	Key     *ecdsa.PublicKey
-	MaxAge  time.Duration // how old an EAR may be
-	Skew    time.Duration // how far in the future its iat may be
-	Submods []string      // submodules the RRP accepts, e.g. "SEVSNP"
-	Now     func() time.Time
+	Submods []string // e.g. "SEVSNP" for Veraison, "TDX" for the bench's TDX verifier
+}
+
+// Verifier holds the verifiers' EAR signing keys and the RRP's acceptance rules.
+type Verifier struct {
+	Keys   []TrustedKey
+	MaxAge time.Duration // how old an EAR may be
+	Skew   time.Duration // how far in the future its iat may be
+	Now    func() time.Time
 }
 
 // Result is what the RRP takes from a verified EAR.
@@ -125,7 +131,14 @@ func (v *Verifier) Verify(jws string, wantNonce []byte) (*Result, error) {
 		return nil, fmt.Errorf("%w: signature is not 64 octets", ErrMalformed)
 	}
 	digest := sha256.Sum256([]byte(parts[0] + "." + parts[1]))
-	if !ecdsa.Verify(v.Key, digest[:], new(big.Int).SetBytes(sig[:32]), new(big.Int).SetBytes(sig[32:])) {
+	var submods []string // the submodules the key that signed may speak for
+	for _, k := range v.Keys {
+		if ecdsa.Verify(k.Key, digest[:], new(big.Int).SetBytes(sig[:32]), new(big.Int).SetBytes(sig[32:])) {
+			submods = k.Submods
+			break
+		}
+	}
+	if submods == nil {
 		return nil, ErrSignature
 	}
 	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
@@ -136,10 +149,8 @@ func (v *Verifier) Verify(jws string, wantNonce []byte) (*Result, error) {
 		Nonce   string `json:"eat_nonce"`
 		IAT     int64  `json:"iat"`
 		Submods map[string]struct {
-			Status   string `json:"ear.status"`
-			Evidence struct {
-				Tags []string `json:"tags"`
-			} `json:"ear.veraison.annotated-evidence"`
+			Status   string          `json:"ear.status"`
+			Evidence json.RawMessage `json:"ear.veraison.annotated-evidence"`
 		} `json:"submods"`
 	}
 	if err := json.Unmarshal(payload, &claims); err != nil {
@@ -153,7 +164,7 @@ func (v *Verifier) Verify(jws string, wantNonce []byte) (*Result, error) {
 	if err != nil || !bytes.Equal(nonce, wantNonce) {
 		return nil, ErrNonce
 	}
-	for _, name := range v.Submods {
+	for _, name := range submods {
 		sub, ok := claims.Submods[name]
 		if !ok {
 			continue
@@ -161,13 +172,34 @@ func (v *Verifier) Verify(jws string, wantNonce []byte) (*Result, error) {
 		if sub.Status != "affirming" {
 			return nil, fmt.Errorf("%w: %s is %q", ErrNotAffirming, name, sub.Status)
 		}
-		res := &Result{Submod: name, Status: sub.Status, IssuedAt: iat, Raw: jws}
-		if len(sub.Evidence.Tags) > 0 {
-			res.Measurement = measurement(sub.Evidence.Tags[0])
-		}
-		return res, nil
+		return &Result{Submod: name, Status: sub.Status, IssuedAt: iat, Raw: jws,
+			Measurement: annotatedMeasurement(name, sub.Evidence)}, nil
 	}
-	return nil, fmt.Errorf("%w: none of the submodules %v", ErrNotAffirming, v.Submods)
+	return nil, fmt.Errorf("%w: no submodule the signing verifier may speak for (%v)", ErrNotAffirming, submods)
+}
+
+// annotatedMeasurement reads the launch measurement the verifier annotated: SEV-SNP's MEASUREMENT from Veraison's
+// CoMID, TDX's MRTD from the bench TDX verifier's annotation.
+func annotatedMeasurement(submod string, raw json.RawMessage) []byte {
+	switch submod {
+	case "SEVSNP":
+		var a struct {
+			Tags []string `json:"tags"`
+		}
+		if json.Unmarshal(raw, &a) == nil && len(a.Tags) > 0 {
+			return measurement(a.Tags[0])
+		}
+	case "TDX":
+		var a struct {
+			MRTD string `json:"mrtd"`
+		}
+		if json.Unmarshal(raw, &a) == nil {
+			if m, err := hex.DecodeString(a.MRTD); err == nil && len(m) == 48 {
+				return m
+			}
+		}
+	}
+	return nil
 }
 
 // measurement reads MKey 641 from the annotated CoMID (base64 of a CBOR-tagged CoMID), or nil.

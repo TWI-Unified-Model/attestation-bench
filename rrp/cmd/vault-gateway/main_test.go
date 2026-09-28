@@ -68,7 +68,8 @@ func TestRetrieveThroughVault(t *testing.T) {
 	}
 	sender, _ := bundle.GenerateSenderKeys()
 	s := &server{kv: kv, sender: sender, g: &gateway.Gateway{Config: cfg, Mode: "retrieve", Fresh: fresh.New(nil),
-		EAR: &ear.Verifier{Key: &earKey.PublicKey, MaxAge: 2 * time.Minute, Skew: 5 * time.Second, Submods: []string{"SEVSNP"}}}}
+		EAR: &ear.Verifier{Keys: []ear.TrustedKey{{Key: &earKey.PublicKey, Submods: []string{"SEVSNP"}}},
+			MaxAge: 2 * time.Minute, Skew: 5 * time.Second}}}
 
 	handle := func() []byte {
 		r, err := s.g.Initiate(gateway.InitiateRequest{Target: target, CredentialType: "api-key"})

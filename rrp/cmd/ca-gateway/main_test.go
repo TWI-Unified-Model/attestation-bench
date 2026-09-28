@@ -63,7 +63,8 @@ func testServer(t *testing.T, measurement string) (*server, *ecdsa.PrivateKey, s
 		t.Fatal(err)
 	}
 	g := &gateway.Gateway{Config: cfg, Mode: "enroll", Fresh: fresh.New(nil),
-		EAR: &ear.Verifier{Key: &earKey.PublicKey, MaxAge: 2 * time.Minute, Skew: 5 * time.Second, Submods: []string{"SEVSNP"}}}
+		EAR: &ear.Verifier{Keys: []ear.TrustedKey{{Key: &earKey.PublicKey, Submods: []string{"SEVSNP"}}},
+			MaxAge: 2 * time.Minute, Skew: 5 * time.Second}}
 	return &server{g: g, ca: bench(t)}, earKey, strings.TrimSpace(string(tmpl))
 }
 

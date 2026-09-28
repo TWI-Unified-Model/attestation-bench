@@ -24,18 +24,20 @@ import (
 
 // Config is a gateway's configuration file.
 type Config struct {
-	RRPID    string `json:"rrp_id"` // the identifier Evidence binds for this RRP
-	Listen   string `json:"listen"`
-	TLSCert  string `json:"tls_cert"`
-	TLSKey   string `json:"tls_key"`
-	Veraison struct {
-		URL string `json:"url"`
-		CA  string `json:"ca"`
-	} `json:"veraison"`
-	EAR struct {
-		MaxAgeS int      `json:"max_age"`
-		SkewS   int      `json:"skew"`
+	RRPID   string `json:"rrp_id"` // the identifier Evidence binds for this RRP
+	Listen  string `json:"listen"`
+	TLSCert string `json:"tls_cert"`
+	TLSKey  string `json:"tls_key"`
+	// Verifiers whose Attestation Results this RRP accepts, each for its submodules (Veraison for SEVSNP, the
+	// bench's TDX verifier for TDX); their EAR keys are read from their well-known endpoints at start.
+	Verifiers []struct {
+		URL     string   `json:"url"`
+		CA      string   `json:"ca"`
 		Submods []string `json:"submods"`
+	} `json:"verifiers"`
+	EAR struct {
+		MaxAgeS int `json:"max_age"`
+		SkewS   int `json:"skew"`
 	} `json:"ear"`
 	Targets map[string]*Target `json:"targets"`
 	// EpochFile holds the deployment's current epoch marker (hex), shared by its RRPs; absent: a marker of this RRP.
@@ -116,6 +118,22 @@ func (c *Config) Validate() error {
 		}
 	}
 	return nil
+}
+
+// TrustedKeys reads each configured verifier's EAR key.
+func (c *Config) TrustedKeys() ([]ear.TrustedKey, error) {
+	var keys []ear.TrustedKey
+	for _, v := range c.Verifiers {
+		k, err := ear.FetchVeraisonKey(v.URL, v.CA)
+		if err != nil {
+			return nil, fmt.Errorf("gateway: verifier %s: %w", v.URL, err)
+		}
+		keys = append(keys, ear.TrustedKey{Key: k, Submods: v.Submods})
+	}
+	if len(keys) == 0 {
+		return nil, errors.New("gateway: no verifier configured")
+	}
+	return keys, nil
 }
 
 // Gateway holds a running RRP's state.
