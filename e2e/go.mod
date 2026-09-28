@@ -7,6 +7,7 @@ require (
 	github.com/TWI-Unified-Model/tacra/gen/go v0.0.0
 	github.com/TWI-Unified-Model/tacra/platform v0.0.0-00010101000000-000000000000
 	github.com/globalsign/est v0.0.0
+	github.com/jackc/pgx/v5 v5.11.0
 	google.golang.org/grpc v1.83.2
 )
 
@@ -21,6 +22,8 @@ require (
 	github.com/google/go-tpm v0.9.6 // indirect
 	github.com/google/logger v1.1.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/smallstep/scep v0.0.0-20250318231241-a25cabb69492 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
