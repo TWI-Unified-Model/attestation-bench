@@ -1,0 +1,8 @@
+AWS SEV-SNP Evidence x rrpverify (veraison-services with the DER and signer-info fixes), go-sev-guest pinned as shown.
+20260928T201434Z = plug-in of 28 September (go-sev-guest v0.14.2-0.20251119154202-af1c107a648f);
+20260929T184109Z = plug-in of PR 1 (platform/ at 2d1a4c3, go-sev-guest v0.15.0).
+
+20260928T201434Z-aws-sev-snp  verifier go-sev-guest v0.14.2-0.20251119154202-af1c107a648f    162 checks, 0 not as expected
+20260928T201434Z-aws-sev-snp  verifier go-sev-guest v0.15.0                                  122 checks, 120 not as expected
+20260929T184109Z-aws-sev-snp  verifier go-sev-guest v0.14.2-0.20251119154202-af1c107a648f    162 checks, 0 not as expected
+20260929T184109Z-aws-sev-snp  verifier go-sev-guest v0.15.0                                  122 checks, 120 not as expected

@@ -1,0 +1,16 @@
+What differs from a scripted run
+
+hwrun finished in the guest at 18:43:19Z (hwrun-stdout.txt; RRP clock window 18:41:34Z-18:43:20Z). The scripted
+copy-back that followed (gcloud compute scp) ended with a client-side ReadTimeout from compute.googleapis.com
+(read timeout 300 s), and the scripted delete right after it failed the same way: the script printed
+"!! tacra-hwcheck-2609291839 still exists" and exited with 1.
+
+The VM was still running. At 18:48:46Z its ~/hwrun-out (46 files, 272 KB) was copied with the script's own command,
+and every file was compared by SHA-256 with the file on the VM (copy-verified-against-vm.sha256, computed on the VM:
+46 of 46 equal). The VM was then deleted and its absence checked at 18:50:12Z (vm-deleted.txt); the project had no
+instances and no disks left.
+
+The steps the script had not reached were then run by hand with the script's commands: rrpverify with both Veraison
+builds (fork, fixed) against the recorded clock window, then sha256sums.txt. Both rrpverify binaries were built from
+the same tree as the run (hwcheck/evidence/20260929-pr1-tested-tree.patch). The local Veraison service was not
+running, so there is no rrpverify-service.*.

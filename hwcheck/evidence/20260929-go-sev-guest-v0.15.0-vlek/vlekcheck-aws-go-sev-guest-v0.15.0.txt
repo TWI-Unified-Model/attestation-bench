@@ -1,0 +1,82 @@
+# vlekcheck (hwcheck/vlekcheck) built with github.com/google/go-sev-guest v0.15.0
+# Evidence: hwcheck/evidence/20260929T184109Z-aws-sev-snp/*/evidence.tsm.cbor (the plug-in of PR 1, platform/ at 2d1a4c3)
+== enroll-absent-epoch
+  report signer: VLEK; chain has VLEK 1319 B, VCEK 0 B, ASK 1683 B, ARK 1639 B
+  table slot VLEK: CN "SEV-VLEK", issuer CN "SEV-VLEK-Milan"
+  table slot ASK : CN "SEV-VLEK-Milan", issuer CN "ARK-Milan"
+  table slot ARK : CN "ARK-Milan", issuer CN "ARK-Milan"
+(a) no TrustedRoots:            REJECTED: VLEK could not be verified by any trusted roots. Last error: root of trust missing intermediate certificate authority certificate for key VLEK
+(b) TrustedRoots = Milan VLEK:  ACCEPTED
+(c) TrustedRoots = VCEK + VLEK: ACCEPTED
+== enroll-absent-none
+  report signer: VLEK; chain has VLEK 1319 B, VCEK 0 B, ASK 1683 B, ARK 1639 B
+  table slot VLEK: CN "SEV-VLEK", issuer CN "SEV-VLEK-Milan"
+  table slot ASK : CN "SEV-VLEK-Milan", issuer CN "ARK-Milan"
+  table slot ARK : CN "ARK-Milan", issuer CN "ARK-Milan"
+(a) no TrustedRoots:            REJECTED: VLEK could not be verified by any trusted roots. Last error: root of trust missing intermediate certificate authority certificate for key VLEK
+(b) TrustedRoots = Milan VLEK:  ACCEPTED
+(c) TrustedRoots = VCEK + VLEK: ACCEPTED
+== enroll-absent-timestamp
+  report signer: VLEK; chain has VLEK 1319 B, VCEK 0 B, ASK 1683 B, ARK 1639 B
+  table slot VLEK: CN "SEV-VLEK", issuer CN "SEV-VLEK-Milan"
+  table slot ASK : CN "SEV-VLEK-Milan", issuer CN "ARK-Milan"
+  table slot ARK : CN "ARK-Milan", issuer CN "ARK-Milan"
+(a) no TrustedRoots:            REJECTED: VLEK could not be verified by any trusted roots. Last error: root of trust missing intermediate certificate authority certificate for key VLEK
+(b) TrustedRoots = Milan VLEK:  ACCEPTED
+(c) TrustedRoots = VCEK + VLEK: ACCEPTED
+== enroll-present-epoch
+  report signer: VLEK; chain has VLEK 1319 B, VCEK 0 B, ASK 1683 B, ARK 1639 B
+  table slot VLEK: CN "SEV-VLEK", issuer CN "SEV-VLEK-Milan"
+  table slot ASK : CN "SEV-VLEK-Milan", issuer CN "ARK-Milan"
+  table slot ARK : CN "ARK-Milan", issuer CN "ARK-Milan"
+(a) no TrustedRoots:            REJECTED: VLEK could not be verified by any trusted roots. Last error: root of trust missing intermediate certificate authority certificate for key VLEK
+(b) TrustedRoots = Milan VLEK:  ACCEPTED
+(c) TrustedRoots = VCEK + VLEK: ACCEPTED
+== enroll-present-nonce
+  report signer: VLEK; chain has VLEK 1319 B, VCEK 0 B, ASK 1683 B, ARK 1639 B
+  table slot VLEK: CN "SEV-VLEK", issuer CN "SEV-VLEK-Milan"
+  table slot ASK : CN "SEV-VLEK-Milan", issuer CN "ARK-Milan"
+  table slot ARK : CN "ARK-Milan", issuer CN "ARK-Milan"
+(a) no TrustedRoots:            REJECTED: VLEK could not be verified by any trusted roots. Last error: root of trust missing intermediate certificate authority certificate for key VLEK
+(b) TrustedRoots = Milan VLEK:  ACCEPTED
+(c) TrustedRoots = VCEK + VLEK: ACCEPTED
+== retrieve-absent-epoch
+  report signer: VLEK; chain has VLEK 1319 B, VCEK 0 B, ASK 1683 B, ARK 1639 B
+  table slot VLEK: CN "SEV-VLEK", issuer CN "SEV-VLEK-Milan"
+  table slot ASK : CN "SEV-VLEK-Milan", issuer CN "ARK-Milan"
+  table slot ARK : CN "ARK-Milan", issuer CN "ARK-Milan"
+(a) no TrustedRoots:            REJECTED: VLEK could not be verified by any trusted roots. Last error: root of trust missing intermediate certificate authority certificate for key VLEK
+(b) TrustedRoots = Milan VLEK:  ACCEPTED
+(c) TrustedRoots = VCEK + VLEK: ACCEPTED
+== retrieve-absent-none
+  report signer: VLEK; chain has VLEK 1319 B, VCEK 0 B, ASK 1683 B, ARK 1639 B
+  table slot VLEK: CN "SEV-VLEK", issuer CN "SEV-VLEK-Milan"
+  table slot ASK : CN "SEV-VLEK-Milan", issuer CN "ARK-Milan"
+  table slot ARK : CN "ARK-Milan", issuer CN "ARK-Milan"
+(a) no TrustedRoots:            REJECTED: VLEK could not be verified by any trusted roots. Last error: root of trust missing intermediate certificate authority certificate for key VLEK
+(b) TrustedRoots = Milan VLEK:  ACCEPTED
+(c) TrustedRoots = VCEK + VLEK: ACCEPTED
+== retrieve-absent-timestamp
+  report signer: VLEK; chain has VLEK 1319 B, VCEK 0 B, ASK 1683 B, ARK 1639 B
+  table slot VLEK: CN "SEV-VLEK", issuer CN "SEV-VLEK-Milan"
+  table slot ASK : CN "SEV-VLEK-Milan", issuer CN "ARK-Milan"
+  table slot ARK : CN "ARK-Milan", issuer CN "ARK-Milan"
+(a) no TrustedRoots:            REJECTED: VLEK could not be verified by any trusted roots. Last error: root of trust missing intermediate certificate authority certificate for key VLEK
+(b) TrustedRoots = Milan VLEK:  ACCEPTED
+(c) TrustedRoots = VCEK + VLEK: ACCEPTED
+== retrieve-present-epoch
+  report signer: VLEK; chain has VLEK 1319 B, VCEK 0 B, ASK 1683 B, ARK 1639 B
+  table slot VLEK: CN "SEV-VLEK", issuer CN "SEV-VLEK-Milan"
+  table slot ASK : CN "SEV-VLEK-Milan", issuer CN "ARK-Milan"
+  table slot ARK : CN "ARK-Milan", issuer CN "ARK-Milan"
+(a) no TrustedRoots:            REJECTED: VLEK could not be verified by any trusted roots. Last error: root of trust missing intermediate certificate authority certificate for key VLEK
+(b) TrustedRoots = Milan VLEK:  ACCEPTED
+(c) TrustedRoots = VCEK + VLEK: ACCEPTED
+== retrieve-present-nonce
+  report signer: VLEK; chain has VLEK 1319 B, VCEK 0 B, ASK 1683 B, ARK 1639 B
+  table slot VLEK: CN "SEV-VLEK", issuer CN "SEV-VLEK-Milan"
+  table slot ASK : CN "SEV-VLEK-Milan", issuer CN "ARK-Milan"
+  table slot ARK : CN "ARK-Milan", issuer CN "ARK-Milan"
+(a) no TrustedRoots:            REJECTED: VLEK could not be verified by any trusted roots. Last error: root of trust missing intermediate certificate authority certificate for key VLEK
+(b) TrustedRoots = Milan VLEK:  ACCEPTED
+(c) TrustedRoots = VCEK + VLEK: ACCEPTED

@@ -62,6 +62,23 @@ freshness element, and a trust anchor that is a genuine AMD certificate but not 
 appraisal are taken from the first Evidence of the same launch (trust on first use): this shows that the scheme's
 matching works on real reports, not that the launch measurement is the expected one.
 
+## 29 September: the same checks on the code of PR 1
+
+PR 1 (branch `serhii/platform-sevsnp-tdx`, commit 2d1a4c3) puts the two back-ends on TWI main 67ea03e. Its
+`platform/` is the one here except for `go.mod`: go-sev-guest v0.15.0, a release, instead of
+v0.14.2-0.20251119154202-af1c107a648f (`evidence/20260929-pr1-tested-tree.patch` is the whole difference of the
+tested tree).
+
+| run | cloud, machine | report signed by | Evidence per call | burst | RRP verification |
+|---|---|---|---|---|---|
+| `20260929T183950Z-gcp-sev-snp` | GCP n2d-standard-2, AMD Milan, 7.0.0-1011-gcp | VCEK | 8.5-11.7 ms, 5 989 B | 100 reports: median 8.1 ms, every tenth waited 10.2 s | fixed: 162 checks, 0 not as expected; fork: 142, 60 (finding 1) |
+| `20260929T184031Z-gcp-tdx` | GCP c3-standard-4, Intel TDX, 7.0.0-1011-gcp | TDX quote | 39.0-42.1 ms, 4 966 B | 30 quotes: median 39.1 ms, max 40.3 ms | 82 checks, 0 not as expected |
+| `20260929T184109Z-aws-sev-snp` | AWS c6a.large, us-east-2a, 7.0.0-1013-aws | VLEK (the same one, 5330c95b...) | 7.3-8.3 ms, 5 963 B | 100 reports: median 7.9 ms, max 9.7 ms | with Veraison's own go-sev-guest: fixed 162, 0; fork 122, 60 (finding 1). With v0.15.0 in the verifier: 122, 120 (finding 4) |
+
+The SEV-SNP run on GCP lost its scripted copy-back and delete to an API timeout; the output was copied from the
+still-running VM, checked file by file against the VM, and the VM deleted by hand (`RECOVERY.txt` there). All three
+machines are deleted, and GCP and AWS were checked empty afterwards.
+
 ## Findings (none reported upstream yet)
 
 1. **veraison-services `sevsnp` refuses Evidence from Google Cloud.** The GCP host writes DER certificates in the
@@ -79,6 +96,11 @@ matching works on real reports, not that the launch measurement is the expected 
    MASK_CHIP_KEY (0x2) fails, and one with AUTHOR_KEY_EN (0x1) is classed as signed by a CSP key. Fix (local, on
    v1.2.3, which the fork uses, and on main): take SIGNING_KEY from `abi.ParseSignerInfo`. Its test fails on 4 of 7
    cases before the fix and passes after.
+4. **go-sev-guest v0.15.0 refuses every VLEK-signed report (AWS) when the caller passes no trusted roots**, as the
+   Veraison `sevsnp` scheme does. Its public-key pinning fix (726e291c52) takes the roots from built-in defaults,
+   which hold the VCEK chains only. Veraison pins the version before it, so a deployed Veraison is not affected until
+   it moves. Passing both chains as `TrustedRoots` works on both versions (tested on ten AWS and ten GCP reports).
+   Details: `evidence/20260929-go-sev-guest-v0.15.0-vlek/README.md`.
 
 ## Measurements
 
@@ -110,4 +132,5 @@ matching works on real reports, not that the launch measurement is the expected 
 3. CAAPI `EnrollCredentialRequest` and `RetrieveCredentialRequest` carry no freshness element: absent-timestamp on
    SEV-SNP and TDX needs one (EST carries it in `handle`).
 4. Sudarshan's branch binds `server_id`; the revised draft (fa4cd72) binds the RRP identifier.
-5. Findings 1-3: report upstream (Veraison, go-gen-ref) from the SIG, or from us with the SIG's agreement.
+5. Findings 1-4: report upstream (Veraison, go-gen-ref, go-sev-guest) from the SIG, or from us with the SIG's
+   agreement.

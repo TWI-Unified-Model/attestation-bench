@@ -1,0 +1,52 @@
+diff --git a/hwcheck/go.mod b/hwcheck/go.mod
+index 04dab42..fb84333 100644
+--- a/hwcheck/go.mod
++++ b/hwcheck/go.mod
+@@ -24,7 +24,7 @@ require (
+ 	github.com/goccy/go-json v0.10.4 // indirect
+ 	github.com/golang/protobuf v1.5.4 // indirect
+ 	github.com/google/go-configfs-tsm v0.3.2 // indirect
+-	github.com/google/go-sev-guest v0.14.2-0.20251119154202-af1c107a648f // indirect
++	github.com/google/go-sev-guest v0.15.0 // indirect
+ 	github.com/google/logger v1.1.1 // indirect
+ 	github.com/google/uuid v1.6.0 // indirect
+ 	github.com/hashicorp/go-hclog v1.5.0 // indirect
+diff --git a/hwcheck/go.patched.mod b/hwcheck/go.patched.mod
+index 0ec2f9a..2dadc9d 100644
+--- a/hwcheck/go.patched.mod
++++ b/hwcheck/go.patched.mod
+@@ -91,7 +91,7 @@ replace github.com/TWI-Unified-Model/tacra/platform => ../platform
+ 
+ require (
+ 	github.com/fxamacker/cbor/v2 v2.9.3
+-	github.com/google/go-sev-guest v0.14.2-0.20251119154202-af1c107a648f
++	github.com/google/go-sev-guest v0.15.0
+ 	github.com/google/go-tdx-guest v0.3.1
+ 	github.com/google/uuid v1.6.0
+ 	github.com/jraman567/go-gen-ref v1.2.3
+diff --git a/hwcheck/go.patched.sum b/hwcheck/go.patched.sum
+index 6800e21..15575b4 100644
+--- a/hwcheck/go.patched.sum
++++ b/hwcheck/go.patched.sum
+@@ -61,6 +61,8 @@ github.com/google/go-configfs-tsm v0.3.2 h1:ZYmHkdQavfsvVGDtX7RRda0gamelUNUhu0A9
+ github.com/google/go-configfs-tsm v0.3.2/go.mod h1:EL1GTDFMb5PZQWDviGfZV9n87WeGTR/JUg13RfwkgRo=
+ github.com/google/go-sev-guest v0.14.2-0.20251119154202-af1c107a648f h1:UVLafZ3h85JE5e0QU5dUixIJa2PO5G51THLMuXrtnTw=
+ github.com/google/go-sev-guest v0.14.2-0.20251119154202-af1c107a648f/go.mod h1:SK9vW+uyfuzYdVN0m8BShL3OQCtXZe/JPF7ZkpD3760=
++github.com/google/go-sev-guest v0.15.0 h1:Xzfut5mbhcVb7TyPiyc5PolLUzdai7VH3QpyvXwcW9Y=
++github.com/google/go-sev-guest v0.15.0/go.mod h1:SK9vW+uyfuzYdVN0m8BShL3OQCtXZe/JPF7ZkpD3760=
+ github.com/google/go-tdx-guest v0.3.1 h1:gl0KvjdsD4RrJzyLefDOvFOUH3NAJri/3qvaL5m83Iw=
+ github.com/google/go-tdx-guest v0.3.1/go.mod h1:/rc3d7rnPykOPuY8U9saMyEps0PZDThLk/RygXm04nE=
+ github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
+diff --git a/platform/go.mod b/platform/go.mod
+index 36fd92a..da59557 100644
+--- a/platform/go.mod
++++ b/platform/go.mod
+@@ -5,7 +5,7 @@ go 1.26.5
+ require (
+ 	github.com/fxamacker/cbor/v2 v2.9.3
+ 	github.com/google/go-configfs-tsm v0.3.2
+-	github.com/google/go-sev-guest v0.14.2-0.20251119154202-af1c107a648f
++	github.com/google/go-sev-guest v0.15.0
+ 	github.com/veraison/eat v0.0.0-20251105185612-2c0e43e22ea9
+ 	github.com/veraison/go-cose v1.3.0
+ )

@@ -1,0 +1,38 @@
+== build hwrun (linux/amd64) and rrpverify (both Veraison builds)
+== RRP mints the Freshness Handles
+== create tacra-hwcheck-2609291839 (us-central1-c, n2d-standard-2, SEV_SNP)
+WARNING: You have selected a disk size of under [200GB]. This may result in poor I/O performance. For more information, see: https://developers.google.com/compute/docs/disks#performance.
+Created [https://www.googleapis.com/compute/v1/projects/rats-probe/zones/us-central1-c/instances/tacra-hwcheck-2609291839].
+WARNING: Some requests generated warnings:
+ - Disk size: '20 GB' is larger than image size: '10 GB'. You might need to resize the root repartition manually if the operating system does not support automatic resizing. See https://cloud.google.com/compute/docs/disks/add-persistent-disk#resize_pd for details.
+
+== wait for ssh
+== provision: sev-guest module, configfs-tsm
+crw------- 1 root root 10, 260 Sep 29 18:40 /dev/sev-guest
+drwxr-xr-x 2 root root       0 Sep 29 18:40 /sys/kernel/config/tsm/report
+7.0.0-1011-gcp
+== copy hwrun and the handles
+== run hwrun as root
+enroll-present-nonce           11.7 ms    5989 B  VCEK 
+retrieve-present-nonce          9.2 ms    5989 B  VCEK 
+enroll-present-epoch            9.2 ms    5989 B  VCEK 
+retrieve-present-epoch          9.1 ms    5989 B  VCEK 
+enroll-absent-epoch             9.6 ms    5989 B  VCEK 
+retrieve-absent-epoch           8.9 ms    5989 B  VCEK 
+enroll-absent-timestamp         9.1 ms    5989 B  VCEK 
+retrieve-absent-timestamp       8.7 ms    5989 B  VCEK 
+enroll-absent-none              8.5 ms    5989 B  VCEK 
+retrieve-absent-none            9.0 ms    5989 B  VCEK 
+burst of 100: min 7.6 ms, median 8.1 ms, p95 10228.2 ms, max 10234.1 ms
+attestation key (from the host certificate table): SHA-256(SPKI) f58ba71a7eb98e354adcbaaaf712718b093da492d020cd8e49c7f8f7e50c34b1
+== copy the output back
+ERROR: gcloud crashed (ReadTimeout): HTTPSConnectionPool(host='compute.googleapis.com', port=443): Read timed out. (read timeout=300)
+
+If you would like to report this issue, please run the following command:
+  gcloud feedback
+
+To check gcloud for common problems, please run the following command:
+  gcloud info --run-diagnostics
+== delete tacra-hwcheck-2609291839
+!! tacra-hwcheck-2609291839 still exists
+exit 1
