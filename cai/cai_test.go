@@ -53,11 +53,18 @@ func newTestCAI(t *testing.T, fake *fakeCAAPI) (*Client, *platform.Simulated) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := New(p, fake)
+	c, err := New(p, fake, testRelyingParties...)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return c, p
+}
+
+// testRelyingParties is the CAI configuration of the tests: the identifiers held for their Target, per mode.
+var testRelyingParties = []Option{
+	WithRelyingParty("https://api.example", ModeEnroll, "https://ca.example"),
+	WithRelyingParty("https://api.example", ModeRetrieve, "https://vault.example"),
+	WithRelyingParty("https://ca.example", ModeEnroll, "https://ca.example"),
 }
 
 func TestAcquireCredentialRetrieveECDH(t *testing.T) {
@@ -476,7 +483,7 @@ func TestAcquireCredentialFreshness(t *testing.T) {
 					return &caapiv1.RetrieveCredentialResponse{WrappedCredential: wrapped}, nil
 				},
 			}
-			c, err := New(p, fake)
+			c, err := New(p, fake, testRelyingParties...)
 			if err != nil {
 				t.Fatal(err)
 			}

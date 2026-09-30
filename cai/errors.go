@@ -19,6 +19,7 @@ var (
 	ErrUnsupportedFreshnessKind      = errors.New("cai: unsupported freshness kind")
 	ErrNoLocalEpoch                  = errors.New("cai: platform has no locally held epoch for absent-epoch freshness")
 	ErrUnsupportedMode               = errors.New("cai: unsupported credential acquisition mode")
+	ErrNoRelyingParty                = errors.New("cai: no Relying Party identifier is held for this Target and mode")
 	ErrEmptyCredential               = errors.New("cai: CAS returned an empty credential")
 	ErrUnwrap                        = errors.New("cai: failed to unwrap retrieved credential")
 	ErrMissingSigningAlgorithm       = errors.New("cai: signing algorithm is required for enrollment")

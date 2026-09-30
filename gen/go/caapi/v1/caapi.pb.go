@@ -373,8 +373,8 @@ type InitiateCredentialAcquisitionResponse struct {
 	// CEK algorithm for Retrieval. Present when mode is retrieve.
 	EncryptionAlgorithm *EncryptionAlgorithm `protobuf:"varint,5,opt,name=encryption_algorithm,json=encryptionAlgorithm,proto3,enum=caapi.v1.EncryptionAlgorithm,oneof" json:"encryption_algorithm,omitempty"`
 	// Identifier of the RATS Relying Party that will rely on the Evidence
-	// (draft-novak-lamps-tacra-est, rrp_id). The CAI binds the identifier it
-	// holds for the Target if it holds one, and otherwise this one.
+	// (draft-novak-lamps-tacra-est, rrp_id). The CAI does not bind it: it
+	// binds the identifier it holds for the Target and mode (TACRA Section 4.5).
 	RrpId         *string `protobuf:"bytes,6,opt,name=rrp_id,json=rrpId,proto3,oneof" json:"rrp_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

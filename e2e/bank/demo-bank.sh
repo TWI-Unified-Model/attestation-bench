@@ -137,7 +137,7 @@ print(json.dumps({"tee": os.environ["TEE"], "caapi": "127.0.0.1:50061", "hint": 
   "ledger": {"target": ledger, "host": "core.demobank.internal", "port": 5432, "database": "bank", "user": "payments",
              "server_ca_pem": core_root},
   "fraud": {"target": fraud, "url": "https://core.demobank.internal:8444", "server_ca_pem": core_root},
-  "relying_parties": {ledger: "https://ca.demobank.example", fraud: "https://vault.demobank.example"},
+  "relying_parties": {ledger: {"enroll": "https://ca.demobank.example"}, fraud: {"retrieve": "https://vault.demobank.example"}},
   "vault_origins": {"https://vault.demobank.example": json.load(open(f"{P}/origin-keys.json"))},
   "local_epoch_hex": open(f"{P}/epoch.hex").read().strip()}, indent=1))
 PY

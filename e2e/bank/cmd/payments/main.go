@@ -53,7 +53,7 @@ type config struct {
 		URL         string `json:"url"`
 		ServerCAPEM string `json:"server_ca_pem"`
 	} `json:"fraud"`
-	RelyingParties map[string]string            `json:"relying_parties"`
+	RelyingParties map[string]map[string]string `json:"relying_parties"` // Target -> mode -> RRP identifier held
 	VaultOrigins   map[string]map[string]string `json:"vault_origins"`
 	LocalEpochHex  string                       `json:"local_epoch_hex"`
 }
@@ -206,10 +206,11 @@ func newCAI(cfg *config) (*cai.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	opts := []cai.Option{cai.WithCSRNamingHint()}
-	for t, rrp := range cfg.RelyingParties {
-		opts = append(opts, cai.WithRelyingParty(t, rrp))
+	opts, err := cai.RelyingParties(cfg.RelyingParties)
+	if err != nil {
+		return nil, err
 	}
+	opts = append(opts, cai.WithCSRNamingHint())
 	for rrp, keys := range cfg.VaultOrigins {
 		for kem, b64 := range keys {
 			spki, err := base64.RawURLEncoding.DecodeString(b64)

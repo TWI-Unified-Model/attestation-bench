@@ -75,7 +75,9 @@ type AcquisitionRequest struct {
 	SigningAlgorithm    SigningAlgorithm
 	EncryptionAlgorithm EncryptionAlgorithm
 	// RelyingParty is the RRP identifier the Evidence binds: the one the CAI
-	// holds for the Target, else the Initiate response's.
+	// holds for the Target and mode (TACRA Section 4.5: "The Credential
+	// Acquisition Interface holds this identifier in its configuration for each
+	// Target and Credential Acquisition Mode; it does not take it from the CAS").
 	RelyingParty string
 }
 
@@ -85,9 +87,9 @@ type Client struct {
 	plugin platform.Plugin
 	caapi  caapiv1.CredentialAcquisitionServiceClient
 
-	// relyingParties holds, per Target, the identifier of the RRP the
-	// deployment intends; Evidence binds it (draft-novak-lamps-tacra-est).
-	relyingParties map[string]string
+	// relyingParties holds, per Target and mode, the identifier of the RRP
+	// the deployment intends; Evidence binds it, and nothing else.
+	relyingParties map[rpKey]string
 	// vaultOrigins holds, per RRP identifier and DHKEM, the Secret Vault's
 	// static KEM key (SubjectPublicKeyInfo DER) the hpke-auth container must
 	// be sealed with.
@@ -105,10 +107,41 @@ func WithCSRNamingHint() Option { return func(c *Client) { c.csrNamesHint = true
 // Option configures a Client.
 type Option func(*Client)
 
-// WithRelyingParty makes the CAI bind rrpID for target, whatever the
-// Initiate response names.
-func WithRelyingParty(target, rrpID string) Option {
-	return func(c *Client) { c.relyingParties[target] = rrpID }
+type rpKey struct {
+	target string
+	mode   Mode
+}
+
+// WithRelyingParty makes the CAI bind rrpID for target when the CAS selects
+// mode: the Credential Authority's identifier for Enrollment, the Secret
+// Vault's for Retrieval. Whatever the Initiate response names is not used, and
+// a Target and mode for which none is held get no Evidence.
+func WithRelyingParty(target string, mode Mode, rrpID string) Option {
+	return func(c *Client) { c.relyingParties[rpKey{target, mode}] = rrpID }
+}
+
+// RelyingParties turns a configuration of the form Target -> mode ("enroll" or "retrieve") -> RRP identifier
+// into the options that hold those identifiers.
+func RelyingParties(cfg map[string]map[string]string) ([]Option, error) {
+	var opts []Option
+	for target, byMode := range cfg {
+		for name, rrpID := range byMode {
+			var mode Mode
+			switch name {
+			case "enroll":
+				mode = ModeEnroll
+			case "retrieve":
+				mode = ModeRetrieve
+			default:
+				return nil, fmt.Errorf("cai: relying party for %s: mode %q is neither enroll nor retrieve", target, name)
+			}
+			if target == "" || rrpID == "" {
+				return nil, fmt.Errorf("cai: relying party: empty Target or identifier (%q, %q)", target, rrpID)
+			}
+			opts = append(opts, WithRelyingParty(target, mode, rrpID))
+		}
+	}
+	return opts, nil
 }
 
 // WithVaultOrigin provisions the Secret Vault's origin key for rrpID and the
@@ -131,7 +164,7 @@ func New(plugin platform.Plugin, caapi caapiv1.CredentialAcquisitionServiceClien
 	if caapi == nil {
 		return nil, ErrNilCAAPI
 	}
-	c := &Client{plugin: plugin, caapi: caapi, relyingParties: map[string]string{},
+	c := &Client{plugin: plugin, caapi: caapi, relyingParties: map[rpKey]string{},
 		vaultOrigins: map[string]map[string][]byte{}}
 	for _, o := range opts {
 		o(c)
@@ -188,10 +221,6 @@ func (c *Client) AcquireCredential(ctx context.Context, target string, credType 
 		Handle:              handle,
 		SigningAlgorithm:    initResp.GetSigningAlgorithm(),
 		EncryptionAlgorithm: initResp.GetEncryptionAlgorithm(),
-		RelyingParty:        initResp.GetRrpId(),
-	}
-	if held, ok := c.relyingParties[target]; ok {
-		req.RelyingParty = held
 	}
 	switch initResp.GetMode() {
 	case ModeRetrieve:
@@ -201,6 +230,9 @@ func (c *Client) AcquireCredential(ctx context.Context, target string, credType 
 		if req.EncryptionAlgorithm == EncryptionAlgorithmUnspecified {
 			return nil, ErrMissingEncryptionAlgorithm
 		}
+		if req.RelyingParty, err = c.heldRelyingParty(target, ModeRetrieve); err != nil {
+			return nil, err
+		}
 		return c.retrieve(ctx, req)
 	case ModeEnroll:
 		if req.EncryptionAlgorithm != EncryptionAlgorithmUnspecified {
@@ -209,10 +241,22 @@ func (c *Client) AcquireCredential(ctx context.Context, target string, credType 
 		if req.SigningAlgorithm == SigningAlgorithmUnspecified {
 			return nil, ErrMissingSigningAlgorithm
 		}
+		if req.RelyingParty, err = c.heldRelyingParty(target, ModeEnroll); err != nil {
+			return nil, err
+		}
 		return c.enroll(ctx, req)
 	default:
 		return nil, fmt.Errorf("%w: %s", ErrUnsupportedMode, initResp.GetMode())
 	}
+}
+
+// heldRelyingParty is the identifier the CAI holds for target and mode; the Initiate response's is never used.
+func (c *Client) heldRelyingParty(target string, mode Mode) (string, error) {
+	held, ok := c.relyingParties[rpKey{target, mode}]
+	if !ok || held == "" {
+		return "", fmt.Errorf("%w: %s, %s", ErrNoRelyingParty, target, mode)
+	}
+	return held, nil
 }
 
 func (c *Client) retrieve(ctx context.Context, req AcquisitionRequest) (*Credential, error) {

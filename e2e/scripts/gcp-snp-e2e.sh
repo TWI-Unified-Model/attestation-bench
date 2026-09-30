@@ -43,7 +43,7 @@ B, BIN = os.environ["B"], os.environ["BIN"]
 kinds = ["nonce", "epoch", "lepoch", "time", "none"]
 targets = [{"target": f"https://db-{k}.tacra.example", "type": "x509"} for k in kinds] + \
           [{"target": f"https://ledger-{k}.tacra.example", "type": "api-key"} for k in kinds]
-rp = {t["target"]: ("https://ca1.tacra.example" if "/db-" in t["target"] else "https://vault1.tacra.example") for t in targets}
+rp = {t["target"]: ({"enroll": "https://ca1.tacra.example"} if "/db-" in t["target"] else {"retrieve": "https://vault1.tacra.example"}) for t in targets}
 cfg = {"tee": os.environ["TEE"], "caapi": "127.0.0.1:50061", "hint": "payments.workload.tacra.example",
        "targets": targets, "relying_parties": rp,
        "vault_origins": {"https://vault1.tacra.example": json.load(open(f"{BIN}/origin-keys.json"))},

@@ -39,7 +39,7 @@ type config struct {
 	CAAPI          string                       `json:"caapi"`
 	Hint           string                       `json:"hint"`
 	Targets        []target                     `json:"targets"`
-	RelyingParties map[string]string            `json:"relying_parties"` // Target -> RRP identifier held
+	RelyingParties map[string]map[string]string `json:"relying_parties"` // Target -> mode -> RRP identifier held
 	VaultOrigins   map[string]map[string]string `json:"vault_origins"`   // RRP id -> DHKEM -> SPKI (base64url)
 	LocalEpochHex  string                       `json:"local_epoch_hex"`
 	RUP            struct {
@@ -104,9 +104,9 @@ func main() {
 		log.Fatal(err)
 	}
 	defer conn.Close()
-	var opts []cai.Option
-	for t, rrp := range cfg.RelyingParties {
-		opts = append(opts, cai.WithRelyingParty(t, rrp))
+	opts, err := cai.RelyingParties(cfg.RelyingParties)
+	if err != nil {
+		log.Fatal(err)
 	}
 	for rrp, keys := range cfg.VaultOrigins {
 		for kem, b64 := range keys {

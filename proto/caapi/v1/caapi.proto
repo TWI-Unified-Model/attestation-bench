@@ -91,8 +91,8 @@ message InitiateCredentialAcquisitionResponse {
     optional EncryptionAlgorithm encryption_algorithm = 5;
 
     // Identifier of the RATS Relying Party that will rely on the Evidence
-    // (draft-novak-lamps-tacra-est, rrp_id). The CAI binds the identifier it
-    // holds for the Target if it holds one, and otherwise this one.
+    // (draft-novak-lamps-tacra-est, rrp_id). The CAI does not bind it: it
+    // binds the identifier it holds for the Target and mode (TACRA Section 4.5).
     optional string rrp_id = 6;
 }
 

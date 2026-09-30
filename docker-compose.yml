@@ -15,6 +15,9 @@ services:
     environment:
       CAI_LISTEN: ":50051"
       CAAPI_ADDR: ${CAAPI_ADDR:-host.docker.internal:9090}
+      # The Relying Party identifiers the CAI binds, per Target and mode (TARGET|MODE|RRP_ID ...); the default
+      # covers the client's default Target. The demo server does not check the binding.
+      CAI_RELYING_PARTIES: ${CAI_RELYING_PARTIES:-https://host.docker.internal:8443|enroll|urn:tacra:demo:credential-authority https://host.docker.internal:8443|retrieve|urn:tacra:demo:secret-vault}
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
