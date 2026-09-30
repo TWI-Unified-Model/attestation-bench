@@ -75,21 +75,30 @@ type Bundle struct {
 	Enc        B64    `json:"enc"`
 	Ciphertext B64    `json:"ciphertext"`
 	AAD        AAD    `json:"aad"`
-	SenderPub  B64    `json:"sender_pub"` // SubjectPublicKeyInfo of the Vault's KEM key
+	SenderPub  B64    `json:"sender_pub,omitempty"` // hpke-auth: SubjectPublicKeyInfo of the Vault's KEM key
+	Signature  B64    `json:"signature,omitempty"`  // hpke-base-signed: the Vault's signature (signed.go)
 }
 
-// Suite names the HPKE algorithms.
+// Suite names the HPKE algorithms, and for hpke-base-signed the signature algorithm.
 type Suite struct {
 	KEM  string `json:"kem"`
 	KDF  string `json:"kdf"`
 	AEAD string `json:"aead"`
+	Sig  string `json:"sig,omitempty"`
 }
 
-// Item is one credential inside the bundle.
+// Item is one credential inside the bundle, with its key-block attributes: what it may be used for, with which
+// algorithm and mode, whether it may leave the TEE, and whether it is a private key shared by a replicated
+// service's instances.
 type Item struct {
-	Type   string `json:"type"`
-	Format string `json:"format,omitempty"`
-	Value  string `json:"value"`
+	Type       string   `json:"type"`
+	Format     string   `json:"format,omitempty"`
+	Value      string   `json:"value"`
+	Kid        string   `json:"kid,omitempty"`
+	Purpose    []string `json:"purpose,omitempty"`
+	Algorithm  string   `json:"algorithm,omitempty"`
+	Exportable *bool    `json:"exportable,omitempty"`
+	Shared     bool     `json:"shared,omitempty"`
 }
 
 // Content is the plaintext of the bundle.
