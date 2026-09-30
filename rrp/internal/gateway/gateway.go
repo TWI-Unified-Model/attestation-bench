@@ -42,6 +42,9 @@ type Config struct {
 	Targets map[string]*Target `json:"targets"`
 	// EpochFile holds the deployment's current epoch marker (hex), shared by its RRPs; absent: a marker of this RRP.
 	EpochFile string `json:"epoch_file,omitempty"`
+	// Platform is this RRP's rule on the machine, product line, TCB and guest policy the Attestation Results report
+	// (platform.go); absent: none beyond the verifier's "affirming".
+	Platform *PlatformPolicy `json:"platform,omitempty"`
 }
 
 // LoadEpoch installs the epoch marker of EpochFile, if one is configured.
@@ -115,6 +118,11 @@ func (c *Config) Validate() error {
 		}
 		if t.FreshnessKind == fresh.AbsentTimestamp && t.MaxAgeS <= 0 {
 			return fmt.Errorf("gateway: Target %s: absent-timestamp needs max_age", name)
+		}
+	}
+	if c.Platform != nil {
+		if err := c.Platform.Validate(); err != nil {
+			return fmt.Errorf("gateway: %w", err)
 		}
 	}
 	return nil
@@ -248,6 +256,11 @@ func (g *Gateway) Check(req *SecondLeg, subject []byte) (*ear.Result, *Target, e
 	res, err := g.EAR.Verify(req.EAR, bv[:])
 	if err != nil {
 		return nil, nil, refuse(http.StatusForbidden, "attestation", err)
+	}
+	if g.Config.Platform != nil {
+		if err := g.Config.Platform.Check(res); err != nil {
+			return nil, nil, refuse(http.StatusForbidden, "platform-policy", err)
+		}
 	}
 	return res, t, nil
 }

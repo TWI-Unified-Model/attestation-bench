@@ -64,11 +64,14 @@ func (s *server) enroll(req *EnrollRequest) (*EnrollResponse, error) {
 		return nil, &gateway.Error{Status: http.StatusForbidden, Code: "identity",
 			Err: errors.New("the attested launch may not hold this identity")}
 	}
-	// The CA assigns the names; the CSR proves possession and may name only the identity requested.
-	if (csr.Subject.CommonName != "" && csr.Subject.CommonName != req.CredentialHint) ||
+	// The CA assigns the names. The identity requested is the one the bound CSR names: its subject is exactly one
+	// common name, equal to the Credential Hint, which travels outside the binding and so cannot choose the identity
+	// alone (tacra-est formal/gaps p0-b7: a conduit that rewrites the hint to another identity the launch may hold
+	// gets that identity certified for the honest key unless the name comes from the bound CSR).
+	if csr.Subject.CommonName != req.CredentialHint || len(csr.Subject.Names) != 1 ||
 		len(csr.DNSNames)+len(csr.URIs)+len(csr.IPAddresses)+len(csr.EmailAddresses) > 0 {
 		return nil, &gateway.Error{Status: http.StatusForbidden, Code: "csr-names",
-			Err: errors.New("the CSR may carry only the requested identity as its common name")}
+			Err: errors.New("the CSR must name the requested identity as its only subject attribute, the common name, and nothing else")}
 	}
 	chain, err := s.ca.sign(req.CSR, req.CredentialHint, id.SANs, id.Validity)
 	if err != nil {

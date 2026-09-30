@@ -2,7 +2,9 @@
 // appraise (veraison-services has no TDX scheme). It offers the subset of Veraison's challenge-response API the EST
 // server uses: a session whose nonce the caller chooses, Evidence as a TSM report (provider tdx_guest), and an EAR
 // signed ES256 with its own key. The quote is verified with go-tdx-guest against Intel PCS collateral with
-// revocation checks; REPORTDATA must be the session nonce; MRTD must be one of the configured reference values.
+// revocation checks; REPORTDATA must be the session nonce; SEAMATTRIBUTES must be zero; the TD's ATTRIBUTES must
+// have no bit of the TUD group (a TD under debug is untrusted) and none of the bits the configuration refuses;
+// MRTD must be one of the configured reference values, and so must each run-time register the configuration names.
 // It appraises and reports; it does not decide issuance or release.
 //
 //	tdx-verifier -config tdx-verifier.json
@@ -16,6 +18,7 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -27,6 +30,7 @@ import (
 	"net/http"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -45,6 +49,76 @@ type config struct {
 	TLSKey  string   `json:"tls_key"`
 	KeyFile string   `json:"signing_key"` // ES256 private JWK; created if absent
 	MRTDs   []string `json:"reference_mrtd"`
+	// TD ATTRIBUTES bits refused beyond the TUD group, which is always refused; a hex mask. Absent: the TUP group
+	// (bits 15:4, the TD is profiled) and MIGRATABLE (bit 29).
+	AttributesRefused string `json:"td_attributes_refused,omitempty"`
+	// Reference values of the run-time registers, by name ("rtmr0" to "rtmr3"): a register named here must hold one
+	// of its values; a register not named is only annotated.
+	RTMRs map[string][]string `json:"reference_rtmr,omitempty"`
+}
+
+// The TD's ATTRIBUTES (Intel TDX Module ABI Reference 348551-008US, Table 3.23): "If any bit in the TUD group is set
+// to 1, the guest TD is under off-TD debug and is untrusted" (bits 3:0; bit 0 is DEBUG); the TUP group (bits 15:4)
+// means the TD is subject to profiling, "which may expose side channel information to untrusted entities";
+// MIGRATABLE (bit 29) has a negative security impact.
+const (
+	attrTUD        = uint64(0x000F)
+	attrTUP        = uint64(0xFFF0)
+	attrMigratable = uint64(1) << 29
+	// defaultRefused is refused unless the configuration says otherwise.
+	defaultRefused = attrTUP | attrMigratable
+)
+
+// Offsets in the TD Quote Body (Intel TDX DCAP Quote Generation and Verification Library, A.3.2): TEE_TCB_SVN 16,
+// MRSEAM 48, MRSIGNERSEAM 48, SEAMATTRIBUTES 8 ("Must be zero for TDX 1.0"), TDATTRIBUTES 8, XFAM 8, MRTD 48, ...
+const (
+	offSeamAttributes = 112
+	offTDAttributes   = 120
+	offXFAM           = 128
+)
+
+// refusedMask is the ATTRIBUTES mask this configuration refuses, always including the TUD group.
+func (c *config) refusedMask() (uint64, error) {
+	if c.AttributesRefused == "" {
+		return attrTUD | defaultRefused, nil
+	}
+	m, err := strconv.ParseUint(strings.TrimPrefix(strings.ToLower(c.AttributesRefused), "0x"), 16, 64)
+	if err != nil {
+		return 0, fmt.Errorf("td_attributes_refused %q: %w", c.AttributesRefused, err)
+	}
+	return attrTUD | m, nil
+}
+
+// checkTD applies this Verifier's rules to a TD Quote Body and annotates what it read; the quote's signature and
+// REPORTDATA are checked before.
+func (c *config) checkTD(body []byte, ann map[string]string) error {
+	seam := binary.LittleEndian.Uint64(body[offSeamAttributes:])
+	attrs := binary.LittleEndian.Uint64(body[offTDAttributes:])
+	ann["seam_attributes"] = fmt.Sprintf("%016x", seam)
+	ann["td_attributes"] = fmt.Sprintf("%016x", attrs)
+	ann["xfam"] = fmt.Sprintf("%016x", binary.LittleEndian.Uint64(body[offXFAM:]))
+	if seam != 0 {
+		return fmt.Errorf("SEAMATTRIBUTES %016x is not zero", seam)
+	}
+	refused, err := c.refusedMask()
+	if err != nil {
+		return err
+	}
+	if attrs&attrTUD != 0 {
+		return fmt.Errorf("TD ATTRIBUTES %016x: the TD is under debug (TUD bits %x)", attrs, attrs&attrTUD)
+	}
+	if bad := attrs & refused; bad != 0 {
+		return fmt.Errorf("TD ATTRIBUTES %016x: bits %x are refused by this Verifier's configuration", attrs, bad)
+	}
+	if !slices.Contains(c.MRTDs, ann["mrtd"]) {
+		return fmt.Errorf("MRTD %s matches no reference value", ann["mrtd"])
+	}
+	for _, name := range []string{"rtmr0", "rtmr1", "rtmr2", "rtmr3"} {
+		if refs, ok := c.RTMRs[name]; ok && !slices.Contains(refs, ann[name]) {
+			return fmt.Errorf("%s %s matches no reference value", strings.ToUpper(name), ann[name])
+		}
+	}
+	return nil
 }
 
 type session struct {
@@ -152,8 +226,8 @@ func (s *server) appraise(token, nonce []byte) (string, map[string]string, error
 	if !bytes.Equal(body[520:584], nonce) {
 		return "contraindicated", ann, errors.New("REPORTDATA is not the session nonce")
 	}
-	if !slices.Contains(s.cfg.MRTDs, ann["mrtd"]) {
-		return "contraindicated", ann, fmt.Errorf("MRTD %s matches no reference value", ann["mrtd"])
+	if err := s.cfg.checkTD(body, ann); err != nil {
+		return "contraindicated", ann, err
 	}
 	return "affirming", ann, nil
 }
@@ -251,6 +325,16 @@ func main() {
 	if err := json.Unmarshal(raw, &cfg); err != nil {
 		log.Fatal(err)
 	}
+	refused, err := cfg.refusedMask()
+	if err != nil {
+		log.Fatal(err)
+	}
+	for name := range cfg.RTMRs {
+		if !slices.Contains([]string{"rtmr0", "rtmr1", "rtmr2", "rtmr3"}, name) {
+			log.Fatalf("reference_rtmr: unknown register %q", name)
+		}
+	}
+	log.Printf("TD ATTRIBUTES refused: %016x; reference RTMRs for %d registers", refused, len(cfg.RTMRs))
 	key, err := loadOrCreateKey(cfg.KeyFile)
 	if err != nil {
 		log.Fatal(err)

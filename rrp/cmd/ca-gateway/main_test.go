@@ -165,3 +165,67 @@ func TestEnrollThroughStepCA(t *testing.T) {
 		t.Fatalf("broken CSR signature: %v", err)
 	}
 }
+
+// TestNameFromBoundCSR needs no step-ca: every case is refused before the CA is asked. Two identities are allowed
+// for the same attested launch, so that a conduit rewriting the Credential Hint could pick the other one.
+func TestNameFromBoundCSR(t *testing.T) {
+	measHex, _ := os.ReadFile("../../internal/ear/testdata/measurement.hex")
+	meas := strings.TrimSpace(string(measHex))
+	tmpl, err := os.ReadFile("../../internal/ear/testdata/ear-gcp-sevsnp.jws")
+	if err != nil {
+		t.Fatal(err)
+	}
+	earKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	const batch = "batch.workload.tacra.example"
+	cfg := &gateway.Config{RRPID: rrpID, Targets: map[string]*gateway.Target{target: {
+		CredentialTypes: []string{"x509"}, FreshnessKind: fresh.PresentNonce, ExpiresInS: 300,
+		Acceptable: []string{"ecdsa-p256-sha256"},
+		Identities: map[string]*gateway.Identity{
+			hint:  {SANs: []string{hint}, Measurements: []string{meas}, Validity: "1h"},
+			batch: {SANs: []string{batch}, Measurements: []string{meas}, Validity: "1h"},
+		}}}}
+	if err := cfg.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	s := &server{g: &gateway.Gateway{Config: cfg, Mode: "enroll", Fresh: fresh.New(nil),
+		EAR: &ear.Verifier{Keys: []ear.TrustedKey{{Key: &earKey.PublicKey, Submods: []string{"SEVSNP"}}},
+			MaxAge: 2 * time.Minute, Skew: 5 * time.Second}}}
+	request := func(csr []byte, h string) *EnrollRequest {
+		resp, err := s.g.Initiate(gateway.InitiateRequest{Target: target, CredentialType: "x509"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		bv := platform.BindingValue(resp.Handle, rrpID, target, csr)
+		jws, err := gateway.SignTestEAR(earKey, strings.TrimSpace(string(tmpl)), bv[:], time.Now(), "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return &EnrollRequest{SecondLeg: gateway.SecondLeg{FreshnessKind: fresh.PresentNonce, Target: target,
+			CredentialType: "x509", Handle: resp.Handle, CredentialHint: h, EAR: jws}, CSR: csr}
+	}
+	withOrg := func() []byte {
+		k, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		der, err := x509.CreateCertificateRequest(rand.Reader, &x509.CertificateRequest{
+			Subject: pkix.Name{CommonName: hint, Organization: []string{"Payments Operations"}}}, k)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return der
+	}
+	named, _ := csrFor(t, hint)
+	unnamed, _ := csrFor(t, "")
+	for _, c := range []struct {
+		name string
+		req  *EnrollRequest
+	}{
+		{"the conduit rewrites the hint to the other identity of the same launch", request(named, batch)},
+		{"a CSR without a name: the hint alone would choose", request(unnamed, hint)},
+		{"a CSR subject with an attribute besides the name", request(withOrg(), hint)},
+	} {
+		_, err := s.enroll(c.req)
+		var e *gateway.Error
+		if !errors.As(err, &e) || e.Status != http.StatusForbidden || e.Code != "csr-names" {
+			t.Errorf("%s: got %v, want 403 csr-names", c.name, err)
+		}
+	}
+}

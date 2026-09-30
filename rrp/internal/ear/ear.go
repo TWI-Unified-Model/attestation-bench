@@ -59,6 +59,11 @@ type Result struct {
 	IssuedAt    time.Time
 	Measurement []byte // launch measurement annotated by the verifier, if any
 	Raw         string // the EAR as received, for the issuance record
+	// SNP holds the SEV-SNP report fields the verifier annotated (submodule SEVSNP), or nil with SNPErr saying why;
+	// TDX the bench TDX verifier's annotations (submodule TDX).
+	SNP    *SNPClaims
+	SNPErr error
+	TDX    map[string]string
 }
 
 // KeyFromJWK parses an EC P-256 public JWK.
@@ -172,8 +177,15 @@ func (v *Verifier) Verify(jws string, wantNonce []byte) (*Result, error) {
 		if sub.Status != "affirming" {
 			return nil, fmt.Errorf("%w: %s is %q", ErrNotAffirming, name, sub.Status)
 		}
-		return &Result{Submod: name, Status: sub.Status, IssuedAt: iat, Raw: jws,
-			Measurement: annotatedMeasurement(name, sub.Evidence)}, nil
+		res := &Result{Submod: name, Status: sub.Status, IssuedAt: iat, Raw: jws,
+			Measurement: annotatedMeasurement(name, sub.Evidence)}
+		switch name {
+		case "SEVSNP":
+			res.SNP, res.SNPErr = snpClaims(sub.Evidence)
+		case "TDX":
+			_ = json.Unmarshal(sub.Evidence, &res.TDX)
+		}
+		return res, nil
 	}
 	return nil, fmt.Errorf("%w: no submodule the signing verifier may speak for (%v)", ErrNotAffirming, submods)
 }
