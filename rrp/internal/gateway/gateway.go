@@ -45,7 +45,15 @@ type Config struct {
 	// Platform is this RRP's rule on the machine, product line, TCB and guest policy the Attestation Results report
 	// (platform.go); absent: none beyond the verifier's "affirming".
 	Platform *PlatformPolicy `json:"platform,omitempty"`
+	// Profile "bank" adds the bank profile's rules (tacra-est BANK-PROFILE, decisions 5 and 6): every Target
+	// present-nonce; certificates and released items for at most an hour; every group with its key-block attributes;
+	// a shared private key only for a group declared a replicated service.
+	Profile string `json:"profile,omitempty"`
 }
+
+// BankMaxValidity is the bank profile's longest lifetime of a certificate or a released item: one appraisal of 60
+// minutes, the longest of PCI's attestation intervals for software on platforms it does not trust.
+const BankMaxValidity = time.Hour
 
 // LoadEpoch installs the epoch marker of EpochFile, if one is configured.
 func (g *Gateway) LoadEpoch() error {
@@ -84,11 +92,17 @@ type Identity struct {
 	Validity     string   `json:"validity"`     // e.g. "1h"
 }
 
-// Group is what the Secret Vault may release for a Credential Hint, and to which launch measurements.
+// Group is what the Secret Vault may release for a Credential Hint, and to which launch measurements, with the
+// key-block attributes the released item carries (what it may be used for, with which algorithm and mode; it never
+// leaves the TEE) and how long it counts as valid.
 type Group struct {
 	SecretPath    string   `json:"secret_path"` // KV v2 path under the mount, e.g. "tacra/payments"
 	Measurements  []string `json:"measurements"`
 	PolicyVersion string   `json:"policy_version"`
+	Purpose       []string `json:"purpose,omitempty"`          // e.g. ["encrypt", "decrypt"]
+	Algorithm     string   `json:"algorithm,omitempty"`        // e.g. "AES-256-GCM"
+	Replicated    bool     `json:"replicated,omitempty"`       // a replicated service whose instances share a private key
+	ValidityS     int      `json:"validity_seconds,omitempty"` // default 3600
 }
 
 // DecodeConfigFile reads a JSON configuration file into v, refusing fields v does not have.
@@ -125,6 +139,31 @@ func (c *Config) Validate() error {
 		if err := c.Platform.Validate(); err != nil {
 			return fmt.Errorf("gateway: %w", err)
 		}
+	}
+	switch c.Profile {
+	case "":
+	case "bank":
+		for name, t := range c.Targets {
+			if t.FreshnessKind != fresh.PresentNonce {
+				return fmt.Errorf("gateway: bank profile: every Target is present-nonce; %s is %s", name, t.FreshnessKind)
+			}
+			for n, id := range t.Identities {
+				d, err := time.ParseDuration(id.Validity)
+				if err != nil || d <= 0 || d > BankMaxValidity {
+					return fmt.Errorf("gateway: bank profile: identity %s at %s valid for %q; at most %s", n, name, id.Validity, BankMaxValidity)
+				}
+			}
+			for h, g := range t.Groups {
+				if len(g.Purpose) == 0 || g.Algorithm == "" {
+					return fmt.Errorf("gateway: bank profile: group %s at %s has no purpose or algorithm for its key block", h, name)
+				}
+				if g.ValidityS > int(BankMaxValidity/time.Second) {
+					return fmt.Errorf("gateway: bank profile: group %s at %s valid for %d s; at most %d", h, name, g.ValidityS, int(BankMaxValidity/time.Second))
+				}
+			}
+		}
+	default:
+		return fmt.Errorf("gateway: unknown profile %q", c.Profile)
 	}
 	return nil
 }

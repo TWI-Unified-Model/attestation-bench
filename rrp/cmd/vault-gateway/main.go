@@ -71,10 +71,23 @@ func (s *server) retrieve(req *RetrieveRequest) (*bundle.Bundle, error) {
 	if err != nil {
 		return nil, &gateway.Error{Status: http.StatusBadGateway, Code: "secret-vault", Err: err}
 	}
+	gid := groupID(res.Measurement, gateway.Platform(res.Submod), req.CredentialHint, grp.PolicyVersion)
+	// The item carries its key-block attributes from the group's policy and never leaves the TEE; a private key is
+	// shared by the group's instances, which the bank profile allows only for a declared replicated service.
+	shared := secret["type"] == "private-key"
+	if shared && !grp.Replicated && s.g.Config.Profile == "bank" {
+		return nil, &gateway.Error{Status: http.StatusForbidden, Code: "group",
+			Err: errors.New("bank profile: a shared private key only for a group declared a replicated service")}
+	}
+	no := false
+	validity := grp.ValidityS
+	if validity == 0 {
+		validity = int(gateway.BankMaxValidity / time.Second)
+	}
 	content := bundle.Content{CredentialItems: []bundle.Item{{Type: secret["type"], Format: secret["format"],
-		Value: secret["value"]}}, Metadata: map[string]any{"secret_version": strconv.Itoa(version)}}
-	aad := bundle.AAD{GroupID: groupID(res.Measurement, gateway.Platform(res.Submod), req.CredentialHint, grp.PolicyVersion),
-		RRPID: s.g.Config.RRPID, Target: req.Target, Handle: req.Handle, CredentialHint: req.CredentialHint}
+		Value: secret["value"], Kid: gid[:16], Purpose: grp.Purpose, Algorithm: grp.Algorithm, Exportable: &no, Shared: shared}},
+		Metadata: map[string]any{"secret_version": strconv.Itoa(version), "validity_seconds": validity}}
+	aad := bundle.AAD{GroupID: gid, RRPID: s.g.Config.RRPID, Target: req.Target, Handle: req.Handle, CredentialHint: req.CredentialHint}
 	b, err := bundle.Seal(s.sender, req.CEKPub, aad, content)
 	if err != nil {
 		return nil, &gateway.Error{Status: http.StatusBadRequest, Code: "cek", Err: err}
