@@ -31,9 +31,16 @@ The Veraison code is called in-process (the scheme's `Implementation`), not thro
 | `20260928T190538Z-gcp-sev-snp` | GCP n2d-standard-2, AMD Milan | 7.0.0-1011-gcp | VCEK | 8.0-12.9 ms, 5 989 B | 100 reports in 103.0 s: every tenth waited 10.2 s, the rest median 8.1 ms |
 | `20260928T191330Z-aws-sev-snp` | AWS c6a.large, us-east-2a | 7.0.0-1013-aws | VLEK, CHIP_ID zero | 7.4-9.1 ms, 2 593 B | 100 reports in 0.8 s: median 8.0 ms, max 11.6 ms, no stall |
 | `20260928T193434Z-gcp-tdx` | GCP c3-standard-4, Intel TDX | 7.0.0-1011-gcp | TDX quote v4 (Quoting Enclave) | 39.1-42.0 ms, 4 966 B | 30 quotes: median 39.3 ms, max 41.8 ms, no stall |
+| `20260928T201434Z-aws-sev-snp` | AWS c6a.large, us-east-2a | 7.0.0-1013-aws | VLEK, the plug-in appending the Milan ASVK and ARK | 7.9-9.1 ms, 5 963 B | 100 reports: median 8.3 ms, max 12.3 ms, no stall |
 
 Every machine was deleted by the script and the deletion checked (`vm-deleted.txt`). The first TDX run
 (`20260928T192839Z-gcp-tdx`) produced no Evidence: an edit had corrupted the script's run line (`NOTE.txt` there).
+
+Later the same day (commit `bb8b97a`) the Evidence of `20260928T190538Z-gcp-sev-snp` and of the second AWS run,
+`20260928T201434Z-aws-sev-snp`, was also verified by a deployed Veraison (a native deployment of veraison-services
+`hw/tacra-verifier` with its own EAR signing key, provisioned with the ARK-Milan trust anchor and reference values for
+both launches): `rrpverify-service.json` in each run, 50 checks each, 10 honest Evidence affirming with the EAR's
+eat_nonce equal to the binding value and 40 changed inputs contraindicated, all as expected.
 
 ## What the host puts in the certificate table (raw configfs-tsm `auxblob`)
 
@@ -119,7 +126,8 @@ machines are deleted, and GCP and AWS were checked empty afterwards.
 
 - No EST or CAAPI transport: Evidence went from the guest to the RRP by file copy. The next step is Sudarshan's EST
   server with this verifier in place of the mock one.
-- No deployed Veraison service, no CoRIM provisioning, no EAR signing: the scheme is called in-process. TDX
+- Apart from the two service runs of `bb8b97a` (above), no deployed Veraison service, no CoRIM provisioning, no EAR
+  signing: the scheme is called in-process. TDX
   Evidence is verified outside Veraison.
 - Reference values are trust on first use. Independent ones (for GCP, Google's signed launch endorsements of the
   firmware) are not used yet.
