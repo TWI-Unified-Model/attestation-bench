@@ -55,6 +55,9 @@ type config struct {
 	// Reference values of the run-time registers, by name ("rtmr0" to "rtmr3"): a register named here must hold one
 	// of its values; a register not named is only annotated.
 	RTMRs map[string][]string `json:"reference_rtmr,omitempty"`
+	// How long an Intel PCS document, revocation lists included, is reused before it is fetched again, in seconds;
+	// absent: one hour.
+	CollateralMaxAgeS int `json:"collateral_max_age,omitempty"`
 }
 
 // The TD's ATTRIBUTES (Intel TDX Module ABI Reference 348551-008US, Table 3.23): "If any bit in the TUD group is set
@@ -135,27 +138,34 @@ type server struct {
 	sessions map[string]*session
 }
 
-// cachingGetter fetches each Intel PCS document once per process lifetime (they are valid for days).
+// cachingGetter keeps each Intel PCS document (TCB Info, QE Identity, the revocation lists) for at most maxAge, so
+// that a revocation Intel publishes reaches this Verifier within that time rather than at its next restart.
 type cachingGetter struct {
-	inner trust.HTTPSGetter
-	mu    sync.Mutex
-	m     map[string][3]any
+	inner  trust.HTTPSGetter
+	maxAge time.Duration
+	now    func() time.Time
+	mu     sync.Mutex
+	m      map[string]cachedDoc
+}
+
+type cachedDoc struct {
+	header  map[string][]string
+	body    []byte
+	fetched time.Time
 }
 
 func (g *cachingGetter) Get(url string) (map[string][]string, []byte, error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	if r, ok := g.m[url]; ok {
-		h, _ := r[0].(map[string][]string)
-		b, _ := r[1].([]byte)
-		e, _ := r[2].(error)
-		return h, b, e
+	if d, ok := g.m[url]; ok && g.now().Sub(d.fetched) < g.maxAge {
+		return d.header, d.body, nil
 	}
 	h, b, err := g.inner.Get(url)
-	if err == nil {
-		g.m[url] = [3]any{h, b, nil}
+	if err != nil {
+		return h, b, err
 	}
-	return h, b, err
+	g.m[url] = cachedDoc{header: h, body: b, fetched: g.now()}
+	return h, b, nil
 }
 
 func loadOrCreateKey(path string) (*ecdsa.PrivateKey, error) {
@@ -339,8 +349,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	maxAge := time.Hour
+	if cfg.CollateralMaxAgeS > 0 {
+		maxAge = time.Duration(cfg.CollateralMaxAgeS) * time.Second
+	}
 	s := &server{cfg: cfg, key: key, sessions: map[string]*session{},
-		getter: &cachingGetter{inner: trust.DefaultHTTPSGetter(), m: map[string][3]any{}}}
+		getter: &cachingGetter{inner: trust.DefaultHTTPSGetter(), maxAge: maxAge, now: time.Now, m: map[string]cachedDoc{}}}
 	srv := &http.Server{Addr: cfg.Listen, Handler: s.routes(), ReadHeaderTimeout: 10 * time.Second,
 		TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12}}
 	log.Printf("tdx-verifier listening on %s; reference MRTDs %d", cfg.Listen, len(cfg.MRTDs))

@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/fxamacker/cbor/v2"
 )
@@ -82,5 +83,27 @@ func TestRefusals(t *testing.T) {
 	cfg := config{MRTDs: []string{mrtd}, AttributesRefused: "0"}
 	if err := cfg.checkTD(withAttributes(body, 1<<5), annotate(body)); err != nil {
 		t.Errorf("PERF_PROF with an empty refused mask: %v", err)
+	}
+}
+
+type countingGetter struct{ n int }
+
+func (g *countingGetter) Get(string) (map[string][]string, []byte, error) {
+	g.n++
+	return nil, []byte{byte(g.n)}, nil
+}
+
+// A PCS document is reused for maxAge and fetched again after it, so that a revocation reaches the Verifier.
+func TestCollateralIsRefetched(t *testing.T) {
+	clock := time.Date(2026, 9, 30, 12, 0, 0, 0, time.UTC)
+	inner := &countingGetter{}
+	g := &cachingGetter{inner: inner, maxAge: time.Hour, now: func() time.Time { return clock }, m: map[string]cachedDoc{}}
+	_, b1, _ := g.Get("https://api.trustedservices.intel.com/sgx/certification/v4/pckcrl?ca=platform")
+	clock = clock.Add(59 * time.Minute)
+	_, b2, _ := g.Get("https://api.trustedservices.intel.com/sgx/certification/v4/pckcrl?ca=platform")
+	clock = clock.Add(2 * time.Minute)
+	_, b3, _ := g.Get("https://api.trustedservices.intel.com/sgx/certification/v4/pckcrl?ca=platform")
+	if inner.n != 2 || b1[0] != 1 || b2[0] != 1 || b3[0] != 2 {
+		t.Fatalf("fetches %d, bodies %v %v %v", inner.n, b1, b2, b3)
 	}
 }
