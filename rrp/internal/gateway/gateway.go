@@ -71,12 +71,13 @@ type Target struct {
 	MaxAgeS         int        `json:"max_age,omitempty"`    // absent-timestamp
 	SkewS           int        `json:"clock_skew,omitempty"` // absent-timestamp, future tolerance
 	Acceptable      []string   `json:"acceptable"`           // acceptable_csk (CA) or acceptable_cek (Vault)
-	// Identities (Credential Authority) and Groups (Secret Vault), keyed by Credential Hint.
+	// Identities (Credential Authority), keyed by the identity's name, which the bound CSR's common name or the
+	// Credential Hint gives (ca-gateway assignIdentity); Groups (Secret Vault), keyed by Credential Hint.
 	Identities map[string]*Identity `json:"identities,omitempty"`
 	Groups     map[string]*Group    `json:"groups,omitempty"`
 }
 
-// Identity is what the Credential Authority may certify for a Credential Hint, and for which launch measurements.
+// Identity is what the Credential Authority may certify under one name, and for which launch measurements.
 type Identity struct {
 	SANs         []string `json:"sans"`
 	Measurements []string `json:"measurements"` // hex; the attested launches allowed this identity

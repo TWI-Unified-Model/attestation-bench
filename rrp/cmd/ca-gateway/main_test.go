@@ -203,29 +203,92 @@ func TestNameFromBoundCSR(t *testing.T) {
 		return &EnrollRequest{SecondLeg: gateway.SecondLeg{FreshnessKind: fresh.PresentNonce, Target: target,
 			CredentialType: "x509", Handle: resp.Handle, CredentialHint: h, EAR: jws}, CSR: csr}
 	}
-	withOrg := func() []byte {
-		k, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-		der, err := x509.CreateCertificateRequest(rand.Reader, &x509.CertificateRequest{
-			Subject: pkix.Name{CommonName: hint, Organization: []string{"Payments Operations"}}}, k)
-		if err != nil {
-			t.Fatal(err)
-		}
-		return der
-	}
 	named, _ := csrFor(t, hint)
 	unnamed, _ := csrFor(t, "")
 	for _, c := range []struct {
 		name string
 		req  *EnrollRequest
+		code string
 	}{
-		{"the conduit rewrites the hint to the other identity of the same launch", request(named, batch)},
-		{"a CSR without a name: the hint alone would choose", request(unnamed, hint)},
-		{"a CSR subject with an attribute besides the name", request(withOrg(), hint)},
+		{"the conduit rewrites the hint to the other identity of the same launch", request(named, batch), "credential-hint"},
+		{"a CSR without a name: the hint alone would choose", request(unnamed, hint), "csr-names"},
+		{"a CSR subject with an attribute besides the name", request(csrWithOrg(t, hint), hint), "csr-names"},
 	} {
 		_, err := s.enroll(c.req)
 		var e *gateway.Error
-		if !errors.As(err, &e) || e.Status != http.StatusForbidden || e.Code != "csr-names" {
-			t.Errorf("%s: got %v, want 403 csr-names", c.name, err)
+		if !errors.As(err, &e) || e.Status != http.StatusForbidden || e.Code != c.code {
+			t.Errorf("%s: got %v, want 403 %s", c.name, err, c.code)
+		}
+	}
+}
+
+func csrWithOrg(t *testing.T, cn string) []byte {
+	t.Helper()
+	k, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	der, err := x509.CreateCertificateRequest(rand.Reader, &x509.CertificateRequest{
+		Subject: pkix.Name{CommonName: cn, Organization: []string{"Payments Operations"}}}, k)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return der
+}
+
+// TestAssignIdentity is the name rule alone (tacra-est 14-DECISIONS-FROM-EVIDENCE.md, decision 1): the CA assigns
+// an identity the attested launch may hold; the CSR needs no name when that is one identity and names one when it
+// is several; a hint must be the identity assigned.
+func TestAssignIdentity(t *testing.T) {
+	const meas, other = "aa", "bb"
+	const batch, ledger = "batch.workload.tacra.example", "ledger.workload.tacra.example"
+	one := &gateway.Target{Identities: map[string]*gateway.Identity{
+		hint:   {SANs: []string{hint}, Measurements: []string{meas}},
+		ledger: {SANs: []string{ledger}, Measurements: []string{other}},
+	}}
+	two := &gateway.Target{Identities: map[string]*gateway.Identity{
+		hint:   {SANs: []string{hint}, Measurements: []string{meas}},
+		batch:  {SANs: []string{batch}, Measurements: []string{meas}},
+		ledger: {SANs: []string{ledger}, Measurements: []string{other}},
+	}}
+	parse := func(der []byte) *x509.CertificateRequest {
+		c, err := x509.ParseCertificateRequest(der)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return c
+	}
+	csr := func(cn string, uris ...string) *x509.CertificateRequest {
+		der, _ := csrFor(t, cn, uris...)
+		return parse(der)
+	}
+	m, _ := hex.DecodeString(meas)
+	for _, c := range []struct {
+		name   string
+		t      *gateway.Target
+		csr    *x509.CertificateRequest
+		hint   string
+		assign string // "" when refused
+		code   string
+	}{
+		{"one identity, a CSR without a name, no hint", one, csr(""), "", hint, ""},
+		{"one identity, a CSR without a name, the same hint", one, csr(""), hint, hint, ""},
+		{"one identity, a CSR without a name, a hint for another", one, csr(""), batch, "", "credential-hint"},
+		{"one identity, the CSR names it", one, csr(hint), "", hint, ""},
+		{"one identity, the CSR names one of another launch", one, csr(ledger), "", "", "identity"},
+		{"two identities, a CSR without a name", two, csr(""), hint, "", "csr-names"},
+		{"two identities, the CSR names one, no hint", two, csr(batch), "", batch, ""},
+		{"two identities, the CSR names one, the hint the other", two, csr(hint), batch, "", "credential-hint"},
+		{"a CSR subject with an attribute besides the name", two, parse(csrWithOrg(t, hint)), "", "", "csr-names"},
+		{"a CSR that asks for a URI of its own", one, csr("", "spiffe://tacra.example/admin"), "", "", "csr-names"},
+	} {
+		name, id, err := assignIdentity(c.t, m, c.csr, c.hint)
+		if c.assign != "" {
+			if err != nil || name != c.assign || id == nil || id.SANs[0] != c.assign {
+				t.Errorf("%s: got %q %v, want %q", c.name, name, err, c.assign)
+			}
+			continue
+		}
+		var e *gateway.Error
+		if !errors.As(err, &e) || e.Status != http.StatusForbidden || e.Code != c.code {
+			t.Errorf("%s: got %q %v, want 403 %s", c.name, name, err, c.code)
 		}
 	}
 }

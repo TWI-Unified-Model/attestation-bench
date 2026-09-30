@@ -1,8 +1,8 @@
 // Command ca-gateway is the test bench's Credential Authority as a RATS Relying Party: it answers attest-initiate
 // for its Targets with Handles it mints, and for attest-enroll it checks the Target's policy, freshness, the binding
-// value it recomputes with its own identifier against verified Attestation Results, proof of possession, and that
-// the attested launch may hold the identity the Credential Hint names; then step-ca certifies the CSR's key with the
-// names the policy assigns.
+// value it recomputes with its own identifier against verified Attestation Results, and proof of possession; then it
+// assigns an identity of the Target that the attested launch may hold, and step-ca certifies the CSR's key with the
+// names the policy gives that identity.
 //
 //	ca-gateway -config ca-gateway.json
 package main
@@ -12,8 +12,10 @@ import (
 	"crypto/x509"
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/TWI-Unified-Model/tacra/bundle"
@@ -55,25 +57,11 @@ func (s *server) enroll(req *EnrollRequest) (*EnrollResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	id, ok := t.Identities[req.CredentialHint]
-	if !ok {
-		return nil, &gateway.Error{Status: http.StatusForbidden, Code: "credential-hint",
-			Err: errors.New("no identity for this Credential Hint at this Target")}
+	name, id, err := assignIdentity(t, res.Measurement, csr, req.CredentialHint)
+	if err != nil {
+		return nil, err
 	}
-	if !gateway.Allowed(res.Measurement, id.Measurements) {
-		return nil, &gateway.Error{Status: http.StatusForbidden, Code: "identity",
-			Err: errors.New("the attested launch may not hold this identity")}
-	}
-	// The CA assigns the names. The identity requested is the one the bound CSR names: its subject is exactly one
-	// common name, equal to the Credential Hint, which travels outside the binding and so cannot choose the identity
-	// alone (tacra-est formal/gaps p0-b7: a conduit that rewrites the hint to another identity the launch may hold
-	// gets that identity certified for the honest key unless the name comes from the bound CSR).
-	if csr.Subject.CommonName != req.CredentialHint || len(csr.Subject.Names) != 1 ||
-		len(csr.DNSNames)+len(csr.URIs)+len(csr.IPAddresses)+len(csr.EmailAddresses) > 0 {
-		return nil, &gateway.Error{Status: http.StatusForbidden, Code: "csr-names",
-			Err: errors.New("the CSR must name the requested identity as its only subject attribute, the common name, and nothing else")}
-	}
-	chain, err := s.ca.sign(req.CSR, req.CredentialHint, id.SANs, id.Validity)
+	chain, err := s.ca.sign(req.CSR, name, id.SANs, id.Validity)
 	if err != nil {
 		return nil, &gateway.Error{Status: http.StatusBadGateway, Code: "credential-authority", Err: err}
 	}
@@ -82,6 +70,48 @@ func (s *server) enroll(req *EnrollRequest) (*EnrollResponse, error) {
 		out.CertificateChain = append(out.CertificateChain, c)
 	}
 	return out, nil
+}
+
+// assignIdentity is where the CA assigns the name: an identity of the Target that the attested launch may hold,
+// chosen only by what the binding covers. With one such identity the CSR needs no name; with several, the bound CSR
+// names one as its only subject attribute, the common name, since the Credential Hint travels outside the binding
+// and a conduit that rewrites it could otherwise pick another (tacra-est formal/gaps p0-b7). A hint, if present,
+// must be the identity assigned. The CSR asks for no names of its own: the policy gives them.
+func assignIdentity(t *gateway.Target, measurement []byte, csr *x509.CertificateRequest, hint string) (string, *gateway.Identity, error) {
+	if len(csr.DNSNames)+len(csr.URIs)+len(csr.IPAddresses)+len(csr.EmailAddresses) > 0 {
+		return "", nil, &gateway.Error{Status: http.StatusForbidden, Code: "csr-names",
+			Err: errors.New("the CSR asks for names; the CA assigns them")}
+	}
+	var held []string
+	for n, id := range t.Identities {
+		if gateway.Allowed(measurement, id.Measurements) {
+			held = append(held, n)
+		}
+	}
+	sort.Strings(held)
+	var name string
+	switch {
+	case len(csr.Subject.Names) == 0:
+		if len(held) != 1 {
+			return "", nil, &gateway.Error{Status: http.StatusForbidden, Code: "csr-names",
+				Err: fmt.Errorf("the attested launch may hold %d identities at this Target; the bound CSR must name one", len(held))}
+		}
+		name = held[0]
+	case len(csr.Subject.Names) == 1 && csr.Subject.CommonName != "":
+		name = csr.Subject.CommonName
+		if id, ok := t.Identities[name]; !ok || !gateway.Allowed(measurement, id.Measurements) {
+			return "", nil, &gateway.Error{Status: http.StatusForbidden, Code: "identity",
+				Err: errors.New("the attested launch may not hold the identity the CSR names")}
+		}
+	default:
+		return "", nil, &gateway.Error{Status: http.StatusForbidden, Code: "csr-names",
+			Err: errors.New("the CSR subject must be empty or the common name alone")}
+	}
+	if hint != "" && hint != name {
+		return "", nil, &gateway.Error{Status: http.StatusForbidden, Code: "credential-hint",
+			Err: errors.New("the Credential Hint is not the identity the CA assigns")}
+	}
+	return name, t.Identities[name], nil
 }
 
 func (s *server) routes() http.Handler {
@@ -111,7 +141,7 @@ func (s *server) routes() http.Handler {
 			gateway.WriteError(w, err)
 			return
 		}
-		log.Printf("enrolled: target=%s kind=%s hint=%s", req.Target, req.FreshnessKind, req.CredentialHint)
+		log.Printf("enrolled: target=%s kind=%s hint=%q", req.Target, req.FreshnessKind, req.CredentialHint)
 		gateway.WriteJSON(w, http.StatusOK, resp)
 	})
 	return mux
