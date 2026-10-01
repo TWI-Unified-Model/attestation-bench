@@ -106,6 +106,33 @@ The gateways did not yet log the container or whom they asked. Two things still 
 runs. A gateway answers 400 to a second leg of the other model (`rrp/internal/gateway/appraise_test.go`). The bench's
 configuration was switched between the two pairs (`rats-model.txt` in each run).
 
+## After the EST server's encoding change (globalsign-est `fc57077`, 1 October, 20:24Z and 20:37Z)
+
+`fc57077` makes the EST server write the envelopes as the draft's CDDL says for JSON: every `bstr` member in unpadded
+base64url, where it wrote padded standard base64 before. It reads either. It also accepts the reference
+implementation's media types. The workload and `caapi-est` are built from the same repository, so their side
+changed too. Two runs check that nothing broke:
+
+| run | platform | RATS model | code | Targets admitted | median x509 / API key |
+|---|---|---|---|---|---|
+| `20261001T202400Z-gcp-sev-snp-e2e-passport` | SEV-SNP | passport | `9d440be`, EST `fc57077` | 10 of 10 | 553.7 / 547.5 ms |
+| `20261001T203659Z-gcp-tdx-e2e-background-check` | TDX | background-check | `9d440be` and the bench of `c2e713f`, EST `fc57077` | 10 of 10 | 550.5 / 561.4 ms |
+
+**The reference implementation through the same server.** Between and after these two runs, the reference
+implementation's client acquired 10 of 10 through this server on both platforms and in both models. In the two
+Background Check runs this bench's CA gateway answered its name-rule cases D26-D27 as decision 1 requires (tacra-est
+`interop/RESULTS-twi-est-server.md`).
+
+**The bench's log windows, and the fix (`c2e713f`).** `start_one` sent the EST server's stderr to `est-server.log`
+with `>`, from offset 0, while the server also writes that file itself, appending. TLS handshake errors from port
+probes therefore landed at the start of the file, over the server's own lines. Each one added a line there, so a
+later run's line-count window began one line early:
+
+- the window of `20261001T202400Z-gcp-sev-snp-e2e-passport` starts with the last request of the run before (tacra-est
+  TDX, 20:22:47Z); this run's 20 requests follow it;
+- since `c2e713f` the bench empties each service's log at start and both writers append;
+- the window of the TDX run holds exactly its 20 requests.
+
 ## What these runs do not show
 
 - **A deployment.** The bench is one machine, every listener on loopback. The demo bank of 28 September is the
