@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -92,6 +93,7 @@ func (a *Appraiser) Appraise(evidence []byte, mediaType string, nonce []byte) (s
 	unavailable := func(format string, args ...any) error {
 		return refuse(http.StatusServiceUnavailable, "verifier-unavailable", fmt.Errorf(format, args...))
 	}
+	log.Printf("background-check: this RRP asks %s, %d octets of Evidence (%s)", v.URL, len(evidence), mediaType)
 	q := url.Values{"nonce": {base64.URLEncoding.EncodeToString(nonce)}}
 	resp, err := v.Client.Post(v.URL+"/challenge-response/v1/newSession?"+q.Encode(), "application/json", nil)
 	if err != nil {

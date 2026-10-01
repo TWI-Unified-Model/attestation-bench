@@ -27,6 +27,7 @@ import (
 	"os"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/TWI-Unified-Model/tacra/bundle"
@@ -117,6 +118,10 @@ func (s *server) retrieve(req *RetrieveRequest) (*bundle.Bundle, error) {
 		if s.g.Config.Profile == "bank" {
 			return nil, &gateway.Error{Status: http.StatusBadRequest, Code: "cek",
 				Err: errors.New("bank profile: only the hpke-base-signed container, to an MLKEM768-P256 CEK")}
+		}
+		if !slices.ContainsFunc(t.Acceptable, func(a string) bool { return strings.HasPrefix(a, "DHKEM(") }) {
+			return nil, &gateway.Error{Status: http.StatusBadRequest, Code: "cek",
+				Err: errors.New("the Target accepts no hpke-auth suite: an MLKEM768-P256 CEK and the signed container only")}
 		}
 		b, err = bundle.Seal(s.sender, req.CEKPub, aad, content)
 	}
@@ -215,7 +220,8 @@ func (s *server) routes() http.Handler {
 			gateway.WriteError(w, err)
 			return
 		}
-		log.Printf("released: target=%s kind=%s group=%s", req.Target, req.FreshnessKind, b.AAD.GroupID[:16])
+		log.Printf("released: target=%s kind=%s group=%s container=%s kem=%s", req.Target, req.FreshnessKind,
+			b.AAD.GroupID[:16], b.Container, b.Suite.KEM)
 		gateway.WriteJSON(w, http.StatusOK, b)
 	})
 	// The Vault's origin keys, for provisioning Attesters' trust anchors out of band: its static KEM keys (hpke-auth)

@@ -222,6 +222,13 @@ func TestRetrieveSigned(t *testing.T) {
 	if _, err := s2.retrieve(request(s2, cekPub)); status(err) != http.StatusBadRequest {
 		t.Fatalf("signed container at a Target that does not accept it: %v", err)
 	}
+	// a Target that accepts only the signed container: an X25519 CEK (hpke-auth) is refused, 400, without the profile too
+	s3 := newServer([]string{bundle.AcceptableSigned}, "")
+	xk, _ := ecdh.X25519().GenerateKey(rand.Reader)
+	xkSPKI, _ := x509.MarshalPKIXPublicKey(xk.PublicKey())
+	if _, err := s3.retrieve(request(s3, xkSPKI)); status(err) != http.StatusBadRequest {
+		t.Fatalf("hpke-auth at a Target that accepts only the signed container: %v", err)
+	}
 	// the bank profile: an X25519 CEK (hpke-auth) is refused, 400
 	x, _ := ecdh.X25519().GenerateKey(rand.Reader)
 	xSPKI, _ := x509.MarshalPKIXPublicKey(x.PublicKey())
