@@ -61,10 +61,13 @@ type server struct {
 	signer *ecdsa.PrivateKey // signs the hpke-base-signed container
 }
 
-// groupID derives the credential group from the Attestation Results, as the reference implementation does:
-// SHA-256 of measurement | platform | hint | policy version.
-func groupID(measurement []byte, platform, hint, policyVersion string) string {
-	s := sha256.Sum256([]byte(hex.EncodeToString(measurement) + "|" + platform + "|" + hint + "|" + policyVersion))
+// groupID derives the credential group from the Attestation Results and the Target, as the reference implementation
+// does: SHA-256 of measurement | platform | Target | hint | policy version. The Target is part of the group (tacra-est
+// N2; the draft: a group ID "distinct across security domains, tenants, and credential selections"). Each Target's
+// policy names the secret each of its groups releases; two Targets release one secret only where their policies name
+// the same one.
+func groupID(measurement []byte, platform, target, hint, policyVersion string) string {
+	s := sha256.Sum256([]byte(hex.EncodeToString(measurement) + "|" + platform + "|" + target + "|" + hint + "|" + policyVersion))
 	return hex.EncodeToString(s[:])
 }
 
@@ -86,7 +89,7 @@ func (s *server) retrieve(req *RetrieveRequest) (*bundle.Bundle, error) {
 	if err != nil {
 		return nil, &gateway.Error{Status: http.StatusBadGateway, Code: "secret-vault", Err: err}
 	}
-	gid := groupID(res.Measurement, gateway.Platform(res.Submod), req.CredentialHint, grp.PolicyVersion)
+	gid := groupID(res.Measurement, gateway.Platform(res.Submod), req.Target, req.CredentialHint, grp.PolicyVersion)
 	// The item carries its key-block attributes from the group's policy and never leaves the TEE; a private key is
 	// shared by the group's instances, which the bank profile allows only for a declared replicated service.
 	shared := secret["type"] == "private-key"

@@ -260,3 +260,71 @@ func TestRetrieveSigned(t *testing.T) {
 		t.Fatal("origin-keys does not name the Vault's signature key")
 	}
 }
+
+// TestGroupPerTarget (tacra-est N2): the Target is part of the group. Two Targets with the same hint get two groups;
+// each releases the secret its own policy names, so they share a secret only where both policies name it.
+func TestGroupPerTarget(t *testing.T) {
+	measHex, _ := os.ReadFile("../../internal/ear/testdata/measurement.hex")
+	meas := strings.TrimSpace(string(measHex))
+	tmplRaw, _ := os.ReadFile("../../internal/ear/testdata/ear-gcp-sevsnp.jws")
+	tmpl := strings.TrimSpace(string(tmplRaw))
+	earKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	signer, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	sender, _ := bundle.GenerateSenderKeys()
+	kv := fakeSecrets{"tacra/ledger-a": {"type": "api-key", "format": "raw", "value": "secret-a"},
+		"tacra/ledger-b": {"type": "api-key", "format": "raw", "value": "secret-b"},
+		"tacra/shared":   {"type": "api-key", "format": "raw", "value": "shared"}}
+	const ta, tb = "https://ledger-a.tacra.example", "https://ledger-b.tacra.example"
+	newGW := func(pathA, pathB string) *server {
+		group := func(path string) map[string]*gateway.Group {
+			return map[string]*gateway.Group{hint: {SecretPath: path, Measurements: []string{meas}, PolicyVersion: "1",
+				Purpose: []string{"authenticate"}, Algorithm: "opaque-bearer", ValidityS: 3600}}
+		}
+		target := func(path string) *gateway.Target {
+			return &gateway.Target{Verifiers: []string{"veraison"}, CredentialTypes: []string{"api-key"}, FreshnessKind: fresh.PresentNonce,
+				ExpiresInS: 300, Acceptable: []string{bundle.AcceptableSigned}, Groups: group(path)}
+		}
+		cfg := &gateway.Config{RRPID: rrpID, Verifiers: testVerifiers, Targets: map[string]*gateway.Target{ta: target(pathA), tb: target(pathB)}}
+		if err := cfg.Validate(); err != nil {
+			t.Fatal(err)
+		}
+		return &server{kv: kv, sender: sender, signer: signer, g: &gateway.Gateway{Config: cfg, Mode: "retrieve", Fresh: fresh.New(nil),
+			EAR: &ear.Verifier{Keys: []ear.TrustedKey{{Name: "veraison", Key: &earKey.PublicKey, Submods: []string{"SEVSNP"}}},
+				MaxAge: 2 * time.Minute, Skew: 5 * time.Second}}}
+	}
+	release := func(s *server, target string) (string, string) {
+		cek, cekPub, err := bundle.GenerateCEK()
+		if err != nil {
+			t.Fatal(err)
+		}
+		r, err := s.g.Initiate(gateway.InitiateRequest{Target: target, CredentialType: "api-key"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		bv := platform.BindingValue(r.Handle, rrpID, target, cekPub)
+		jws, _ := gateway.SignTestEAR(earKey, tmpl, bv[:], time.Now(), "")
+		b, err := s.retrieve(&RetrieveRequest{SecondLeg: gateway.SecondLeg{FreshnessKind: fresh.PresentNonce, Target: target,
+			CredentialType: "api-key", Handle: r.Handle, CredentialHint: hint, EAR: jws}, CEKPub: cekPub})
+		if err != nil {
+			t.Fatalf("%s: %v", target, err)
+		}
+		got, err := bundle.OpenSigned(b, bundle.ExpectSigned{RRPID: rrpID, Target: target, Handle: r.Handle, CredentialHint: hint,
+			CEK: cek, VaultKey: &signer.PublicKey})
+		if err != nil {
+			t.Fatalf("%s: open: %v", target, err)
+		}
+		return b.AAD.GroupID, got.CredentialItems[0].Value
+	}
+	own := newGW("tacra/ledger-a", "tacra/ledger-b")
+	ga, sa := release(own, ta)
+	gb, sb := release(own, tb)
+	if ga == gb || sa == sb || sa != "secret-a" || sb != "secret-b" {
+		t.Fatalf("each Target its own secret: groups %s %s, secrets %q %q", ga[:16], gb[:16], sa, sb)
+	}
+	shared := newGW("tacra/shared", "tacra/shared")
+	ga, sa = release(shared, ta)
+	gb, sb = release(shared, tb)
+	if ga == gb || sa != sb {
+		t.Fatalf("both policies name one secret: groups %s %s (want two), secrets %q %q (want one)", ga[:16], gb[:16], sa, sb)
+	}
+}
