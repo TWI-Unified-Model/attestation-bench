@@ -192,6 +192,11 @@ func main() {
 	g := &gateway.Gateway{Config: &fc.Config, Mode: "retrieve", Fresh: fresh.New(nil),
 		EAR: &ear.Verifier{Keys: keys, MaxAge: time.Duration(fc.EAR.MaxAgeS) * time.Second,
 			Skew: time.Duration(fc.EAR.SkewS) * time.Second}}
+	if fc.RATSModel == gateway.BackgroundCheck {
+		if g.Appraiser, err = gateway.NewAppraiser(&fc.Config); err != nil {
+			log.Fatal(err)
+		}
+	}
 	if err := g.LoadEpoch(); err != nil {
 		log.Fatal(err)
 	}

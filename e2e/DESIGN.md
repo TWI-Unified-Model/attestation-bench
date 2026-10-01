@@ -43,8 +43,14 @@ cloud machines are deleted and the deletion checked.
 
 The draft illustrates Passport mode and the SIG's PoC implements it. The EST server opens the Veraison session with the
 binding value it computes from the request and the Target's `rrp_id` (a conduit convenience: a wrong value only makes
-Veraison refuse), and the RRP accepts only an EAR whose nonce equals the value it recomputes itself. Background Check
-(the RRP asks Veraison directly) is a later addition; for the Attester nothing differs.
+Veraison refuse), and the RRP accepts only an EAR whose nonce equals the value it recomputes itself.
+
+Background Check (TACRA Goal 6; TWI CAM C) is a setting of each gateway, `rats_model: background-check`, and of the
+EST backend's entry for that RRP: the EST server then forwards the Evidence and its media type in the second leg
+instead of an EAR, and the gateway opens the session itself, with the binding value it recomputed as the nonce, at the
+verifier configured for the Evidence's TSM provider (`rrp/internal/gateway/appraise.go`). It verifies the EAR as in
+Passport. A gateway in one model refuses a second leg of the other (400). For the Attester nothing differs. Tested
+with a fake verifier (`appraise_test.go`, the EST backend's `backend_test.go`); not yet run on the bench.
 
 ## Open points to settle with the SIG
 

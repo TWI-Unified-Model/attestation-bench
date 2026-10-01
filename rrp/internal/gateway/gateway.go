@@ -34,8 +34,17 @@ type Config struct {
 		URL     string   `json:"url"`
 		CA      string   `json:"ca"`
 		Submods []string `json:"submods"`
+		// Background Check: the TSM report provider whose Evidence this verifier appraises (e.g. "tdx_guest");
+		// a verifier without one takes the rest, as the EST backend routes Evidence in Passport
+		Provider string `json:"provider,omitempty"`
 	} `json:"verifiers"`
-	EAR struct {
+	// RATSModel says how this RRP takes the Verifier's word (TACRA Goal 6): "passport" (the default), the
+	// Attestation Results the EST server obtained and forwards; "background-check", the Attester's Evidence,
+	// which this RRP sends to a verifier itself, with the binding value it recomputed as the session's nonce
+	// (TWI CAM C; Mark Novak, TheBankster/rats-tacra#6: "the Verifier would be contacted by SV and CA in
+	// Background Check mode").
+	RATSModel string `json:"rats_model,omitempty"`
+	EAR       struct {
 		MaxAgeS int `json:"max_age"`
 		SkewS   int `json:"skew"`
 	} `json:"ear"`
@@ -140,6 +149,11 @@ func (c *Config) Validate() error {
 			return fmt.Errorf("gateway: %w", err)
 		}
 	}
+	switch c.RATSModel {
+	case "", Passport, BackgroundCheck:
+	default:
+		return fmt.Errorf("gateway: unknown rats_model %q", c.RATSModel)
+	}
 	switch c.Profile {
 	case "":
 	case "bank":
@@ -184,13 +198,20 @@ func (c *Config) TrustedKeys() ([]ear.TrustedKey, error) {
 	return keys, nil
 }
 
+// The RATS models an RRP may run in (Config.RATSModel).
+const (
+	Passport        = "passport"
+	BackgroundCheck = "background-check"
+)
+
 // Gateway holds a running RRP's state.
 type Gateway struct {
-	Config *Config
-	Mode   string // "enroll" (Credential Authority) or "retrieve" (Secret Vault)
-	Fresh  *fresh.Store
-	EAR    *ear.Verifier
-	Now    func() time.Time
+	Config    *Config
+	Mode      string // "enroll" (Credential Authority) or "retrieve" (Secret Vault)
+	Fresh     *fresh.Store
+	EAR       *ear.Verifier
+	Appraiser *Appraiser // Background Check: how this RRP asks a verifier itself
+	Now       func() time.Time
 }
 
 // Error is a refusal with the HTTP status the draft's error handling gives it.
@@ -229,14 +250,17 @@ type InitiateResponse struct {
 	AcceptableCEK []string   `json:"acceptable_cek,omitempty"`
 }
 
-// SecondLeg holds the fields both attest-enroll and attest-retrieve carry to the RRP, with the Attestation Results.
+// SecondLeg holds the fields both attest-enroll and attest-retrieve carry to the RRP: in Passport the Attestation
+// Results, in Background Check the Evidence and its media type.
 type SecondLeg struct {
 	FreshnessKind  fresh.Kind `json:"freshness_kind"`
 	Target         string     `json:"target"`
 	CredentialType string     `json:"credential_type"`
 	Handle         bundle.B64 `json:"handle,omitempty"` // the freshness element
 	CredentialHint string     `json:"credential_hint,omitempty"`
-	EAR            string     `json:"ear"` // Attestation Results from the Verifier
+	EAR            string     `json:"ear,omitempty"`      // Passport: Attestation Results from the Verifier
+	Evidence       bundle.B64 `json:"evidence,omitempty"` // Background Check: the Attester's Evidence, as it sent it
+	Profile        string     `json:"profile,omitempty"`  // Background Check: the Evidence's media type
 }
 
 func (g *Gateway) target(name, credentialType string) (*Target, error) {
@@ -293,7 +317,24 @@ func (g *Gateway) Check(req *SecondLeg, subject []byte) (*ear.Result, *Target, e
 		return nil, nil, refuse(http.StatusBadRequest, "freshness", err)
 	}
 	bv := platform.BindingValue(req.Handle, g.Config.RRPID, req.Target, subject)
-	res, err := g.EAR.Verify(req.EAR, bv[:])
+	jws := req.EAR
+	if g.Config.RATSModel == BackgroundCheck {
+		// the RRP asks the verifier itself; Attestation Results that arrive with the request are not taken
+		if req.EAR != "" || len(req.Evidence) == 0 {
+			return nil, nil, refuse(http.StatusBadRequest, "malformed",
+				errors.New("background-check: this RRP takes the Evidence, not Attestation Results"))
+		}
+		if g.Appraiser == nil {
+			return nil, nil, refuse(http.StatusInternalServerError, "internal", errors.New("background-check: no verifier to ask"))
+		}
+		if jws, err = g.Appraiser.Appraise(req.Evidence, req.Profile, bv[:]); err != nil {
+			return nil, nil, err
+		}
+	} else if len(req.Evidence) > 0 || req.EAR == "" {
+		return nil, nil, refuse(http.StatusBadRequest, "malformed",
+			errors.New("passport: this RRP takes Attestation Results, not Evidence"))
+	}
+	res, err := g.EAR.Verify(jws, bv[:])
 	if err != nil {
 		return nil, nil, refuse(http.StatusForbidden, "attestation", err)
 	}
