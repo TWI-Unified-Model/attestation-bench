@@ -6,6 +6,9 @@
 # The guest receives trust anchors, the Vault's public origin keys and the epoch marker: nothing secret.
 #
 #   e2e/scripts/gcp-snp-e2e.sh [PROJECT] [ZONE]
+#
+# CAS_OUTSIDE=1 runs the CAS Client (caapi-est, the conduit) outside the guest, on this machine, and gives the
+# workload's CAI the way to it through the reverse tunnel (tacra-est N1: "a run with the conduit outside the guest").
 set -euo pipefail
 PROJECT="${1:-rats-probe}"
 ZONE="${2:-us-central1-c}"
@@ -16,7 +19,8 @@ HERE="$(cd "$(dirname "$0")/../.." && pwd)"
 B="${TACRA_BENCH:-$HOME/tacra-bench}"
 # the bench's RATS model (bench.sh config, RATS_MODEL): who asks the verifiers
 MODEL="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('rats_model') or 'passport')" "$B/config/vault-gateway.json")"
-OUT="$HERE/e2e/evidence/${STAMP}-gcp-${TEE}-e2e-${MODEL}"
+CAS_OUTSIDE="${CAS_OUTSIDE:-}"
+OUT="$HERE/e2e/evidence/${STAMP}-gcp-${TEE}-e2e-${MODEL}${CAS_OUTSIDE:+-cas-outside}"
 BIN="$(mktemp -d)"
 export CLOUDSDK_CORE_DISABLE_PROMPTS=1 GOWORK=off
 mkdir -p "$OUT/bench-logs"
@@ -39,6 +43,12 @@ echo "== build (linux/amd64)"
 (cd "$HERE/e2e" && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -o "$BIN/e2e-attester" ./cmd/e2e-attester \
   && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -o "$BIN/caapi-est" ./cmd/caapi-est)
 shasum -a 256 "$BIN/e2e-attester" "$BIN/caapi-est" | sed "s#$BIN/##" > "$OUT/binaries.sha256"
+if [ -n "$CAS_OUTSIDE" ]; then
+  # the CAS Client for this machine; the guest gets none
+  (cd "$HERE/e2e" && go build -trimpath -o "$BIN/caapi-est-local" ./cmd/caapi-est)
+  shasum -a 256 "$BIN/caapi-est-local" | sed "s#$BIN/##" >> "$OUT/binaries.sha256"
+  if nc -z 127.0.0.1 50061 2>/dev/null; then echo "!! port 50061 is taken on this machine"; exit 1; fi
+fi
 
 echo "== guest configuration (public material only)"
 # the Vault gateway takes callers with a certificate of the bench (mutual TLS): the operator's
@@ -75,9 +85,11 @@ gcloud compute instances create "$NAME" --project="$PROJECT" --zone="$ZONE" "${M
   --maintenance-policy=TERMINATE --image-family=ubuntu-2404-lts-amd64 --image-project=ubuntu-os-cloud \
   --boot-disk-size=20GB --labels=purpose=tacra-e2e,stamp="$(echo "$STAMP" | tr -d 'TZ')" --metadata=enable-oslogin=TRUE >/dev/null
 TUNNEL=""
+CAS_PID=""
 cleanup() {
   set +e
   [ -n "$TUNNEL" ] && kill "$TUNNEL" 2>/dev/null
+  [ -n "$CAS_PID" ] && kill "$CAS_PID" 2>/dev/null
   echo "== delete $NAME"
   gcloud compute instances delete "$NAME" --project="$PROJECT" --zone="$ZONE" --quiet >/dev/null 2>&1
   left="$(gcloud compute instances list --project="$PROJECT" --filter="name=$NAME" --format='value(name)' 2>/dev/null)"
@@ -95,25 +107,42 @@ mountpoint -q /sys/kernel/config || sudo mount -t configfs none /sys/kernel/conf
 ls -ld /sys/kernel/config/tsm/report; uname -r' 2>>"$OUT/ssh.stderr" | tee "$OUT/provision.txt"
 
 echo "== copy the workload, the CAS Client and the public configuration"
-gcloud compute scp "$BIN/e2e-attester" "$BIN/caapi-est" "$BIN/e2e-attester.json" "$BIN/bench-tls-root.crt" "$NAME:~/" \
-  --project="$PROJECT" --zone="$ZONE" >/dev/null 2>>"$OUT/ssh.stderr"
+GUEST_FILES=("$BIN/e2e-attester" "$BIN/e2e-attester.json" "$BIN/bench-tls-root.crt")
+[ -n "$CAS_OUTSIDE" ] || GUEST_FILES+=("$BIN/caapi-est")
+gcloud compute scp "${GUEST_FILES[@]}" "$NAME:~/" --project="$PROJECT" --zone="$ZONE" >/dev/null 2>>"$OUT/ssh.stderr"
+if [ -n "$CAS_OUTSIDE" ]; then
+  echo "== the CAS Client outside the guest, on this machine (127.0.0.1:50061, through the tunnel to the guest)"
+  "$BIN/caapi-est-local" -listen 127.0.0.1:50061 -est localhost:18443 -anchor "$B/tls/root.crt" > "$OUT/caapi-est-outside.log" 2>&1 &
+  CAS_PID=$!
+  for i in $(seq 1 20); do nc -z 127.0.0.1 50061 2>/dev/null && break; sleep 0.5; done
+  echo "outside the guest: caapi-est on the bench machine, pid $CAS_PID, reached by the guest through ssh -R 50061" > "$OUT/cas-placement.txt"
+else
+  echo "inside the guest: caapi-est on 127.0.0.1:50061 of the guest" > "$OUT/cas-placement.txt"
+fi
 
 echo "== reverse tunnel to the bench (EST server 18443, mTLS service 19443)"
-"${SSH[@]}" -- -N -o ExitOnForwardFailure=yes -R 18443:127.0.0.1:18443 -R 19443:127.0.0.1:19443 2>>"$OUT/ssh.stderr" &
+FWD=(-R 18443:127.0.0.1:18443 -R 19443:127.0.0.1:19443)
+[ -n "$CAS_OUTSIDE" ] && FWD+=(-R 50061:127.0.0.1:50061)
+"${SSH[@]}" -- -N -o ExitOnForwardFailure=yes "${FWD[@]}" 2>>"$OUT/ssh.stderr" &
 TUNNEL=$!
 for i in $(seq 1 20); do "${SSH[@]}" --command='nc -z 127.0.0.1 18443 && nc -z 127.0.0.1 19443' >/dev/null 2>&1 && break; sleep 3; done
 
 echo "== run in the guest"
 NB="$(date -u +%s)"
-"${SSH[@]}" --command='
-set -e
-nohup ~/caapi-est -listen 127.0.0.1:50061 -est localhost:18443 -anchor ~/bench-tls-root.crt > ~/caapi-est.log 2>&1 &
+if [ -n "$CAS_OUTSIDE" ]; then
+  START_CAS='echo "the CAS Client is outside this guest" > ~/caapi-est.log; echo 0 > ~/caapi-est.pid'
+else
+  START_CAS='nohup ~/caapi-est -listen 127.0.0.1:50061 -est localhost:18443 -anchor ~/bench-tls-root.crt > ~/caapi-est.log 2>&1 &
 echo $! > ~/caapi-est.pid
-sleep 1
+sleep 1'
+fi
+"${SSH[@]}" --command="
+set -e
+$START_CAS"'
 sudo ~/e2e-attester -config ~/e2e-attester.json -out ~/results.json 2>&1
 sudo chown $(id -u):$(id -g) ~/results.json; uname -a > ~/kernel.txt
 (curl -s -H Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/machine-type > ~/machine-type.txt || true)
-kill "$(cat ~/caapi-est.pid)" || true' 2>>"$OUT/ssh.stderr" | tee "$OUT/e2e-attester-stdout.txt"
+[ "$(cat ~/caapi-est.pid)" = 0 ] || kill "$(cat ~/caapi-est.pid)" || true' 2>>"$OUT/ssh.stderr" | tee "$OUT/e2e-attester-stdout.txt"
 NA="$(date -u +%s)"
 echo "$NB $NA" > "$OUT/run-window.txt"
 gcloud compute scp "$NAME:~/results.json" "$NAME:~/caapi-est.log" "$NAME:~/kernel.txt" "$NAME:~/machine-type.txt" "$OUT/" \
