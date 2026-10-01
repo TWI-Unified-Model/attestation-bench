@@ -17,7 +17,7 @@ case "${1:-status}" in
       nohup "$D/bin/$s-service" --config="$CFG" > "$D/logs/$s.log" 2>&1 &
       echo $! > "$pidf"
       echo "$s started ($(cat "$pidf"))"
-      [ "$s" = vts ] && sleep 2
+      if [ "$s" = vts ]; then sleep 2; fi
     done ;;
   stop)
     for s in "${SERVICES[@]}"; do
