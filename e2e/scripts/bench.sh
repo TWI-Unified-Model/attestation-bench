@@ -88,7 +88,10 @@ running() { [ -f "$B/$1.pid" ] && kill -0 "$(cat "$B/$1.pid")" 2>/dev/null; }
 start_one() { # name command...
   local name="$1"; shift
   if running "$name"; then echo "$name already running ($(cat "$B/$name.pid"))"; return; fi
-  nohup "$@" > "$B/$name.log" 2>&1 &
+  # emptied, then appended to: the EST server also writes this file itself (log_file, O_APPEND); a plain ">" would
+  # write its stderr from offset 0, over the start of its own log, and shift the e2e scripts' line-count windows
+  : > "$B/$name.log"
+  nohup "$@" >> "$B/$name.log" 2>&1 &
   echo $! > "$B/$name.pid"
   echo "$name started ($!)"
 }
