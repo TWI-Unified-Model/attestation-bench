@@ -48,7 +48,10 @@ vault = dict(common, rrp_id="https://vault1.tacra.example", listen="127.0.0.1:91
              tls_cert=f"{B}/tls/vault-gateway.crt", tls_key=f"{B}/tls/vault-gateway.key",
              # the hpke-base-signed container only (tacra-est decision 4): an MLKEM768-P256 CEK, the Vault's signature
              targets={f"https://ledger-{k}.tacra.example": target(v, {"acceptable": ["MLKEM768-P256+HKDF-SHA256+AES-256-GCM"],
-                      "groups": {hint: {"secret_path": "tacra/payments", "measurements": meas, "policy_version": "1"}}})
+                      # key-block attributes the CAI requires of a signed container's items: the API key authenticates,
+                      # an opaque bearer value; 3600 s, the bank profile's longest
+                      "groups": {hint: {"secret_path": "tacra/payments", "measurements": meas, "policy_version": "1",
+                                        "purpose": ["authenticate"], "algorithm": "opaque-bearer", "validity_seconds": 3600}}})
                       for k, v in kinds.items()},
              vault={"addr": "https://127.0.0.1:8200", "ca": f"{B}/tls/root.crt", "mount": "secret",
                     "token_file": f"{B}/gateways/vault-gateway.token"}, kem_keys=f"{B}/gateways/vault-kem.json",
