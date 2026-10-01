@@ -5,6 +5,7 @@
 package gateway
 
 import (
+	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -20,6 +21,7 @@ import (
 	"github.com/TWI-Unified-Model/tacra/platform"
 	"github.com/TWI-Unified-Model/tacra/rrp/internal/ear"
 	"github.com/TWI-Unified-Model/tacra/rrp/internal/fresh"
+	"github.com/TWI-Unified-Model/tacra/rrp/internal/mtls"
 )
 
 // Config is a gateway's configuration file.
@@ -28,16 +30,17 @@ type Config struct {
 	Listen  string `json:"listen"`
 	TLSCert string `json:"tls_cert"`
 	TLSKey  string `json:"tls_key"`
-	// Verifiers whose Attestation Results this RRP accepts, each for its submodules (Veraison for SEVSNP, the
-	// bench's TDX verifier for TDX); their EAR keys are read from their well-known endpoints at start.
-	Verifiers []struct {
-		URL     string   `json:"url"`
-		CA      string   `json:"ca"`
-		Submods []string `json:"submods"`
-		// Background Check: the TSM report provider whose Evidence this verifier appraises (e.g. "tdx_guest");
-		// a verifier without one takes the rest, as the EST backend routes Evidence in Passport
-		Provider string `json:"provider,omitempty"`
-	} `json:"verifiers"`
+	// Mutual TLS (N23). ClientCA certifies the callers this RRP takes; Clients are the identities among them (a DNS
+	// name or URI of the certificate) that may run the protocol, the EST server's; any other caller of ClientCA may
+	// read public material only (the Vault's origin keys). ClientCert and ClientKey are this RRP's own certificate
+	// when it calls a verifier, step-ca or HashiCorp Vault.
+	ClientCA   string   `json:"client_ca,omitempty"`
+	Clients    []string `json:"clients,omitempty"`
+	ClientCert string   `json:"client_cert,omitempty"`
+	ClientKey  string   `json:"client_key,omitempty"`
+	// Verifiers whose Attestation Results this RRP may take, each by name; a Target's policy names those it takes
+	// (Target.Verifiers).
+	Verifiers []VerifierConfig `json:"verifiers"`
 	// RATSModel says how this RRP takes the Verifier's word (TACRA Goal 6): "passport" (the default), the
 	// Attestation Results the EST server obtained and forwards; "background-check", the Attester's Evidence,
 	// which this RRP sends to a verifier itself, with the binding value it recomputed as the session's nonce
@@ -80,14 +83,32 @@ func (g *Gateway) LoadEpoch() error {
 	return g.Fresh.SetEpoch(m)
 }
 
+// VerifierConfig is one verifier this RRP may take Attestation Results from.
+type VerifierConfig struct {
+	Name string `json:"name"` // how Targets' policies name it
+	// EARKey is the file of its EAR verification key, an EC P-256 public JWK or PEM key, as this RRP's operator
+	// provisioned it (N24); the RRP never fetches the key from the verifier.
+	EARKey  string   `json:"ear_key"`
+	Submods []string `json:"submods"` // the submodules its results may speak for ("SEVSNP", "TDX")
+	// Background Check: where this RRP asks it (URL, its TLS CA), and the TSM report provider of the Evidence it
+	// appraises ("sev_guest", "tdx_guest"). The provider only picks among the verifiers the Target's policy takes.
+	URL      string `json:"url,omitempty"`
+	CA       string `json:"ca,omitempty"`
+	Provider string `json:"provider,omitempty"`
+}
+
 // Target is the policy for one Target.
 type Target struct {
 	CredentialTypes []string   `json:"credential_types"`
 	FreshnessKind   fresh.Kind `json:"freshness_kind"`
-	ExpiresInS      int        `json:"expires_in,omitempty"` // present-* Handle lifetime
-	MaxAgeS         int        `json:"max_age,omitempty"`    // absent-timestamp
-	SkewS           int        `json:"clock_skew,omitempty"` // absent-timestamp, future tolerance
-	Acceptable      []string   `json:"acceptable"`           // acceptable_csk (CA) or acceptable_cek (Vault)
+	// Verifiers names the verifiers whose Attestation Results this RRP takes for the Target (N24; CVE-2026-92792:
+	// the appraisal path is chosen by the Relying Party's configuration, never by a field of the Evidence). A Target
+	// that takes one platform names one verifier.
+	Verifiers  []string `json:"verifiers"`
+	ExpiresInS int      `json:"expires_in,omitempty"` // present-* Handle lifetime
+	MaxAgeS    int      `json:"max_age,omitempty"`    // absent-timestamp
+	SkewS      int      `json:"clock_skew,omitempty"` // absent-timestamp, future tolerance
+	Acceptable []string `json:"acceptable"`           // acceptable_csk (CA) or acceptable_cek (Vault)
 	// Identities (Credential Authority), keyed by the identity's name, which the bound CSR's common name or the
 	// Credential Hint gives (ca-gateway assignIdentity); Groups (Secret Vault), keyed by Credential Hint.
 	Identities map[string]*Identity `json:"identities,omitempty"`
@@ -133,7 +154,32 @@ func (c *Config) Validate() error {
 	if c.RRPID == "" || len(c.Targets) == 0 {
 		return errors.New("gateway: rrp_id and at least one Target are required")
 	}
+	verifiers := map[string]*VerifierConfig{}
+	for i := range c.Verifiers {
+		v := &c.Verifiers[i]
+		if v.Name == "" || verifiers[v.Name] != nil {
+			return fmt.Errorf("gateway: verifier %d: a name of its own is required", i)
+		}
+		if v.EARKey == "" || len(v.Submods) == 0 {
+			return fmt.Errorf("gateway: verifier %s: ear_key and submods are required", v.Name)
+		}
+		if c.RATSModel == BackgroundCheck && (v.URL == "" || v.CA == "" || v.Provider == "") {
+			return fmt.Errorf("gateway: verifier %s: background-check asks it, and needs its url, ca and provider", v.Name)
+		}
+		verifiers[v.Name] = v
+	}
+	if (c.ClientCert == "") != (c.ClientKey == "") {
+		return errors.New("gateway: client_cert and client_key go together")
+	}
 	for name, t := range c.Targets {
+		if len(t.Verifiers) == 0 {
+			return fmt.Errorf("gateway: Target %s names no verifier whose results it takes", name)
+		}
+		for _, v := range t.Verifiers {
+			if verifiers[v] == nil {
+				return fmt.Errorf("gateway: Target %s: no verifier named %q", name, v)
+			}
+		}
 		if !t.FreshnessKind.Valid() {
 			return fmt.Errorf("gateway: Target %s: unknown Freshness Kind %q", name, t.FreshnessKind)
 		}
@@ -157,6 +203,9 @@ func (c *Config) Validate() error {
 	switch c.Profile {
 	case "":
 	case "bank":
+		if c.ClientCA == "" || len(c.Clients) == 0 {
+			return errors.New("gateway: bank profile: client_ca and clients are required (mutual TLS with the EST server)")
+		}
 		for name, t := range c.Targets {
 			if t.FreshnessKind != fresh.PresentNonce {
 				return fmt.Errorf("gateway: bank profile: every Target is present-nonce; %s is %s", name, t.FreshnessKind)
@@ -182,20 +231,40 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// TrustedKeys reads each configured verifier's EAR key.
+// TrustedKeys reads each configured verifier's EAR key from the file its operator provisioned.
 func (c *Config) TrustedKeys() ([]ear.TrustedKey, error) {
 	var keys []ear.TrustedKey
 	for _, v := range c.Verifiers {
-		k, err := ear.FetchVeraisonKey(v.URL, v.CA)
+		k, err := ear.LoadKey(v.EARKey)
 		if err != nil {
-			return nil, fmt.Errorf("gateway: verifier %s: %w", v.URL, err)
+			return nil, fmt.Errorf("gateway: verifier %s: %w", v.Name, err)
 		}
-		keys = append(keys, ear.TrustedKey{Key: k, Submods: v.Submods})
+		keys = append(keys, ear.TrustedKey{Name: v.Name, Key: k, Submods: v.Submods})
 	}
 	if len(keys) == 0 {
 		return nil, errors.New("gateway: no verifier configured")
 	}
 	return keys, nil
+}
+
+// PublicPaths are the routes of public material, which any caller with a certificate of the client CA may read.
+var PublicPaths = []string{"/tacra/v1/origin-keys"}
+
+// ServerTLS is this RRP's listener TLS: 1.3, and with a client CA configured a client certificate required (N23).
+func (c *Config) ServerTLS() (*tls.Config, error) { return mtls.ServerTLS(c.ClientCA) }
+
+// Guard wraps the RRP's routes: with a client CA configured, the protocol (attest-initiate and the second legs)
+// answers only the callers Clients names, and PublicPaths any caller of the client CA.
+func (c *Config) Guard(h http.Handler) http.Handler {
+	required := c.ClientCA != ""
+	protocol, public := mtls.Authorize(required, c.Clients, h), mtls.Authorize(required, nil, h)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if slices.Contains(PublicPaths, r.URL.Path) {
+			public.ServeHTTP(w, r)
+			return
+		}
+		protocol.ServeHTTP(w, r)
+	})
 }
 
 // The RATS models an RRP may run in (Config.RATSModel).
@@ -327,15 +396,21 @@ func (g *Gateway) Check(req *SecondLeg, subject []byte) (*ear.Result, *Target, e
 		if g.Appraiser == nil {
 			return nil, nil, refuse(http.StatusInternalServerError, "internal", errors.New("background-check: no verifier to ask"))
 		}
-		if jws, err = g.Appraiser.Appraise(req.Evidence, req.Profile, bv[:]); err != nil {
+		if jws, err = g.Appraiser.Appraise(req.Evidence, req.Profile, bv[:], t.Verifiers); err != nil {
 			return nil, nil, err
 		}
 	} else if len(req.Evidence) > 0 || req.EAR == "" {
 		return nil, nil, refuse(http.StatusBadRequest, "malformed",
 			errors.New("passport: this RRP takes Attestation Results, not Evidence"))
 	}
-	res, err := g.EAR.Verify(jws, bv[:])
+	// only the keys of the verifiers the Target's policy takes (N24): a result another verifier signed is refused,
+	// whichever verifier the conduit chose to ask
+	res, err := g.EAR.Only(t.Verifiers).Verify(jws, bv[:])
 	if err != nil {
+		if errors.Is(err, ear.ErrSignature) {
+			err = fmt.Errorf("%w: none of the verifiers this RRP takes for the Target (%s) signed it", err,
+				strings.Join(t.Verifiers, ", "))
+		}
 		return nil, nil, refuse(http.StatusForbidden, "attestation", err)
 	}
 	if g.Config.Platform != nil {

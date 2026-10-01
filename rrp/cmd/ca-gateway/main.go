@@ -8,7 +8,6 @@
 package main
 
 import (
-	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"flag"
@@ -22,6 +21,7 @@ import (
 	"github.com/TWI-Unified-Model/tacra/rrp/internal/ear"
 	"github.com/TWI-Unified-Model/tacra/rrp/internal/fresh"
 	"github.com/TWI-Unified-Model/tacra/rrp/internal/gateway"
+	"github.com/TWI-Unified-Model/tacra/rrp/internal/mtls"
 )
 
 type fileConfig struct {
@@ -137,11 +137,11 @@ func (s *server) routes() http.Handler {
 		}
 		resp, err := s.enroll(&req)
 		if err != nil {
-			log.Printf("enroll refused: target=%s kind=%s: %v", req.Target, req.FreshnessKind, err)
+			log.Printf("enroll refused: target=%s kind=%s caller=%v: %v", req.Target, req.FreshnessKind, mtls.Names(r), err)
 			gateway.WriteError(w, err)
 			return
 		}
-		log.Printf("enrolled: target=%s kind=%s hint=%q", req.Target, req.FreshnessKind, req.CredentialHint)
+		log.Printf("enrolled: target=%s kind=%s hint=%q caller=%v", req.Target, req.FreshnessKind, req.CredentialHint, mtls.Names(r))
 		gateway.WriteJSON(w, http.StatusOK, resp)
 	})
 	return mux
@@ -176,8 +176,12 @@ func main() {
 	if err := g.LoadEpoch(); err != nil {
 		log.Fatal(err)
 	}
-	srv := &http.Server{Addr: fc.Listen, Handler: (&server{g: g, ca: ca}).routes(), ReadHeaderTimeout: 10 * time.Second,
-		TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12}}
-	log.Printf("ca-gateway %s listening on %s", fc.RRPID, fc.Listen)
+	tc, err := fc.ServerTLS()
+	if err != nil {
+		log.Fatal(err)
+	}
+	srv := &http.Server{Addr: fc.Listen, Handler: fc.Guard((&server{g: g, ca: ca}).routes()), ReadHeaderTimeout: 10 * time.Second,
+		TLSConfig: tc}
+	log.Printf("ca-gateway %s listening on %s; client CA %q, protocol callers %v", fc.RRPID, fc.Listen, fc.ClientCA, fc.Clients)
 	log.Fatal(srv.ListenAndServeTLS(fc.TLSCert, fc.TLSKey))
 }

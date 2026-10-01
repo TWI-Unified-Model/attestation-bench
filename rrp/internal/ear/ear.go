@@ -1,6 +1,6 @@
 // Package ear verifies, for a RATS Relying Party, the Attestation Results a Veraison verifier returns: an EAR (a JWT
-// signed ES256) that must be signed by the verifier's key, be recent, report the binding value the RRP recomputed as
-// its eat_nonce, and be affirming for the scheme's submodule. It also reads the launch measurement the verifier
+// signed ES256) that must be signed by the key the RRP was given for a verifier its policy takes for the Target, be
+// recent, report the binding value the RRP recomputed as its eat_nonce, and be affirming for the scheme's submodule. It also reads the launch measurement the verifier
 // annotated, which the Secret Vault uses to choose a credential group.
 package ear
 
@@ -9,16 +9,16 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/sha256"
-	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"math/big"
-	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -38,8 +38,10 @@ var (
 // mKeyMeasurement is the SEV-SNP launch MEASUREMENT in the AMD CoRIM profile.
 const mKeyMeasurement = 641
 
-// TrustedKey is a verifier's EAR signing key and the submodules it may speak for.
+// TrustedKey is a verifier's EAR signing key, as the RRP's configuration provisions it, and the submodules it may
+// speak for.
 type TrustedKey struct {
+	Name    string // the verifier's name in the RRP's configuration, which a Target's policy names
 	Key     *ecdsa.PublicKey
 	Submods []string // e.g. "SEVSNP" for Veraison, "TDX" for the bench's TDX verifier
 }
@@ -50,6 +52,19 @@ type Verifier struct {
 	MaxAge time.Duration // how old an EAR may be
 	Skew   time.Duration // how far in the future its iat may be
 	Now    func() time.Time
+}
+
+// Only is this Verifier with the keys of the named verifiers alone: those a Target's policy takes (N24, "the Verifier
+// is chosen by the RP's configuration for the Target"). A result signed by any other key it holds is then refused.
+func (v *Verifier) Only(names []string) *Verifier {
+	o := *v
+	o.Keys = nil
+	for _, k := range v.Keys {
+		if slices.Contains(names, k.Name) {
+			o.Keys = append(o.Keys, k)
+		}
+	}
+	return &o
 }
 
 // Result is what the RRP takes from a verified EAR.
@@ -87,30 +102,32 @@ func KeyFromJWK(b []byte) (*ecdsa.PublicKey, error) {
 	return pub, nil
 }
 
-// FetchVeraisonKey reads the EAR verification key a Veraison verification service publishes, over TLS trusting caPath.
-func FetchVeraisonKey(baseURL, caPath string) (*ecdsa.PublicKey, error) {
-	pem, err := os.ReadFile(caPath)
+// LoadKey reads a verifier's EAR verification key from the file the RRP's operator provisioned: an EC P-256 public
+// JWK, or a PEM public key. The RRP never fetches the key from the verifier (N24: the key is provisioned; fetched at
+// start it is only as good as the channel and the verifier's answer at that moment).
+func LoadKey(path string) (*ecdsa.PublicKey, error) {
+	raw, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	pool := x509.NewCertPool()
-	if !pool.AppendCertsFromPEM(pem) {
-		return nil, errors.New("ear: no CA certificate in " + caPath)
+	if b, _ := pem.Decode(raw); b != nil {
+		k, err := x509.ParsePKIXPublicKey(b.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("ear: %s: %w", path, err)
+		}
+		pub, ok := k.(*ecdsa.PublicKey)
+		if !ok || pub.Curve != elliptic.P256() {
+			return nil, fmt.Errorf("ear: %s is not an EC P-256 public key", path)
+		}
+		return pub, nil
 	}
-	c := &http.Client{Timeout: 15 * time.Second, Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}}}
-	resp, err := c.Get(strings.TrimRight(baseURL, "/") + "/.well-known/veraison/verification")
-	if err != nil {
-		return nil, err
+	var j struct {
+		D string `json:"d"`
 	}
-	defer resp.Body.Close()
-	var wk struct {
-		Key json.RawMessage `json:"ear-verification-key"`
+	if json.Unmarshal(raw, &j) == nil && j.D != "" {
+		return nil, fmt.Errorf("ear: %s holds a private key; the RRP is given the public key alone", path)
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&wk); err != nil {
-		return nil, err
-	}
-	return KeyFromJWK(wk.Key)
+	return KeyFromJWK(raw)
 }
 
 // Verify checks the EAR and that it reports wantNonce, and returns what the RRP needs from it.

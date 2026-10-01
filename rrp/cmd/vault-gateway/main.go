@@ -15,7 +15,6 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
-	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
@@ -34,6 +33,7 @@ import (
 	"github.com/TWI-Unified-Model/tacra/rrp/internal/ear"
 	"github.com/TWI-Unified-Model/tacra/rrp/internal/fresh"
 	"github.com/TWI-Unified-Model/tacra/rrp/internal/gateway"
+	"github.com/TWI-Unified-Model/tacra/rrp/internal/mtls"
 )
 
 type fileConfig struct {
@@ -216,12 +216,12 @@ func (s *server) routes() http.Handler {
 		}
 		b, err := s.retrieve(&req)
 		if err != nil {
-			log.Printf("retrieve refused: target=%s kind=%s: %v", req.Target, req.FreshnessKind, err)
+			log.Printf("retrieve refused: target=%s kind=%s caller=%v: %v", req.Target, req.FreshnessKind, mtls.Names(r), err)
 			gateway.WriteError(w, err)
 			return
 		}
-		log.Printf("released: target=%s kind=%s group=%s container=%s kem=%s", req.Target, req.FreshnessKind,
-			b.AAD.GroupID[:16], b.Container, b.Suite.KEM)
+		log.Printf("released: target=%s kind=%s group=%s container=%s kem=%s caller=%v", req.Target, req.FreshnessKind,
+			b.AAD.GroupID[:16], b.Container, b.Suite.KEM, mtls.Names(r))
 		gateway.WriteJSON(w, http.StatusOK, b)
 	})
 	// The Vault's origin keys, for provisioning Attesters' trust anchors out of band: its static KEM keys (hpke-auth)
@@ -253,7 +253,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	kv, err := newVaultKV(fc.Vault)
+	kv, err := newVaultKV(fc.Vault, fc.ClientCert, fc.ClientKey)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -288,8 +288,12 @@ func main() {
 	if err := g.LoadEpoch(); err != nil {
 		log.Fatal(err)
 	}
-	srv := &http.Server{Addr: fc.Listen, Handler: (&server{g: g, kv: kv, sender: sender, signer: signer}).routes(),
-		ReadHeaderTimeout: 10 * time.Second, TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12}}
-	log.Printf("vault-gateway %s listening on %s", fc.RRPID, fc.Listen)
+	tc, err := fc.ServerTLS()
+	if err != nil {
+		log.Fatal(err)
+	}
+	srv := &http.Server{Addr: fc.Listen, Handler: fc.Guard((&server{g: g, kv: kv, sender: sender, signer: signer}).routes()),
+		ReadHeaderTimeout: 10 * time.Second, TLSConfig: tc}
+	log.Printf("vault-gateway %s listening on %s; client CA %q, protocol callers %v", fc.RRPID, fc.Listen, fc.ClientCA, fc.Clients)
 	log.Fatal(srv.ListenAndServeTLS(fc.TLSCert, fc.TLSKey))
 }

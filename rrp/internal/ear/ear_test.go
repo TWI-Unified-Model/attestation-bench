@@ -2,10 +2,13 @@ package ear
 
 import (
 	"bytes"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/pem"
 	"errors"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -82,5 +85,48 @@ func TestEARRefusals(t *testing.T) {
 	tdx.Keys = []TrustedKey{{Key: v.Keys[0].Key, Submods: []string{"TDX"}}}
 	if _, err := tdx.Verify(jws, bv); !errors.Is(err, ErrNotAffirming) {
 		t.Fatalf("submodule not allowed for the key: %v", err)
+	}
+}
+
+// TestProvisionedKey: an RRP reads each verifier's key from the file its operator provisioned, a public JWK or PEM,
+// and refuses a file that holds a private key; Only keeps the keys of the verifiers a Target takes (N24).
+func TestProvisionedKey(t *testing.T) {
+	v, jws, bv, _ := load(t)
+	want := v.Keys[0].Key
+	dir := t.TempDir()
+	jwkPath := "testdata/veraison-ear-key.jwk"
+	if k, err := LoadKey(jwkPath); err != nil || !k.Equal(want) {
+		t.Fatalf("public JWK: %v", err)
+	}
+	der, err := x509.MarshalPKIXPublicKey(want)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pemPath := filepath.Join(dir, "veraison.pem")
+	_ = os.WriteFile(pemPath, pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: der}), 0o600)
+	if k, err := LoadKey(pemPath); err != nil || !k.Equal(want) {
+		t.Fatalf("PEM: %v", err)
+	}
+	priv := filepath.Join(dir, "private.jwk")
+	_ = os.WriteFile(priv, []byte(`{"kty":"EC","crv":"P-256","x":"AA","y":"AA","d":"AA"}`), 0o600)
+	if _, err := LoadKey(priv); err == nil || !strings.Contains(err.Error(), "private key") {
+		t.Fatalf("a private JWK was taken: %v", err)
+	}
+	if _, err := LoadKey(filepath.Join(dir, "absent.jwk")); err == nil {
+		t.Fatal("a missing file was taken")
+	}
+
+	v.Keys[0].Name = "veraison"
+	if _, err := v.Only([]string{"veraison", "tdx"}).Verify(jws, bv); err != nil {
+		t.Fatalf("the Target takes the verifier that signed: %v", err)
+	}
+	if _, err := v.Only([]string{"tdx"}).Verify(jws, bv); !errors.Is(err, ErrSignature) {
+		t.Fatalf("the Target does not take the verifier that signed: %v, want ErrSignature", err)
+	}
+	if _, err := v.Only(nil).Verify(jws, bv); !errors.Is(err, ErrSignature) {
+		t.Fatalf("a Target that takes no verifier: %v, want ErrSignature", err)
+	}
+	if len(v.Keys) != 1 {
+		t.Fatal("Only changed the Verifier it was called on")
 	}
 }

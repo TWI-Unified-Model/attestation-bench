@@ -2,8 +2,6 @@ package gateway
 
 import (
 	"bytes"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -12,44 +10,47 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/fxamacker/cbor/v2"
+
+	"github.com/TWI-Unified-Model/tacra/rrp/internal/mtls"
 )
 
 // Appraiser sends Evidence to a verifier for an RRP in the Background Check model (TWI CAM C: the Credential
 // Authority "handles the Credential Request by contacting the Verifier on the Workload's behalf, supplying the
 // Evidence from the Credential Request"). It speaks Veraison's challenge-response API, as the EST backend does in
 // Passport: a session opened with a nonce, here the binding value this RRP recomputed, and the Evidence posted to
-// it. It routes Evidence by the TSM report's provider, as the EST backend does; that is not appraising it.
+// it, over mutual TLS with this RRP's own certificate (N23).
+//
+// Which verifier is the Target's policy's choice (N24; CVE-2026-92792): only the verifiers it names are asked. When it
+// names more than one, one for each platform it takes, the TSM report's provider picks among them, and Evidence
+// that none of them appraises is refused; there is no default verifier for the rest.
 type Appraiser struct {
 	Verifiers []AppraisalVerifier
 }
 
 // AppraisalVerifier is one verifier the Appraiser may send Evidence to.
 type AppraisalVerifier struct {
-	Provider string // TSM report provider ("tdx_guest", "sev_guest"); "" takes the rest
+	Name     string // its name in the configuration, which Targets' policies name
+	Provider string // the TSM report provider of the Evidence it appraises ("sev_guest", "tdx_guest")
 	URL      string
 	Client   *http.Client
 }
 
-// NewAppraiser builds the Appraiser from the configured verifiers (their URLs and TLS CAs).
+// NewAppraiser builds the Appraiser from the configured verifiers: their URLs, TLS CAs and this RRP's client
+// certificate.
 func NewAppraiser(c *Config) (*Appraiser, error) {
 	a := &Appraiser{}
 	for _, v := range c.Verifiers {
-		pem, err := os.ReadFile(v.CA)
+		tc, err := mtls.ClientTLS(v.CA, c.ClientCert, c.ClientKey)
 		if err != nil {
-			return nil, fmt.Errorf("gateway: verifier %s: %w", v.URL, err)
+			return nil, fmt.Errorf("gateway: verifier %s: %w", v.Name, err)
 		}
-		pool := x509.NewCertPool()
-		if !pool.AppendCertsFromPEM(pem) {
-			return nil, fmt.Errorf("gateway: verifier %s: no CA certificate in %s", v.URL, v.CA)
-		}
-		a.Verifiers = append(a.Verifiers, AppraisalVerifier{Provider: v.Provider, URL: strings.TrimRight(v.URL, "/"),
-			Client: &http.Client{Timeout: 60 * time.Second, Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}}}})
+		a.Verifiers = append(a.Verifiers, AppraisalVerifier{Name: v.Name, Provider: v.Provider, URL: strings.TrimRight(v.URL, "/"),
+			Client: &http.Client{Timeout: 60 * time.Second, Transport: &http.Transport{TLSClientConfig: tc}}})
 	}
 	if len(a.Verifiers) == 0 {
 		return nil, errors.New("gateway: background-check needs a verifier")
@@ -57,8 +58,8 @@ func NewAppraiser(c *Config) (*Appraiser, error) {
 	return a, nil
 }
 
-// route picks the verifier for the Evidence: the one named for its TSM provider, otherwise the one without a provider.
-func (a *Appraiser) route(evidence []byte) (*AppraisalVerifier, error) {
+// route picks, among the verifiers the Target's policy takes (accept), the one for the Evidence's TSM provider.
+func (a *Appraiser) route(evidence []byte, accept []string) (*AppraisalVerifier, error) {
 	var t struct {
 		Provider string `cbor:"provider"`
 	}
@@ -66,34 +67,29 @@ func (a *Appraiser) route(evidence []byte) (*AppraisalVerifier, error) {
 	if cbor.Unmarshal(evidence, &t) == nil {
 		provider = strings.TrimSpace(t.Provider)
 	}
-	var fallback *AppraisalVerifier
 	for i := range a.Verifiers {
 		v := &a.Verifiers[i]
-		if v.Provider != "" && v.Provider == provider {
+		if slices.Contains(accept, v.Name) && v.Provider != "" && v.Provider == provider {
 			return v, nil
 		}
-		if v.Provider == "" && fallback == nil {
-			fallback = v
-		}
 	}
-	if fallback == nil {
-		return nil, refuse(http.StatusUnsupportedMediaType, "unsupported-evidence",
-			fmt.Errorf("no verifier for Evidence of provider %q", provider))
-	}
-	return fallback, nil
+	return nil, refuse(http.StatusForbidden, "verifier",
+		fmt.Errorf("none of the verifiers this RRP takes for the Target (%s) appraises Evidence of provider %q",
+			strings.Join(accept, ", "), provider))
 }
 
-// Appraise runs one challenge-response session and returns its Attestation Results, unverified: the RRP verifies
-// them as it verifies those the EST server forwards in Passport (ear.Verifier).
-func (a *Appraiser) Appraise(evidence []byte, mediaType string, nonce []byte) (string, error) {
-	v, err := a.route(evidence)
+// Appraise runs one challenge-response session with the verifier the Target's policy takes for this Evidence
+// (accept: the policy's verifier names) and returns its Attestation Results, unverified: the RRP verifies them as it
+// verifies those the EST server forwards in Passport (ear.Verifier).
+func (a *Appraiser) Appraise(evidence []byte, mediaType string, nonce []byte, accept []string) (string, error) {
+	v, err := a.route(evidence, accept)
 	if err != nil {
 		return "", err
 	}
 	unavailable := func(format string, args ...any) error {
 		return refuse(http.StatusServiceUnavailable, "verifier-unavailable", fmt.Errorf(format, args...))
 	}
-	log.Printf("background-check: this RRP asks %s, %d octets of Evidence (%s)", v.URL, len(evidence), mediaType)
+	log.Printf("background-check: this RRP asks %s (%s), %d octets of Evidence (%s)", v.URL, v.Name, len(evidence), mediaType)
 	q := url.Values{"nonce": {base64.URLEncoding.EncodeToString(nonce)}}
 	resp, err := v.Client.Post(v.URL+"/challenge-response/v1/newSession?"+q.Encode(), "application/json", nil)
 	if err != nil {

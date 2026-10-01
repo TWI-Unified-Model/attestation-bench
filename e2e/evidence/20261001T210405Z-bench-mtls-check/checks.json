@@ -1,0 +1,322 @@
+[
+ {
+  "channel": "EST server -> CA gateway: attest-initiate",
+  "caller": "est-server",
+  "tls": "1.3",
+  "expected": 200,
+  "got": 200,
+  "ok": true
+ },
+ {
+  "channel": "EST server -> CA gateway: attest-initiate",
+  "caller": "operator",
+  "tls": "1.3",
+  "expected": 403,
+  "got": 403,
+  "ok": true
+ },
+ {
+  "channel": "EST server -> CA gateway: attest-initiate",
+  "caller": "localhost",
+  "tls": "1.3",
+  "expected": 403,
+  "got": 403,
+  "ok": true
+ },
+ {
+  "channel": "EST server -> CA gateway: attest-initiate",
+  "caller": "ca-gateway",
+  "tls": "1.3",
+  "expected": 403,
+  "got": 403,
+  "ok": true
+ },
+ {
+  "channel": "EST server -> CA gateway: attest-initiate",
+  "caller": "foreign",
+  "tls": "1.3",
+  "expected": "tls",
+  "got": "tls",
+  "ok": true
+ },
+ {
+  "channel": "EST server -> CA gateway: attest-initiate",
+  "caller": "none",
+  "tls": "1.3",
+  "expected": "tls",
+  "got": "tls",
+  "ok": true
+ },
+ {
+  "channel": "EST server -> CA gateway: attest-initiate",
+  "caller": "est-server",
+  "tls": "1.2",
+  "expected": "tls",
+  "got": "tls",
+  "ok": true
+ },
+ {
+  "channel": "EST server -> Vault gateway: attest-initiate",
+  "caller": "est-server",
+  "tls": "1.3",
+  "expected": 200,
+  "got": 200,
+  "ok": true
+ },
+ {
+  "channel": "EST server -> Vault gateway: attest-initiate",
+  "caller": "operator",
+  "tls": "1.3",
+  "expected": 403,
+  "got": 403,
+  "ok": true
+ },
+ {
+  "channel": "EST server -> Vault gateway: attest-initiate",
+  "caller": "vault-gateway",
+  "tls": "1.3",
+  "expected": 403,
+  "got": 403,
+  "ok": true
+ },
+ {
+  "channel": "EST server -> Vault gateway: attest-initiate",
+  "caller": "foreign",
+  "tls": "1.3",
+  "expected": "tls",
+  "got": "tls",
+  "ok": true
+ },
+ {
+  "channel": "EST server -> Vault gateway: attest-initiate",
+  "caller": "none",
+  "tls": "1.3",
+  "expected": "tls",
+  "got": "tls",
+  "ok": true
+ },
+ {
+  "channel": "EST server -> Vault gateway: attest-initiate",
+  "caller": "est-server",
+  "tls": "1.2",
+  "expected": "tls",
+  "got": "tls",
+  "ok": true
+ },
+ {
+  "channel": "operator -> Vault gateway: origin keys (public)",
+  "caller": "operator",
+  "tls": "1.3",
+  "expected": 200,
+  "got": 200,
+  "ok": true
+ },
+ {
+  "channel": "operator -> Vault gateway: origin keys (public)",
+  "caller": "est-server",
+  "tls": "1.3",
+  "expected": 200,
+  "got": 200,
+  "ok": true
+ },
+ {
+  "channel": "operator -> Vault gateway: origin keys (public)",
+  "caller": "foreign",
+  "tls": "1.3",
+  "expected": "tls",
+  "got": "tls",
+  "ok": true
+ },
+ {
+  "channel": "operator -> Vault gateway: origin keys (public)",
+  "caller": "none",
+  "tls": "1.3",
+  "expected": "tls",
+  "got": "tls",
+  "ok": true
+ },
+ {
+  "channel": "operator -> Vault gateway: origin keys (public)",
+  "caller": "operator",
+  "tls": "1.2",
+  "expected": "tls",
+  "got": "tls",
+  "ok": true
+ },
+ {
+  "channel": "EST server or gateway -> TDX verifier: new session",
+  "caller": "est-server",
+  "tls": "1.3",
+  "expected": 201,
+  "got": 201,
+  "ok": true
+ },
+ {
+  "channel": "EST server or gateway -> TDX verifier: new session",
+  "caller": "ca-gateway",
+  "tls": "1.3",
+  "expected": 201,
+  "got": 201,
+  "ok": true
+ },
+ {
+  "channel": "EST server or gateway -> TDX verifier: new session",
+  "caller": "vault-gateway",
+  "tls": "1.3",
+  "expected": 201,
+  "got": 201,
+  "ok": true
+ },
+ {
+  "channel": "EST server or gateway -> TDX verifier: new session",
+  "caller": "operator",
+  "tls": "1.3",
+  "expected": 403,
+  "got": 403,
+  "ok": true
+ },
+ {
+  "channel": "EST server or gateway -> TDX verifier: new session",
+  "caller": "foreign",
+  "tls": "1.3",
+  "expected": "tls",
+  "got": "tls",
+  "ok": true
+ },
+ {
+  "channel": "EST server or gateway -> TDX verifier: new session",
+  "caller": "none",
+  "tls": "1.3",
+  "expected": "tls",
+  "got": "tls",
+  "ok": true
+ },
+ {
+  "channel": "EST server or gateway -> TDX verifier: new session",
+  "caller": "est-server",
+  "tls": "1.2",
+  "expected": "tls",
+  "got": "tls",
+  "ok": true
+ },
+ {
+  "channel": "EST server or gateway -> Veraison: new session",
+  "caller": "est-server",
+  "tls": "1.3",
+  "expected": 201,
+  "got": 201,
+  "ok": true
+ },
+ {
+  "channel": "EST server or gateway -> Veraison: new session",
+  "caller": "ca-gateway",
+  "tls": "1.3",
+  "expected": 201,
+  "got": 201,
+  "ok": true
+ },
+ {
+  "channel": "EST server or gateway -> Veraison: new session",
+  "caller": "foreign",
+  "tls": "1.3",
+  "expected": "tls",
+  "got": "tls",
+  "ok": true
+ },
+ {
+  "channel": "EST server or gateway -> Veraison: new session",
+  "caller": "none",
+  "tls": "1.3",
+  "expected": "tls",
+  "got": "tls",
+  "ok": true
+ },
+ {
+  "channel": "EST server or gateway -> Veraison: new session",
+  "caller": "est-server",
+  "tls": "1.2",
+  "expected": "tls",
+  "got": "tls",
+  "ok": true
+ },
+ {
+  "channel": "Vault gateway -> HashiCorp Vault: health",
+  "caller": "vault-gateway",
+  "tls": "1.3",
+  "expected": 200,
+  "got": 200,
+  "ok": true
+ },
+ {
+  "channel": "Vault gateway -> HashiCorp Vault: health",
+  "caller": "operator",
+  "tls": "1.3",
+  "expected": 200,
+  "got": 200,
+  "ok": true
+ },
+ {
+  "channel": "Vault gateway -> HashiCorp Vault: health",
+  "caller": "foreign",
+  "tls": "1.3",
+  "expected": "tls",
+  "got": "tls",
+  "ok": true
+ },
+ {
+  "channel": "Vault gateway -> HashiCorp Vault: health",
+  "caller": "none",
+  "tls": "1.3",
+  "expected": "tls",
+  "got": "tls",
+  "ok": true
+ },
+ {
+  "channel": "Vault gateway -> HashiCorp Vault: health",
+  "caller": "vault-gateway",
+  "tls": "1.2",
+  "expected": "tls",
+  "got": "tls",
+  "ok": true
+ },
+ {
+  "channel": "CA gateway -> step-ca: health",
+  "caller": "ca-gateway",
+  "tls": "1.3",
+  "expected": 200,
+  "got": "tls",
+  "ok": false
+ },
+ {
+  "channel": "CA gateway -> step-ca: health",
+  "caller": "none",
+  "tls": "1.3",
+  "expected": 200,
+  "got": 200,
+  "ok": true
+ },
+ {
+  "channel": "CA gateway -> step-ca: health",
+  "caller": "ca-gateway",
+  "tls": "1.2",
+  "expected": "tls",
+  "got": "tls",
+  "ok": true
+ },
+ {
+  "channel": "workload -> EST server: attest-initiate (TLS 1.3, no client certificate required)",
+  "caller": "none",
+  "tls": "1.3",
+  "expected": 200,
+  "got": 200,
+  "ok": true
+ },
+ {
+  "channel": "workload -> EST server: attest-initiate (TLS 1.3, no client certificate required)",
+  "caller": "none",
+  "tls": "1.2",
+  "expected": "tls",
+  "got": "tls",
+  "ok": true
+ }
+]

@@ -38,7 +38,8 @@ echo "== build (linux/amd64)"
 shasum -a 256 "$BIN/e2e-attester" "$BIN/caapi-est" | sed "s#$BIN/##" > "$OUT/binaries.sha256"
 
 echo "== guest configuration (public material only)"
-curl -sf --cacert "$B/tls/root.crt" https://127.0.0.1:9102/tacra/v1/origin-keys > "$BIN/origin-keys.json"
+# the Vault gateway takes callers with a certificate of the bench (mutual TLS): the operator's
+curl -sf --cacert "$B/tls/root.crt" --cert "$B/tls/clients/operator.crt" --key "$B/tls/clients/operator.key" https://127.0.0.1:9102/tacra/v1/origin-keys > "$BIN/origin-keys.json"
 cp "$B/tls/root.crt" "$BIN/bench-tls-root.crt"
 TEE="$TEE" B="$B" BIN="$BIN" python3 - <<'PY'
 import json, os

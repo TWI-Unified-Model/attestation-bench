@@ -24,6 +24,10 @@ import (
 	"github.com/TWI-Unified-Model/tacra/rrp/internal/gateway"
 )
 
+// testVerifiers is the verifier the tests' Targets take: Veraison, for SEVSNP. The tests give the gateway its key
+// directly (ear.Verifier); ear_key names the file a deployment would provision.
+var testVerifiers = []gateway.VerifierConfig{{Name: "veraison", EARKey: "veraison.ear.jwk", Submods: []string{"SEVSNP"}}}
+
 const (
 	rrpID  = "https://vault1.tacra.example"
 	target = "https://ledger.tacra.example"
@@ -34,7 +38,8 @@ func benchKV(t *testing.T) *vaultKV {
 	t.Helper()
 	b := filepath.Join(os.Getenv("HOME"), "tacra-bench")
 	kv, err := newVaultKV(vaultConfig{Addr: "https://127.0.0.1:8200", CA: filepath.Join(b, "tls/root.crt"),
-		Mount: "secret", TokenFile: filepath.Join(b, "gateways/vault-gateway.token")})
+		Mount: "secret", TokenFile: filepath.Join(b, "gateways/vault-gateway.token")},
+		filepath.Join(b, "tls/clients/vault-gateway.crt"), filepath.Join(b, "tls/clients/vault-gateway.key"))
 	if err != nil {
 		t.Skipf("test bench not present: %v", err)
 	}
@@ -59,8 +64,8 @@ func TestRetrieveThroughVault(t *testing.T) {
 	tmplRaw, _ := os.ReadFile("../../internal/ear/testdata/ear-gcp-sevsnp.jws")
 	tmpl := strings.TrimSpace(string(tmplRaw))
 	earKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	cfg := &gateway.Config{RRPID: rrpID, Targets: map[string]*gateway.Target{target: {
-		CredentialTypes: []string{"api-key"}, FreshnessKind: fresh.PresentNonce, ExpiresInS: 300,
+	cfg := &gateway.Config{RRPID: rrpID, Verifiers: testVerifiers, Targets: map[string]*gateway.Target{target: {
+		Verifiers: []string{"veraison"}, CredentialTypes: []string{"api-key"}, FreshnessKind: fresh.PresentNonce, ExpiresInS: 300,
 		Acceptable: []string{"DHKEM(X25519,HKDF-SHA256)+HKDF-SHA256+AES-256-GCM"},
 		Groups: map[string]*gateway.Group{
 			hint:                            {SecretPath: "tacra/payments", Measurements: []string{strings.TrimSpace(string(measHex))}, PolicyVersion: "1"},
@@ -71,7 +76,7 @@ func TestRetrieveThroughVault(t *testing.T) {
 	}
 	sender, _ := bundle.GenerateSenderKeys()
 	s := &server{kv: kv, sender: sender, g: &gateway.Gateway{Config: cfg, Mode: "retrieve", Fresh: fresh.New(nil),
-		EAR: &ear.Verifier{Keys: []ear.TrustedKey{{Key: &earKey.PublicKey, Submods: []string{"SEVSNP"}}},
+		EAR: &ear.Verifier{Keys: []ear.TrustedKey{{Name: "veraison", Key: &earKey.PublicKey, Submods: []string{"SEVSNP"}}},
 			MaxAge: 2 * time.Minute, Skew: 5 * time.Second}}}
 
 	handle := func() []byte {
@@ -165,15 +170,17 @@ func TestRetrieveSigned(t *testing.T) {
 	sender, _ := bundle.GenerateSenderKeys()
 	kv := fakeSecrets{"tacra/payments": {"type": "api-key", "format": "raw", "value": "the-secret"}}
 	newServer := func(acceptable []string, profile string) *server {
-		cfg := &gateway.Config{RRPID: rrpID, Profile: profile, Targets: map[string]*gateway.Target{target: {
-			CredentialTypes: []string{"api-key"}, FreshnessKind: fresh.PresentNonce, ExpiresInS: 300, Acceptable: acceptable,
-			Groups: map[string]*gateway.Group{hint: {SecretPath: "tacra/payments", Measurements: []string{strings.TrimSpace(string(measHex))},
-				PolicyVersion: "1", Purpose: []string{"authenticate"}, Algorithm: "API-KEY", ValidityS: 3600}}}}}
+		// the bank profile asks mutual TLS of the EST server's calls; these handlers are called directly
+		cfg := &gateway.Config{RRPID: rrpID, Verifiers: testVerifiers, Profile: profile, ClientCA: "infra-root.crt",
+			Clients: []string{"est-server.bench.tacra.example"}, Targets: map[string]*gateway.Target{target: {
+				Verifiers: []string{"veraison"}, CredentialTypes: []string{"api-key"}, FreshnessKind: fresh.PresentNonce, ExpiresInS: 300, Acceptable: acceptable,
+				Groups: map[string]*gateway.Group{hint: {SecretPath: "tacra/payments", Measurements: []string{strings.TrimSpace(string(measHex))},
+					PolicyVersion: "1", Purpose: []string{"authenticate"}, Algorithm: "API-KEY", ValidityS: 3600}}}}}
 		if err := cfg.Validate(); err != nil {
 			t.Fatal(err)
 		}
 		return &server{kv: kv, sender: sender, signer: signer, g: &gateway.Gateway{Config: cfg, Mode: "retrieve", Fresh: fresh.New(nil),
-			EAR: &ear.Verifier{Keys: []ear.TrustedKey{{Key: &earKey.PublicKey, Submods: []string{"SEVSNP"}}},
+			EAR: &ear.Verifier{Keys: []ear.TrustedKey{{Name: "veraison", Key: &earKey.PublicKey, Submods: []string{"SEVSNP"}}},
 				MaxAge: 2 * time.Minute, Skew: 5 * time.Second}}}
 	}
 	request := func(s *server, cekPub []byte) *RetrieveRequest {

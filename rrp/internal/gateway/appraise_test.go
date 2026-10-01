@@ -104,19 +104,29 @@ func TestBackgroundCheck(t *testing.T) {
 	tmpl := strings.TrimSpace(string(tmplRaw))
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	const rrpID, target = "https://ca1.tacra.example", "https://db.tacra.example"
-	gw := func(model string, verifiers ...AppraisalVerifier) *Gateway {
-		cfg := &Config{RRPID: rrpID, RATSModel: model, Targets: map[string]*Target{target: {
-			CredentialTypes: []string{"x509"}, FreshnessKind: fresh.PresentNonce, ExpiresInS: 300}}}
+	// two verifiers, as on the bench: Veraison for SEV-SNP, the TDX verifier for TDX; the Target takes those its
+	// policy names (takes), and the gateway holds both keys (the TDX verifier's: tdxKey)
+	tdxKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	verifierConfigs := []VerifierConfig{
+		{Name: "veraison", EARKey: "veraison.ear.jwk", Submods: []string{"SEVSNP"}, URL: "https://127.0.0.1:8443", CA: "root.crt", Provider: "sev_guest"},
+		{Name: "tdx", EARKey: "tdx.ear.jwk", Submods: []string{"TDX", "SEVSNP"}, URL: "https://127.0.0.1:8453", CA: "root.crt", Provider: "tdx_guest"}}
+	gwTakes := func(model string, takes []string, verifiers ...AppraisalVerifier) *Gateway {
+		cfg := &Config{RRPID: rrpID, RATSModel: model, Verifiers: verifierConfigs, Targets: map[string]*Target{target: {
+			Verifiers: takes, CredentialTypes: []string{"x509"}, FreshnessKind: fresh.PresentNonce, ExpiresInS: 300}}}
 		if err := cfg.Validate(); err != nil {
 			t.Fatal(err)
 		}
 		g := &Gateway{Config: cfg, Mode: "enroll", Fresh: fresh.New(nil),
-			EAR: &ear.Verifier{Keys: []ear.TrustedKey{{Key: &key.PublicKey, Submods: []string{"SEVSNP"}}},
+			EAR: &ear.Verifier{Keys: []ear.TrustedKey{{Name: "veraison", Key: &key.PublicKey, Submods: []string{"SEVSNP"}},
+				{Name: "tdx", Key: &tdxKey.PublicKey, Submods: []string{"TDX", "SEVSNP"}}},
 				MaxAge: time.Minute, Skew: 5 * time.Second}}
 		if len(verifiers) > 0 {
 			g.Appraiser = &Appraiser{Verifiers: verifiers}
 		}
 		return g
+	}
+	gw := func(model string, verifiers ...AppraisalVerifier) *Gateway {
+		return gwTakes(model, []string{"veraison"}, verifiers...)
 	}
 	subject := []byte("the CSR's DER, as bound")
 	leg := func(g *Gateway) (*SecondLeg, [64]byte) {
@@ -129,7 +139,7 @@ func TestBackgroundCheck(t *testing.T) {
 	}
 
 	v := newFakeVerifier(t, key, tmpl)
-	bc := gw(BackgroundCheck, AppraisalVerifier{URL: v.srv.URL, Client: v.srv.Client()})
+	bc := gw(BackgroundCheck, AppraisalVerifier{Name: "veraison", Provider: "sev_guest", URL: v.srv.URL, Client: v.srv.Client()})
 
 	// the honest exchange: the RRP opens the session with its own binding value and accepts the verified EAR
 	req, bv := leg(bc)
@@ -188,22 +198,59 @@ func TestBackgroundCheck(t *testing.T) {
 	}
 	v.status = ""
 
-	// Evidence goes to the verifier named for its TSM provider; the rest to the one without a provider
-	tdx := newFakeVerifier(t, key, tmpl)
-	routed := gw(BackgroundCheck, AppraisalVerifier{URL: v.srv.URL, Client: v.srv.Client()},
-		AppraisalVerifier{Provider: "tdx_guest", URL: tdx.srv.URL, Client: tdx.srv.Client()})
+	// N24: the Target's policy chooses the verifiers; the TSM provider only picks among them, and Evidence of a
+	// platform none of them appraises is refused before any verifier is asked
+	tdx := newFakeVerifier(t, tdxKey, tmpl)
+	both := []AppraisalVerifier{{Name: "veraison", Provider: "sev_guest", URL: v.srv.URL, Client: v.srv.Client()},
+		{Name: "tdx", Provider: "tdx_guest", URL: tdx.srv.URL, Client: tdx.srv.Client()}}
+	routed := gwTakes(BackgroundCheck, []string{"veraison", "tdx"}, both...)
 	before := len(v.nonces)
 	l, _ = leg(routed)
 	l.Evidence, l.Profile = tsmEvidence(t, "tdx_guest"), platform.TSMReportMediaTypeCBOR
-	_, _, _ = routed.Check(l, subject) // the template's submodule is SEVSNP; what matters is where the Evidence went
+	if _, _, err := routed.Check(l, subject); err != nil { // the TDX fake signs the SEVSNP template with its own key
+		t.Errorf("tdx_guest Evidence at a Target that takes both verifiers: %v", err)
+	}
 	if len(tdx.nonces) != 1 || len(v.nonces) != before {
-		t.Errorf("tdx_guest Evidence went to the TDX verifier %d times and to the default %d times; want 1 and 0",
+		t.Errorf("tdx_guest Evidence went to the TDX verifier %d times and to Veraison %d times; want 1 and 0",
 			len(tdx.nonces), len(v.nonces)-before)
+	}
+	snpOnly := gwTakes(BackgroundCheck, []string{"veraison"}, both...)
+	for _, provider := range []string{"tdx_guest", "", "made_up_guest"} {
+		asked := len(v.nonces) + len(tdx.nonces)
+		l, _ = leg(snpOnly)
+		l.Evidence, l.Profile = tsmEvidence(t, provider), platform.TSMReportMediaTypeCBOR
+		st, code := refusalStatus(func() error { _, _, err := snpOnly.Check(l, subject); return err }())
+		if st != http.StatusForbidden || code != "verifier" || len(v.nonces)+len(tdx.nonces) != asked {
+			t.Errorf("provider %q at a Target that takes Veraison alone: %d %s, %d verifiers asked; want 403 verifier, none asked",
+				provider, st, code, len(v.nonces)+len(tdx.nonces)-asked)
+		}
+	}
+
+	// N24 in Passport: Attestation Results signed by a verifier the Target does not take are refused, though the RRP
+	// holds that verifier's key for other Targets and the result is otherwise good
+	ppSNP := gwTakes(Passport, []string{"veraison"})
+	l, lbv = leg(ppSNP)
+	l.EAR, _ = SignTestEAR(tdxKey, tmpl, lbv[:], time.Now(), "")
+	if st, code := refusalStatus(func() error { _, _, err := ppSNP.Check(l, subject); return err }()); st != http.StatusForbidden || code != "attestation" {
+		t.Errorf("passport, an EAR of a verifier the Target does not take: %d %s, want 403 attestation", st, code)
+	}
+	ppBoth := gwTakes(Passport, []string{"veraison", "tdx"})
+	l, lbv = leg(ppBoth)
+	l.EAR, _ = SignTestEAR(tdxKey, tmpl, lbv[:], time.Now(), "")
+	if _, _, err := ppBoth.Check(l, subject); err != nil {
+		t.Errorf("passport, the same EAR at a Target that takes that verifier: %v", err)
+	}
+
+	// a Background Check verifier needs where to be asked and which Evidence it appraises
+	bad := &Config{RRPID: rrpID, RATSModel: BackgroundCheck, Verifiers: []VerifierConfig{{Name: "veraison", EARKey: "k", Submods: []string{"SEVSNP"}}},
+		Targets: map[string]*Target{target: {Verifiers: []string{"veraison"}, CredentialTypes: []string{"x509"}, FreshnessKind: fresh.PresentNonce, ExpiresInS: 300}}}
+	if err := bad.Validate(); err == nil || !strings.Contains(err.Error(), "url, ca and provider") {
+		t.Errorf("a background-check verifier without url, ca, provider: %v", err)
 	}
 
 	// the verifier cannot be reached: 503 verifier-unavailable
 	down := newFakeVerifier(t, key, tmpl)
-	dead := gw(BackgroundCheck, AppraisalVerifier{URL: down.srv.URL, Client: down.srv.Client()})
+	dead := gw(BackgroundCheck, AppraisalVerifier{Name: "veraison", Provider: "sev_guest", URL: down.srv.URL, Client: down.srv.Client()})
 	down.srv.Close()
 	l, _ = leg(dead)
 	l.Evidence, l.Profile = tsmEvidence(t, "sev_guest"), platform.TSMReportMediaTypeCBOR
@@ -212,8 +259,8 @@ func TestBackgroundCheck(t *testing.T) {
 	}
 
 	// an unknown model is a configuration error
-	if err := (&Config{RRPID: rrpID, RATSModel: "both", Targets: map[string]*Target{target: {
-		CredentialTypes: []string{"x509"}, FreshnessKind: fresh.PresentNonce, ExpiresInS: 300}}}).Validate(); err == nil {
+	if err := (&Config{RRPID: rrpID, RATSModel: "both", Verifiers: verifierConfigs, Targets: map[string]*Target{target: {
+		Verifiers: []string{"veraison"}, CredentialTypes: []string{"x509"}, FreshnessKind: fresh.PresentNonce, ExpiresInS: 300}}}).Validate(); err == nil {
 		t.Error("rats_model \"both\" was accepted")
 	}
 }

@@ -6,8 +6,6 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
@@ -19,6 +17,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/TWI-Unified-Model/tacra/rrp/internal/mtls"
 )
 
 // stepCA signs CSRs through step-ca's /1.0/sign with one-time tokens of a JWK provisioner whose private key this
@@ -36,14 +36,14 @@ type stepCAConfig struct {
 	KeyFile     string `json:"provisioner_key"` // the provisioner's private JWK
 }
 
+// newStepCA is the client of step-ca: TLS 1.3 to a server under c.Root. The gateway authenticates to step-ca with its
+// provisioner's one-time token, signed with the provisioner key it holds, for each certificate (N23: the CA-RA channel
+// mutually authenticated); it presents no TLS client certificate, since step-ca checks those against its own roots
+// and refuses the handshake for one of the bench's infrastructure root.
 func newStepCA(c stepCAConfig) (*stepCA, error) {
-	rootPEM, err := os.ReadFile(c.Root)
+	tc, err := mtls.ClientTLS(c.Root, "", "")
 	if err != nil {
-		return nil, err
-	}
-	pool := x509.NewCertPool()
-	if !pool.AppendCertsFromPEM(rootPEM) {
-		return nil, errors.New("step-ca: no root certificate in " + c.Root)
+		return nil, fmt.Errorf("step-ca: %w", err)
 	}
 	jwk, err := os.ReadFile(c.KeyFile)
 	if err != nil {
@@ -67,8 +67,7 @@ func newStepCA(c stepCAConfig) (*stepCA, error) {
 		Y: new(big.Int).SetBytes(y)}, D: new(big.Int).SetBytes(d)}
 	base := strings.TrimRight(c.URL, "/")
 	return &stepCA{url: base, audience: base + "/1.0/sign", provisioner: c.Provisioner, kid: k.Kid, key: priv,
-		client: &http.Client{Timeout: 30 * time.Second, Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}}}}, nil
+		client: &http.Client{Timeout: 30 * time.Second, Transport: &http.Transport{TLSClientConfig: tc}}}, nil
 }
 
 // token is a one-time token for the JWK provisioner: sub and sans are the names the certificate will carry.

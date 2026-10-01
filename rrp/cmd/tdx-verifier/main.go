@@ -16,7 +16,6 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
-	"crypto/tls"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
@@ -39,16 +38,22 @@ import (
 	"github.com/google/go-tdx-guest/abi"
 	tdxverify "github.com/google/go-tdx-guest/verify"
 	"github.com/google/go-tdx-guest/verify/trust"
+
+	"github.com/TWI-Unified-Model/tacra/rrp/internal/mtls"
 )
 
 const mediaType = "application/vnd.veraison.tsm-report+cbor"
 
 type config struct {
-	Listen  string   `json:"listen"`
-	TLSCert string   `json:"tls_cert"`
-	TLSKey  string   `json:"tls_key"`
-	KeyFile string   `json:"signing_key"` // ES256 private JWK; created if absent
-	MRTDs   []string `json:"reference_mrtd"`
+	Listen  string `json:"listen"`
+	TLSCert string `json:"tls_cert"`
+	TLSKey  string `json:"tls_key"`
+	// Mutual TLS (N23): callers present a certificate of ClientCA, and only the identities Clients names (the EST
+	// server, the RRP gateways) may open sessions.
+	ClientCA string   `json:"client_ca,omitempty"`
+	Clients  []string `json:"clients,omitempty"`
+	KeyFile  string   `json:"signing_key"` // ES256 private JWK; created if absent
+	MRTDs    []string `json:"reference_mrtd"`
 	// TD ATTRIBUTES bits refused beyond the TUD group, which is always refused; a hex mask. Absent: the TUP group
 	// (bits 15:4, the TD is profiled) and MIGRATABLE (bit 29).
 	AttributesRefused string `json:"td_attributes_refused,omitempty"`
@@ -249,6 +254,9 @@ func (s *server) routes() http.Handler {
 			"service-state": "READY"})
 	})
 	mux.HandleFunc("POST /challenge-response/v1/newSession", func(w http.ResponseWriter, r *http.Request) {
+		if s.cfg.ClientCA != "" {
+			log.Printf("session for %v", mtls.Names(r))
+		}
 		nonce, err := base64.URLEncoding.DecodeString(r.URL.Query().Get("nonce"))
 		if err != nil || len(nonce) < 8 || len(nonce) > 64 {
 			http.Error(w, "nonce must be 8 to 64 octets, base64url", http.StatusBadRequest)
@@ -326,6 +334,8 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 
 func main() {
 	path := flag.String("config", "tdx-verifier.json", "configuration file")
+	printKey := flag.Bool("public-jwk", false, "print the EAR verification key as a public JWK (creating the signing key if absent) and exit: "+
+		"what the RRPs' operator provisions to them")
 	flag.Parse()
 	raw, err := os.ReadFile(*path)
 	if err != nil {
@@ -349,14 +359,23 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	if *printKey {
+		_ = json.NewEncoder(os.Stdout).Encode((&server{key: key}).publicJWK())
+		return
+	}
 	maxAge := time.Hour
 	if cfg.CollateralMaxAgeS > 0 {
 		maxAge = time.Duration(cfg.CollateralMaxAgeS) * time.Second
 	}
 	s := &server{cfg: cfg, key: key, sessions: map[string]*session{},
 		getter: &cachingGetter{inner: trust.DefaultHTTPSGetter(), maxAge: maxAge, now: time.Now, m: map[string]cachedDoc{}}}
-	srv := &http.Server{Addr: cfg.Listen, Handler: s.routes(), ReadHeaderTimeout: 10 * time.Second,
-		TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12}}
-	log.Printf("tdx-verifier listening on %s; reference MRTDs %d", cfg.Listen, len(cfg.MRTDs))
+	tc, err := mtls.ServerTLS(cfg.ClientCA)
+	if err != nil {
+		log.Fatal(err)
+	}
+	srv := &http.Server{Addr: cfg.Listen, Handler: mtls.Authorize(cfg.ClientCA != "", cfg.Clients, s.routes()),
+		ReadHeaderTimeout: 10 * time.Second, TLSConfig: tc}
+	log.Printf("tdx-verifier listening on %s; reference MRTDs %d; client CA %q, callers %v", cfg.Listen, len(cfg.MRTDs),
+		cfg.ClientCA, cfg.Clients)
 	log.Fatal(srv.ListenAndServeTLS(cfg.TLSCert, cfg.TLSKey))
 }

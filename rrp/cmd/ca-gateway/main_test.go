@@ -22,6 +22,10 @@ import (
 	"github.com/TWI-Unified-Model/tacra/rrp/internal/gateway"
 )
 
+// testVerifiers is the verifier the tests' Targets take: Veraison, for SEVSNP. The tests give the gateway its key
+// directly (ear.Verifier); ear_key names the file a deployment would provision.
+var testVerifiers = []gateway.VerifierConfig{{Name: "veraison", EARKey: "veraison.ear.jwk", Submods: []string{"SEVSNP"}}}
+
 const (
 	rrpID  = "https://ca1.tacra.example"
 	target = "https://db.tacra.example"
@@ -52,8 +56,8 @@ func testServer(t *testing.T, measurement string) (*server, *ecdsa.PrivateKey, s
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg := &gateway.Config{RRPID: rrpID, Targets: map[string]*gateway.Target{target: {
-		CredentialTypes: []string{"x509"}, FreshnessKind: fresh.PresentNonce, ExpiresInS: 300,
+	cfg := &gateway.Config{RRPID: rrpID, Verifiers: testVerifiers, Targets: map[string]*gateway.Target{target: {
+		Verifiers: []string{"veraison"}, CredentialTypes: []string{"x509"}, FreshnessKind: fresh.PresentNonce, ExpiresInS: 300,
 		Acceptable: []string{"ecdsa-p256-sha256"},
 		Identities: map[string]*gateway.Identity{
 			hint:                            {SANs: []string{hint, "spiffe://tacra.example/payments"}, Measurements: []string{measurement}, Validity: "1h"},
@@ -63,7 +67,7 @@ func testServer(t *testing.T, measurement string) (*server, *ecdsa.PrivateKey, s
 		t.Fatal(err)
 	}
 	g := &gateway.Gateway{Config: cfg, Mode: "enroll", Fresh: fresh.New(nil),
-		EAR: &ear.Verifier{Keys: []ear.TrustedKey{{Key: &earKey.PublicKey, Submods: []string{"SEVSNP"}}},
+		EAR: &ear.Verifier{Keys: []ear.TrustedKey{{Name: "veraison", Key: &earKey.PublicKey, Submods: []string{"SEVSNP"}}},
 			MaxAge: 2 * time.Minute, Skew: 5 * time.Second}}
 	return &server{g: g, ca: bench(t)}, earKey, strings.TrimSpace(string(tmpl))
 }
@@ -177,8 +181,8 @@ func TestNameFromBoundCSR(t *testing.T) {
 	}
 	earKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	const batch = "batch.workload.tacra.example"
-	cfg := &gateway.Config{RRPID: rrpID, Targets: map[string]*gateway.Target{target: {
-		CredentialTypes: []string{"x509"}, FreshnessKind: fresh.PresentNonce, ExpiresInS: 300,
+	cfg := &gateway.Config{RRPID: rrpID, Verifiers: testVerifiers, Targets: map[string]*gateway.Target{target: {
+		Verifiers: []string{"veraison"}, CredentialTypes: []string{"x509"}, FreshnessKind: fresh.PresentNonce, ExpiresInS: 300,
 		Acceptable: []string{"ecdsa-p256-sha256"},
 		Identities: map[string]*gateway.Identity{
 			hint:  {SANs: []string{hint}, Measurements: []string{meas}, Validity: "1h"},
@@ -188,7 +192,7 @@ func TestNameFromBoundCSR(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := &server{g: &gateway.Gateway{Config: cfg, Mode: "enroll", Fresh: fresh.New(nil),
-		EAR: &ear.Verifier{Keys: []ear.TrustedKey{{Key: &earKey.PublicKey, Submods: []string{"SEVSNP"}}},
+		EAR: &ear.Verifier{Keys: []ear.TrustedKey{{Name: "veraison", Key: &earKey.PublicKey, Submods: []string{"SEVSNP"}}},
 			MaxAge: 2 * time.Minute, Skew: 5 * time.Second}}}
 	request := func(csr []byte, h string) *EnrollRequest {
 		resp, err := s.g.Initiate(gateway.InitiateRequest{Target: target, CredentialType: "x509"})
