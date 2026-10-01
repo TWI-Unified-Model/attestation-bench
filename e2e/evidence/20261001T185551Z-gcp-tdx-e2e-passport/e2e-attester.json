@@ -1,0 +1,93 @@
+{
+ "tee": "tdx",
+ "caapi": "127.0.0.1:50061",
+ "hint": "payments.workload.tacra.example",
+ "targets": [
+  {
+   "target": "https://db-nonce.tacra.example",
+   "type": "x509"
+  },
+  {
+   "target": "https://db-epoch.tacra.example",
+   "type": "x509"
+  },
+  {
+   "target": "https://db-lepoch.tacra.example",
+   "type": "x509"
+  },
+  {
+   "target": "https://db-time.tacra.example",
+   "type": "x509"
+  },
+  {
+   "target": "https://db-none.tacra.example",
+   "type": "x509"
+  },
+  {
+   "target": "https://ledger-nonce.tacra.example",
+   "type": "api-key"
+  },
+  {
+   "target": "https://ledger-epoch.tacra.example",
+   "type": "api-key"
+  },
+  {
+   "target": "https://ledger-lepoch.tacra.example",
+   "type": "api-key"
+  },
+  {
+   "target": "https://ledger-time.tacra.example",
+   "type": "api-key"
+  },
+  {
+   "target": "https://ledger-none.tacra.example",
+   "type": "api-key"
+  }
+ ],
+ "relying_parties": {
+  "https://db-nonce.tacra.example": {
+   "enroll": "https://ca1.tacra.example"
+  },
+  "https://db-epoch.tacra.example": {
+   "enroll": "https://ca1.tacra.example"
+  },
+  "https://db-lepoch.tacra.example": {
+   "enroll": "https://ca1.tacra.example"
+  },
+  "https://db-time.tacra.example": {
+   "enroll": "https://ca1.tacra.example"
+  },
+  "https://db-none.tacra.example": {
+   "enroll": "https://ca1.tacra.example"
+  },
+  "https://ledger-nonce.tacra.example": {
+   "retrieve": "https://vault1.tacra.example"
+  },
+  "https://ledger-epoch.tacra.example": {
+   "retrieve": "https://vault1.tacra.example"
+  },
+  "https://ledger-lepoch.tacra.example": {
+   "retrieve": "https://vault1.tacra.example"
+  },
+  "https://ledger-time.tacra.example": {
+   "retrieve": "https://vault1.tacra.example"
+  },
+  "https://ledger-none.tacra.example": {
+   "retrieve": "https://vault1.tacra.example"
+  }
+ },
+ "vault_origins": {
+  "https://vault1.tacra.example": {
+   "DHKEM(P-256, HKDF-SHA256)": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEWw84SQsFb8cU5WQ7_QMBbD8MLeOlwu411AKIvh9Adat2XLrLzGkDQ9l0s61c4jGLNs8IwX1UeHseWkdXmIjG_A",
+   "DHKEM(X25519, HKDF-SHA256)": "MCowBQYDK2VuAyEA3_XC7jLHvUO8vrUplJwAAerKbuSf5_shVNOMC7oNEjI"
+  }
+ },
+ "vault_signers": {
+  "https://vault1.tacra.example": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEU8trHEthtRm4-HVwgQ1fKKCdXNAwSQ4WCLkSCsIefHTSYDGYaf_YV3IEarTq0m5BlLlu9gPTeLeIRt2S33w8BA"
+ },
+ "local_epoch_hex": "f785aee7389f5a6b16e23c1bc27fca761aebf6fceb51db5ae8b6ff554cbc962f",
+ "rup": {
+  "url": "https://localhost:19443",
+  "anchor_pem": "-----BEGIN CERTIFICATE-----\nMIIBgjCCASigAwIBAgIRANfL7NZkyvyk9MVkYFi+mgowCgYIKoZIzj0EAwIwHzEd\nMBsGA1UEAxMUVEFDUkEgYmVuY2ggVExTIHJvb3QwHhcNMjYwOTI4MjAyODQwWhcN\nMjcwOTI4MjAyODQwWjAfMR0wGwYDVQQDExRUQUNSQSBiZW5jaCBUTFMgcm9vdDBZ\nMBMGByqGSM49AgEGCCqGSM49AwEHA0IABKqr2UErChZB/bo0J7CTauo2UKBoMPW8\nzql11mb0U/tNtCztJshS2xycFfyQvUdZLDrX9bqRvVO8B6jPhi6TynWjRTBDMA4G\nA1UdDwEB/wQEAwIBBjASBgNVHRMBAf8ECDAGAQH/AgEBMB0GA1UdDgQWBBRGaHCg\n04BgAc2vsYkfcByrDyUlMDAKBggqhkjOPQQDAgNIADBFAiEAhyxsMc7mMGSbs6UD\nesCGygX4FF7/spVCC7wABOUzDScCIEksPL3lmoSqJc9/eySQeFr6qmhVVy9ToC9o\nVRZNQgag\n-----END CERTIFICATE-----\n"
+ }
+}

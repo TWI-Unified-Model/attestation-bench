@@ -1,0 +1,112 @@
+[
+ {
+  "target": "https://db-nonce.tacra.example",
+  "type": "x509",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 604.858,
+  "cert_serial": "11ba17fab30e99e272e947b53c68f3b6",
+  "cert_names": "[payments.workload.tacra.example] [spiffe://tacra.example/payments]",
+  "cert_issuer": "TACRA bench CA Intermediate CA",
+  "not_after": "2026-10-01T19:50:44Z",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"payments.workload.tacra.example\",\"not_after\":\"2026-10-01T19:50:44Z\",\"serial\":\"11ba17fab30e99e272e947b53c68f3b6\"}"
+ },
+ {
+  "target": "https://db-epoch.tacra.example",
+  "type": "x509",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 576.506,
+  "cert_serial": "fec441c853223723818e905a7a714872",
+  "cert_names": "[payments.workload.tacra.example] [spiffe://tacra.example/payments]",
+  "cert_issuer": "TACRA bench CA Intermediate CA",
+  "not_after": "2026-10-01T19:50:45Z",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"payments.workload.tacra.example\",\"not_after\":\"2026-10-01T19:50:45Z\",\"serial\":\"fec441c853223723818e905a7a714872\"}"
+ },
+ {
+  "target": "https://db-lepoch.tacra.example",
+  "type": "x509",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 555.849,
+  "cert_serial": "46a61692d4549f99d766f51095346f3e",
+  "cert_names": "[payments.workload.tacra.example] [spiffe://tacra.example/payments]",
+  "cert_issuer": "TACRA bench CA Intermediate CA",
+  "not_after": "2026-10-01T19:50:45Z",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"payments.workload.tacra.example\",\"not_after\":\"2026-10-01T19:50:45Z\",\"serial\":\"46a61692d4549f99d766f51095346f3e\"}"
+ },
+ {
+  "target": "https://db-time.tacra.example",
+  "type": "x509",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 578.775,
+  "cert_serial": "a8b12cccf30692c73d2306852f6eb5dc",
+  "cert_names": "[payments.workload.tacra.example] [spiffe://tacra.example/payments]",
+  "cert_issuer": "TACRA bench CA Intermediate CA",
+  "not_after": "2026-10-01T19:50:46Z",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"payments.workload.tacra.example\",\"not_after\":\"2026-10-01T19:50:46Z\",\"serial\":\"a8b12cccf30692c73d2306852f6eb5dc\"}"
+ },
+ {
+  "target": "https://db-none.tacra.example",
+  "type": "x509",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 509.356,
+  "cert_serial": "c601262e901cdb1c134f0327f4c7fff8",
+  "cert_names": "[payments.workload.tacra.example] [spiffe://tacra.example/payments]",
+  "cert_issuer": "TACRA bench CA Intermediate CA",
+  "not_after": "2026-10-01T19:50:47Z",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"payments.workload.tacra.example\",\"not_after\":\"2026-10-01T19:50:47Z\",\"serial\":\"c601262e901cdb1c134f0327f4c7fff8\"}"
+ },
+ {
+  "target": "https://ledger-nonce.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: failed to unwrap retrieved credential: bundle: an item has no key-block attributes (purpose, algorithm, exportable): a5cd85af26938e6d",
+  "attempts": 1,
+  "acquire_ms": 605.892,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-epoch.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: failed to unwrap retrieved credential: bundle: an item has no key-block attributes (purpose, algorithm, exportable): a5cd85af26938e6d",
+  "attempts": 1,
+  "acquire_ms": 557.436,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-lepoch.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: failed to unwrap retrieved credential: bundle: an item has no key-block attributes (purpose, algorithm, exportable): a5cd85af26938e6d",
+  "attempts": 1,
+  "acquire_ms": 548.273,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-time.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: failed to unwrap retrieved credential: bundle: an item has no key-block attributes (purpose, algorithm, exportable): a5cd85af26938e6d",
+  "attempts": 1,
+  "acquire_ms": 532.084,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-none.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: failed to unwrap retrieved credential: bundle: an item has no key-block attributes (purpose, algorithm, exportable): a5cd85af26938e6d",
+  "attempts": 1,
+  "acquire_ms": 528.179,
+  "rup_status": 0
+ }
+]

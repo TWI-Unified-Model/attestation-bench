@@ -1,0 +1,10 @@
+2026/10/01 18:50:44 https://db-nonce.tacra.example           x509    acquired in   604.9 ms (1 attempt(s)); relying party answered 200
+2026/10/01 18:50:45 https://db-epoch.tacra.example           x509    acquired in   576.5 ms (1 attempt(s)); relying party answered 200
+2026/10/01 18:50:45 https://db-lepoch.tacra.example          x509    acquired in   555.8 ms (1 attempt(s)); relying party answered 200
+2026/10/01 18:50:46 https://db-time.tacra.example            x509    acquired in   578.8 ms (1 attempt(s)); relying party answered 200
+2026/10/01 18:50:47 https://db-none.tacra.example            x509    acquired in   509.4 ms (1 attempt(s)); relying party answered 200
+2026/10/01 18:50:48 https://ledger-nonce.tacra.example       acquire failed: cai: failed to unwrap retrieved credential: bundle: an item has no key-block attributes (purpose, algorithm, exportable): a5cd85af26938e6d
+2026/10/01 18:50:48 https://ledger-epoch.tacra.example       acquire failed: cai: failed to unwrap retrieved credential: bundle: an item has no key-block attributes (purpose, algorithm, exportable): a5cd85af26938e6d
+2026/10/01 18:50:49 https://ledger-lepoch.tacra.example      acquire failed: cai: failed to unwrap retrieved credential: bundle: an item has no key-block attributes (purpose, algorithm, exportable): a5cd85af26938e6d
+2026/10/01 18:50:49 https://ledger-time.tacra.example        acquire failed: cai: failed to unwrap retrieved credential: bundle: an item has no key-block attributes (purpose, algorithm, exportable): a5cd85af26938e6d
+2026/10/01 18:50:50 https://ledger-none.tacra.example        acquire failed: cai: failed to unwrap retrieved credential: bundle: an item has no key-block attributes (purpose, algorithm, exportable): a5cd85af26938e6d
