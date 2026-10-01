@@ -1,0 +1,10 @@
+2026/10/01 16:20:24 background-check: this RRP asks https://localhost:8443 (veraison), 5989 octets of Evidence (application/vnd.veraison.tsm-report+cbor)
+2026/10/01 16:20:24 released: target=https://ledger-nonce.tacra.example kind=present-nonce group=a5cd85af26938e6d container=hpke-base-signed kem=MLKEM768-P256 caller=[est-server.bench.tacra.example]
+2026/10/01 16:20:24 background-check: this RRP asks https://localhost:8443 (veraison), 5989 octets of Evidence (application/vnd.veraison.tsm-report+cbor)
+2026/10/01 16:20:24 released: target=https://ledger-epoch.tacra.example kind=present-epoch group=a5cd85af26938e6d container=hpke-base-signed kem=MLKEM768-P256 caller=[est-server.bench.tacra.example]
+2026/10/01 16:20:25 background-check: this RRP asks https://localhost:8443 (veraison), 5989 octets of Evidence (application/vnd.veraison.tsm-report+cbor)
+2026/10/01 16:20:25 released: target=https://ledger-lepoch.tacra.example kind=absent-epoch group=a5cd85af26938e6d container=hpke-base-signed kem=MLKEM768-P256 caller=[est-server.bench.tacra.example]
+2026/10/01 16:20:26 background-check: this RRP asks https://localhost:8443 (veraison), 5989 octets of Evidence (application/vnd.veraison.tsm-report+cbor)
+2026/10/01 16:20:26 released: target=https://ledger-time.tacra.example kind=absent-timestamp group=a5cd85af26938e6d container=hpke-base-signed kem=MLKEM768-P256 caller=[est-server.bench.tacra.example]
+2026/10/01 16:20:26 background-check: this RRP asks https://localhost:8443 (veraison), 5989 octets of Evidence (application/vnd.veraison.tsm-report+cbor)
+2026/10/01 16:20:26 released: target=https://ledger-none.tacra.example kind=absent-none group=a5cd85af26938e6d container=hpke-base-signed kem=MLKEM768-P256 caller=[est-server.bench.tacra.example]
