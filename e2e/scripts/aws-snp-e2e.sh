@@ -29,6 +29,7 @@ if grep -q stopped "$OUT/bench-status.txt"; then echo "!! start the bench first:
   echo "veraison-services $(git -C "$HOME/dev/veraison-services-der" rev-parse --short=12 HEAD)"; } > "$OUT/code-revs.txt"
 for f in est-server ca-gateway vault-gateway rup tdx-verifier; do wc -l < "$B/$f.log" > "$OUT/bench-logs/.$f.start"; done
 wc -l < "$HOME/veraison-deployment/logs/vts.log" > "$OUT/bench-logs/.vts.start"
+wc -l < "$HOME/veraison-deployment/logs/verification.log" > "$OUT/bench-logs/.verification.start"
 
 echo "== build (linux/amd64)"
 (cd "$HERE/e2e" && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -o "$BIN/e2e-attester" ./cmd/e2e-attester \
@@ -130,6 +131,9 @@ cleanup
 echo "== bench logs for the run"
 for f in est-server ca-gateway vault-gateway rup tdx-verifier; do tail -n +"$(( $(cat "$OUT/bench-logs/.$f.start") + 1 ))" "$B/$f.log" | grep -v "TLS handshake error" > "$OUT/bench-logs/$f.log" || true; done
 tail -n +"$(( $(cat "$OUT/bench-logs/.vts.start") + 1 ))" "$HOME/veraison-deployment/logs/vts.log" | grep -v DEBUG > "$OUT/bench-logs/veraison-vts.log" || true
+# Veraison's verification API: who asked for each session (client-ca)
+tail -n +"$(( $(cat "$OUT/bench-logs/.verification.start") + 1 ))" "$HOME/veraison-deployment/logs/verification.log" | grep -v DEBUG \
+  > "$OUT/bench-logs/veraison-verification.log" || true
 rm -f "$OUT"/bench-logs/.*.start
 python3 - "$OUT/results.json" <<'PY'
 import json, sys
