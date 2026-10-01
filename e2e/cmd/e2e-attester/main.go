@@ -16,6 +16,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"flag"
 	"fmt"
@@ -42,6 +43,7 @@ type config struct {
 	RelyingParties map[string]map[string]string `json:"relying_parties"` // Target -> mode -> RRP identifier held
 	VaultOrigins   map[string]map[string]string `json:"vault_origins"`   // RRP id -> DHKEM -> SPKI (base64url)
 	VaultSigners   map[string]string            `json:"vault_signers"`   // RRP id -> signature key SPKI (base64url), hpke-base-signed
+	CAAnchors      map[string]string            `json:"ca_anchors"`      // RRP id -> the Credential Authority's certificates (PEM): tacra-est N15
 	LocalEpochHex  string                       `json:"local_epoch_hex"`
 	RUP            struct {
 		URL       string `json:"url"`
@@ -125,6 +127,26 @@ func main() {
 		}
 		opts = append(opts, cai.WithVaultSigner(rrp, spki))
 	}
+	for rrp, pemText := range cfg.CAAnchors {
+		var certs []*x509.Certificate
+		for rest := []byte(pemText); ; {
+			var b *pem.Block
+			if b, rest = pem.Decode(rest); b == nil {
+				break
+			}
+			cert, err := x509.ParseCertificate(b.Bytes)
+			if err != nil {
+				log.Fatal("ca anchor: ", err)
+			}
+			certs = append(certs, cert)
+		}
+		if len(certs) == 0 {
+			log.Fatal("ca anchor: no certificate for ", rrp)
+		}
+		opts = append(opts, cai.WithCertificateAuthority(rrp, certs...))
+	}
+	// the bank profile's longest certificate (tacra-est decision 6)
+	opts = append(opts, cai.WithCertificateMaxValidity(time.Hour))
 	opts = append(opts, cai.WithCSRNamingHint())
 	c, err := cai.New(plugin, caapiv1.NewCredentialAcquisitionServiceClient(conn), opts...)
 	if err != nil {

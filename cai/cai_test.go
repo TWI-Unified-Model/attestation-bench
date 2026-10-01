@@ -127,7 +127,7 @@ func TestAcquireCredentialRetrieveECDH(t *testing.T) {
 
 func TestAcquireCredentialEnroll(t *testing.T) {
 	handle := bytes.Repeat([]byte{0x0b}, 16)
-	minted := []byte("dummy-x509-der")
+	var minted []byte // a certificate for the CSR's key (testCA.mint)
 	var gotCSR []byte
 
 	fake := &fakeCAAPI{
@@ -172,6 +172,7 @@ func TestAcquireCredentialEnroll(t *testing.T) {
 				t.Fatal(err)
 			}
 			assertSamePublic(t, csr.PublicKey, pub)
+			minted = testCA.mint(t, in.GetCsr(), "")
 			return &caapiv1.EnrollCredentialResponse{PlaintextCredential: minted}, nil
 		},
 	}
@@ -205,7 +206,7 @@ func TestAcquireCredentialEnroll(t *testing.T) {
 
 func TestAcquireCredentialEnrollRSA(t *testing.T) {
 	handle := bytes.Repeat([]byte{0x0b}, 16)
-	minted := []byte("dummy-x509-der")
+	var minted []byte // a certificate for the CSR's key (testCA.mint)
 
 	fake := &fakeCAAPI{
 		init: func(_ context.Context, _ *caapiv1.InitiateCredentialAcquistionRequest) (*caapiv1.InitiateCredentialAcquisitionResponse, error) {
@@ -236,6 +237,7 @@ func TestAcquireCredentialEnrollRSA(t *testing.T) {
 				t.Fatal(err)
 			}
 			assertSamePublic(t, csr.PublicKey, pub)
+			minted = testCA.mint(t, in.GetCsr(), "")
 			return &caapiv1.EnrollCredentialResponse{PlaintextCredential: minted}, nil
 		},
 	}

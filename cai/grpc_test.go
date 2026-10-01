@@ -37,7 +37,7 @@ func TestGRPCAcquireCredential(t *testing.T) {
 			return resp, nil
 		},
 		enroll: func(_ context.Context, in *caapiv1.EnrollCredentialRequest) (*caapiv1.EnrollCredentialResponse, error) {
-			return &caapiv1.EnrollCredentialResponse{PlaintextCredential: []byte("dummy-cert")}, nil
+			return &caapiv1.EnrollCredentialResponse{PlaintextCredential: testCA.mint(t, in.GetCsr(), "")}, nil
 		},
 		retrieve: func(_ context.Context, in *caapiv1.RetrieveCredentialRequest) (*caapiv1.RetrieveCredentialResponse, error) {
 			claims, err := platform.ParseEvidence(in.GetEvidence())

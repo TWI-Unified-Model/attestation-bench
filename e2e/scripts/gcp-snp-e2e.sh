@@ -57,6 +57,8 @@ cfg = {"tee": os.environ["TEE"], "caapi": "127.0.0.1:50061", "hint": "payments.w
                                                           if k.startswith("DHKEM")}},
        # the hpke-base-signed container's trust anchor: the Vault's signature key, held for its RRP identifier
        "vault_signers": {"https://vault1.tacra.example": json.load(open(f"{BIN}/origin-keys.json"))["ECDSA-P256-SHA256"]},
+       # tacra-est N15: the CA the CAI holds for Enrollment, the bench's step-ca intermediate (public)
+       "ca_anchors": {"https://ca1.tacra.example": open(f"{B}/step/certs/intermediate_ca.crt").read()},
        "local_epoch_hex": open(f"{B}/epoch.hex").read().strip(),
        "rup": {"url": "https://localhost:19443", "anchor_pem": open(f"{B}/tls/root.crt").read()}}
 json.dump(cfg, open(f"{BIN}/e2e-attester.json", "w"), indent=1)

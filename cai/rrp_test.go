@@ -44,8 +44,8 @@ func TestRelyingPartyFromConfiguration(t *testing.T) {
 	}
 	p := &recordingPlugin{Simulated: sim}
 	fake := &fakeCAAPI{init: initiateAs(ModeEnroll, "https://other-ca.example"),
-		enroll: func(context.Context, *caapiv1.EnrollCredentialRequest) (*caapiv1.EnrollCredentialResponse, error) {
-			return &caapiv1.EnrollCredentialResponse{PlaintextCredential: []byte("cert")}, nil
+		enroll: func(_ context.Context, in *caapiv1.EnrollCredentialRequest) (*caapiv1.EnrollCredentialResponse, error) {
+			return &caapiv1.EnrollCredentialResponse{PlaintextCredential: testCA.mint(t, in.GetCsr(), "")}, nil
 		}}
 	c, err := New(p, fake, testRelyingParties...)
 	if err != nil {
@@ -69,9 +69,9 @@ func TestRelyingPartyPerMode(t *testing.T) {
 	p := &recordingPlugin{Simulated: sim}
 	asked := false
 	fake := &fakeCAAPI{init: initiateAs(ModeEnroll, "https://ca.example"),
-		enroll: func(context.Context, *caapiv1.EnrollCredentialRequest) (*caapiv1.EnrollCredentialResponse, error) {
+		enroll: func(_ context.Context, in *caapiv1.EnrollCredentialRequest) (*caapiv1.EnrollCredentialResponse, error) {
 			asked = true
-			return &caapiv1.EnrollCredentialResponse{PlaintextCredential: []byte("cert")}, nil
+			return &caapiv1.EnrollCredentialResponse{PlaintextCredential: testCA.mint(t, in.GetCsr(), "")}, nil
 		}}
 	c, err := New(p, fake, WithRelyingParty("https://api.example", ModeRetrieve, "https://vault.example"))
 	if err != nil {

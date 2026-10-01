@@ -3,7 +3,9 @@ package cai
 import (
 	"context"
 	"crypto"
+	"crypto/x509"
 	"fmt"
+	"time"
 
 	"github.com/TWI-Unified-Model/tacra/bundle"
 	caapiv1 "github.com/TWI-Unified-Model/tacra/gen/go/caapi/v1"
@@ -102,6 +104,10 @@ type Client struct {
 	// csrNamesHint makes the CSR name the Credential Hint instead of the
 	// Target, leaving the certificate's names to the CA's policy.
 	csrNamesHint bool
+	// caAnchors holds, per RRP identifier, the Credential Authority's certificates the CAI holds for Enrollment, and
+	// certMaxValidity the longest an issued certificate may remain valid (cert.go; tacra-est N15).
+	caAnchors       map[string]*x509.CertPool
+	certMaxValidity time.Duration
 }
 
 // WithCSRNamingHint makes the CSR carry only the Credential Hint as its
@@ -176,7 +182,7 @@ func New(plugin platform.Plugin, caapi caapiv1.CredentialAcquisitionServiceClien
 		return nil, ErrNilCAAPI
 	}
 	c := &Client{plugin: plugin, caapi: caapi, relyingParties: map[rpKey]string{},
-		vaultOrigins: map[string]map[string][]byte{}, vaultSigners: map[string][]byte{}}
+		vaultOrigins: map[string]map[string][]byte{}, vaultSigners: map[string][]byte{}, caAnchors: map[string]*x509.CertPool{}}
 	for _, o := range opts {
 		o(c)
 	}
@@ -371,6 +377,9 @@ func (c *Client) enroll(ctx context.Context, req AcquisitionRequest) (*Credentia
 	}
 	if len(resp.GetPlaintextCredential()) == 0 {
 		return nil, ErrEmptyCredential
+	}
+	if err := c.checkCertificate(resp.GetPlaintextCredential(), csk.Public(), req.RelyingParty, name); err != nil {
+		return nil, err
 	}
 	return &Credential{
 		Type:       req.Type,
