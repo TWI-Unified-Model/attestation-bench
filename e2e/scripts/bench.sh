@@ -4,7 +4,8 @@
 # service (the RATS-unaware Relying Party). Keys, passwords and
 # generated configuration live under ~/tacra-bench, outside git. Every listener is on 127.0.0.1.
 #
-#   e2e/scripts/bench.sh config    write the gateway and EST server configuration (measurements from MEASUREMENTS)
+#   e2e/scripts/bench.sh config    write the gateway and EST server configuration (measurements from MEASUREMENTS;
+#                                  RATS_MODEL=background-check makes the gateways ask the verifiers themselves)
 #   e2e/scripts/bench.sh start|stop|status
 #
 # MEASUREMENTS: space-separated hex launch measurements the policy admits (GCP and AWS SEV-SNP launches by default).
@@ -33,8 +34,9 @@ def target(kind, extra):
     t.update(extra); return t
 veraison = {"url": "https://localhost:8443", "ca": os.path.expanduser("~/veraison-deployment/certs/rootCA.crt")}
 tdxv = {"url": "https://localhost:8453", "ca": f"{B}/tls/root.crt"}
-common = {"verifiers": [dict(veraison, submods=["SEVSNP"]), dict(tdxv, submods=["TDX"])],
-          "ear": {"max_age": 120, "skew": 5}, "epoch_file": f"{B}/epoch.hex"}
+model = os.environ.get("RATS_MODEL", "passport")   # who asks the verifiers: the EST server, or the gateways
+common = {"verifiers": [dict(veraison, submods=["SEVSNP"]), dict(tdxv, submods=["TDX"], provider="tdx_guest")],
+          "ear": {"max_age": 120, "skew": 5}, "epoch_file": f"{B}/epoch.hex", "rats_model": model}
 ca = dict(common, rrp_id="https://ca1.tacra.example", listen="127.0.0.1:9101",
           tls_cert=f"{B}/tls/ca-gateway.crt", tls_key=f"{B}/tls/ca-gateway.key",
           targets={f"https://db-{k}.tacra.example": target(v, {"acceptable": ["ecdsa-p256-sha256"],
@@ -44,12 +46,13 @@ ca = dict(common, rrp_id="https://ca1.tacra.example", listen="127.0.0.1:9101",
                    "provisioner_key": f"{B}/gateways/ca-provisioner.jwk"})
 vault = dict(common, rrp_id="https://vault1.tacra.example", listen="127.0.0.1:9102",
              tls_cert=f"{B}/tls/vault-gateway.crt", tls_key=f"{B}/tls/vault-gateway.key",
-             targets={f"https://ledger-{k}.tacra.example": target(v, {"acceptable": ["DHKEM(X25519,HKDF-SHA256)+HKDF-SHA256+AES-256-GCM",
-                      "DHKEM(P-256,HKDF-SHA256)+HKDF-SHA256+AES-256-GCM"],
+             # the hpke-base-signed container only (tacra-est decision 4): an MLKEM768-P256 CEK, the Vault's signature
+             targets={f"https://ledger-{k}.tacra.example": target(v, {"acceptable": ["MLKEM768-P256+HKDF-SHA256+AES-256-GCM"],
                       "groups": {hint: {"secret_path": "tacra/payments", "measurements": meas, "policy_version": "1"}}})
                       for k, v in kinds.items()},
              vault={"addr": "https://127.0.0.1:8200", "ca": f"{B}/tls/root.crt", "mount": "secret",
-                    "token_file": f"{B}/gateways/vault-gateway.token"}, kem_keys=f"{B}/gateways/vault-kem.json")
+                    "token_file": f"{B}/gateways/vault-gateway.token"}, kem_keys=f"{B}/gateways/vault-kem.json",
+             sign_key=f"{B}/gateways/vault-sign.key")
 targets = {f"https://db-{k}.tacra.example": "ca" for k in kinds}
 targets.update({f"https://ledger-{k}.tacra.example": "vault" for k in kinds})
 est = {"tls": {"listen_address": "127.0.0.1:18443", "certificates": f"{B}/tls/est-server.crt", "private_key": f"{B}/tls/est-server.key"},
@@ -57,8 +60,10 @@ est = {"tls": {"listen_address": "127.0.0.1:18443", "certificates": f"{B}/tls/es
        "tacra": {"veraison": veraison, "verifiers": {"tdx_guest": tdxv},
                  "acceptable_evidence": ["application/vnd.veraison.tsm-report+cbor"],
                  "ca_certs": f"{B}/step/certs/intermediate_ca.crt",
-                 "rrps": {"ca": {"url": "https://127.0.0.1:9101", "ca": f"{B}/tls/root.crt", "rrp_id": ca["rrp_id"], "mode": "enroll"},
-                          "vault": {"url": "https://127.0.0.1:9102", "ca": f"{B}/tls/root.crt", "rrp_id": vault["rrp_id"], "mode": "retrieve"}},
+                 "rrps": {"ca": {"url": "https://127.0.0.1:9101", "ca": f"{B}/tls/root.crt", "rrp_id": ca["rrp_id"], "mode": "enroll",
+                                 "rats_model": model},
+                          "vault": {"url": "https://127.0.0.1:9102", "ca": f"{B}/tls/root.crt", "rrp_id": vault["rrp_id"], "mode": "retrieve",
+                                    "rats_model": model}},
                  "targets": targets}}
 tdxcfg = {"listen": "127.0.0.1:8453", "tls_cert": f"{B}/tls/tdx-verifier.crt", "tls_key": f"{B}/tls/tdx-verifier.key",
           "signing_key": f"{B}/secrets/tdx-verifier.jwk", "reference_mrtd": tdx}
@@ -66,7 +71,7 @@ for name, c in (("ca-gateway", ca), ("vault-gateway", vault), ("est-server", est
     p = f"{B}/config/{name}.json"
     with open(p, "w") as f: json.dump(c, f, indent=1)
     os.chmod(p, 0o600)
-print("configuration written to", f"{B}/config")
+print("configuration written to", f"{B}/config", "(RATS model: %s)" % model)
 PY
   (cd "$HERE/rrp" && GOWORK=off go build -o "$BIN/ca-gateway" ./cmd/ca-gateway && GOWORK=off go build -o "$BIN/vault-gateway" ./cmd/vault-gateway \
     && GOWORK=off go build -o "$BIN/tdx-verifier" ./cmd/tdx-verifier)

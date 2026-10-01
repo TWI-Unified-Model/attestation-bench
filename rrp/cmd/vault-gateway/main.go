@@ -2,15 +2,21 @@
 // Targets with Handles it mints, and for attest-retrieve it checks the Target's policy, freshness, and the binding
 // value it recomputes with its own identifier and CEKpub against verified Attestation Results; it derives the
 // credential group from the Attestation Results, reads that group's secret from HashiCorp Vault, and returns it
-// sealed to CEKpub in the hpke-auth container under its own static key.
+// sealed to CEKpub: in the hpke-base-signed container, signed with its own ECDSA key, when CEKpub is an
+// MLKEM768-P256 encapsulation key and the Target accepts that container; otherwise in the hpke-auth container under
+// its own static KEM key. Under the bank profile only the signed container is released (tacra-est decision 4).
 //
 //	vault-gateway -config vault-gateway.json
 package main
 
 import (
 	"crypto/ecdh"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -19,6 +25,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"slices"
 	"strconv"
 	"time"
 
@@ -32,6 +39,7 @@ type fileConfig struct {
 	gateway.Config
 	Vault   vaultConfig `json:"vault"`
 	KEMKeys string      `json:"kem_keys"` // file holding this Vault's static KEM keys (created if absent)
+	SignKey string      `json:"sign_key"` // file holding this Vault's ECDSA P-256 signature key (created if absent)
 }
 
 // RetrieveRequest is attest-retrieve as the EST Server forwards it to this RRP.
@@ -40,10 +48,16 @@ type RetrieveRequest struct {
 	CEKPub bundle.B64 `json:"cek_pub"`
 }
 
+// secrets is where the gateway reads a group's secret: HashiCorp Vault's KV (vault.go), or a fake in tests.
+type secrets interface {
+	read(path string) (map[string]string, int, error)
+}
+
 type server struct {
 	g      *gateway.Gateway
-	kv     *vaultKV
+	kv     secrets
 	sender *bundle.SenderKeys
+	signer *ecdsa.PrivateKey // signs the hpke-base-signed container
 }
 
 // groupID derives the credential group from the Attestation Results, as the reference implementation does:
@@ -88,11 +102,57 @@ func (s *server) retrieve(req *RetrieveRequest) (*bundle.Bundle, error) {
 		Value: secret["value"], Kid: gid[:16], Purpose: grp.Purpose, Algorithm: grp.Algorithm, Exportable: &no, Shared: shared}},
 		Metadata: map[string]any{"secret_version": strconv.Itoa(version), "validity_seconds": validity}}
 	aad := bundle.AAD{GroupID: gid, RRPID: s.g.Config.RRPID, Target: req.Target, Handle: req.Handle, CredentialHint: req.CredentialHint}
-	b, err := bundle.Seal(s.sender, req.CEKPub, aad, content)
+	var b *bundle.Bundle
+	if bundle.IsSignedCEK(req.CEKPub) {
+		if !slices.Contains(t.Acceptable, bundle.AcceptableSigned) {
+			return nil, &gateway.Error{Status: http.StatusBadRequest, Code: "cek",
+				Err: errors.New("the Target does not accept the hpke-base-signed container")}
+		}
+		if s.signer == nil {
+			return nil, &gateway.Error{Status: http.StatusInternalServerError, Code: "internal",
+				Err: errors.New("no signature key for the hpke-base-signed container")}
+		}
+		b, err = bundle.SealSigned(s.signer, req.CEKPub, aad, content)
+	} else {
+		if s.g.Config.Profile == "bank" {
+			return nil, &gateway.Error{Status: http.StatusBadRequest, Code: "cek",
+				Err: errors.New("bank profile: only the hpke-base-signed container, to an MLKEM768-P256 CEK")}
+		}
+		b, err = bundle.Seal(s.sender, req.CEKPub, aad, content)
+	}
 	if err != nil {
 		return nil, &gateway.Error{Status: http.StatusBadRequest, Code: "cek", Err: err}
 	}
 	return b, nil
+}
+
+// loadOrCreateSignKey keeps the Vault's ECDSA P-256 signature key across restarts (PKCS#8, base64url): the
+// Attesters hold its public half as the trust anchor of the hpke-base-signed container.
+func loadOrCreateSignKey(path string) (*ecdsa.PrivateKey, error) {
+	if raw, err := os.ReadFile(path); err == nil {
+		der, err := base64.RawURLEncoding.DecodeString(string(raw))
+		if err != nil {
+			return nil, errors.New("sign key: not base64url")
+		}
+		k, err := x509.ParsePKCS8PrivateKey(der)
+		if err != nil {
+			return nil, err
+		}
+		ek, ok := k.(*ecdsa.PrivateKey)
+		if !ok || ek.Curve != elliptic.P256() {
+			return nil, errors.New("sign key: not an ECDSA P-256 key")
+		}
+		return ek, nil
+	}
+	k, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	der, err := x509.MarshalPKCS8PrivateKey(k)
+	if err != nil {
+		return nil, err
+	}
+	return k, os.WriteFile(path, []byte(base64.RawURLEncoding.EncodeToString(der)), 0o600)
 }
 
 // loadOrCreateKEMKeys keeps the Vault's static KEM keys across restarts: the Attesters hold their public halves
@@ -158,11 +218,17 @@ func (s *server) routes() http.Handler {
 		log.Printf("released: target=%s kind=%s group=%s", req.Target, req.FreshnessKind, b.AAD.GroupID[:16])
 		gateway.WriteJSON(w, http.StatusOK, b)
 	})
-	// The Vault's origin keys, for provisioning Attesters' trust anchors out of band.
+	// The Vault's origin keys, for provisioning Attesters' trust anchors out of band: its static KEM keys (hpke-auth)
+	// and its signature key (hpke-base-signed), each as SubjectPublicKeyInfo.
 	mux.HandleFunc("GET /tacra/v1/origin-keys", func(w http.ResponseWriter, r *http.Request) {
 		x, _ := s.sender.PublicSPKI(bundle.KEMX25519)
 		p, _ := s.sender.PublicSPKI(bundle.KEMP256)
-		gateway.WriteJSON(w, http.StatusOK, map[string]bundle.B64{bundle.KEMX25519: x, bundle.KEMP256: p})
+		keys := map[string]bundle.B64{bundle.KEMX25519: x, bundle.KEMP256: p}
+		if s.signer != nil {
+			sig, _ := x509.MarshalPKIXPublicKey(&s.signer.PublicKey)
+			keys[bundle.SuiteSigned.Sig] = sig
+		}
+		gateway.WriteJSON(w, http.StatusOK, keys)
 	})
 	return mux
 }
@@ -189,6 +255,22 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	var signer *ecdsa.PrivateKey
+	if fc.SignKey != "" {
+		if signer, err = loadOrCreateSignKey(fc.SignKey); err != nil {
+			log.Fatal(err)
+		}
+	}
+	if fc.Profile == "bank" { // decision 4: the bank's Targets take the signed container, and only it
+		if signer == nil {
+			log.Fatal("bank profile: sign_key is required (the hpke-base-signed container)")
+		}
+		for name, t := range fc.Targets {
+			if len(t.Acceptable) != 1 || t.Acceptable[0] != bundle.AcceptableSigned {
+				log.Fatalf("bank profile: Target %s must accept exactly %s", name, bundle.AcceptableSigned)
+			}
+		}
+	}
 	g := &gateway.Gateway{Config: &fc.Config, Mode: "retrieve", Fresh: fresh.New(nil),
 		EAR: &ear.Verifier{Keys: keys, MaxAge: time.Duration(fc.EAR.MaxAgeS) * time.Second,
 			Skew: time.Duration(fc.EAR.SkewS) * time.Second}}
@@ -200,7 +282,7 @@ func main() {
 	if err := g.LoadEpoch(); err != nil {
 		log.Fatal(err)
 	}
-	srv := &http.Server{Addr: fc.Listen, Handler: (&server{g: g, kv: kv, sender: sender}).routes(),
+	srv := &http.Server{Addr: fc.Listen, Handler: (&server{g: g, kv: kv, sender: sender, signer: signer}).routes(),
 		ReadHeaderTimeout: 10 * time.Second, TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12}}
 	log.Printf("vault-gateway %s listening on %s", fc.RRPID, fc.Listen)
 	log.Fatal(srv.ListenAndServeTLS(fc.TLSCert, fc.TLSKey))

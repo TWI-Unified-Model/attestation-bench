@@ -41,6 +41,7 @@ type config struct {
 	Targets        []target                     `json:"targets"`
 	RelyingParties map[string]map[string]string `json:"relying_parties"` // Target -> mode -> RRP identifier held
 	VaultOrigins   map[string]map[string]string `json:"vault_origins"`   // RRP id -> DHKEM -> SPKI (base64url)
+	VaultSigners   map[string]string            `json:"vault_signers"`   // RRP id -> signature key SPKI (base64url), hpke-base-signed
 	LocalEpochHex  string                       `json:"local_epoch_hex"`
 	RUP            struct {
 		URL       string `json:"url"`
@@ -116,6 +117,13 @@ func main() {
 			}
 			opts = append(opts, cai.WithVaultOrigin(rrp, kem, spki))
 		}
+	}
+	for rrp, b64 := range cfg.VaultSigners {
+		spki, err := base64.RawURLEncoding.DecodeString(b64)
+		if err != nil {
+			log.Fatal("vault signer: ", err)
+		}
+		opts = append(opts, cai.WithVaultSigner(rrp, spki))
 	}
 	opts = append(opts, cai.WithCSRNamingHint())
 	c, err := cai.New(plugin, caapiv1.NewCredentialAcquisitionServiceClient(conn), opts...)

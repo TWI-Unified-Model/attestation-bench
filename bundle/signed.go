@@ -31,6 +31,17 @@ const ContainerSigned = "hpke-base-signed"
 // SuiteSigned is the one suite of ContainerSigned.
 var SuiteSigned = Suite{KEM: "MLKEM768-P256", KDF: "HKDF-SHA256", AEAD: "AES-256-GCM", Sig: "ECDSA-P256-SHA256"}
 
+// AcceptableSigned is how attest-initiate names ContainerSigned's suite among the acceptable CEKs, as the reference
+// implementation does (tacra-est impl/bundle.py ACCEPTABLE_CEK).
+const AcceptableSigned = "MLKEM768-P256+HKDF-SHA256+AES-256-GCM"
+
+// IsSignedCEK reports whether cekPub is an MLKEM768-P256 encapsulation key, the CEKpub of ContainerSigned.
+func IsSignedCEK(cekPub []byte) bool {
+	kem, _, _ := suiteParts()
+	_, err := kem.NewPublicKey(cekPub)
+	return err == nil
+}
+
 const (
 	infoLabel = "tacra-est bundle v1"
 	sigLabel  = "tacra-est bundle signature v1"

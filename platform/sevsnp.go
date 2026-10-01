@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/sha512"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"strings"
@@ -167,6 +166,8 @@ func (p *tsmConfig) GenerateCEK(alg EncryptionAlgorithm) (*KeyPair, error) {
 		return generateP256()
 	case EncryptionAlgorithmRSA2048:
 		return generateRSA2048()
+	case EncryptionAlgorithmMLKEM768P256:
+		return generateMLKEM768P256()
 	default:
 		return nil, fmt.Errorf("%w: %d", ErrUnsupportedEncryptionAlgorithm, alg)
 	}
@@ -229,8 +230,9 @@ func (p *tsmConfig) FreshnessElement(req EvidenceRequest) ([]byte, error) {
 	}
 }
 
-// Subject returns the binding subject: the DER CSR for Enrollment, the DER
-// SubjectPublicKeyInfo of the bound key for Retrieval.
+// Subject returns the binding subject: the DER CSR for Enrollment, CEKpub for
+// Retrieval (CEKPub: the encapsulation key itself for MLKEM768-P256, else the
+// DER SubjectPublicKeyInfo of the bound key).
 func Subject(req EvidenceRequest) ([]byte, error) {
 	if resolveKeyUse(req) == BoundKeyUseSign {
 		if len(req.CSR) == 0 {
@@ -241,7 +243,7 @@ func Subject(req EvidenceRequest) ([]byte, error) {
 	if req.BoundKey == nil {
 		return nil, ErrMissingBoundKey
 	}
-	return x509.MarshalPKIXPublicKey(req.BoundKey)
+	return CEKPub(req.BoundKey)
 }
 
 // GenerateEvidence implements Plugin. Claims carries, unsigned, what the

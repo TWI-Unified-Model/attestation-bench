@@ -18,6 +18,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/TWI-Unified-Model/tacra/bundle"
 	caapiv1 "github.com/TWI-Unified-Model/tacra/gen/go/caapi/v1"
 	"github.com/globalsign/est"
 	"google.golang.org/grpc"
@@ -98,6 +99,10 @@ func (b *bridge) InitiateRemoteAttestation(ctx context.Context, in *caapiv1.Init
 			if strings.HasPrefix(a, "DHKEM(P-256") {
 				out.EncryptionAlgorithm = caapiv1.EncryptionAlgorithm_ENCRYPTION_ALGORITHM_ECDH_P256.Enum()
 			}
+		}
+		// the hpke-base-signed container (tacra-est decision 4), when the RRP accepts it: preferred
+		if slices.Contains(r.AcceptableCEK, bundle.AcceptableSigned) {
+			out.EncryptionAlgorithm = caapiv1.EncryptionAlgorithm_ENCRYPTION_ALGORITHM_MLKEM768_P256.Enum()
 		}
 	}
 	return out, nil

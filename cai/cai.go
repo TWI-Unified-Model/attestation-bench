@@ -3,9 +3,9 @@ package cai
 import (
 	"context"
 	"crypto"
-	"crypto/x509"
 	"fmt"
 
+	"github.com/TWI-Unified-Model/tacra/bundle"
 	caapiv1 "github.com/TWI-Unified-Model/tacra/gen/go/caapi/v1"
 	"github.com/TWI-Unified-Model/tacra/platform"
 	"github.com/veraison/eat"
@@ -47,9 +47,10 @@ const (
 	SigningAlgorithmECDSAP256   SigningAlgorithm = caapiv1.SigningAlgorithm_SIGNING_ALGORITHM_ECDSA_P256
 	SigningAlgorithmRSA2048     SigningAlgorithm = caapiv1.SigningAlgorithm_SIGNING_ALGORITHM_RSA_2048
 
-	EncryptionAlgorithmUnspecified EncryptionAlgorithm = caapiv1.EncryptionAlgorithm_ENCRYPTION_ALGORITHM_UNSPECIFIED
-	EncryptionAlgorithmECDHP256    EncryptionAlgorithm = caapiv1.EncryptionAlgorithm_ENCRYPTION_ALGORITHM_ECDH_P256
-	EncryptionAlgorithmRSA2048     EncryptionAlgorithm = caapiv1.EncryptionAlgorithm_ENCRYPTION_ALGORITHM_RSA_2048
+	EncryptionAlgorithmUnspecified  EncryptionAlgorithm = caapiv1.EncryptionAlgorithm_ENCRYPTION_ALGORITHM_UNSPECIFIED
+	EncryptionAlgorithmECDHP256     EncryptionAlgorithm = caapiv1.EncryptionAlgorithm_ENCRYPTION_ALGORITHM_ECDH_P256
+	EncryptionAlgorithmRSA2048      EncryptionAlgorithm = caapiv1.EncryptionAlgorithm_ENCRYPTION_ALGORITHM_RSA_2048
+	EncryptionAlgorithmMLKEM768P256 EncryptionAlgorithm = caapiv1.EncryptionAlgorithm_ENCRYPTION_ALGORITHM_MLKEM768_P256
 )
 
 // Credential is the document returned to the Attester.
@@ -94,6 +95,10 @@ type Client struct {
 	// static KEM key (SubjectPublicKeyInfo DER) the hpke-auth container must
 	// be sealed with.
 	vaultOrigins map[string]map[string][]byte
+	// vaultSigners holds, per RRP identifier, the Secret Vault's ECDSA P-256 signature key (SubjectPublicKeyInfo
+	// DER) the hpke-base-signed container must be signed with: the trust anchor the CAI holds for the Target and
+	// Retrieval (draft-novak-lamps-tacra-est, Processing the Bundle, item 1).
+	vaultSigners map[string][]byte
 	// csrNamesHint makes the CSR name the Credential Hint instead of the
 	// Target, leaving the certificate's names to the CA's policy.
 	csrNamesHint bool
@@ -155,6 +160,12 @@ func WithVaultOrigin(rrpID, kem string, spki []byte) Option {
 	}
 }
 
+// WithVaultSigner provisions the Secret Vault's signature key for rrpID, as DER SubjectPublicKeyInfo: the key the
+// hpke-base-signed container must be signed with.
+func WithVaultSigner(rrpID string, spki []byte) Option {
+	return func(c *Client) { c.vaultSigners[rrpID] = append([]byte(nil), spki...) }
+}
+
 // New constructs a CAI client. plugin must run in the Attester TEE; caapi is
 // the CAAPI gRPC client (CAS Client side).
 func New(plugin platform.Plugin, caapi caapiv1.CredentialAcquisitionServiceClient, opts ...Option) (*Client, error) {
@@ -165,7 +176,7 @@ func New(plugin platform.Plugin, caapi caapiv1.CredentialAcquisitionServiceClien
 		return nil, ErrNilCAAPI
 	}
 	c := &Client{plugin: plugin, caapi: caapi, relyingParties: map[rpKey]string{},
-		vaultOrigins: map[string]map[string][]byte{}}
+		vaultOrigins: map[string]map[string][]byte{}, vaultSigners: map[string][]byte{}}
 	for _, o := range opts {
 		o(c)
 	}
@@ -275,7 +286,7 @@ func (c *Client) retrieve(ctx context.Context, req AcquisitionRequest) (*Credent
 	if err != nil {
 		return nil, fmt.Errorf("cai: generate evidence: %w", err)
 	}
-	cekPub, err := x509.MarshalPKIXPublicKey(cek.Public())
+	cekPub, err := platform.CEKPub(cek.Public())
 	if err != nil {
 		return nil, fmt.Errorf("cai: CEKpub: %w", err)
 	}
@@ -298,9 +309,12 @@ func (c *Client) retrieve(ctx context.Context, req AcquisitionRequest) (*Credent
 		return nil, ErrEmptyCredential
 	}
 	var doc []byte
-	if isHPKEAuth(resp.GetWrappedCredential()) {
+	switch containerOf(resp.GetWrappedCredential()) {
+	case bundle.ContainerSigned:
+		doc, err = c.openSigned(resp.GetWrappedCredential(), cek.Private, req, element)
+	case bundle.Container:
 		doc, err = c.openHPKEAuth(resp.GetWrappedCredential(), cek.Private, req, element)
-	} else {
+	default:
 		doc, err = UnwrapCredential(cek.Private, resp.GetWrappedCredential())
 	}
 	if err != nil {

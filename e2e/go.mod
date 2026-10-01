@@ -3,6 +3,7 @@ module github.com/TWI-Unified-Model/tacra/e2e
 go 1.26.5
 
 require (
+	github.com/TWI-Unified-Model/tacra/bundle v0.0.0
 	github.com/TWI-Unified-Model/tacra/cai v0.0.0-00010101000000-000000000000
 	github.com/TWI-Unified-Model/tacra/gen/go v0.0.0
 	github.com/TWI-Unified-Model/tacra/platform v0.0.0-00010101000000-000000000000
@@ -12,7 +13,6 @@ require (
 )
 
 require (
-	github.com/TWI-Unified-Model/tacra/bundle v0.0.0 // indirect
 	github.com/cloudflare/circl v1.6.5 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.3 // indirect

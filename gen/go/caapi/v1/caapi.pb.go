@@ -198,6 +198,10 @@ const (
 	EncryptionAlgorithm_ENCRYPTION_ALGORITHM_UNSPECIFIED EncryptionAlgorithm = 0
 	EncryptionAlgorithm_ENCRYPTION_ALGORITHM_ECDH_P256   EncryptionAlgorithm = 1
 	EncryptionAlgorithm_ENCRYPTION_ALGORITHM_RSA_2048    EncryptionAlgorithm = 2
+	// The hpke-base-signed container (the Secret Vault seals to it in HPKE base mode with
+	// MLKEM768-P256, HKDF-SHA256 and AES-256-GCM, and signs the result): CEKpub is the 1249-octet
+	// MLKEM768-P256 encapsulation key itself, not a SubjectPublicKeyInfo.
+	EncryptionAlgorithm_ENCRYPTION_ALGORITHM_MLKEM768_P256 EncryptionAlgorithm = 3
 )
 
 // Enum value maps for EncryptionAlgorithm.
@@ -206,11 +210,13 @@ var (
 		0: "ENCRYPTION_ALGORITHM_UNSPECIFIED",
 		1: "ENCRYPTION_ALGORITHM_ECDH_P256",
 		2: "ENCRYPTION_ALGORITHM_RSA_2048",
+		3: "ENCRYPTION_ALGORITHM_MLKEM768_P256",
 	}
 	EncryptionAlgorithm_value = map[string]int32{
-		"ENCRYPTION_ALGORITHM_UNSPECIFIED": 0,
-		"ENCRYPTION_ALGORITHM_ECDH_P256":   1,
-		"ENCRYPTION_ALGORITHM_RSA_2048":    2,
+		"ENCRYPTION_ALGORITHM_UNSPECIFIED":   0,
+		"ENCRYPTION_ALGORITHM_ECDH_P256":     1,
+		"ENCRYPTION_ALGORITHM_RSA_2048":      2,
+		"ENCRYPTION_ALGORITHM_MLKEM768_P256": 3,
 	}
 )
 
@@ -631,8 +637,9 @@ type RetrieveCredentialRequest struct {
 	FreshnessElement []byte `protobuf:"bytes,7,opt,name=freshness_element,json=freshnessElement,proto3,oneof" json:"freshness_element,omitempty"`
 	// Format of evidence.
 	EvidenceProfile *string `protobuf:"bytes,8,opt,name=evidence_profile,json=evidenceProfile,proto3,oneof" json:"evidence_profile,omitempty"`
-	// CEKpub as DER SubjectPublicKeyInfo. Hardware Evidence carries only a
-	// digest over it (the binding input), so the Secret Vault needs it here.
+	// CEKpub as DER SubjectPublicKeyInfo, or, for ENCRYPTION_ALGORITHM_MLKEM768_P256, the
+	// encapsulation key itself. Hardware Evidence carries only a digest over it (the binding
+	// input), so the Secret Vault needs it here.
 	CekPub        []byte `protobuf:"bytes,9,opt,name=cek_pub,json=cekPub,proto3" json:"cek_pub,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -840,11 +847,12 @@ const file_caapi_v1_caapi_proto_rawDesc = "" +
 	"\x10SigningAlgorithm\x12!\n" +
 	"\x1dSIGNING_ALGORITHM_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cSIGNING_ALGORITHM_ECDSA_P256\x10\x01\x12\x1e\n" +
-	"\x1aSIGNING_ALGORITHM_RSA_2048\x10\x02*\x82\x01\n" +
+	"\x1aSIGNING_ALGORITHM_RSA_2048\x10\x02*\xaa\x01\n" +
 	"\x13EncryptionAlgorithm\x12$\n" +
 	" ENCRYPTION_ALGORITHM_UNSPECIFIED\x10\x00\x12\"\n" +
 	"\x1eENCRYPTION_ALGORITHM_ECDH_P256\x10\x01\x12!\n" +
-	"\x1dENCRYPTION_ALGORITHM_RSA_2048\x10\x02*\xcf\x01\n" +
+	"\x1dENCRYPTION_ALGORITHM_RSA_2048\x10\x02\x12&\n" +
+	"\"ENCRYPTION_ALGORITHM_MLKEM768_P256\x10\x03*\xcf\x01\n" +
 	"\x0eCredentialType\x12\x1f\n" +
 	"\x1bCREDENTIAL_TYPE_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13CREDENTIAL_TYPE_JWT\x10\x01\x12\x17\n" +

@@ -5,6 +5,8 @@ import (
 	"crypto"
 	"crypto/ecdh"
 	"crypto/ecdsa"
+	"crypto/hpke"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,16 +30,20 @@ func freshnessElement(ev *platform.Evidence, handle []byte) []byte {
 	return handle
 }
 
-// isHPKEAuth reports whether a wrapped credential is the hpke-auth container of the revised EST profile.
-func isHPKEAuth(b []byte) bool {
+// containerOf names the container of a wrapped credential: bundle.ContainerSigned (hpke-base-signed),
+// bundle.Container (hpke-auth), or "" for the earlier wrapping that is not a JSON container.
+func containerOf(b []byte) string {
 	b = bytes.TrimSpace(b)
 	if len(b) == 0 || b[0] != '{' {
-		return false
+		return ""
 	}
 	var head struct {
 		Container string `json:"container"`
 	}
-	return json.Unmarshal(b, &head) == nil && head.Container == bundle.Container
+	if json.Unmarshal(b, &head) != nil {
+		return ""
+	}
+	return head.Container
 }
 
 // ErrNoVaultOrigin is returned when the CAI holds no trust anchor for the Secret Vault that sealed a container.
@@ -70,6 +76,52 @@ func (c *Client) openHPKEAuth(raw []byte, cekPriv crypto.PrivateKey, req Acquisi
 	content, err := bundle.Open(&b, cek, bundle.Expect{RRPID: req.RelyingParty, Target: req.Target, Handle: element,
 		CredentialHint: req.Hint, VaultSPKI: origin})
 	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrUnwrap, err)
+	}
+	if len(content.CredentialItems) == 0 {
+		return nil, ErrEmptyCredential
+	}
+	return []byte(content.CredentialItems[0].Value), nil
+}
+
+// ErrNoVaultSigner is returned when the CAI holds no signature key for the Secret Vault that sealed a signed container.
+var ErrNoVaultSigner = errors.New("cai: no trust anchor for the Secret Vault's signature key")
+
+// SignedItemPolicy is what the CAI takes from a signed container (the bank profile; tacra-est decisions 5 and 6):
+// every item with its key-block attributes and not exportable, no private key shared among instances, and a
+// validity of at most 3600 s.
+var SignedItemPolicy = struct {
+	AcceptShared       bool
+	MaxValiditySeconds int
+}{false, 3600}
+
+// openSigned checks and opens an hpke-base-signed container: it must be signed by the key the CAI holds for the RRP
+// its Evidence bound, name that RRP, the Target, the freshness element and the hint, be sealed to this request's
+// MLKEM768-P256 CEK, and carry only items SignedItemPolicy takes. The document returned is the first item's value.
+func (c *Client) openSigned(raw []byte, cekPriv crypto.PrivateKey, req AcquisitionRequest, element []byte) ([]byte, error) {
+	var b bundle.Bundle
+	if err := json.Unmarshal(raw, &b); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrUnwrap, err)
+	}
+	spki := c.vaultSigners[req.RelyingParty]
+	if spki == nil {
+		return nil, ErrNoVaultSigner
+	}
+	pub, err := x509.ParsePKIXPublicKey(spki)
+	vaultKey, ok := pub.(*ecdsa.PublicKey)
+	if err != nil || !ok {
+		return nil, fmt.Errorf("%w: the key held for %s is not an ECDSA public key", ErrNoVaultSigner, req.RelyingParty)
+	}
+	cek, ok := cekPriv.(hpke.PrivateKey)
+	if !ok {
+		return nil, fmt.Errorf("%w: a signed container needs an MLKEM768-P256 CEK, not %T", ErrUnwrap, cekPriv)
+	}
+	content, err := bundle.OpenSigned(&b, bundle.ExpectSigned{RRPID: req.RelyingParty, Target: req.Target, Handle: element,
+		CredentialHint: req.Hint, CEK: cek, VaultKey: vaultKey})
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrUnwrap, err)
+	}
+	if err := bundle.CheckItems(content, SignedItemPolicy.AcceptShared, SignedItemPolicy.MaxValiditySeconds); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrUnwrap, err)
 	}
 	if len(content.CredentialItems) == 0 {

@@ -14,7 +14,9 @@ STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 NAME="tacra-e2e-$(echo "$STAMP" | tr -d 'TZ' | cut -c3-12)"
 HERE="$(cd "$(dirname "$0")/../.." && pwd)"
 B="${TACRA_BENCH:-$HOME/tacra-bench}"
-OUT="$HERE/e2e/evidence/${STAMP}-gcp-${TEE}-e2e"
+# the bench's RATS model (bench.sh config, RATS_MODEL): who asks the verifiers
+MODEL="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('rats_model') or 'passport')" "$B/config/vault-gateway.json")"
+OUT="$HERE/e2e/evidence/${STAMP}-gcp-${TEE}-e2e-${MODEL}"
 BIN="$(mktemp -d)"
 export CLOUDSDK_CORE_DISABLE_PROMPTS=1 GOWORK=off
 mkdir -p "$OUT/bench-logs"
@@ -26,6 +28,7 @@ if grep -q stopped "$OUT/bench-status.txt"; then echo "!! start the bench first:
 { echo "twi-tacra $(git -C "$HERE" rev-parse --short=12 HEAD)$(git -C "$HERE" diff --quiet HEAD -- platform cai bundle rrp e2e/cmd || echo -dirty)"
   echo "globalsign-est $(git -C "$HOME/dev/globalsign-est" rev-parse --short=12 HEAD)"
   echo "veraison-services $(git -C "$HOME/dev/veraison-services-der" rev-parse --short=12 HEAD)"; } > "$OUT/code-revs.txt"
+echo "$MODEL" > "$OUT/rats-model.txt"
 for f in est-server ca-gateway vault-gateway rup tdx-verifier; do wc -l < "$B/$f.log" > "$OUT/bench-logs/.$f.start"; done
 wc -l < "$HOME/veraison-deployment/logs/vts.log" > "$OUT/bench-logs/.vts.start"
 
@@ -46,7 +49,10 @@ targets = [{"target": f"https://db-{k}.tacra.example", "type": "x509"} for k in 
 rp = {t["target"]: ({"enroll": "https://ca1.tacra.example"} if "/db-" in t["target"] else {"retrieve": "https://vault1.tacra.example"}) for t in targets}
 cfg = {"tee": os.environ["TEE"], "caapi": "127.0.0.1:50061", "hint": "payments.workload.tacra.example",
        "targets": targets, "relying_parties": rp,
-       "vault_origins": {"https://vault1.tacra.example": json.load(open(f"{BIN}/origin-keys.json"))},
+       "vault_origins": {"https://vault1.tacra.example": {k: v for k, v in json.load(open(f"{BIN}/origin-keys.json")).items()
+                                                          if k.startswith("DHKEM")}},
+       # the hpke-base-signed container's trust anchor: the Vault's signature key, held for its RRP identifier
+       "vault_signers": {"https://vault1.tacra.example": json.load(open(f"{BIN}/origin-keys.json"))["ECDSA-P256-SHA256"]},
        "local_epoch_hex": open(f"{B}/epoch.hex").read().strip(),
        "rup": {"url": "https://localhost:19443", "anchor_pem": open(f"{B}/tls/root.crt").read()}}
 json.dump(cfg, open(f"{BIN}/e2e-attester.json", "w"), indent=1)
