@@ -69,3 +69,6 @@ help:
 	@echo ""
 	@echo "Targets:"
 	@sed -n 's/^##//p' $(MAKEFILE_LIST)
+
+# attestation-bench targets (doctor, setup, start, stop, status, checks, runs)
+include bench.mk
