@@ -1,0 +1,39 @@
+{
+ "tee": "sev-snp",
+ "caapi": "127.0.0.1:50061",
+ "hint": "payments.workload.demobank.example",
+ "ledger": {
+  "target": "https://ledger-db.demobank.example",
+  "host": "core.demobank.internal",
+  "port": 5432,
+  "database": "bank",
+  "user": "payments",
+  "server_ca_pem": "-----BEGIN CERTIFICATE-----\nMIIBiDCCAS6gAwIBAgIRAMZ0Qm+6Z9W/+gAnsRik2VMwCgYIKoZIzj0EAwIwIjEg\nMB4GA1UEAxMXRGVtbyBCYW5rIGNvcmUgVExTIHJvb3QwHhcNMjYxMDA2MjMxNTE0\nWhcNMjYxMTA1MjMxNTE0WjAiMSAwHgYDVQQDExdEZW1vIEJhbmsgY29yZSBUTFMg\ncm9vdDBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABEzkMcukVvjeCK1TcEnoevY3\n/8IsKOJktPDyeIHauHZ3x+8CR2wgy8YivggVfUpdWlTCd9RfslzAms86D+hRTIyj\nRTBDMA4GA1UdDwEB/wQEAwIBBjASBgNVHRMBAf8ECDAGAQH/AgEBMB0GA1UdDgQW\nBBSaYW9TeAb0WPTq/RI+N1SptUpffDAKBggqhkjOPQQDAgNIADBFAiEAoDtPs9mK\nu33W7nb/M2gYspIySVFMScoTT3ONg4E7wwsCIFO7VLdoB6eA22MKjbP4rw8lVZnQ\naWFhg7Cp+pp6+Vnc\n-----END CERTIFICATE-----\n"
+ },
+ "fraud": {
+  "target": "https://fraud-api.demobank.example",
+  "url": "https://core.demobank.internal:8444",
+  "server_ca_pem": "-----BEGIN CERTIFICATE-----\nMIIBiDCCAS6gAwIBAgIRAMZ0Qm+6Z9W/+gAnsRik2VMwCgYIKoZIzj0EAwIwIjEg\nMB4GA1UEAxMXRGVtbyBCYW5rIGNvcmUgVExTIHJvb3QwHhcNMjYxMDA2MjMxNTE0\nWhcNMjYxMTA1MjMxNTE0WjAiMSAwHgYDVQQDExdEZW1vIEJhbmsgY29yZSBUTFMg\ncm9vdDBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABEzkMcukVvjeCK1TcEnoevY3\n/8IsKOJktPDyeIHauHZ3x+8CR2wgy8YivggVfUpdWlTCd9RfslzAms86D+hRTIyj\nRTBDMA4GA1UdDwEB/wQEAwIBBjASBgNVHRMBAf8ECDAGAQH/AgEBMB0GA1UdDgQW\nBBSaYW9TeAb0WPTq/RI+N1SptUpffDAKBggqhkjOPQQDAgNIADBFAiEAoDtPs9mK\nu33W7nb/M2gYspIySVFMScoTT3ONg4E7wwsCIFO7VLdoB6eA22MKjbP4rw8lVZnQ\naWFhg7Cp+pp6+Vnc\n-----END CERTIFICATE-----\n"
+ },
+ "relying_parties": {
+  "https://ledger-db.demobank.example": {
+   "enroll": "https://ca.demobank.example"
+  },
+  "https://fraud-api.demobank.example": {
+   "retrieve": "https://vault.demobank.example"
+  }
+ },
+ "vault_origins": {
+  "https://vault.demobank.example": {
+   "DHKEM(P-256, HKDF-SHA256)": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEaMCpRhjF4cFTFCQ7DTJgd8HoO8O_3UUL_QzHaL-6m47T4K_o0KXn9Ucwdxv7T7-9I_fS-ZQ0vyB5eD8FooSAXQ",
+   "DHKEM(X25519, HKDF-SHA256)": "MCowBQYDK2VuAyEAEwMItY5orixIDouhO_hFZgwp2IoAIdaH7hl6zoWif1o"
+  }
+ },
+ "vault_signers": {
+  "https://vault.demobank.example": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEfsld1XepwRGGVrmz_dir45r0Lfn6MVCWoENJO6jB4g1s7S2WlQwyDK3AslWBTs9vrVLaJ3-IwtrJ_n-imtsQ2w"
+ },
+ "ca_anchors": {
+  "https://ca.demobank.example": "-----BEGIN CERTIFICATE-----\nMIIB+zCCAaKgAwIBAgIQV4FGIQ3tkz6VpiP0p1tn4zAKBggqhkjOPQQDAjBIMR4w\nHAYDVQQKExVEZW1vIEJhbmsgd29ya2xvYWQgQ0ExJjAkBgNVBAMTHURlbW8gQmFu\nayB3b3JrbG9hZCBDQSBSb290IENBMB4XDTI2MTAwNjIzMTQ1OVoXDTM2MTAwMzIz\nMTQ1OVowUDEeMBwGA1UEChMVRGVtbyBCYW5rIHdvcmtsb2FkIENBMS4wLAYDVQQD\nEyVEZW1vIEJhbmsgd29ya2xvYWQgQ0EgSW50ZXJtZWRpYXRlIENBMFkwEwYHKoZI\nzj0CAQYIKoZIzj0DAQcDQgAEk4tbJ1w7h6fH2cXgOQ/0UfuQdiwg9ixpEU/zIrOD\nf3bG/WIAz8GcZp5DxPeHn5Y2OSelNg2G2qQUziay3YWcraNmMGQwDgYDVR0PAQH/\nBAQDAgEGMBIGA1UdEwEB/wQIMAYBAf8CAQAwHQYDVR0OBBYEFM6CTdJQK5gocjNe\nO1L+EjiLgMkZMB8GA1UdIwQYMBaAFIwhLscsJ6OMUO8v4ql/P7qVmW1EMAoGCCqG\nSM49BAMCA0cAMEQCIADTPyBUszGVdhatYnaKdDmL0Ok379bfpRb4cdb/rAOjAiAe\nPM8Ea4HIGhb8ad6hYIxdXC/t/1Y7iIIcZa40i8Kb9Q==\n-----END CERTIFICATE-----\n"
+ },
+ "local_epoch_hex": "af010f416b7e9288a68acd92d4e69af0f812e651272f187cd55249c1f1389126"
+}

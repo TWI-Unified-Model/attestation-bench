@@ -1,0 +1,4 @@
+2026-10-06 23:27:55.823 UTC [6320] [unknown]@[unknown] 10.128.0.17(51548) LOG:  connection received: host=10.128.0.17 port=51548
+2026-10-06 23:27:55.829 UTC [6320] payments@bank 10.128.0.17(51548) FATAL:  connection requires a valid client certificate
+2026-10-06 23:28:24.086 UTC [5702] LOG:  checkpoint starting: time
+2026-10-06 23:28:24.534 UTC [5702] LOG:  checkpoint complete: wrote 5 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.407 s, sync=0.015 s, total=0.448 s; sync files=5, longest=0.011 s, average=0.003 s; distance=2 kB, estimate=124 kB; lsn=0/198CDF8, redo lsn=0/198CDC0

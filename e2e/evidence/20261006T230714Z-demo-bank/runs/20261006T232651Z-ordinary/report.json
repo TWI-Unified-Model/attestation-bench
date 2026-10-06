@@ -1,0 +1,25 @@
+{
+ "mode": "imposter",
+ "tee": "sev-snp",
+ "steps": [
+  {
+   "step": "attestation plug-in and CAI",
+   "ok": false,
+   "ms": 0.341,
+   "note": "sev-snp",
+   "error": "no attestation from this machine: platform: configfs-tsm report: could not create report entry in configfs: mkdir /sys/kernel/config/tsm/report/entry1904187534: no such device or address"
+  },
+  {
+   "step": "ledger: login without a certificate",
+   "ok": true,
+   "ms": 12.508,
+   "note": "refused as expected: failed to connect to `user=payments database=bank`: 10.128.15.230:5432 (core.demobank.internal): server error: FATAL: connection requires a valid client certificate (SQLSTATE 28000)"
+  },
+  {
+   "step": "fraud service: call without the key",
+   "ok": true,
+   "ms": 5.659,
+   "note": "refused as expected: HTTP 403: not admitted"
+  }
+ ]
+}

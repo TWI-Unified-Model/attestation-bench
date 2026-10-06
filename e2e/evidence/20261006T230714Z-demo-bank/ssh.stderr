@@ -1,0 +1,168 @@
+WARNING: You have selected a disk size of under [200GB]. This may result in poor I/O performance. For more information, see: https://developers.google.com/compute/docs/disks#performance.
+Created [https://www.googleapis.com/compute/v1/projects/rats-probe/zones/us-central1-c/instances/demobank-trust-2610062307].
+WARNING: Some requests generated warnings:
+ - Disk size: '30 GB' is larger than image size: '10 GB'. You might need to resize the root repartition manually if the operating system does not support automatic resizing. See https://cloud.google.com/compute/docs/disks/add-persistent-disk#resize_pd for details.
+
+WARNING: You have selected a disk size of under [200GB]. This may result in poor I/O performance. For more information, see: https://developers.google.com/compute/docs/disks#performance.
+Created [https://www.googleapis.com/compute/v1/projects/rats-probe/zones/us-central1-c/instances/demobank-core-2610062307].
+WARNING: Some requests generated warnings:
+ - Disk size: '30 GB' is larger than image size: '10 GB'. You might need to resize the root repartition manually if the operating system does not support automatic resizing. See https://cloud.google.com/compute/docs/disks/add-persistent-disk#resize_pd for details.
+
+ssh: connect to host 34.45.129.41 port 22: Connection refused
+
+Recommendation: To check for possible causes of SSH connectivity issues and get
+recommendations, rerun the ssh command with the --troubleshoot option.
+
+gcloud compute ssh demobank-trust-2610062307 --project=rats-probe --zone=us-central1-c --troubleshoot
+
+Or, to investigate an IAP tunneling issue:
+
+gcloud compute ssh demobank-trust-2610062307 --project=rats-probe --zone=us-central1-c --troubleshoot --tunnel-through-iap
+
+ERROR: (gcloud.compute.ssh) [/usr/bin/ssh] exited with return code [255].
+Warning: Permanently added 'compute.8546965487339749807' (ED25519) to the list of known hosts.
+nikolaichuk_s_f_gmail_com@34.45.129.41: Permission denied (publickey).
+
+Recommendation: To check for possible causes of SSH connectivity issues and get
+recommendations, rerun the ssh command with the --troubleshoot option.
+
+gcloud compute ssh demobank-trust-2610062307 --project=rats-probe --zone=us-central1-c --troubleshoot
+
+Or, to investigate an IAP tunneling issue:
+
+gcloud compute ssh demobank-trust-2610062307 --project=rats-probe --zone=us-central1-c --troubleshoot --tunnel-through-iap
+
+ERROR: (gcloud.compute.ssh) [/usr/bin/ssh] exited with return code [255].
+Warning: Permanently added 'compute.7091659172490035622' (ED25519) to the list of known hosts.
+
+Running kernel seems to be up-to-date.
+
+Restarting services...
+ /etc/needrestart/restart.d/systemd-manager
+ systemctl restart packagekit.service ssh.service systemd-journald.service systemd-networkd.service systemd-resolved.service systemd-udevd.service
+
+Service restarts being deferred:
+ /etc/needrestart/restart.d/dbus.service
+ systemctl restart systemd-logind.service
+
+No containers need to be restarted.
+
+User sessions running outdated binaries:
+ nikolaichuk_s_f_gmail_com @ session #8: sshd[1729]
+ nikolaichuk_s_f_gmail_com @ user manager service: systemd[1548]
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+go: downloading google.golang.org/protobuf v1.28.1
+go: downloading google.golang.org/grpc v1.2.0
+go: downloading google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.2.0
+go: downloading google.golang.org/protobuf v1.27.1
+go: downloading github.com/mitchellh/protoc-gen-go-json v1.1.0
+go: downloading google.golang.org/protobuf v1.25.0
+go: downloading github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+
+Running kernel seems to be up-to-date.
+
+Restarting services...
+ /etc/needrestart/restart.d/systemd-manager
+ systemctl restart packagekit.service ssh.service systemd-journald.service systemd-networkd.service systemd-resolved.service systemd-udevd.service
+
+Service restarts being deferred:
+ /etc/needrestart/restart.d/dbus.service
+ systemctl restart systemd-logind.service
+
+No containers need to be restarted.
+
+User sessions running outdated binaries:
+ nikolaichuk_s_f_gmail_com @ session #9: sshd[1554]
+ nikolaichuk_s_f_gmail_com @ user manager service: systemd[1438]
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+
+Running kernel seems to be up-to-date.
+
+Restarting services...
+
+Service restarts being deferred:
+ /etc/needrestart/restart.d/dbus.service
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+AttributeError: module 'cbor2' has no attribute '__version__'
+Your certificate has been saved in root.crt.
+Your private key has been saved in root.key.
+Your certificate has been saved in est-server.crt.
+Your private key has been saved in est-server.key.
+Your certificate has been saved in ca-gateway.crt.
+Your private key has been saved in ca-gateway.key.
+Your certificate has been saved in vault-gateway.crt.
+Your private key has been saved in vault-gateway.key.
+Your certificate has been saved in tdx-verifier.crt.
+Your private key has been saved in tdx-verifier.key.
+Your certificate has been saved in vault.crt.
+Your private key has been saved in vault.key.
+2026/10/06 23:14:59 TD ATTRIBUTES refused: 000000002000ffff; reference RTMRs for 0 registers
+Your certificate has been saved in root.crt.
+Your private key has been saved in root.key.
+Your certificate has been saved in server.crt.
+Your private key has been saved in server.key.
+Connection to 127.0.0.1 5432 port [tcp/postgresql] succeeded!
+Connection to 127.0.0.1 8444 port [tcp/*] succeeded!
+2026/10/06 23:18:09 TD ATTRIBUTES refused: 000000002000ffff; reference RTMRs for 0 registers
+Connection to 127.0.0.1 5432 port [tcp/postgresql] succeeded!
+Connection to 127.0.0.1 8444 port [tcp/*] succeeded!
+WARNING: You have selected a disk size of under [200GB]. This may result in poor I/O performance. For more information, see: https://developers.google.com/compute/docs/disks#performance.
+Created [https://www.googleapis.com/compute/v1/projects/rats-probe/zones/us-central1-c/instances/demobank-pay-062319-gcp-snp].
+WARNING: Some requests generated warnings:
+ - Disk size: '30 GB' is larger than image size: '10 GB'. You might need to resize the root repartition manually if the operating system does not support automatic resizing. See https://cloud.google.com/compute/docs/disks/add-persistent-disk#resize_pd for details.
+
+Warning: Permanently added 'compute.4259168738024636160' (ED25519) to the list of known hosts.
+WARNING: You have selected a disk size of under [200GB]. This may result in poor I/O performance. For more information, see: https://developers.google.com/compute/docs/disks#performance.
+Created [https://www.googleapis.com/compute/v1/projects/rats-probe/zones/us-central1-c/instances/demobank-pay-062322-gcp-tdx].
+WARNING: Some requests generated warnings:
+ - Disk size: '30 GB' is larger than image size: '10 GB'. You might need to resize the root repartition manually if the operating system does not support automatic resizing. See https://cloud.google.com/compute/docs/disks/add-persistent-disk#resize_pd for details.
+
+Warning: Permanently added 'compute.4877376894567726157' (ED25519) to the list of known hosts.
+nikolaichuk_s_f_gmail_com@35.193.17.116: Permission denied (publickey).
+
+Recommendation: To check for possible causes of SSH connectivity issues and get
+recommendations, rerun the ssh command with the --troubleshoot option.
+
+gcloud compute ssh demobank-pay-062322-gcp-tdx --project=rats-probe --zone=us-central1-c --troubleshoot
+
+Or, to investigate an IAP tunneling issue:
+
+gcloud compute ssh demobank-pay-062322-gcp-tdx --project=rats-probe --zone=us-central1-c --troubleshoot --tunnel-through-iap
+
+ERROR: (gcloud.compute.ssh) [/usr/bin/ssh] exited with return code [255].
+Creating firewall...
+..Created [https://www.googleapis.com/compute/v1/projects/rats-probe/global/firewalls/demobank-aws-232439].
+done.
+WARNING: You have selected a disk size of under [200GB]. This may result in poor I/O performance. For more information, see: https://developers.google.com/compute/docs/disks#performance.
+Created [https://www.googleapis.com/compute/v1/projects/rats-probe/zones/us-central1-c/instances/demobank-pay-062326-ordinary].
+WARNING: Some requests generated warnings:
+ - Disk size: '30 GB' is larger than image size: '10 GB'. You might need to resize the root repartition manually if the operating system does not support automatic resizing. See https://cloud.google.com/compute/docs/disks/add-persistent-disk#resize_pd for details.
+
+ssh: connect to host 35.193.17.116 port 22: Connection refused
+
+Recommendation: To check for possible causes of SSH connectivity issues and get
+recommendations, rerun the ssh command with the --troubleshoot option.
+
+gcloud compute ssh demobank-pay-062326-ordinary --project=rats-probe --zone=us-central1-c --troubleshoot
+
+Or, to investigate an IAP tunneling issue:
+
+gcloud compute ssh demobank-pay-062326-ordinary --project=rats-probe --zone=us-central1-c --troubleshoot --tunnel-through-iap
+
+ERROR: (gcloud.compute.ssh) [/usr/bin/ssh] exited with return code [255].
+Warning: Permanently added 'compute.2660008008333409579' (ED25519) to the list of known hosts.
+WARNING: You have selected a disk size of under [200GB]. This may result in poor I/O performance. For more information, see: https://developers.google.com/compute/docs/disks#performance.
+Created [https://www.googleapis.com/compute/v1/projects/rats-probe/zones/us-central1-c/instances/demobank-pay-062329-unapproved].
+WARNING: Some requests generated warnings:
+ - Disk size: '30 GB' is larger than image size: '10 GB'. You might need to resize the root repartition manually if the operating system does not support automatic resizing. See https://cloud.google.com/compute/docs/disks/add-persistent-disk#resize_pd for details.
+
+Warning: Permanently added 'compute.3339195144177466042' (ED25519) to the list of known hosts.

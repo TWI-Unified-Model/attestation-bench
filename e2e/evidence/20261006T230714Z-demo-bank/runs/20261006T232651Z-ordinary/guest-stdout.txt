@@ -1,0 +1,4 @@
+drwxr-xr-x 2 root root 0 Oct  6 23:27 /sys/kernel/config/tsm/report
+2026/10/06 23:27:55 NO  attestation plug-in and CAI             0.3 ms  sev-snp no attestation from this machine: platform: configfs-tsm report: could not create report entry in configfs: mkdir /sys/kernel/config/tsm/report/entry1904187534: no such device or address
+2026/10/06 23:27:55 ok  ledger: login without a certificate     12.5 ms  refused as expected: failed to connect to `user=payments database=bank`: 10.128.15.230:5432 (core.demobank.internal): server error: FATAL: connection requires a valid client certificate (SQLSTATE 28000) 
+2026/10/06 23:27:55 ok  fraud service: call without the key      5.7 ms  refused as expected: HTTP 403: not admitted 

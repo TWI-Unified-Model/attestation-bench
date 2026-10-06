@@ -1,0 +1,17 @@
+The bank came up on the third provisioning of the same two VMs. The first two stopped as follows (lines copied from
+the operator's console; the files in up/ hold the third, successful attempt).
+
+1. make bank-up, 23:07Z: the trust VM's install stopped in Veraison's deployment:
+     ERROR: jose executable must be installed to use this command.
+     !! install failed (1)
+   Cause: the rewritten trust.sh no longer installed jose, which Veraison's signing-key step needs.
+
+2. e2e/bank/demo-bank.sh provision, 23:15Z (jose back, the signing keys made): the trust zone's start stopped at the
+   CoRIM:
+     !! CoRIM not accepted: {"status":"failed","expiry":"2026-10-06T23:15:29Z","failure-reason":"submit endorsement
+     returned error: submit endorsements failed: SQL logic error: no such table: tokens (1)"}
+   Cause: quick-init-all makes certificates, signing keys, clients, stores in that order; attempt 1 had stopped at the
+   keys, so the stores were never made (/root/veraison-deployment/stores/store.sql was 0 bytes).
+
+3. Fix (commit 09e1e5d): the install runs Veraison's steps one by one, each skipped when done. Then
+   e2e/bank/demo-bank.sh provision, 23:18Z: Veraison took the CoRIM, all ten services ran (up/trust-start.txt).
