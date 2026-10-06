@@ -41,3 +41,12 @@ Every credential ca1 issued is a real certificate from the bench's step-ca (`res
 
 **Cloud:** the VM was deleted (`vm-deleted.txt`); checked again afterwards: 0 instances, 0 disks.
 **Not covered here:** TDX and AWS (separate runs); the Secret Vault (Retrieval) side; the attack is on the CA path.
+
+## Character-level check (`recompute-binding.py`)
+Independently of the Go code, SHA-512 over the length-prefixed binding input (handle, target, rrp_id, subject) was
+recomputed in Python from the raw SEV-SNP report:
+- with **ca1's** identifier it equals the report's REPORT_DATA (the 64 bytes at offset 0x50), byte for byte;
+- with **ca2's** identifier it differs.
+
+So a second CA's refusal is exactly because the binding value genuinely differs when the RRP identifier differs; the
+Verifier's session nonce no longer matches and it returns "contraindicated".
