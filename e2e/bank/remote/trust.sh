@@ -25,7 +25,7 @@ install() {
   mkdir -p "$D/logs"
   apt-get update -qq
   DEBIAN_FRONTEND=noninteractive apt-get install -y -qq jq sqlite3 protobuf-compiler make gcc libc6-dev gettext-base \
-    openssl git netcat-openbsd unzip python3 python3-venv >/dev/null   # gcc: Veraison's sqlite stores use cgo
+    openssl git jose netcat-openbsd unzip python3 python3-venv >/dev/null   # gcc: Veraison's sqlite stores use cgo
   if [ "$(/usr/local/go/bin/go env GOVERSION 2>/dev/null || true)" != "go$GO_VM_VERSION" ]; then
     curl -sfL -o /tmp/go.tgz "https://go.dev/dl/go${GO_VM_VERSION}.linux-amd64.tar.gz"
     echo "$GO_VM_SHA256_linux_amd64  /tmp/go.tgz" | sha256sum -c - >/dev/null
@@ -39,18 +39,25 @@ install() {
   # the bench's Python packages (requirements.txt), for scripts/trustzone.py
   [ -x "$D/venv/bin/python3" ] || python3 -m venv "$D/venv"
   "$D/venv/bin/pip" install -q --disable-pip-version-check -r "$D/requirements.txt"
-  # the protoc plug-ins Veraison's build runs, at the bench's pins; then its build and deployment with fresh keys
+  # the protoc plug-ins Veraison's build runs, at the bench's pins; then its build and deployment with fresh keys, in
+  # the steps of its quick-init-all, each skipped when done: a deployment that stopped half-way is finished
   go install "$PROTOC_GEN_GO" && go install "$PROTOC_GEN_GO_GRPC" && go install "$PROTOC_GEN_GO_JSON"
-  if [ ! -x "$V/bin/vts-service" ]; then
-    (cd "$D/src/veraison-services/deployments/native" && ./deployment.sh quick-init-all > "$D/logs/veraison-build.log" 2>&1) \
-      || { tail -30 "$D/logs/veraison-build.log"; exit 1; }
-  fi
+  [ -x "$V/bin/vts-service" ] || { veraison_step build; veraison_step deploy; }
+  [ -s "$V/certs/rootCA.crt" ] || veraison_step init-certs localhost
+  [ -s "$V/signing/skey.jwk" ] || veraison_step init-signing-keys   # jose
+  [ -x "$V/bin/corim-store" ] || veraison_step init-clients
+  [ -s "$V/stores/po-store.sql" ] || veraison_step init-stores
   sed -i 's#listen-addr: 0.0.0.0:#listen-addr: 127.0.0.1:#' "$V/config/services/config.yaml"
   grep -q "listen-addr: 127.0.0.1:50051" "$V/config/services/config.yaml" || \
     sed -i 's#^  server-addr: localhost:50051$#  server-addr: localhost:50051\n  listen-addr: 127.0.0.1:50051#' "$V/config/services/config.yaml"
   echo "installed: $(go version | cut -d' ' -f3), $("$D/bin/vault" version | cut -d' ' -f1-2)," \
-    "$("$D/venv/bin/python3" -c 'import cryptography, cbor2; print("cryptography", cryptography.__version__, "cbor2", cbor2.__version__)')," \
+    "$("$D/venv/bin/python3" -c 'from importlib.metadata import version as v; print("cryptography", v("cryptography"), "cbor2", v("cbor2"))')," \
     "veraison $(ls "$V/bin" | tr '\n' ' ')"
+}
+
+veraison_step() { # one step of Veraison's native deployment, logged
+  (cd "$D/src/veraison-services/deployments/native" && ./deployment.sh "$@" >> "$D/logs/veraison-build.log" 2>&1) \
+    || { tail -30 "$D/logs/veraison-build.log"; exit 1; }
 }
 
 setup() {
