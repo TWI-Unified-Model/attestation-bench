@@ -119,8 +119,12 @@ func (p *PlatformPolicy) Check(res *ear.Result) error {
 			return nil
 		}
 		return p.TDX.check(res.TDX)
+	case "SIM":
+		// the software stand-in has no platform to judge; whether it is accepted at all is allow_simulated_tee
+		return nil
 	}
-	return nil
+	// a submodule this policy has no rule for is refused, not passed
+	return fmt.Errorf("%w: no platform rule for submodule %q", ErrPlatform, res.Submod)
 }
 
 func (s *SNPPolicy) check(c *ear.SNPClaims) error {

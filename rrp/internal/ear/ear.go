@@ -43,7 +43,7 @@ const mKeyMeasurement = 641
 type TrustedKey struct {
 	Name    string // the verifier's name in the RRP's configuration, which a Target's policy names
 	Key     *ecdsa.PublicKey
-	Submods []string // e.g. "SEVSNP" for Veraison, "TDX" for the bench's TDX verifier
+	Submods []string // e.g. "SEVSNP" for Veraison, "TDX" for the bench's TDX verifier, "SIM" for its sim-verifier
 }
 
 // Verifier holds the verifiers' EAR signing keys and the RRP's acceptance rules.
@@ -75,10 +75,12 @@ type Result struct {
 	Measurement []byte // launch measurement annotated by the verifier, if any
 	Raw         string // the EAR as received, for the issuance record
 	// SNP holds the SEV-SNP report fields the verifier annotated (submodule SEVSNP), or nil with SNPErr saying why;
-	// TDX the bench TDX verifier's annotations (submodule TDX).
+	// TDX the bench TDX verifier's annotations (submodule TDX); SIM the bench sim-verifier's (submodule SIM, the
+	// software stand-in TEE, which an RRP accepts only when its configuration allows it).
 	SNP    *SNPClaims
 	SNPErr error
 	TDX    map[string]string
+	SIM    map[string]string
 }
 
 // KeyFromJWK parses an EC P-256 public JWK.
@@ -201,6 +203,8 @@ func (v *Verifier) Verify(jws string, wantNonce []byte) (*Result, error) {
 			res.SNP, res.SNPErr = snpClaims(sub.Evidence)
 		case "TDX":
 			_ = json.Unmarshal(sub.Evidence, &res.TDX)
+		case "SIM":
+			_ = json.Unmarshal(sub.Evidence, &res.SIM)
 		}
 		return res, nil
 	}
@@ -208,7 +212,7 @@ func (v *Verifier) Verify(jws string, wantNonce []byte) (*Result, error) {
 }
 
 // annotatedMeasurement reads the launch measurement the verifier annotated: SEV-SNP's MEASUREMENT from Veraison's
-// CoMID, TDX's MRTD from the bench TDX verifier's annotation.
+// CoMID, TDX's MRTD from the bench TDX verifier's annotation, the software TEE's measurement from the sim-verifier's.
 func annotatedMeasurement(submod string, raw json.RawMessage) []byte {
 	switch submod {
 	case "SEVSNP":
@@ -224,6 +228,15 @@ func annotatedMeasurement(submod string, raw json.RawMessage) []byte {
 		}
 		if json.Unmarshal(raw, &a) == nil {
 			if m, err := hex.DecodeString(a.MRTD); err == nil && len(m) == 48 {
+				return m
+			}
+		}
+	case "SIM":
+		var a struct {
+			Measurement string `json:"measurement"`
+		}
+		if json.Unmarshal(raw, &a) == nil {
+			if m, err := hex.DecodeString(a.Measurement); err == nil && len(m) == 48 {
 				return m
 			}
 		}

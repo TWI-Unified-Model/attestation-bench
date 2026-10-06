@@ -66,6 +66,10 @@ type Config struct {
 	// present-nonce; certificates and released items for at most an hour; every group with its key-block attributes;
 	// a shared private key only for a group declared a replicated service.
 	Profile string `json:"profile,omitempty"`
+	// AllowSimulatedTEE accepts Attestation Results for the test bench's software stand-in TEE (submodule SIM,
+	// platform.SimTEE), which provides no isolation and no security. Only a test bench sets it; without it such
+	// results are refused whatever the Target's verifiers and the platform policy say.
+	AllowSimulatedTEE bool `json:"allow_simulated_tee,omitempty"`
 }
 
 // BankMaxValidity is the bank profile's longest lifetime of a certificate or a released item: one appraisal of 60
@@ -421,6 +425,10 @@ func (g *Gateway) Check(req *SecondLeg, subject []byte) (*ear.Result, *Target, e
 				strings.Join(t.Verifiers, ", "))
 		}
 		return nil, nil, refuse(http.StatusForbidden, "attestation", err)
+	}
+	if res.Submod == "SIM" && !g.Config.AllowSimulatedTEE {
+		return nil, nil, refuse(http.StatusForbidden, "platform-policy",
+			fmt.Errorf("%w: a simulated TEE, which this RRP does not accept (allow_simulated_tee)", ErrPlatform))
 	}
 	if g.Config.Platform != nil {
 		if err := g.Config.Platform.Check(res); err != nil {
