@@ -1,0 +1,13 @@
+{
+ "case": "retrieve-absent-none",
+ "mode": "retrieve",
+ "freshness_kind": "absent-none",
+ "target": "https://db.tacra.example",
+ "relying_party": "https://vault1.tacra.example",
+ "binding_value_hex": "0769ccd13e5d8613a7f6d81cd92e22352c03211ab37785967bb66b705bd16ffe851e79cc35c740c09f32084244bd75b982a3cdacedc85996fb573c4c0194ccff",
+ "evidence_ms": 39.478,
+ "token_bytes": 4966,
+ "report_sha256": "7538cc464d95a37abe33790905268a5e34d4c213118b7d49b61fc150bb86741f",
+ "signing_key": "TDX quote",
+ "chip_id_prefix": "MRTD c1ee9c16e3afc506"
+}
