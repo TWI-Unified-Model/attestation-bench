@@ -30,8 +30,11 @@ AMD KDS VLEK chain fetched by the script is in `amd-kds-milan-vlek-cert_chain.pe
 | Deployed service, now `2d18260` | 50 of 50 | morning service (then v0.14.2-pre): 0 differ |
 
 **What it shows:**
-- Without AMD's roots, go-sev-guest v0.15.0 refuses every VLEK report. Honest AWS Evidence then fails, and the
-  attacks come out refused for the wrong reason.
+- Without AMD's roots, go-sev-guest v0.15.0 refuses every VLEK report, as the tally in `rrpverify-veraison-fixed.json`
+  shows:
+  - all 20 honest checks fail;
+  - 100 of the 102 changed-input checks come out `inconclusive` rather than refused, because the chain cannot be
+    verified at all.
 - With the roots, the same VLEK Evidence passes and every attack is refused for its own reason, exactly as on GCP
   (VCEK).
 
