@@ -31,6 +31,9 @@ w("Configuration: written by the bench's own program, `scripts/trustzone.py`, fr
   "launches, as on the bench: mutual TLS between the components (tacra-est N23), the verifiers' EAR keys given to the "
   "gateways as files (N24), the API key released in the signed container (MLKEM768-P256, signed by the Vault). "
   f"RATS model: {read('rats-model.txt').strip() or '(not recorded)'}.\n")
+fa = read("up", "failed-attempts.txt").strip()
+if fa:
+    w("Attempts that failed before the bank came up (`up/failed-attempts.txt`):\n\n```\n" + fa + "\n```\n")
 w("## Code\n")
 w("```\n" + read("code-revs.txt").strip() + "\n```\n")
 
@@ -72,9 +75,11 @@ for r in runs:
            "unapproved": "refusal"}.get(kind, "?")
     w(f"| `{r}` | {exp} | {m.group(1) if m else 'no verdict'} | {what_happened(r).replace('|', '/')} |")
 w("")
-w("The two TDX runs that did not pay met a TDX firmware whose MRTD the bank had not approved: Google runs more than "
-  "one build of its TDX firmware. The TDX verifier refused it (contraindicated), and so did the CA. The MRTD was then "
-  "checked against Google's signed endorsement and approved (below), and the third TDX run paid.\n")
+unpaid = [r for r in runs if r.split("-", 1)[-1] in ("gcp-snp", "gcp-tdx", "aws-snp")
+          and "VERDICT PASS" not in read("runs", r, "verdict.txt")]
+if unpaid:
+    w(f"{len(unpaid)} run(s) on a confidential VM did not pay: " + ", ".join(f"`{r}`" for r in unpaid) + ". The reason "
+      "is in each run's section below; a firmware build approved during the run is under the reference values.\n")
 for r in runs:
     w(f"### {r}\n")
     inst = read("runs", r, "instance.yaml") or read("runs", r, "instance.txt")
@@ -148,10 +153,10 @@ w("```\n" + (read("audit", "ledger.txt").strip() or "(not taken)") + "\n```\n")
 w("## Teardown\n")
 w("```\n" + (read("teardown.txt").strip() or "(not yet)") + "\n```\n")
 w("## Notes\n")
-w("- Provisioning, not the protocol: the fraud service's API key was handed once from the core VM to the trust zone's "
-  "Vault by piping it through the operator's console (`gcloud compute ssh ... | gcloud compute ssh ...`), never written "
-  "to the console's disk; the file on the trust zone was deleted after loading into Vault. Every payment then got the "
-  "key only through TACRA.\n"
+w("- Provisioning, not the protocol: the fraud service's API key was handed from the core VM to the trust zone by "
+  "piping it through the operator's console (`gcloud compute ssh ... | gcloud compute ssh ...`), on each provisioning, "
+  "never written to the console's disk; the file on the trust zone was deleted after loading into Vault. Every payment "
+  "then got the key only through TACRA.\n"
   "- step-ca logs the one-time token of each signing request; `demo-bank.sh` redacts the tokens in "
   "`trust-logs/step-ca.log` (single-use and expired) before the per-run `sha256sums.txt` is computed.\n"
   "- `TLS handshake error from 127.0.0.1` lines in the fraud service's log are the start script's port checks.\n")
