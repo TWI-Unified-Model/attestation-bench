@@ -7,13 +7,15 @@ A check is keyed by (channel, caller, TLS version): each channel is tried at TLS
 (expected, got, ok). Prints every check whose outcome differs or that is in only one file, then a summary. Exit status
 0 only when both files hold the same checks with the same outcomes.
 """
+
 import json
 import sys
+from pathlib import Path
 
 
 def load(path):
     out = {}
-    for r in json.load(open(path)):
+    for r in json.loads(Path(path).read_text()):
         key = (r["channel"], r["caller"], r["tls"])
         if key in out:
             sys.exit(f"{path}: duplicate check {key}")

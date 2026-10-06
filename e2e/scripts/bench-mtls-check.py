@@ -15,6 +15,7 @@ and, for each listener, a caller allowed there but limited to TLS 1.2.
 A refusal at the handshake is "tls"; an answer is its HTTP status. A route the policy keeps for named callers answers
 403 to another caller of the root.
 """
+
 import datetime
 import http.client
 import json
@@ -22,6 +23,7 @@ import os
 import ssl
 import sys
 import tempfile
+from pathlib import Path
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
@@ -40,16 +42,25 @@ def foreign_identity(tmp: str) -> tuple[str, str]:
     ca_key = ec.generate_private_key(ec.SECP256R1())
     ca_name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "not the bench's root")])
     key = ec.generate_private_key(ec.SECP256R1())
-    cert = (x509.CertificateBuilder().subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "est-server.bench.tacra.example")]))
-            .issuer_name(ca_name).public_key(key.public_key()).serial_number(x509.random_serial_number())
-            .not_valid_before(now - datetime.timedelta(minutes=5)).not_valid_after(now + datetime.timedelta(hours=1))
-            .add_extension(x509.SubjectAlternativeName([x509.DNSName("est-server.bench.tacra.example")]), critical=False)
-            .add_extension(x509.ExtendedKeyUsage([ExtendedKeyUsageOID.CLIENT_AUTH]), critical=False)
-            .sign(ca_key, hashes.SHA256()))
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "est-server.bench.tacra.example")]))
+        .issuer_name(ca_name)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now - datetime.timedelta(minutes=5))
+        .not_valid_after(now + datetime.timedelta(hours=1))
+        .add_extension(x509.SubjectAlternativeName([x509.DNSName("est-server.bench.tacra.example")]), critical=False)
+        .add_extension(x509.ExtendedKeyUsage([ExtendedKeyUsageOID.CLIENT_AUTH]), critical=False)
+        .sign(ca_key, hashes.SHA256())
+    )
     cp, kp = os.path.join(tmp, "foreign.crt"), os.path.join(tmp, "foreign.key")
-    open(cp, "wb").write(cert.public_bytes(serialization.Encoding.PEM))
-    open(kp, "wb").write(key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.TraditionalOpenSSL,
-                                           serialization.NoEncryption()))
+    Path(cp).write_bytes(cert.public_bytes(serialization.Encoding.PEM))
+    Path(kp).write_bytes(
+        key.private_bytes(
+            serialization.Encoding.PEM, serialization.PrivateFormat.TraditionalOpenSSL, serialization.NoEncryption()
+        )
+    )
     return cp, kp
 
 
@@ -66,14 +77,17 @@ def call(port: int, ca: str, method: str, path: str, ident, body: bytes | None =
         r = c.getresponse()
         r.read()
         return r.status
-    except (ssl.SSLError, ConnectionResetError, BrokenPipeError, http.client.RemoteDisconnected) as e:
+    except (ssl.SSLError, ConnectionResetError, BrokenPipeError, http.client.RemoteDisconnected):
         return "tls"
 
 
 def main() -> int:
     out = sys.argv[1]
     tmp = tempfile.mkdtemp(prefix="mtls-check-")
-    ids = {n: (f"{B}/tls/clients/{n}.crt", f"{B}/tls/clients/{n}.key") for n in ("est-server", "ca-gateway", "vault-gateway", "operator")}
+    ids = {
+        n: (f"{B}/tls/clients/{n}.crt", f"{B}/tls/clients/{n}.key")
+        for n in ("est-server", "ca-gateway", "vault-gateway", "operator")
+    }
     ids["localhost"] = (f"{B}/tls/rup.crt", f"{B}/tls/rup.key")
     ids["foreign"] = foreign_identity(tmp)
     ids["none"] = None
@@ -82,27 +96,112 @@ def main() -> int:
     nonce = "?nonce=" + "A" * 43 + "="
     # (channel, port, server CA, method, path, body, {caller: expected}, the allowed caller for the TLS 1.2 check)
     checks = [
-        ("EST server -> CA gateway: attest-initiate", 9101, ROOT, "POST", "/tacra/v1/initiate", init,
-         {"est-server": 200, "operator": 403, "localhost": 403, "ca-gateway": 403, "foreign": "tls", "none": "tls"}, "est-server"),
-        ("EST server -> Vault gateway: attest-initiate", 9102, ROOT, "POST", "/tacra/v1/initiate", vinit,
-         {"est-server": 200, "operator": 403, "vault-gateway": 403, "foreign": "tls", "none": "tls"}, "est-server"),
-        ("operator -> Vault gateway: origin keys (public)", 9102, ROOT, "GET", "/tacra/v1/origin-keys", None,
-         {"operator": 200, "est-server": 200, "foreign": "tls", "none": "tls"}, "operator"),
-        ("EST server or gateway -> TDX verifier: new session", 8453, ROOT, "POST", "/challenge-response/v1/newSession" + nonce, None,
-         {"est-server": 201, "ca-gateway": 201, "vault-gateway": 201, "operator": 403, "foreign": "tls", "none": "tls"}, "est-server"),
-        ("EST server or gateway -> sim-verifier: new session", 8463, ROOT, "POST", "/challenge-response/v1/newSession" + nonce, None,
-         {"est-server": 201, "ca-gateway": 201, "vault-gateway": 201, "operator": 403, "foreign": "tls", "none": "tls"}, "est-server"),
-        ("EST server or gateway -> Veraison: new session", 8443, VERAISON_CA, "POST", "/challenge-response/v1/newSession" + nonce, None,
-         {"est-server": 201, "ca-gateway": 201, "foreign": "tls", "none": "tls"}, "est-server"),
-        ("Vault gateway -> HashiCorp Vault: health", 8200, ROOT, "GET", "/v1/sys/health", None,
-         {"vault-gateway": 200, "operator": 200, "foreign": "tls", "none": "tls"}, "vault-gateway"),
+        (
+            "EST server -> CA gateway: attest-initiate",
+            9101,
+            ROOT,
+            "POST",
+            "/tacra/v1/initiate",
+            init,
+            {"est-server": 200, "operator": 403, "localhost": 403, "ca-gateway": 403, "foreign": "tls", "none": "tls"},
+            "est-server",
+        ),
+        (
+            "EST server -> Vault gateway: attest-initiate",
+            9102,
+            ROOT,
+            "POST",
+            "/tacra/v1/initiate",
+            vinit,
+            {"est-server": 200, "operator": 403, "vault-gateway": 403, "foreign": "tls", "none": "tls"},
+            "est-server",
+        ),
+        (
+            "operator -> Vault gateway: origin keys (public)",
+            9102,
+            ROOT,
+            "GET",
+            "/tacra/v1/origin-keys",
+            None,
+            {"operator": 200, "est-server": 200, "foreign": "tls", "none": "tls"},
+            "operator",
+        ),
+        (
+            "EST server or gateway -> TDX verifier: new session",
+            8453,
+            ROOT,
+            "POST",
+            "/challenge-response/v1/newSession" + nonce,
+            None,
+            {
+                "est-server": 201,
+                "ca-gateway": 201,
+                "vault-gateway": 201,
+                "operator": 403,
+                "foreign": "tls",
+                "none": "tls",
+            },
+            "est-server",
+        ),
+        (
+            "EST server or gateway -> sim-verifier: new session",
+            8463,
+            ROOT,
+            "POST",
+            "/challenge-response/v1/newSession" + nonce,
+            None,
+            {
+                "est-server": 201,
+                "ca-gateway": 201,
+                "vault-gateway": 201,
+                "operator": 403,
+                "foreign": "tls",
+                "none": "tls",
+            },
+            "est-server",
+        ),
+        (
+            "EST server or gateway -> Veraison: new session",
+            8443,
+            VERAISON_CA,
+            "POST",
+            "/challenge-response/v1/newSession" + nonce,
+            None,
+            {"est-server": 201, "ca-gateway": 201, "foreign": "tls", "none": "tls"},
+            "est-server",
+        ),
+        (
+            "Vault gateway -> HashiCorp Vault: health",
+            8200,
+            ROOT,
+            "GET",
+            "/v1/sys/health",
+            None,
+            {"vault-gateway": 200, "operator": 200, "foreign": "tls", "none": "tls"},
+            "vault-gateway",
+        ),
         # step-ca checks client certificates against its own roots and refuses the handshake for one of the bench's
         # root; the CA gateway presents none there and authenticates with its provisioner's one-time token
-        ("CA gateway -> step-ca: health", 9000, f"{B}/step/certs/root_ca.crt", "GET", "/health", None,
-         {"none": 200, "ca-gateway": "tls"}, "none"),
-        ("workload -> EST server: attest-initiate (TLS 1.3, no client certificate required)", 18443, ROOT, "GET",
-         "/.well-known/est/attest-initiate?target=https%3A%2F%2Fdb-none.tacra.example&credential_type=x509", None,
-         {"none": 200}, "none"),
+        (
+            "CA gateway -> step-ca: health",
+            9000,
+            f"{B}/step/certs/root_ca.crt",
+            "GET",
+            "/health",
+            None,
+            {"none": 200, "ca-gateway": "tls"},
+            "none",
+        ),
+        (
+            "workload -> EST server: attest-initiate (TLS 1.3, no client certificate required)",
+            18443,
+            ROOT,
+            "GET",
+            "/.well-known/est/attest-initiate?target=https%3A%2F%2Fdb-none.tacra.example&credential_type=x509",
+            None,
+            {"none": 200},
+            "none",
+        ),
     ]
     results, bad = [], 0
     for channel, port, ca, method, path, body, expect, tls12_caller in checks:
@@ -111,14 +210,18 @@ def main() -> int:
             ok = got == want
             bad += not ok
             results.append({"channel": channel, "caller": caller, "tls": "1.3", "expected": want, "got": got, "ok": ok})
-            print("%s %-80s %-14s want %-5s got %s" % ("ok " if ok else "BAD", channel, caller, want, got), flush=True)
+            mark = "ok " if ok else "BAD"
+            print(f"{mark} {channel:<80} {caller:<14} want {want!s:<5} got {got}", flush=True)
         got = call(port, ca, method, path, ids[tls12_caller], body, tls12=True)
         ok = got == "tls"
         bad += not ok
-        results.append({"channel": channel, "caller": tls12_caller, "tls": "1.2", "expected": "tls", "got": got, "ok": ok})
-        print("%s %-80s %-14s want %-5s got %s (TLS 1.2 only)" % ("ok " if ok else "BAD", channel, tls12_caller, "tls", got), flush=True)
-    json.dump(results, open(out, "w"), indent=1)
-    print("%d of %d checks as expected" % (len(results) - bad, len(results)))
+        results.append(
+            {"channel": channel, "caller": tls12_caller, "tls": "1.2", "expected": "tls", "got": got, "ok": ok}
+        )
+        mark = "ok " if ok else "BAD"
+        print(f"{mark} {channel:<80} {tls12_caller:<14} want {'tls':<5} got {got} (TLS 1.2 only)", flush=True)
+    Path(out).write_text(json.dumps(results, indent=1))
+    print(f"{len(results) - bad} of {len(results)} checks as expected")
     return 1 if bad else 0
 
 

@@ -27,6 +27,7 @@ server certificates, step-ca, Vault's data, the gateways' keys and tokens) the c
 It refuses an approved SEV-SNP launch that Veraison's CoRIM (--corim) holds no reference value for: Veraison would not
 affirm it, so the bank would approve a launch it can never admit.
 """
+
 import argparse
 import base64
 import datetime
@@ -35,12 +36,13 @@ import json
 import os
 import re
 import sys
+from pathlib import Path
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KINDS = ("present-nonce", "present-epoch", "absent-epoch", "absent-timestamp", "absent-none")
 FRESHNESS_PARAMS = ("expires_in", "max_age", "clock_skew")
-INFRA = ("est-server", "ca-gateway", "vault-gateway", "operator")   # the components with a client certificate
-SERVICE = {"credential-authority": "ca-gateway", "secret-vault": "vault-gateway"}   # an RRP kind's program
+INFRA = ("est-server", "ca-gateway", "vault-gateway", "operator")  # the components with a client certificate
+SERVICE = {"credential-authority": "ca-gateway", "secret-vault": "vault-gateway"}  # an RRP kind's program
 # The software stand-in TEE (platform/simtee.go: NO isolation, NO security) has one approved launch: SHA-384 of a
 # fixed label. A real RRP never accepts its results (allow_simulated_tee).
 SIM_LABEL = b"attestation-bench simulated TEE: approved workload"
@@ -56,7 +58,7 @@ def main():
     logs = os.path.abspath(a.logs or home)
     vd = os.path.abspath(a.veraison)
     pack = load_pack(a.pack, a.simulated_tee)
-    approved = json.load(open(a.approved))
+    approved = json.loads(Path(a.approved).read_text())
     snp = [e["measurement"] for e in approved["sev-snp"]]
     tdx = [e["mrtd"] for e in approved["tdx"]]
     check_corim(snp, a.corim)
@@ -69,8 +71,14 @@ def main():
     infra = {n: f"{n}.{pack['infra_domain']}" for n in INFRA}
     verifiers = site_verifiers(home, vd, root, a.simulated_tee)
     everyone = [v["name"] for v in verifiers]
-    common = {"verifiers": verifiers, "ear": pack["ear"], "epoch_file": f"{home}/epoch.hex", "rats_model": a.rats_model,
-              "client_ca": root, "clients": [infra["est-server"]]}
+    common = {
+        "verifiers": verifiers,
+        "ear": pack["ear"],
+        "epoch_file": f"{home}/epoch.hex",
+        "rats_model": a.rats_model,
+        "client_ca": root,
+        "clients": [infra["est-server"]],
+    }
     if a.simulated_tee:
         # bench only: accept the software stand-in TEE's results (submodule SIM); a production RRP never sets it
         common["allow_simulated_tee"] = True
@@ -79,29 +87,55 @@ def main():
     for r in pack["rrps"]:
         if "same_as" in r:
             continue
-        targets = {t["target"]: target_config(t, pack["workload"], measurements, everyone)
-                   for t in pack["targets"] if t["rrp"] == r["name"]}
+        targets = {
+            t["target"]: target_config(t, pack["workload"], measurements, everyone)
+            for t in pack["targets"]
+            if t["rrp"] == r["name"]
+        }
         svc = SERVICE[r["kind"]]
-        c = dict(common, **identity(home, svc), rrp_id=r["rrp_id"], listen=r["listen"],
-                 tls_cert=f"{home}/tls/{svc}.crt", tls_key=f"{home}/tls/{svc}.key", targets=targets)
+        c = dict(
+            common,
+            **identity(home, svc),
+            rrp_id=r["rrp_id"],
+            listen=r["listen"],
+            tls_cert=f"{home}/tls/{svc}.crt",
+            tls_key=f"{home}/tls/{svc}.key",
+            targets=targets,
+        )
         if r["kind"] == "credential-authority":
-            c["step_ca"] = {"url": "https://127.0.0.1:9000", "root": f"{home}/step/certs/root_ca.crt",
-                            "provisioner": "tacra-ca-gateway", "provisioner_key": f"{home}/gateways/ca-provisioner.jwk"}
+            c["step_ca"] = {
+                "url": "https://127.0.0.1:9000",
+                "root": f"{home}/step/certs/root_ca.crt",
+                "provisioner": "tacra-ca-gateway",
+                "provisioner_key": f"{home}/gateways/ca-provisioner.jwk",
+            }
         else:
-            c.update(vault={"addr": "https://127.0.0.1:8200", "ca": root, "mount": "secret",
-                            "token_file": f"{home}/gateways/vault-gateway.token"},
-                     kem_keys=f"{home}/gateways/vault-kem.json", sign_key=f"{home}/gateways/vault-sign.key")
+            c.update(
+                vault={
+                    "addr": "https://127.0.0.1:8200",
+                    "ca": root,
+                    "mount": "secret",
+                    "token_file": f"{home}/gateways/vault-gateway.token",
+                },
+                kem_keys=f"{home}/gateways/vault-kem.json",
+                sign_key=f"{home}/gateways/vault-sign.key",
+            )
         rrps[r["name"]] = c
-        est_rrps[r["name"]] = {"url": f"https://{r['listen']}", "ca": root, "rrp_id": r["rrp_id"],
-                               "mode": "enroll" if r["kind"] == "credential-authority" else "retrieve",
-                               "rats_model": a.rats_model, "verifiers": everyone}
+        est_rrps[r["name"]] = {
+            "url": f"https://{r['listen']}",
+            "ca": root,
+            "rrp_id": r["rrp_id"],
+            "mode": "enroll" if r["kind"] == "credential-authority" else "retrieve",
+            "rats_model": a.rats_model,
+            "verifiers": everyone,
+        }
         est_targets.update({t: r["name"] for t in targets})
     # An RRP "same_as" another is a copy of it with its own identifier and listener, which the honest EST server never
     # routes to: the second Credential Authority of the #19/#20 redirection experiment ("another bank").
     for r in pack["rrps"]:
         if "same_as" in r:
             rrps[r["name"]] = dict(rrps[r["same_as"]], rrp_id=r["rrp_id"], listen=r["listen"])
-    if a.omit_rrp_id:   # the variant #20 is about: the Credential Authorities bind no RRP identifier
+    if a.omit_rrp_id:  # the variant #20 is about: the Credential Authorities bind no RRP identifier
         for r in pack["rrps"]:
             if rrp_kind(pack, r) == "credential-authority":
                 rrps[r["name"]]["omit_rrp_id_in_binding"] = True
@@ -110,15 +144,36 @@ def main():
     others = [infra["est-server"], infra["ca-gateway"], infra["vault-gateway"]]
     files = [(r.get("service") or SERVICE[r["kind"]], rrps[r["name"]]) for r in pack["rrps"]]
     files.append(("est-server", est))
-    files.append(("tdx-verifier", {"listen": "127.0.0.1:8453", "tls_cert": f"{home}/tls/tdx-verifier.crt",
-                                   "tls_key": f"{home}/tls/tdx-verifier.key", "client_ca": root, "clients": others,
-                                   "signing_key": f"{home}/secrets/tdx-verifier.jwk", "reference_mrtd": tdx}))
+    files.append(
+        (
+            "tdx-verifier",
+            {
+                "listen": "127.0.0.1:8453",
+                "tls_cert": f"{home}/tls/tdx-verifier.crt",
+                "tls_key": f"{home}/tls/tdx-verifier.key",
+                "client_ca": root,
+                "clients": others,
+                "signing_key": f"{home}/secrets/tdx-verifier.jwk",
+                "reference_mrtd": tdx,
+            },
+        )
+    )
     if sim:
-        files.append(("sim-verifier", {"listen": "127.0.0.1:8463", "tls_cert": f"{home}/tls/sim-verifier.crt",
-                                       "tls_key": f"{home}/tls/sim-verifier.key", "client_ca": root, "clients": others,
-                                       "signing_key": f"{home}/secrets/sim-verifier.jwk",
-                                       "attestation_keys": [sim["public_key"]],
-                                       "reference_measurements": [sim["measurement"]]}))
+        files.append(
+            (
+                "sim-verifier",
+                {
+                    "listen": "127.0.0.1:8463",
+                    "tls_cert": f"{home}/tls/sim-verifier.crt",
+                    "tls_key": f"{home}/tls/sim-verifier.key",
+                    "client_ca": root,
+                    "clients": others,
+                    "signing_key": f"{home}/secrets/sim-verifier.jwk",
+                    "attestation_keys": [sim["public_key"]],
+                    "reference_measurements": [sim["measurement"]],
+                },
+            )
+        )
     os.makedirs(f"{home}/config", exist_ok=True)
     for name, c in files:
         p = f"{home}/config/{name}.json"
@@ -134,28 +189,44 @@ def main():
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0], epilog="See the module's header for what it writes.")
+    p = argparse.ArgumentParser(
+        description=__doc__.split("\n\n")[0], epilog="See the module's header for what it writes."
+    )
     p.add_argument("--home", required=True, help="the trust zone's directory (BENCH_HOME on the bench)")
     p.add_argument("--veraison", required=True, help="the Veraison deployment (VERAISON_DEPLOYMENT on the bench)")
     p.add_argument("--pack", required=True, help="the pack, packs/<name>/pack.json")
-    p.add_argument("--approved", default=os.path.join(REPO, "trust", "approved-launches.json"),
-                   help="the approved launches (default trust/approved-launches.json)")
-    p.add_argument("--corim", default=os.path.join(REPO, "trust", "veraison-corim-milan.cbor"),
-                   help="the CoRIM Veraison is provisioned with (default trust/veraison-corim-milan.cbor)")
+    p.add_argument(
+        "--approved",
+        default=os.path.join(REPO, "trust", "approved-launches.json"),
+        help="the approved launches (default trust/approved-launches.json)",
+    )
+    p.add_argument(
+        "--corim",
+        default=os.path.join(REPO, "trust", "veraison-corim-milan.cbor"),
+        help="the CoRIM Veraison is provisioned with (default trust/veraison-corim-milan.cbor)",
+    )
     p.add_argument("--logs", help="where the EST server writes its log (default: --home)")
     p.add_argument("--est-listen", default="127.0.0.1:18443", help="the EST server's address (default 127.0.0.1:18443)")
-    p.add_argument("--simulated-tee", action="store_true",
-                   help="laptop only: run the software stand-in TEE's verifier and accept its results (NO security)")
-    p.add_argument("--rats-model", choices=("passport", "background-check"), default="passport",
-                   help="who asks the verifiers: the EST server (passport) or the gateways (background-check)")
-    p.add_argument("--omit-rrp-id", action="store_true",
-                   help="the #20 variant: the Credential Authorities bind no RRP identifier")
+    p.add_argument(
+        "--simulated-tee",
+        action="store_true",
+        help="laptop only: run the software stand-in TEE's verifier and accept its results (NO security)",
+    )
+    p.add_argument(
+        "--rats-model",
+        choices=("passport", "background-check"),
+        default="passport",
+        help="who asks the verifiers: the EST server (passport) or the gateways (background-check)",
+    )
+    p.add_argument(
+        "--omit-rrp-id", action="store_true", help="the #20 variant: the Credential Authorities bind no RRP identifier"
+    )
     return p.parse_args()
 
 
 def load_pack(path, simulated):
     """Reads a pack and refuses one that does not hold together, saying what is wrong."""
-    pack = json.load(open(path))
+    pack = json.loads(Path(path).read_text())
     for k in ("name", "infra_domain", "workload", "ear", "rrps", "targets"):
         if k not in pack:
             raise PackError(f"{path}: no {k!r}")
@@ -193,8 +264,10 @@ def load_pack(path, simulated):
             raise PackError(f"{where}: takes a verifier this trust zone does not run (it runs {', '.join(available)})")
         vault = by_name(pack, t["rrp"])["kind"] == "secret-vault"
         if vault != ("secret" in t) or vault == ("certificate_validity" in t):
-            raise PackError(f"{where}: a Secret Vault Target needs 'secret', a Credential Authority Target "
-                            "'certificate_validity', and neither the other")
+            raise PackError(
+                f"{where}: a Secret Vault Target needs 'secret', a Credential Authority Target "
+                "'certificate_validity', and neither the other"
+            )
     return pack
 
 
@@ -207,22 +280,46 @@ def rrp_kind(pack, r):
 
 
 def check_corim(snp, corim_path):
-    corim = open(corim_path, "rb").read()
+    corim = Path(corim_path).read_bytes()
     missing = [m for m in snp if bytes.fromhex(m) not in corim]
     if missing:
-        sys.exit("approved SEV-SNP launch(es) without a reference value in %s: %s (make one with hwcheck/cmd/mkcorim; "
-                 "trust/README.md)" % (corim_path, ", ".join(m[:16] + "..." for m in missing)))
+        sys.exit(
+            "approved SEV-SNP launch(es) without a reference value in {}: {} (make one with hwcheck/cmd/mkcorim; "
+            "trust/README.md)".format(corim_path, ", ".join(m[:16] + "..." for m in missing))
+        )
 
 
 def site_verifiers(home, vd, root, simulated):
     """The verifiers the RRPs may take, by name, each with its EAR key as a provisioned file (N24)."""
-    v = [{"url": "https://localhost:8443", "ca": f"{vd}/certs/rootCA.crt", "name": "veraison",
-          "ear_key": f"{home}/gateways/veraison.ear.jwk", "submods": ["SEVSNP"], "provider": "sev_guest"},
-         {"url": "https://localhost:8453", "ca": root, "name": "tdx",
-          "ear_key": f"{home}/gateways/tdx-verifier.ear.jwk", "submods": ["TDX"], "provider": "tdx_guest"}]
+    v = [
+        {
+            "url": "https://localhost:8443",
+            "ca": f"{vd}/certs/rootCA.crt",
+            "name": "veraison",
+            "ear_key": f"{home}/gateways/veraison.ear.jwk",
+            "submods": ["SEVSNP"],
+            "provider": "sev_guest",
+        },
+        {
+            "url": "https://localhost:8453",
+            "ca": root,
+            "name": "tdx",
+            "ear_key": f"{home}/gateways/tdx-verifier.ear.jwk",
+            "submods": ["TDX"],
+            "provider": "tdx_guest",
+        },
+    ]
     if simulated:
-        v.append({"url": "https://localhost:8463", "ca": root, "name": "sim",
-                  "ear_key": f"{home}/gateways/sim-verifier.ear.jwk", "submods": ["SIM"], "provider": "sim_guest"})
+        v.append(
+            {
+                "url": "https://localhost:8463",
+                "ca": root,
+                "name": "sim",
+                "ear_key": f"{home}/gateways/sim-verifier.ear.jwk",
+                "submods": ["SIM"],
+                "provider": "sim_guest",
+            }
+        )
     return v
 
 
@@ -238,28 +335,49 @@ def target_config(t, workload, measurements, everyone):
     c["acceptable"] = t["acceptable"]
     if "secret" in t:
         s = t["secret"]
-        c["groups"] = {workload["hint"]: {"secret_path": s["path"], "measurements": measurements,
-                                          **{k: v for k, v in s.items() if k != "path"}}}
+        c["groups"] = {
+            workload["hint"]: {
+                "secret_path": s["path"],
+                "measurements": measurements,
+                **{k: v for k, v in s.items() if k != "path"},
+            }
+        }
     else:
-        c["identities"] = {workload["hint"]: {"sans": workload["sans"], "measurements": measurements,
-                                              "validity": t["certificate_validity"]}}
+        c["identities"] = {
+            workload["hint"]: {
+                "sans": workload["sans"],
+                "measurements": measurements,
+                "validity": t["certificate_validity"],
+            }
+        }
     return c
 
 
 def est_server(home, logs, listen, vd, root, verifiers, rrps, targets):
     # the health-check password: kept from an earlier run, so writing the configuration again changes nothing
     try:
-        hc = json.load(open(f"{home}/config/est-server.json"))["healthcheck_password"]
+        hc = json.loads(Path(home, "config", "est-server.json").read_text())["healthcheck_password"]
     except (OSError, KeyError, ValueError):
         hc = os.urandom(16).hex()
-    return {"tls": {"listen_address": listen, "certificates": f"{home}/tls/est-server.crt",
-                    "private_key": f"{home}/tls/est-server.key"},
-            "healthcheck_password": hc, "timeout": 60, "rate_limit": 0, "log_file": f"{logs}/est-server.log",
-            "tacra": dict(identity(home, "est-server"),
-                          verifiers={v["name"]: {"url": v["url"], "ca": v["ca"], "provider": v["provider"]}
-                                     for v in verifiers},
-                          acceptable_evidence=["application/vnd.veraison.tsm-report+cbor"],
-                          ca_certs=f"{home}/step/certs/intermediate_ca.crt", rrps=rrps, targets=targets)}
+    return {
+        "tls": {
+            "listen_address": listen,
+            "certificates": f"{home}/tls/est-server.crt",
+            "private_key": f"{home}/tls/est-server.key",
+        },
+        "healthcheck_password": hc,
+        "timeout": 60,
+        "rate_limit": 0,
+        "log_file": f"{logs}/est-server.log",
+        "tacra": dict(
+            identity(home, "est-server"),
+            verifiers={v["name"]: {"url": v["url"], "ca": v["ca"], "provider": v["provider"]} for v in verifiers},
+            acceptable_evidence=["application/vnd.veraison.tsm-report+cbor"],
+            ca_certs=f"{home}/step/certs/intermediate_ca.crt",
+            rrps=rrps,
+            targets=targets,
+        ),
+    }
 
 
 def client_certificates(home, domain):
@@ -269,29 +387,41 @@ def client_certificates(home, domain):
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import ec
     from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
-    root = x509.load_pem_x509_certificate(open(f"{home}/tls/root.crt", "rb").read())
-    root_key = serialization.load_pem_private_key(open(f"{home}/tls/root.key", "rb").read(), None)
+
+    root = x509.load_pem_x509_certificate(Path(home, "tls", "root.crt").read_bytes())
+    root_key = serialization.load_pem_private_key(Path(home, "tls", "root.key").read_bytes(), None)
     now = datetime.datetime.now(datetime.timezone.utc)
     os.makedirs(f"{home}/tls/clients", exist_ok=True)
     for name in INFRA:
         cp, kp, dns = f"{home}/tls/clients/{name}.crt", f"{home}/tls/clients/{name}.key", f"{name}.{domain}"
         if os.path.exists(cp):
-            old = x509.load_pem_x509_certificate(open(cp, "rb").read())
+            old = x509.load_pem_x509_certificate(Path(cp).read_bytes())
             if old.not_valid_after_utc > now + datetime.timedelta(days=14) and dns_names(old) == [dns]:
                 continue
         key = ec.generate_private_key(ec.SECP256R1())
-        cert = (x509.CertificateBuilder().subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, dns)]))
-                .issuer_name(root.subject).public_key(key.public_key()).serial_number(x509.random_serial_number())
-                .not_valid_before(now - datetime.timedelta(minutes=5)).not_valid_after(now + datetime.timedelta(days=90))
-                .add_extension(x509.SubjectAlternativeName([x509.DNSName(dns)]), critical=False)
-                .add_extension(x509.ExtendedKeyUsage([ExtendedKeyUsageOID.CLIENT_AUTH]), critical=False)
-                .add_extension(x509.KeyUsage(True, False, False, False, False, False, False, False, False), critical=True)
-                .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
-                .sign(root_key, hashes.SHA256()))
+        cert = (
+            x509.CertificateBuilder()
+            .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, dns)]))
+            .issuer_name(root.subject)
+            .public_key(key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(now - datetime.timedelta(minutes=5))
+            .not_valid_after(now + datetime.timedelta(days=90))
+            .add_extension(x509.SubjectAlternativeName([x509.DNSName(dns)]), critical=False)
+            .add_extension(x509.ExtendedKeyUsage([ExtendedKeyUsageOID.CLIENT_AUTH]), critical=False)
+            .add_extension(x509.KeyUsage(True, False, False, False, False, False, False, False, False), critical=True)
+            .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
+            .sign(root_key, hashes.SHA256())
+        )
         old_umask = os.umask(0o077)
         with open(kp, "wb") as f:
-            f.write(key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.TraditionalOpenSSL,
-                                      serialization.NoEncryption()))
+            f.write(
+                key.private_bytes(
+                    serialization.Encoding.PEM,
+                    serialization.PrivateFormat.TraditionalOpenSSL,
+                    serialization.NoEncryption(),
+                )
+            )
         with open(cp, "wb") as f:
             f.write(cert.public_bytes(serialization.Encoding.PEM))
         os.umask(old_umask)
@@ -300,8 +430,11 @@ def client_certificates(home, domain):
 
 def dns_names(cert):
     from cryptography import x509
+
     try:
-        return cert.extensions.get_extension_for_class(x509.SubjectAlternativeName).value.get_values_for_type(x509.DNSName)
+        return cert.extensions.get_extension_for_class(x509.SubjectAlternativeName).value.get_values_for_type(
+            x509.DNSName
+        )
     except x509.ExtensionNotFound:
         return []
 
@@ -315,14 +448,23 @@ def simulated_tee(home):
     ak, ak_pub = f"{home}/secrets/sim-tee-ak.jwk", f"{home}/gateways/sim-tee-ak.pub.jwk"
     if not os.path.exists(ak):
         from cryptography.hazmat.primitives.asymmetric import ec
+
         n = ec.generate_private_key(ec.SECP256R1()).private_numbers()
         b64 = lambda v: base64.urlsafe_b64encode(v.to_bytes(32, "big")).rstrip(b"=").decode()
         old_umask = os.umask(0o077)
         with open(ak, "w") as f:
-            json.dump({"kty": "EC", "crv": "P-256", "x": b64(n.public_numbers.x), "y": b64(n.public_numbers.y),
-                       "d": b64(n.private_value)}, f)
+            json.dump(
+                {
+                    "kty": "EC",
+                    "crv": "P-256",
+                    "x": b64(n.public_numbers.x),
+                    "y": b64(n.public_numbers.y),
+                    "d": b64(n.private_value),
+                },
+                f,
+            )
         os.umask(old_umask)
-    j = json.load(open(ak))
+    j = json.loads(Path(ak).read_text())
     with open(ak_pub, "w") as f:
         json.dump({k: j[k] for k in ("kty", "crv", "x", "y")}, f)
     return {"measurement": m, "public_key": ak_pub}
@@ -330,7 +472,7 @@ def simulated_tee(home):
 
 def veraison_ear_key(home, vd):
     """Veraison's EAR key, given to the gateways as a file: the public half of the deployment's signing key."""
-    sk = json.load(open(f"{vd}/signing/skey.jwk"))
+    sk = json.loads(Path(vd, "signing", "skey.jwk").read_text())
     with open(f"{home}/gateways/veraison.ear.jwk", "w") as f:
         json.dump({k: v for k, v in sk.items() if k in ("kty", "crv", "x", "y", "alg", "kid")}, f)
 
@@ -338,23 +480,31 @@ def veraison_ear_key(home, vd):
 def veraison_client_ca(vd, root):
     """Veraison's verification API takes only callers with a certificate of the home's root (its client-ca option)."""
     vy = f"{vd}/config/services/config.yaml"
-    y = open(vy).read()
-    blk = re.search(r"^verification:\n((?:  .*\n)+)", y, re.M)
+    y = Path(vy).read_text()
+    blk = re.search(r"^verification:\n((?:  .*\n)+)", y, re.MULTILINE)
     if blk and "client-ca:" not in blk.group(1):
         with open(vy, "w") as f:
-            f.write(y[:blk.end()] + "  client-ca: " + root + "\n" + y[blk.end():])
+            f.write(y[: blk.end()] + "  client-ca: " + root + "\n" + y[blk.end() :])
 
 
 def vault_hcl(home, root):
     """HashiCorp Vault: TLS 1.3, a client certificate of the home's root required."""
-    hcl = ['storage "file" {', '  path = "%s/vault/data"' % home, '}', 'listener "tcp" {',
-           '  address                            = "127.0.0.1:8200"',
-           '  tls_cert_file                      = "%s/tls/vault.crt"' % home,
-           '  tls_key_file                       = "%s/tls/vault.key"' % home,
-           '  tls_min_version                    = "tls13"',
-           '  tls_require_and_verify_client_cert = "true"',
-           '  tls_client_ca_file                 = "%s"' % root, '}',
-           'api_addr      = "https://127.0.0.1:8200"', 'disable_mlock = true', 'ui            = false']
+    hcl = [
+        'storage "file" {',
+        f'  path = "{home}/vault/data"',
+        "}",
+        'listener "tcp" {',
+        '  address                            = "127.0.0.1:8200"',
+        f'  tls_cert_file                      = "{home}/tls/vault.crt"',
+        f'  tls_key_file                       = "{home}/tls/vault.key"',
+        '  tls_min_version                    = "tls13"',
+        '  tls_require_and_verify_client_cert = "true"',
+        f'  tls_client_ca_file                 = "{root}"',
+        "}",
+        'api_addr      = "https://127.0.0.1:8200"',
+        "disable_mlock = true",
+        "ui            = false",
+    ]
     os.makedirs(f"{home}/vault", exist_ok=True)
     with open(f"{home}/vault/config.hcl", "w") as f:
         f.write("\n".join(hcl) + "\n")
@@ -364,7 +514,7 @@ def step_ca_tls13(home):
     """step-ca: TLS 1.3. The CA gateway authenticates with its provisioner's one-time token and presents its
     certificate."""
     sc = f"{home}/step/config/ca.json"
-    c = json.load(open(sc))
+    c = json.loads(Path(sc).read_text())
     if c.get("tls", {}).get("minVersion") != 1.3:
         c.setdefault("tls", {})["minVersion"] = 1.3
         with open(sc, "w") as f:

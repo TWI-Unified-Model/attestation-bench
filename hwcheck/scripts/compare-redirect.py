@@ -10,9 +10,11 @@ compared. --ignore-platform also reads the verifier's submodule named in a reaso
 compare a run on one platform with a run on another (a local run with the software stand-in against a hardware run).
 Exit status 0 only when both runs hold the same cases with the same outcomes.
 """
+
 import json
 import re
 import sys
+from pathlib import Path
 
 VOLATILE = re.compile(r"\b[0-9a-f]{16,}\b|[A-Za-z0-9_-]{22,}")
 PLATFORM = re.compile(r"\b(SEVSNP|TDX|SIM)\b")
@@ -22,7 +24,7 @@ IGNORE_PLATFORM = len(args) != len(sys.argv) - 1
 
 def load(path):
     out = {}
-    for line in open(path):
+    for line in Path(path).read_text().splitlines():
         r = json.loads(line)
         key = (r["pass"], r["kind"], r["rrp"])
         if key in out:

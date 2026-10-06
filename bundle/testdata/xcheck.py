@@ -7,16 +7,21 @@
 Run with the tacra-est virtual environment; TACRA_EST_IMPL points at the impl/ directory of a checkout of
 https://github.com/nikolaichuk7/tacra-est.
 """
-import json, os, sys
+
+import json
+import os
+import sys
 
 if not os.environ.get("TACRA_EST_IMPL"):
     sys.exit("xcheck.py: set TACRA_EST_IMPL to the impl/ directory of a checkout of github.com/nikolaichuk7/tacra-est")
 sys.path.insert(0, os.environ["TACRA_EST_IMPL"])
-from cryptography.hazmat.primitives import serialization  # noqa: E402
-from cryptography.hazmat.primitives.asymmetric import x25519  # noqa: E402
-from common import b64u, b64u_dec  # noqa: E402
-from est_server import SecretVault  # noqa: E402
-from attester import Attester  # noqa: E402
+from pathlib import Path
+
+from attester import Attester
+from common import b64u, b64u_dec
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import x25519
+from est_server import SecretVault
 
 RRP, TARGET, HINT = "https://vault1.tacra.example", "https://ledger.tacra.example", "workload.tacra.example"
 HANDLE = bytes(range(32))
@@ -28,14 +33,28 @@ def make(path, hint=HINT):
     spki = cek.public_key().public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
     results = {"measurement": "ab" * 48, "platform": "sev-snp"}
     b = vault.release(spki, results, HANDLE, TARGET, hint)
-    json.dump({"cek_x25519": b64u(cek.private_bytes(serialization.Encoding.Raw, serialization.PrivateFormat.Raw,
-                                                    serialization.NoEncryption())),
-               "vault_spki": b64u(vault.origin_spki_der()), "rrp_id": RRP, "target": TARGET,
-               "handle": b64u(HANDLE), "credential_hint": hint or "", "bundle": b}, open(path, "w"), indent=1)
+    with open(path, "w") as fh:
+        json.dump(
+            {
+                "cek_x25519": b64u(
+                    cek.private_bytes(
+                        serialization.Encoding.Raw, serialization.PrivateFormat.Raw, serialization.NoEncryption()
+                    )
+                ),
+                "vault_spki": b64u(vault.origin_spki_der()),
+                "rrp_id": RRP,
+                "target": TARGET,
+                "handle": b64u(HANDLE),
+                "credential_hint": hint or "",
+                "bundle": b,
+            },
+            fh,
+            indent=1,
+        )
 
 
 def open_(path):
-    f = json.load(open(path))
+    f = json.loads(Path(path).read_text())
     a = Attester(tee=None, target=f["target"], credential_type="x509", vault_origin_spki_der=b64u_dec(f["vault_spki"]))
     a.bound_rrp_id, a.handle = f["rrp_id"], b64u_dec(f["handle"])
     a.credential_hint = f.get("credential_hint")

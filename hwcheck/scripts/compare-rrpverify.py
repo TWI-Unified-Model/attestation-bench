@@ -7,12 +7,14 @@ A check is keyed by (case, certificate_table, check); its outcome is (want, got,
 whose outcome differs, every check present in only one file, and a one-line summary. Exit status 0 only when both
 files hold the same checks with the same outcomes. Timings (ms) and error texts are not compared.
 """
+
 import json
 import sys
+from pathlib import Path
 
 
 def load(path):
-    doc = json.load(open(path))
+    doc = json.loads(Path(path).read_text())
     out = {}
     for r in doc["results"]:
         key = (r.get("case"), r.get("certificate_table"), r.get("check"))
