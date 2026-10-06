@@ -1,0 +1,11 @@
+ok  with-rrp-id  enroll-absent-epoch        REPORT_DATA matches: ca1 (expected ca1)
+ok  with-rrp-id  enroll-absent-none         REPORT_DATA matches: ca1 (expected ca1)
+ok  with-rrp-id  enroll-absent-timestamp    REPORT_DATA matches: ca1 (expected ca1)
+ok  with-rrp-id  enroll-present-epoch       REPORT_DATA matches: ca1 (expected ca1)
+ok  with-rrp-id  enroll-present-nonce       REPORT_DATA matches: ca1 (expected ca1)
+ok  no-rrp-id    enroll-absent-epoch        REPORT_DATA matches: none (expected none)
+ok  no-rrp-id    enroll-absent-none         REPORT_DATA matches: none (expected none)
+ok  no-rrp-id    enroll-absent-timestamp    REPORT_DATA matches: none (expected none)
+ok  no-rrp-id    enroll-present-epoch       REPORT_DATA matches: none (expected none)
+ok  no-rrp-id    enroll-present-nonce       REPORT_DATA matches: none (expected none)
+tdx: 0 not as expected

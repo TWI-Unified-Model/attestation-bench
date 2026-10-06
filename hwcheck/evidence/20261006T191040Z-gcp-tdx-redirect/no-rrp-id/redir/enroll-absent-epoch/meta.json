@@ -1,0 +1,14 @@
+{
+ "case": "enroll-absent-epoch",
+ "mode": "enroll",
+ "freshness_kind": "absent-epoch",
+ "target": "https://db-lepoch.tacra.example",
+ "relying_party": "",
+ "freshness_element_b64": "94Wu5zifWmsW4jwbwn_Kdhrr9vzrUdta6Lb_VUy8li8",
+ "binding_value_hex": "867ea0ae42119421f9568e16f01018234fa06a6b527f63ce3ef07125aca0460f31a25a2add615238562ee51536f90beb70088921a640f278c3c2067f2ec42adf",
+ "evidence_ms": 40.438,
+ "token_bytes": 4966,
+ "report_sha256": "52a5664a3ff186375f30b517e79850adcd7e4b1914697c6a025ce3d5939953c9",
+ "signing_key": "TDX quote",
+ "chip_id_prefix": "MRTD c1ee9c16e3afc506"
+}

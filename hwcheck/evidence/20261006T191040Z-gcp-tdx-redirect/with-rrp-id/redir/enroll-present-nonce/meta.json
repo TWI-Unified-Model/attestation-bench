@@ -1,0 +1,14 @@
+{
+ "case": "enroll-present-nonce",
+ "mode": "enroll",
+ "freshness_kind": "present-nonce",
+ "target": "https://db-nonce.tacra.example",
+ "relying_party": "https://ca1.tacra.example",
+ "freshness_element_b64": "wdHDZq45PNDA5gsxRjYKyQKJemz2QNHROiI56PRZGWw",
+ "binding_value_hex": "a8da5d35aa1e6f22a42ee333447c16c2b9c45a1cec407bdac7cc02d524939110ed9594a6f1ffd2e43e7d65a3252dfd00c4ee06262574d0651077a190a5a63cd0",
+ "evidence_ms": 41.908,
+ "token_bytes": 4966,
+ "report_sha256": "267ee60a78a72c9155673c344abd9303ee2ea64d8db8555c9698251edc46be0b",
+ "signing_key": "TDX quote",
+ "chip_id_prefix": "MRTD c1ee9c16e3afc506"
+}
