@@ -31,6 +31,7 @@ type veraisonService struct {
 	base   string
 	client *http.Client
 	key    *ecdsa.PublicKey
+	submod string // the EAR submodule read: SEVSNP (Veraison), TDX or SIM (the bench's own verifiers)
 }
 
 func newVeraisonService(base, caPath, certPath, keyPath string) (*veraisonService, error) {
@@ -131,7 +132,7 @@ func (v *veraisonService) verify(token, nonce []byte) (*earResult, error) {
 	return v.checkEAR(session.Result)
 }
 
-// checkEAR verifies the JWS (ES256) under the service's key and extracts the SEVSNP submodule status and eat_nonce.
+// checkEAR verifies the JWS (ES256) under the service's key and extracts the submodule's status and eat_nonce.
 func (v *veraisonService) checkEAR(jws string) (*earResult, error) {
 	parts := strings.Split(jws, ".")
 	if len(parts) != 3 {
@@ -166,9 +167,9 @@ func (v *veraisonService) checkEAR(jws string) (*earResult, error) {
 	if err := json.Unmarshal(payload, &claims); err != nil {
 		return nil, err
 	}
-	sub, ok := claims.Submods["SEVSNP"]
+	sub, ok := claims.Submods[v.submod]
 	if !ok {
-		return nil, errors.New("EAR has no SEVSNP submodule")
+		return nil, fmt.Errorf("EAR has no %s submodule", v.submod)
 	}
 	nonce, err := base64.RawURLEncoding.DecodeString(strings.TrimRight(claims.Nonce, "="))
 	if err != nil {
@@ -196,12 +197,14 @@ func veraisonDeployment() string {
 	return filepath.Join(benchHome(), "veraison")
 }
 
-// serviceVerify is `rrpverify service`: the same cases and changed inputs as `verify`, against a deployed Veraison.
+// serviceVerify is `rrpverify service`: the same cases and changed inputs as `verify`, against a deployed verifier
+// (Veraison, or the bench's sim-verifier with -url, -ca and -submod SIM).
 func serviceVerify(args []string) {
 	fs := flag.NewFlagSet("service", flag.ExitOnError)
 	in := fs.String("in", "hwrun-out", "hwrun output directory")
 	handlesPath := fs.String("handles", "handles.json", "the handles this RRP minted")
-	base := fs.String("url", "https://localhost:8443", "Veraison verification service")
+	base := fs.String("url", "https://localhost:8443", "verification service (Veraison; the bench's sim-verifier is https://localhost:8463)")
+	submod := fs.String("submod", "SEVSNP", "the EAR submodule to read: SEVSNP (Veraison), SIM (the sim-verifier)")
 	caPath := fs.String("ca", filepath.Join(veraisonDeployment(), "certs", "rootCA.crt"), "CA of the service's TLS certificate")
 	certPath := fs.String("cert", filepath.Join(benchHome(), "tls", "clients", "ca-gateway.crt"), "this RRP's client certificate (mutual TLS)")
 	keyPath := fs.String("key", filepath.Join(benchHome(), "tls", "clients", "ca-gateway.key"), "its private key")
@@ -216,6 +219,7 @@ func serviceVerify(args []string) {
 
 	v, err := newVeraisonService(*base, *caPath, *certPath, *keyPath)
 	must(err)
+	v.submod = *submod
 	var h handles
 	b, err := os.ReadFile(*handlesPath)
 	must(err)

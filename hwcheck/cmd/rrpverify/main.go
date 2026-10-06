@@ -12,6 +12,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/base64"
@@ -108,8 +110,23 @@ func verify(args []string) {
 	notAfter := fs.Int64("not-after", 0, "unix seconds: run ended (RRP clock)")
 	window := fs.Int64("window", 300, "absent-timestamp acceptance window, seconds")
 	out := fs.String("out", "", "results file (default DIR/rrpverify-<veraison>.json)")
+	simKeyPath := fs.String("sim-key", "", "SimTEE Evidence: the stand-in's attestation key (public JWK)")
+	simRefHex := fs.String("sim-measurement", "", "SimTEE Evidence: the reference measurement (hex); empty: trust on first use")
 	must(fs.Parse(args))
 	vlog.SetLevel(zapcore.InfoLevel)
+	var simKeys, simOtherKeys []*ecdsa.PublicKey
+	if *simKeyPath != "" {
+		raw, err := os.ReadFile(*simKeyPath)
+		must(err)
+		k, err := platform.ParseSimPublicJWK(raw)
+		must(err)
+		other, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader) // a key the stand-in did not sign with
+		must(err)
+		simKeys, simOtherKeys = []*ecdsa.PublicKey{k}, []*ecdsa.PublicKey{&other.PublicKey}
+	}
+	simRef, err := hex.DecodeString(*simRefHex)
+	must(err)
+	var simPassed []simPassing
 
 	var h handles
 	b, err := os.ReadFile(*handlesPath)
@@ -177,6 +194,19 @@ func verify(args []string) {
 		flipped := append([]byte(nil), subject...)
 		flipped[len(flipped)-1] ^= 1
 
+		if tokenProvider(token) == platform.SimProvider {
+			if len(simKeys) == 0 {
+				results = append(results, result{Case: m.Case, Check: "honest", Want: "pass", Got: "fail",
+					Error: "SimTEE Evidence, but no attestation key given (-sim-key)"})
+				continue
+			}
+			rs, p := simChecks(m.Case, token, elem, otherElem, rrp, otherRRP, *target, subject, flipped, simKeys, simOtherKeys)
+			results = append(results, rs...)
+			if p != nil {
+				simPassed = append(simPassed, *p)
+			}
+			continue
+		}
 		if tokenProvider(token) == "tdx_guest" {
 			if tdxOtherRoots == nil {
 				tdxOtherRoots = otherRoots()
@@ -353,6 +383,8 @@ func verify(args []string) {
 			}
 		}
 	}
+
+	results = append(results, simAppraisal(simPassed, simRef)...)
 
 	build := veraisonBuild()
 	if *out == "" {

@@ -1,7 +1,9 @@
 // Command e2e-attester is the workload of the end-to-end run. In an AMD SEV-SNP or Intel TDX guest it uses the SIG's
-// CAI with the hardware plug-in to acquire, through the CAAPI (caapi-est) and the EST server, a credential for each
+// CAI with the hardware plug-in (on a laptop, with the bench's software stand-in, tee "sim": no isolation, no
+// security) to acquire, through the CAAPI (caapi-est) and the EST server, a credential for each
 // configured Target, then presents it to the RATS-unaware Relying Party: the certificate as a TLS client certificate,
-// the API key in a header. It writes what happened, with digests in place of secrets. Run as root (configfs-tsm).
+// the API key in a header. It writes what happened, with digests in place of secrets. Run as root on hardware
+// (configfs-tsm).
 //
 //	e2e-attester -config e2e-attester.json -out results.json
 package main
@@ -45,7 +47,12 @@ type config struct {
 	VaultSigners   map[string]string            `json:"vault_signers"`   // RRP id -> signature key SPKI (base64url), hpke-base-signed
 	CAAnchors      map[string]string            `json:"ca_anchors"`      // RRP id -> the Credential Authority's certificates (PEM): tacra-est N15
 	LocalEpochHex  string                       `json:"local_epoch_hex"`
-	RUP            struct {
+	// tee "sim" only: the stand-in's attestation key (private JWK), its launch measurement, and whether it reports
+	// a debuggable instance
+	SimKeyFile        string `json:"sim_key_file,omitempty"`
+	SimMeasurementHex string `json:"sim_measurement_hex,omitempty"`
+	SimDebug          bool   `json:"sim_debug,omitempty"`
+	RUP               struct {
 		URL       string `json:"url"`
 		AnchorPEM string `json:"anchor_pem"`
 	} `json:"rup"`
@@ -96,6 +103,8 @@ func main() {
 		plugin, err = platform.NewSEVSNP(platform.WithLocalEpoch(epoch))
 	case "tdx":
 		plugin, err = platform.NewTDX(platform.WithLocalEpoch(epoch))
+	case "sim":
+		plugin, err = newSim(cfg, epoch)
 	default:
 		err = fmt.Errorf("unknown tee %q", cfg.TEE)
 	}
@@ -225,4 +234,17 @@ func present(url string, pool *x509.CertPool, cert *tls.Certificate, apiKey []by
 	defer resp.Body.Close()
 	b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 	return resp.StatusCode, string(bytes.TrimSpace(b)), ""
+}
+
+// newSim is the bench's software stand-in TEE, as the configuration describes it.
+func newSim(cfg config, epoch []byte) (platform.Plugin, error) {
+	key, err := platform.LoadSimKey(cfg.SimKeyFile)
+	if err != nil {
+		return nil, fmt.Errorf("sim_key_file: %w", err)
+	}
+	m, err := hex.DecodeString(cfg.SimMeasurementHex)
+	if err != nil {
+		return nil, fmt.Errorf("sim_measurement_hex: %w", err)
+	}
+	return platform.NewSimTEE(platform.SimTEEConfig{Key: key, Measurement: m, Debug: cfg.SimDebug}, platform.WithLocalEpoch(epoch))
 }

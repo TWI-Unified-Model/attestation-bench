@@ -1,10 +1,12 @@
-// Command hwrun is the Attester side of the hardware check: in an AMD SEV-SNP or Intel TDX guest it drives the
+// Command hwrun is the Attester side of the hardware check: in an AMD SEV-SNP or Intel TDX guest (or, on a laptop, the
+// bench's software stand-in, -tee sim: no isolation, no security) it drives the
 // platform plug-in the way the CAI does (keys, CSR, GenerateEvidence) for Enrollment and Retrieval in all five
 // Freshness Kinds, and writes each Evidence with what the Relying Party needs to recompute the binding. Run as root
 // (configfs-tsm).
 package main
 
 import (
+	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
@@ -66,7 +68,10 @@ func main() {
 	csrCN := flag.String("csr-cn", "workload.tacra.example", "the CSR's common name (the identity to certify)")
 	handlesPath := flag.String("handles", "", "Freshness Handles minted by the RRP (rrpverify mint); random if empty")
 	burst := flag.Int("burst", 0, "after the cases, time this many present-nonce Enrollment reports")
-	tee := flag.String("tee", "sev-snp", "sev-snp or tdx")
+	tee := flag.String("tee", "sev-snp", "sev-snp, tdx, or sim (the bench's software stand-in)")
+	simKey := flag.String("sim-key", "", "-tee sim: the stand-in's attestation key (private JWK)")
+	simMeasurement := flag.String("sim-measurement", "", "-tee sim: its launch measurement (hex, 48 octets)")
+	simDebug := flag.Bool("sim-debug", false, "-tee sim: report a debuggable instance")
 	flag.Parse()
 	must(os.MkdirAll(*out, 0o755))
 
@@ -97,6 +102,15 @@ func main() {
 		p, err = platform.NewSEVSNP(platform.WithLocalEpoch(epoch))
 	case "tdx":
 		p, err = platform.NewTDX(platform.WithLocalEpoch(epoch))
+	case "sim":
+		var key *ecdsa.PrivateKey
+		var m []byte
+		if key, err = platform.LoadSimKey(*simKey); err == nil {
+			if m, err = hex.DecodeString(*simMeasurement); err == nil {
+				p, err = platform.NewSimTEE(platform.SimTEEConfig{Key: key, Measurement: m, Debug: *simDebug},
+					platform.WithLocalEpoch(epoch))
+			}
+		}
 	default:
 		err = fmt.Errorf("unknown -tee %q", *tee)
 	}
@@ -168,7 +182,7 @@ func main() {
 				m.TokenBytes = len(ev.Token)
 				must(os.WriteFile(filepath.Join(dir, "evidence.tsm.cbor"), ev.Token, 0o644))
 				must(os.WriteFile(filepath.Join(dir, "claims.cbor"), ev.Claims, 0o644))
-				fillReportFields(&m, ev.Token, *tee)
+				fillReportFields(&m, ev.Token, *tee, p)
 			}
 			all = append(all, m)
 			b, _ := json.MarshalIndent(m, "", " ")
@@ -183,7 +197,11 @@ func main() {
 	}
 	if pub := p.AttestationPublicKey(); pub != nil {
 		der, _ := x509.MarshalPKIXPublicKey(pub)
-		fmt.Printf("attestation key (from the host certificate table): SHA-256(SPKI) %x\n", sha256.Sum256(der))
+		src := "from the host certificate table"
+		if *tee == "sim" {
+			src = "the stand-in's key file"
+		}
+		fmt.Printf("attestation key (%s): SHA-256(SPKI) %x\n", src, sha256.Sum256(der))
 	}
 }
 
@@ -217,8 +235,21 @@ func timeBurst(p backend, n int, target, rrp, path string) {
 }
 
 // fillReportFields reads SIGNING_KEY (48h bits 4:2) and CHIP_ID (1A0h) from an SEV-SNP report, or MRTD from a TDX
-// quote (offset 48 + 136), inside the TSM token.
-func fillReportFields(m *caseMeta, token []byte, tee string) {
+// quote (offset 48 + 136), or the instance from a SimTEE report, inside the TSM token.
+func fillReportFields(m *caseMeta, token []byte, tee string, p backend) {
+	if tee == "sim" {
+		rep, err := platform.ReportFromTSMToken(token)
+		if err != nil {
+			return
+		}
+		sum := sha256.Sum256(rep)
+		m.ReportSHA256 = hex.EncodeToString(sum[:])
+		m.SigningKey = "SIM (software stand-in)"
+		if r, err := platform.ParseSimReport(rep, []*ecdsa.PublicKey{p.AttestationPublicKey()}); err == nil {
+			m.ChipIDPrefix = "instance " + hex.EncodeToString(r.InstanceID[:8])
+		}
+		return
+	}
 	rep, err := platform.ReportFromTSMToken(token)
 	if err != nil || len(rep) < 0x1E0 {
 		return
