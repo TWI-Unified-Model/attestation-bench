@@ -21,8 +21,8 @@ B="${TACRA_BENCH:-$HOME/tacra-bench}"; CERT="$B/tls/clients/est-server.crt"; KEY
 export CLOUDSDK_CORE_DISABLE_PROMPTS=1 GOWORK=off
 mkdir -p "$OUT"
 git -C "$REPO" rev-parse --short=12 HEAD > "$OUT/code-rev.txt"
-declare -A FRESH=( [nonce]=present-nonce [epoch]=present-epoch [lepoch]=absent-epoch [time]=absent-timestamp [none]=absent-none )
-ORDER=(nonce epoch lepoch time none)
+ORDER=(nonce epoch lepoch time none)  # short name of each Target; fresh_of maps it to the Freshness Kind (bash 3.2: no associative arrays)
+fresh_of() { case "$1" in nonce) echo present-nonce;; epoch) echo present-epoch;; lepoch) echo absent-epoch;; time) echo absent-timestamp;; none) echo absent-none;; esac; }
 
 case "$CLOUD" in
   gcp-snp) TEE=sev-snp; ZONE=us-central1-c; MACHINE=(--machine-type=n2d-standard-2 --min-cpu-platform="AMD Milan" --confidential-compute-type=SEV_SNP);;
@@ -124,7 +124,7 @@ sudo chmod -R a+rX /root/redir; rm -rf ~/redir; sudo cp -r /root/redir ~/redir; 
   local k fresh tgt ev subj handle res
   : > "$d/results.jsonl"
   for k in "${ORDER[@]}"; do
-    fresh="${FRESH[$k]}"; tgt="https://db-${k}.tacra.example"
+    fresh="$(fresh_of "$k")"; tgt="https://db-${k}.tacra.example"
     ev="$d/redir/enroll-${fresh}/evidence.tsm.cbor"; subj="$d/redir/enroll-${fresh}/subject.der"
     handle="$(python3 -c "import json;print(json.load(open('$d/redir/enroll-${fresh}/meta.json')).get('freshness_element_b64',''))")"
     for rrp in ca1 ca2; do
