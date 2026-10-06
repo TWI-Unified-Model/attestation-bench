@@ -1,0 +1,14 @@
+{
+ "case": "enroll-present-epoch",
+ "mode": "enroll",
+ "freshness_kind": "present-epoch",
+ "target": "https://db-epoch.tacra.example",
+ "relying_party": "",
+ "freshness_element_b64": "L5hhaj491WWv4172c2u2dULKAkeyr7L3uY_UwP85u88",
+ "binding_value_hex": "cd7af944086883e2c377c0db965477bb4b538067b4c869dd86a5df1e5a6cac1604ccc5bcf0090a5b086ecc2629abb2755234fd2c3a1d1c2711e0f4dbab6d5700",
+ "evidence_ms": 9.182,
+ "token_bytes": 5963,
+ "report_sha256": "626830f676bcba2e4d941bd727876922264adeb97243f6a875dedbdb6f321bf9",
+ "signing_key": "VLEK",
+ "chip_id_prefix": "0000000000000000"
+}

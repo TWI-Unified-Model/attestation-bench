@@ -1,0 +1,48 @@
+ok  EST server -> CA gateway: attest-initiate                                        est-server     want 200   got 200
+ok  EST server -> CA gateway: attest-initiate                                        operator       want 403   got 403
+ok  EST server -> CA gateway: attest-initiate                                        localhost      want 403   got 403
+ok  EST server -> CA gateway: attest-initiate                                        ca-gateway     want 403   got 403
+ok  EST server -> CA gateway: attest-initiate                                        foreign        want tls   got tls
+ok  EST server -> CA gateway: attest-initiate                                        none           want tls   got tls
+ok  EST server -> CA gateway: attest-initiate                                        est-server     want tls   got tls (TLS 1.2 only)
+ok  EST server -> Vault gateway: attest-initiate                                     est-server     want 200   got 200
+ok  EST server -> Vault gateway: attest-initiate                                     operator       want 403   got 403
+ok  EST server -> Vault gateway: attest-initiate                                     vault-gateway  want 403   got 403
+ok  EST server -> Vault gateway: attest-initiate                                     foreign        want tls   got tls
+ok  EST server -> Vault gateway: attest-initiate                                     none           want tls   got tls
+ok  EST server -> Vault gateway: attest-initiate                                     est-server     want tls   got tls (TLS 1.2 only)
+ok  operator -> Vault gateway: origin keys (public)                                  operator       want 200   got 200
+ok  operator -> Vault gateway: origin keys (public)                                  est-server     want 200   got 200
+ok  operator -> Vault gateway: origin keys (public)                                  foreign        want tls   got tls
+ok  operator -> Vault gateway: origin keys (public)                                  none           want tls   got tls
+ok  operator -> Vault gateway: origin keys (public)                                  operator       want tls   got tls (TLS 1.2 only)
+ok  EST server or gateway -> TDX verifier: new session                               est-server     want 201   got 201
+ok  EST server or gateway -> TDX verifier: new session                               ca-gateway     want 201   got 201
+ok  EST server or gateway -> TDX verifier: new session                               vault-gateway  want 201   got 201
+ok  EST server or gateway -> TDX verifier: new session                               operator       want 403   got 403
+ok  EST server or gateway -> TDX verifier: new session                               foreign        want tls   got tls
+ok  EST server or gateway -> TDX verifier: new session                               none           want tls   got tls
+ok  EST server or gateway -> TDX verifier: new session                               est-server     want tls   got tls (TLS 1.2 only)
+ok  EST server or gateway -> sim-verifier: new session                               est-server     want 201   got 201
+ok  EST server or gateway -> sim-verifier: new session                               ca-gateway     want 201   got 201
+ok  EST server or gateway -> sim-verifier: new session                               vault-gateway  want 201   got 201
+ok  EST server or gateway -> sim-verifier: new session                               operator       want 403   got 403
+ok  EST server or gateway -> sim-verifier: new session                               foreign        want tls   got tls
+ok  EST server or gateway -> sim-verifier: new session                               none           want tls   got tls
+ok  EST server or gateway -> sim-verifier: new session                               est-server     want tls   got tls (TLS 1.2 only)
+ok  EST server or gateway -> Veraison: new session                                   est-server     want 201   got 201
+ok  EST server or gateway -> Veraison: new session                                   ca-gateway     want 201   got 201
+ok  EST server or gateway -> Veraison: new session                                   foreign        want tls   got tls
+ok  EST server or gateway -> Veraison: new session                                   none           want tls   got tls
+ok  EST server or gateway -> Veraison: new session                                   est-server     want tls   got tls (TLS 1.2 only)
+ok  Vault gateway -> HashiCorp Vault: health                                         vault-gateway  want 200   got 200
+ok  Vault gateway -> HashiCorp Vault: health                                         operator       want 200   got 200
+ok  Vault gateway -> HashiCorp Vault: health                                         foreign        want tls   got tls
+ok  Vault gateway -> HashiCorp Vault: health                                         none           want tls   got tls
+ok  Vault gateway -> HashiCorp Vault: health                                         vault-gateway  want tls   got tls (TLS 1.2 only)
+ok  CA gateway -> step-ca: health                                                    none           want 200   got 200
+ok  CA gateway -> step-ca: health                                                    ca-gateway     want tls   got tls
+ok  CA gateway -> step-ca: health                                                    none           want tls   got tls (TLS 1.2 only)
+ok  workload -> EST server: attest-initiate (TLS 1.3, no client certificate required) none           want 200   got 200
+ok  workload -> EST server: attest-initiate (TLS 1.3, no client certificate required) none           want tls   got tls (TLS 1.2 only)
+47 of 47 checks as expected
