@@ -16,7 +16,9 @@ STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 NAME="tacra-e2e-$(echo "$STAMP" | tr -d 'TZ' | cut -c3-12)"
 HERE="$(cd "$(dirname "$0")/../.." && pwd)"
 B="${TACRA_BENCH:-$HOME/tacra-bench}"
-OUT="$HERE/e2e/evidence/${STAMP}-aws-${TEE}-e2e"
+# the bench's RATS model (bench.sh config, RATS_MODEL): who asks the verifiers
+MODEL="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('rats_model') or 'passport')" "$B/config/vault-gateway.json")"
+OUT="$HERE/e2e/evidence/${STAMP}-aws-${TEE}-e2e-${MODEL}"
 BIN="$(mktemp -d)"
 export AWS_PAGER="" GOWORK=off
 mkdir -p "$OUT/bench-logs"
@@ -28,6 +30,7 @@ if grep -q stopped "$OUT/bench-status.txt"; then echo "!! start the bench first:
   echo "globalsign-est $(git -C "$HOME/dev/globalsign-est" rev-parse --short=12 HEAD)"
   # the deployed Veraison, as its binaries say they were built
   "$HERE/e2e/scripts/veraison-build-info.sh"; } > "$OUT/code-revs.txt"
+echo "$MODEL" > "$OUT/rats-model.txt"
 for f in est-server ca-gateway vault-gateway rup tdx-verifier; do wc -l < "$B/$f.log" > "$OUT/bench-logs/.$f.start"; done
 wc -l < "$HOME/veraison-deployment/logs/vts.log" > "$OUT/bench-logs/.vts.start"
 wc -l < "$HOME/veraison-deployment/logs/verification.log" > "$OUT/bench-logs/.verification.start"
