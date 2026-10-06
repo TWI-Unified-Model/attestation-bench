@@ -1,0 +1,112 @@
+[
+ {
+  "target": "https://db-nonce.tacra.example",
+  "type": "x509",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 660.898,
+  "cert_serial": "697c8708f6549fba5a1256cf288948ea",
+  "cert_names": "[payments.workload.tacra.example] [spiffe://tacra.example/payments]",
+  "cert_issuer": "TACRA bench CA Intermediate CA",
+  "not_after": "2026-10-06T17:03:43Z",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"payments.workload.tacra.example\",\"not_after\":\"2026-10-06T17:03:43Z\",\"serial\":\"697c8708f6549fba5a1256cf288948ea\"}"
+ },
+ {
+  "target": "https://db-epoch.tacra.example",
+  "type": "x509",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 722.877,
+  "cert_serial": "99fadc793d70ca6b719f2858bc9f3149",
+  "cert_names": "[payments.workload.tacra.example] [spiffe://tacra.example/payments]",
+  "cert_issuer": "TACRA bench CA Intermediate CA",
+  "not_after": "2026-10-06T17:03:44Z",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"payments.workload.tacra.example\",\"not_after\":\"2026-10-06T17:03:44Z\",\"serial\":\"99fadc793d70ca6b719f2858bc9f3149\"}"
+ },
+ {
+  "target": "https://db-lepoch.tacra.example",
+  "type": "x509",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 662.028,
+  "cert_serial": "e01ad38e750627a2369587baa3092278",
+  "cert_names": "[payments.workload.tacra.example] [spiffe://tacra.example/payments]",
+  "cert_issuer": "TACRA bench CA Intermediate CA",
+  "not_after": "2026-10-06T17:03:44Z",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"payments.workload.tacra.example\",\"not_after\":\"2026-10-06T17:03:44Z\",\"serial\":\"e01ad38e750627a2369587baa3092278\"}"
+ },
+ {
+  "target": "https://db-time.tacra.example",
+  "type": "x509",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 632.86,
+  "cert_serial": "fcd948ef7142535873cc445eb3ffdad6",
+  "cert_names": "[payments.workload.tacra.example] [spiffe://tacra.example/payments]",
+  "cert_issuer": "TACRA bench CA Intermediate CA",
+  "not_after": "2026-10-06T17:03:45Z",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"payments.workload.tacra.example\",\"not_after\":\"2026-10-06T17:03:45Z\",\"serial\":\"fcd948ef7142535873cc445eb3ffdad6\"}"
+ },
+ {
+  "target": "https://db-none.tacra.example",
+  "type": "x509",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 599.026,
+  "cert_serial": "547920a876a6d37059a62e8bc0bc5d4e",
+  "cert_names": "[payments.workload.tacra.example] [spiffe://tacra.example/payments]",
+  "cert_issuer": "TACRA bench CA Intermediate CA",
+  "not_after": "2026-10-06T17:03:46Z",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"payments.workload.tacra.example\",\"not_after\":\"2026-10-06T17:03:46Z\",\"serial\":\"547920a876a6d37059a62e8bc0bc5d4e\"}"
+ },
+ {
+  "target": "https://ledger-nonce.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: no trust anchor for the Secret Vault's signature key",
+  "attempts": 1,
+  "acquire_ms": 610.995,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-epoch.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: no trust anchor for the Secret Vault's signature key",
+  "attempts": 1,
+  "acquire_ms": 790.164,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-lepoch.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: no trust anchor for the Secret Vault's signature key",
+  "attempts": 1,
+  "acquire_ms": 589.354,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-time.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: no trust anchor for the Secret Vault's signature key",
+  "attempts": 1,
+  "acquire_ms": 664.132,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-none.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: no trust anchor for the Secret Vault's signature key",
+  "attempts": 1,
+  "acquire_ms": 755.592,
+  "rup_status": 0
+ }
+]
