@@ -18,7 +18,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.9.3 // indirect
 	github.com/go-chi/chi v4.1.2+incompatible // indirect
 	github.com/google/go-configfs-tsm v0.3.2 // indirect
-	github.com/google/go-sev-guest v0.14.2-0.20251119154202-af1c107a648f // indirect
+	github.com/google/go-sev-guest v0.15.0 // indirect
 	github.com/google/go-tpm v0.9.6 // indirect
 	github.com/google/logger v1.1.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
