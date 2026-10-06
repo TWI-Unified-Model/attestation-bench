@@ -91,7 +91,7 @@ replace github.com/TWI-Unified-Model/tacra/platform => ../platform
 
 require (
 	github.com/fxamacker/cbor/v2 v2.9.3
-	github.com/google/go-sev-guest v0.14.2-0.20251119154202-af1c107a648f
+	github.com/google/go-sev-guest v0.15.0
 	github.com/google/go-tdx-guest v0.3.1
 	github.com/google/uuid v1.6.0
 	github.com/jraman567/go-gen-ref v1.2.3
