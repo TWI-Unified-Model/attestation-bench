@@ -10,6 +10,7 @@
 # The guest only runs hwrun (offline); all gateway interaction is on this machine, where the bench runs. The bench is
 # reconfigured between passes (OMIT_RRP_ID) and left in background-check mode, no omit, at the end.
 set -euo pipefail
+. "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
 CLOUD="${1:?usage: redirect.sh gcp-snp|gcp-tdx|aws-snp}"
 HW="$(cd "$(dirname "$0")/.." && pwd)"; REPO="$(cd "$HW/.." && pwd)"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
@@ -17,7 +18,7 @@ NAME="tacra-redir-$(echo "$STAMP" | tr -d 'TZ' | cut -c3-12)"
 OUT="$HW/evidence/${STAMP}-${CLOUD}-redirect"; BIN="$(mktemp -d)"
 CA1=https://127.0.0.1:9101; CA2=https://127.0.0.1:9103
 CA1_ID=https://ca1.tacra.example; CA2_ID=https://ca2.tacra.example
-B="${TACRA_BENCH:-$HOME/tacra-bench}"; CERT="$B/tls/clients/est-server.crt"; KEY_C="$B/tls/clients/est-server.key"; ROOT="$B/tls/root.crt"
+B="$BENCH_HOME"; CERT="$B/tls/clients/est-server.crt"; KEY_C="$B/tls/clients/est-server.key"; ROOT="$B/tls/root.crt"
 export CLOUDSDK_CORE_DISABLE_PROMPTS=1 GOWORK=off
 mkdir -p "$OUT"
 git -C "$REPO" rev-parse --short=12 HEAD > "$OUT/code-rev.txt"

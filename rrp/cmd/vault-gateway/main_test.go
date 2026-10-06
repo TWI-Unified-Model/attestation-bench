@@ -36,7 +36,14 @@ const (
 
 func benchKV(t *testing.T) *vaultKV {
 	t.Helper()
-	b := filepath.Join(os.Getenv("HOME"), "tacra-bench")
+	// the running bench, as in scripts/lib.sh: BENCH_HOME, or TACRA_BENCH, or ~/.attestation-bench
+	b := os.Getenv("BENCH_HOME")
+	if b == "" {
+		b = os.Getenv("TACRA_BENCH")
+	}
+	if b == "" {
+		b = filepath.Join(os.Getenv("HOME"), ".attestation-bench")
+	}
 	kv, err := newVaultKV(vaultConfig{Addr: "https://127.0.0.1:8200", CA: filepath.Join(b, "tls/root.crt"),
 		Mount: "secret", TokenFile: filepath.Join(b, "gateways/vault-gateway.token")},
 		filepath.Join(b, "tls/clients/vault-gateway.crt"), filepath.Join(b, "tls/clients/vault-gateway.key"))

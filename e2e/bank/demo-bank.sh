@@ -13,12 +13,13 @@
 #   e2e/bank/demo-bank.sh audit
 #   e2e/bank/demo-bank.sh down
 set -euo pipefail
+. "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
 PROJECT="${PROJECT:-rats-probe}"
 ZONE="${ZONE:-us-central1-c}"
 AWS_REGION="${AWS_REGION:-us-east-2}"
 AWS_AZ="${AWS_AZ:-us-east-2a}"
 HERE="$(cd "$(dirname "$0")/../.." && pwd)"
-ST="${DEMO_BANK_STATE:-$HOME/tacra-bench/demo-bank}"   # state and staging, outside git
+ST="${DEMO_BANK_STATE:-$BENCH_HOME/demo-bank}"   # state and staging, outside git
 D=/opt/demobank
 # launch measurements the bank approves: GCP n2d-standard-2 and AWS c6a.large SEV-SNP, GCP c3-standard-4 TDX (MRTD);
 # the same values as the bench, taken from the hardware runs in e2e/evidence and hwcheck/evidence

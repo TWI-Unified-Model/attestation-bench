@@ -35,7 +35,14 @@ const (
 // bench returns a step-ca client for the local test bench, or skips.
 func bench(t *testing.T) *stepCA {
 	t.Helper()
-	b := filepath.Join(os.Getenv("HOME"), "tacra-bench")
+	// the running bench, as in scripts/lib.sh: BENCH_HOME, or TACRA_BENCH, or ~/.attestation-bench
+	b := os.Getenv("BENCH_HOME")
+	if b == "" {
+		b = os.Getenv("TACRA_BENCH")
+	}
+	if b == "" {
+		b = filepath.Join(os.Getenv("HOME"), ".attestation-bench")
+	}
 	c, err := newStepCA(stepCAConfig{URL: "https://127.0.0.1:9000", Root: filepath.Join(b, "step/certs/root_ca.crt"),
 		Provisioner: "tacra-ca-gateway", KeyFile: filepath.Join(b, "gateways/ca-provisioner.jwk")})
 	if err != nil {

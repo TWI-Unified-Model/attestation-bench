@@ -5,7 +5,8 @@
 #
 #   e2e/scripts/veraison-build-info.sh [DEPLOYMENT]
 set -euo pipefail
-D="${1:-${VERAISON_DEPLOYMENT:-$HOME/veraison-deployment}}"
+. "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"
+D="${1:-$VERAISON_DEPLOYMENT}"
 for f in bin/verification-service bin/vts-service plugins/scheme-sevsnp.plugin; do
   info="$(go version -m "$D/$f")"
   rev="$(awk -F= '/vcs.revision/{print substr($2, 1, 12)}' <<<"$info")"

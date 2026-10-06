@@ -11,6 +11,7 @@
 # Env: TYPE (default c6a.large), AMI_PARAM (SSM parameter of the image; default Ubuntu 24.04), SSH_USER.
 # Cost: one c6a.large for ~10 minutes.
 set -euo pipefail
+. "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
 REGION="${1:-us-east-2}"
 AZ="${2:-us-east-2a}"
 TYPE="${TYPE:-c6a.large}"
@@ -128,8 +129,8 @@ for v in fork fixed v015; do
   "$BIN/rrpverify-$v" verify -in "$OUT" -handles "$OUT/handles.json" -ark "$OUT/amd-kds-milan-vlek-cert_chain.pem" \
     -not-before "$NB" -not-after "$NA" -out "$OUT/rrpverify-veraison-$v.json" | tee "$OUT/rrpverify-veraison-$v.txt"
 done
-if curl -sf --cacert "$HOME/veraison-deployment/certs/rootCA.crt" --cert "${TACRA_BENCH:-$HOME/tacra-bench}/tls/clients/ca-gateway.crt" \
-  --key "${TACRA_BENCH:-$HOME/tacra-bench}/tls/clients/ca-gateway.key" https://localhost:8443/.well-known/veraison/verification >/dev/null 2>&1; then
+if curl -sf --cacert "$VERAISON_DEPLOYMENT/certs/rootCA.crt" --cert "$BENCH_HOME/tls/clients/ca-gateway.crt" \
+  --key "$BENCH_HOME/tls/clients/ca-gateway.key" https://localhost:8443/.well-known/veraison/verification >/dev/null 2>&1; then
   echo "== RRP verification through the deployed Veraison service (https://localhost:8443)"
   "$BIN/rrpverify-fixed" service -in "$OUT" -handles "$OUT/handles.json" -not-before "$NB" -not-after "$NA" \
     -out "$OUT/rrpverify-service.json" | tee "$OUT/rrpverify-service.txt"

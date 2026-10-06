@@ -70,13 +70,20 @@ func b64(path string) string {
 }
 
 func commonFlags(fs *flag.FlagSet) (url, target, ctype, ca, cert, key *string) {
-	home := os.Getenv("HOME")
+	// the running bench, as in scripts/lib.sh: BENCH_HOME, or TACRA_BENCH, or ~/.attestation-bench
+	home := os.Getenv("BENCH_HOME")
+	if home == "" {
+		home = os.Getenv("TACRA_BENCH")
+	}
+	if home == "" {
+		home = os.Getenv("HOME") + "/.attestation-bench"
+	}
 	url = fs.String("url", "https://127.0.0.1:9101", "RRP gateway base URL")
 	target = fs.String("target", "https://db-nonce.tacra.example", "the Target")
 	ctype = fs.String("ctype", "x509", "credential type")
-	ca = fs.String("ca", home+"/tacra-bench/tls/root.crt", "CA of the gateway's TLS certificate")
-	cert = fs.String("cert", home+"/tacra-bench/tls/clients/est-server.crt", "the conduit's client certificate")
-	key = fs.String("key", home+"/tacra-bench/tls/clients/est-server.key", "its private key")
+	ca = fs.String("ca", home+"/tls/root.crt", "CA of the gateway's TLS certificate")
+	cert = fs.String("cert", home+"/tls/clients/est-server.crt", "the conduit's client certificate")
+	key = fs.String("key", home+"/tls/clients/est-server.key", "its private key")
 	return
 }
 

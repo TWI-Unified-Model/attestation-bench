@@ -28,9 +28,10 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 
-B = os.environ.get("TACRA_BENCH", os.path.expanduser("~/tacra-bench"))
+# BENCH_HOME and VERAISON_DEPLOYMENT as in scripts/lib.sh
+B = os.environ.get("BENCH_HOME") or os.environ.get("TACRA_BENCH") or os.path.expanduser("~/.attestation-bench")
 ROOT = f"{B}/tls/root.crt"
-VERAISON_CA = os.path.expanduser("~/veraison-deployment/certs/rootCA.crt")
+VERAISON_CA = os.path.join(os.environ.get("VERAISON_DEPLOYMENT") or f"{B}/veraison", "certs", "rootCA.crt")
 
 
 def foreign_identity(tmp: str) -> tuple[str, str]:

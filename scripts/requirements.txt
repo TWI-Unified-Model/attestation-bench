@@ -1,0 +1,4 @@
+# Python packages the bench's scripts use (client certificates, configuration, CBOR evidence), installed by
+# scripts/setup.sh into BENCH_HOME/venv.
+cryptography==42.0.8
+cbor2==6.1.4

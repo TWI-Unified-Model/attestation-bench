@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # The local TACRA test bench: Veraison (verification), step-ca (workload credentials), HashiCorp Vault (secrets),
 # the Credential Authority and Secret Vault gateways (the RRPs), the EST server (the conduit) and an ordinary mTLS
-# service (the RATS-unaware Relying Party). Keys, passwords and
-# generated configuration live under ~/tacra-bench, outside git. Every listener is on 127.0.0.1.
+# service (the RATS-unaware Relying Party). Keys, passwords and generated configuration live under BENCH_HOME
+# (default ~/.attestation-bench; scripts/setup.sh creates it), outside git. Every listener is on 127.0.0.1.
 #
 #   e2e/scripts/bench.sh config    write the gateway and EST server configuration (measurements from MEASUREMENTS;
 #                                  RATS_MODEL=background-check makes the gateways ask the verifiers themselves)
@@ -12,8 +12,10 @@
 #
 # MEASUREMENTS: space-separated hex launch measurements the policy admits (GCP and AWS SEV-SNP launches by default).
 set -euo pipefail
-B="${TACRA_BENCH:-$HOME/tacra-bench}"
-HERE="$(cd "$(dirname "$0")/../.." && pwd)"
+# BENCH_HOME (default ~/.attestation-bench) and VERAISON_DEPLOYMENT, the pinned tools on PATH: scripts/lib.sh
+. "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"
+B="$BENCH_HOME"
+HERE="$BENCH_REPO"
 EST="${EST_REPO:-$HERE/third_party/globalsign-est/src}"   # fetched by third_party/fetch.sh
 BIN="$B/bin"
 MEASUREMENTS="${MEASUREMENTS:-ccdc5cf01ba25526bd65503d95931b787b4385a3277cfe4448addf9c3e894948ae8cf7b099620e3e22717de2fb5d26fa 7a89cceaaba0bbdddc4f775acca3ef15d1f9bf8abccdc6115cfad7fb8eae113df3ee0bb50efa34db9c53ae065b1dc766}"
@@ -76,7 +78,8 @@ root = f"{B}/tls/root.crt"
 infra = {n: f"{n}.bench.tacra.example" for n in ("est-server", "ca-gateway", "vault-gateway", "operator")}
 def ident(name):   # a component's client certificate on its calls (N23)
     return {"client_cert": f"{B}/tls/clients/{name}.crt", "client_key": f"{B}/tls/clients/{name}.key"}
-veraison = {"url": "https://localhost:8443", "ca": os.path.expanduser("~/veraison-deployment/certs/rootCA.crt")}
+VD = os.environ["VERAISON_DEPLOYMENT"]
+veraison = {"url": "https://localhost:8443", "ca": f"{VD}/certs/rootCA.crt"}
 tdxv = {"url": "https://localhost:8453", "ca": root}
 # the verifiers the RRPs may take, by name, with their EAR keys as provisioned files (N24: never fetched from them)
 verifiers = [dict(veraison, name="veraison", ear_key=f"{B}/gateways/veraison.ear.jwk", submods=["SEVSNP"], provider="sev_guest"),
@@ -119,8 +122,13 @@ vault = dict(common, **ident("vault-gateway"), rrp_id="https://vault1.tacra.exam
              sign_key=f"{B}/gateways/vault-sign.key")
 targets = {t: "ca" for t in catargets}
 targets.update({f"https://ledger-{k}.tacra.example": "vault" for k in kinds})
+# the EST server's health-check password: kept from an earlier run, so a rerun of config changes nothing
+try:
+    hc = json.load(open(f"{B}/config/est-server.json"))["healthcheck_password"]
+except (OSError, KeyError, ValueError):
+    hc = os.urandom(16).hex()
 est = {"tls": {"listen_address": "127.0.0.1:18443", "certificates": f"{B}/tls/est-server.crt", "private_key": f"{B}/tls/est-server.key"},
-       "healthcheck_password": os.urandom(16).hex(), "timeout": 60, "rate_limit": 0, "log_file": f"{B}/est-server.log",
+       "healthcheck_password": hc, "timeout": 60, "rate_limit": 0, "log_file": f"{B}/est-server.log",
        "tacra": dict(ident("est-server"),
                      verifiers={"veraison": dict(veraison, provider="sev_guest"), "tdx": dict(tdxv, provider="tdx_guest")},
                      acceptable_evidence=["application/vnd.veraison.tsm-report+cbor"],
@@ -138,11 +146,11 @@ for name, c in (("ca-gateway", ca), ("ca-gateway-2", ca2), ("vault-gateway", vau
     with open(p, "w") as f: json.dump(c, f, indent=1)
     os.chmod(p, 0o600)
 # Veraison's EAR key, provisioned to the gateways as a file: the public half of the deployment's signing key
-sk = json.load(open(os.path.expanduser("~/veraison-deployment/signing/skey.jwk")))
+sk = json.load(open(f"{VD}/signing/skey.jwk"))
 with open(f"{B}/gateways/veraison.ear.jwk", "w") as f:
     json.dump({k: v for k, v in sk.items() if k in ("kty", "crv", "x", "y", "alg", "kid")}, f)
 # Veraison's verification API takes only callers with a certificate of the bench's root (its client-ca option)
-vy = os.path.expanduser("~/veraison-deployment/config/services/config.yaml")
+vy = f"{VD}/config/services/config.yaml"
 y = open(vy).read()
 blk = re.search(r"^verification:\n((?:  .*\n)+)", y, re.M)
 if blk and "client-ca:" not in blk.group(1):
@@ -193,7 +201,7 @@ case "${1:-status}" in
   config) config ;;
   start)
     "$HERE/e2e/scripts/veraison-local.sh" start
-    start_one step-ca "$HOME/go/bin/step-ca" "$B/step/config/ca.json" --password-file "$B/secrets/step-ca-password"
+    start_one step-ca step-ca "$B/step/config/ca.json" --password-file "$B/secrets/step-ca-password"
     start_one vault vault server -config="$B/vault/config.hcl"
     wait_port 9000; wait_port 8200; wait_port 8443
     if { vault status 2>/dev/null || true; } | grep -q "Sealed *true"; then  # vault status exits 2 when sealed

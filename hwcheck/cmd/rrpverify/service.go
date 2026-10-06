@@ -177,15 +177,34 @@ func (v *veraisonService) checkEAR(jws string) (*earResult, error) {
 	return &earResult{Status: sub.Status, Nonce: nonce}, nil
 }
 
+// benchHome is the running bench's directory, as in scripts/lib.sh: BENCH_HOME, or TACRA_BENCH, or ~/.attestation-bench.
+func benchHome() string {
+	if d := os.Getenv("BENCH_HOME"); d != "" {
+		return d
+	}
+	if d := os.Getenv("TACRA_BENCH"); d != "" {
+		return d
+	}
+	return filepath.Join(os.Getenv("HOME"), ".attestation-bench")
+}
+
+// veraisonDeployment is VERAISON_DEPLOYMENT, or the bench's own Veraison.
+func veraisonDeployment() string {
+	if d := os.Getenv("VERAISON_DEPLOYMENT"); d != "" {
+		return d
+	}
+	return filepath.Join(benchHome(), "veraison")
+}
+
 // serviceVerify is `rrpverify service`: the same cases and changed inputs as `verify`, against a deployed Veraison.
 func serviceVerify(args []string) {
 	fs := flag.NewFlagSet("service", flag.ExitOnError)
 	in := fs.String("in", "hwrun-out", "hwrun output directory")
 	handlesPath := fs.String("handles", "handles.json", "the handles this RRP minted")
 	base := fs.String("url", "https://localhost:8443", "Veraison verification service")
-	caPath := fs.String("ca", os.Getenv("HOME")+"/veraison-deployment/certs/rootCA.crt", "CA of the service's TLS certificate")
-	certPath := fs.String("cert", os.Getenv("HOME")+"/tacra-bench/tls/clients/ca-gateway.crt", "this RRP's client certificate (mutual TLS)")
-	keyPath := fs.String("key", os.Getenv("HOME")+"/tacra-bench/tls/clients/ca-gateway.key", "its private key")
+	caPath := fs.String("ca", filepath.Join(veraisonDeployment(), "certs", "rootCA.crt"), "CA of the service's TLS certificate")
+	certPath := fs.String("cert", filepath.Join(benchHome(), "tls", "clients", "ca-gateway.crt"), "this RRP's client certificate (mutual TLS)")
+	keyPath := fs.String("key", filepath.Join(benchHome(), "tls", "clients", "ca-gateway.key"), "its private key")
 	target := fs.String("target", "https://db.tacra.example", "the Target this RRP answered Initiate for")
 	rrpCA := fs.String("rrp-ca", "https://ca1.tacra.example", "this Credential Authority's identifier")
 	rrpVault := fs.String("rrp-vault", "https://vault1.tacra.example", "this Secret Vault's identifier")

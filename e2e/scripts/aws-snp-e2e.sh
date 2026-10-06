@@ -7,6 +7,7 @@
 #
 #   e2e/scripts/aws-snp-e2e.sh [REGION] [AZ]
 set -euo pipefail
+. "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
 REGION="${1:-us-east-2}"
 AZ="${2:-us-east-2a}"
 TYPE="${TYPE:-c6a.large}"
@@ -15,7 +16,7 @@ TEE=sev-snp
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 NAME="tacra-e2e-$(echo "$STAMP" | tr -d 'TZ' | cut -c3-12)"
 HERE="$(cd "$(dirname "$0")/../.." && pwd)"
-B="${TACRA_BENCH:-$HOME/tacra-bench}"
+B="$BENCH_HOME"
 # the bench's RATS model (bench.sh config, RATS_MODEL): who asks the verifiers
 MODEL="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('rats_model') or 'passport')" "$B/config/vault-gateway.json")"
 OUT="$HERE/e2e/evidence/${STAMP}-aws-${TEE}-e2e-${MODEL}"
@@ -27,13 +28,14 @@ echo "== bench"
 "$HERE/e2e/scripts/bench.sh" status | tee "$OUT/bench-status.txt"
 if grep -q stopped "$OUT/bench-status.txt"; then echo "!! start the bench first: e2e/scripts/bench.sh start"; exit 1; fi
 { echo "attestation-bench $(git -C "$HERE" rev-parse --short=12 HEAD)$(git -C "$HERE" diff --quiet HEAD -- platform cai bundle rrp e2e/cmd || echo -dirty)"
-  "$HERE/third_party/describe.sh" globalsign-est
+  # the sources of the EST server and of the deployed Veraison (upstream commit, our patches, tree)
+  "$HERE/third_party/describe.sh" globalsign-est veraison-services go-gen-ref | grep -v -e '/src-fork ' -e '/src-der '
   # the deployed Veraison, as its binaries say they were built
   "$HERE/e2e/scripts/veraison-build-info.sh"; } > "$OUT/code-revs.txt"
 echo "$MODEL" > "$OUT/rats-model.txt"
 for f in est-server ca-gateway vault-gateway rup tdx-verifier; do wc -l < "$B/$f.log" > "$OUT/bench-logs/.$f.start"; done
-wc -l < "$HOME/veraison-deployment/logs/vts.log" > "$OUT/bench-logs/.vts.start"
-wc -l < "$HOME/veraison-deployment/logs/verification.log" > "$OUT/bench-logs/.verification.start"
+wc -l < "$VERAISON_DEPLOYMENT/logs/vts.log" > "$OUT/bench-logs/.vts.start"
+wc -l < "$VERAISON_DEPLOYMENT/logs/verification.log" > "$OUT/bench-logs/.verification.start"
 
 echo "== build (linux/amd64)"
 (cd "$HERE/e2e" && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -o "$BIN/e2e-attester" ./cmd/e2e-attester \
@@ -121,9 +123,9 @@ cleanup
 
 echo "== bench logs for the run"
 for f in est-server ca-gateway vault-gateway rup tdx-verifier; do tail -n +"$(( $(cat "$OUT/bench-logs/.$f.start") + 1 ))" "$B/$f.log" | grep -v "TLS handshake error" > "$OUT/bench-logs/$f.log" || true; done
-tail -n +"$(( $(cat "$OUT/bench-logs/.vts.start") + 1 ))" "$HOME/veraison-deployment/logs/vts.log" | grep -v DEBUG > "$OUT/bench-logs/veraison-vts.log" || true
+tail -n +"$(( $(cat "$OUT/bench-logs/.vts.start") + 1 ))" "$VERAISON_DEPLOYMENT/logs/vts.log" | grep -v DEBUG > "$OUT/bench-logs/veraison-vts.log" || true
 # Veraison's verification API: who asked for each session (client-ca)
-tail -n +"$(( $(cat "$OUT/bench-logs/.verification.start") + 1 ))" "$HOME/veraison-deployment/logs/verification.log" | grep -v DEBUG \
+tail -n +"$(( $(cat "$OUT/bench-logs/.verification.start") + 1 ))" "$VERAISON_DEPLOYMENT/logs/verification.log" | grep -v DEBUG \
   > "$OUT/bench-logs/veraison-verification.log" || true
 rm -f "$OUT"/bench-logs/.*.start
 python3 - "$OUT/results.json" <<'PY'

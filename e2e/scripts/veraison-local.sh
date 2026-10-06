@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Start or stop the native Veraison deployment (~/veraison-deployment) as plain background processes: no launchd or
-# systemd units are installed. Logs and pids go to ~/veraison-deployment/logs.
+# Start or stop the native Veraison deployment (VERAISON_DEPLOYMENT, default BENCH_HOME/veraison: scripts/lib.sh) as
+# plain background processes: no launchd or systemd units are installed. Logs and pids go to its logs/ directory.
 #
 #   e2e/scripts/veraison-local.sh start|stop|status
 set -euo pipefail
-D="${VERAISON_DEPLOYMENT:-$HOME/veraison-deployment}"
+. "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"
+D="$VERAISON_DEPLOYMENT"
 CFG="$D/config/services/config.yaml"
 SERVICES=(vts provisioning verification management)
 mkdir -p "$D/logs"
@@ -17,7 +18,9 @@ case "${1:-status}" in
       nohup "$D/bin/$s-service" --config="$CFG" > "$D/logs/$s.log" 2>&1 &
       echo $! > "$pidf"
       echo "$s started ($(cat "$pidf"))"
-      if [ "$s" = vts ]; then sleep 2; fi
+      # the other services connect to VTS when they start (gRPC, localhost:50051) and back off for a while when it is
+      # not there yet, so they start only once VTS listens; a fixed pause was too short on a first start
+      if [ "$s" = vts ]; then bench_wait_port 50051 || { echo "vts did not open 50051 (see $D/logs/vts.log)" >&2; exit 1; }; fi
     done ;;
   stop)
     for s in "${SERVICES[@]}"; do

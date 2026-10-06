@@ -4,7 +4,7 @@
 hpke-base-signed container's trust anchor, from 01.10 on, so Retrieval on AWS failed (evidence
 20261006T160234Z-aws-sev-snp-e2e). Public material only: trust anchors, the Vault's public keys, the epoch marker.
 
-    TEE=sev-snp|tdx B=~/tacra-bench BIN=<dir holding origin-keys.json> python3 e2e/scripts/guest_config.py
+    TEE=sev-snp|tdx B=$BENCH_HOME BIN=<dir holding origin-keys.json> python3 e2e/scripts/guest_config.py
 """
 import json, os
 B, BIN = os.environ["B"], os.environ["BIN"]
