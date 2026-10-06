@@ -139,9 +139,9 @@ sudo chmod -R a+rX /root/redir; rm -rf ~/redir; sudo cp -r /root/redir ~/redir; 
 
 reconfigure() { # $1 = "omit" or "normal"
   local omit=""; [ "$1" = omit ] && omit=1
-  bash "$HW/e2e/scripts/bench.sh" stop >/dev/null 2>&1 || true
-  RATS_MODEL=background-check OMIT_RRP_ID="$omit" bash "$HW/e2e/scripts/bench.sh" config >/dev/null 2>&1
-  bash "$HW/e2e/scripts/bench.sh" start >/dev/null 2>&1
+  bash "$REPO/e2e/scripts/bench.sh" stop >/dev/null 2>&1 || true
+  RATS_MODEL=background-check OMIT_RRP_ID="$omit" bash "$REPO/e2e/scripts/bench.sh" config >/dev/null 2>&1
+  bash "$REPO/e2e/scripts/bench.sh" start >/dev/null 2>&1
 }
 
 echo "== bench: background-check, RRP identifier IN the binding"
