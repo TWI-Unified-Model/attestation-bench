@@ -5,11 +5,15 @@
 # service. The guest reaches the bench through an SSH reverse tunnel; TLS runs end to end over it. A throwaway key
 # pair and a security group admitting SSH from this address only are deleted with the instance.
 #
-#   e2e/scripts/aws-snp-e2e.sh [REGION] [AZ]
+#   e2e/scripts/aws-snp-e2e.sh                (make demo PLATFORM=aws-snp)
+#
+# AWS_REGION, AWS_AZ: where the instance goes (scripts/lib.sh). RUNS_DIR: where the run directory goes (default
+# BENCH_HOME/runs). Env: TYPE (default c6a.large), AMI_PARAM (SSM parameter of the image; default Ubuntu 24.04).
 set -euo pipefail
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
-REGION="${1:-us-east-2}"
-AZ="${2:-us-east-2a}"
+[ $# -eq 0 ] || bench_die "no arguments: the region and zone come from AWS_REGION and AWS_AZ (scripts/lib.sh)"
+bench_aws
+REGION="$AWS_REGION" AZ="$AWS_AZ"
 TYPE="${TYPE:-c6a.large}"
 AMI_PARAM="${AMI_PARAM:-/aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id}"
 TEE=sev-snp
@@ -19,14 +23,14 @@ HERE="$(cd "$(dirname "$0")/../.." && pwd)"
 B="$BENCH_HOME"
 # the bench's RATS model (bench.sh config, RATS_MODEL): who asks the verifiers
 MODEL="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('rats_model') or 'passport')" "$B/config/vault-gateway.json")"
-OUT="$HERE/e2e/evidence/${STAMP}-aws-${TEE}-e2e-${MODEL}"
+RUNS_DIR="${RUNS_DIR:-$B/runs}"
+OUT="$RUNS_DIR/${STAMP}-aws-${TEE}-e2e-${MODEL}"
 BIN="$(mktemp -d)"
-export AWS_PAGER="" GOWORK=off
 mkdir -p "$OUT/bench-logs"
 ID="" SG="" KEY="$NAME"
 echo "== bench"
 "$HERE/e2e/scripts/bench.sh" status | tee "$OUT/bench-status.txt"
-if grep -q stopped "$OUT/bench-status.txt"; then echo "!! start the bench first: e2e/scripts/bench.sh start"; exit 1; fi
+if grep -q stopped "$OUT/bench-status.txt"; then echo "!! start the bench first: make start"; exit 1; fi
 { echo "attestation-bench $(git -C "$HERE" rev-parse --short=12 HEAD)$(git -C "$HERE" diff --quiet HEAD -- platform cai bundle rrp e2e/cmd || echo -dirty)"
   # the sources of the EST server and of the deployed Veraison (upstream commit, our patches, tree)
   "$HERE/third_party/describe.sh" globalsign-est veraison-services go-gen-ref | grep -v -e '/src-fork ' -e '/src-der '

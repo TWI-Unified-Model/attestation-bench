@@ -6,14 +6,16 @@
 # instance with AmdSevSnp=enabled, runs hwrun as root (configfs-tsm), copies the output back, terminates the
 # instance, deletes the key pair and the group, and checks that all three are gone.
 #
-#   hwcheck/scripts/aws-snp-hwcheck.sh [REGION] [AZ]
+#   hwcheck/scripts/aws-snp-hwcheck.sh        (make attacks PLATFORM=aws-snp)
 #
-# Env: TYPE (default c6a.large), AMI_PARAM (SSM parameter of the image; default Ubuntu 24.04), SSH_USER.
-# Cost: one c6a.large for ~10 minutes.
+# AWS_REGION, AWS_AZ: where the instance goes (scripts/lib.sh). RUNS_DIR: where the run directory goes (default
+# BENCH_HOME/runs). Env: TYPE (default c6a.large), AMI_PARAM (SSM parameter of the image; default Ubuntu 24.04),
+# SSH_USER. Cost: one c6a.large for ~10 minutes.
 set -euo pipefail
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
-REGION="${1:-us-east-2}"
-AZ="${2:-us-east-2a}"
+[ $# -eq 0 ] || bench_die "no arguments: the region and zone come from AWS_REGION and AWS_AZ (scripts/lib.sh)"
+bench_aws
+REGION="$AWS_REGION" AZ="$AWS_AZ"
 TYPE="${TYPE:-c6a.large}"
 AMI_PARAM="${AMI_PARAM:-/aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id}"
 SSH_USER="${SSH_USER:-ubuntu}"
@@ -22,9 +24,9 @@ NAME="tacra-hwcheck-$(echo "$STAMP" | tr -d 'TZ' | cut -c3-12)"
 HW="$(cd "$(dirname "$0")/.." && pwd)"
 REPO="$(cd "$HW/.." && pwd)"
 CODE_REV="$(git -C "$REPO" rev-parse --short=12 HEAD)$(git -C "$REPO" diff --quiet HEAD -- platform cai hwcheck/cmd || echo -dirty)"
-OUT="$HW/evidence/${STAMP}-aws-sev-snp"
+RUNS_DIR="${RUNS_DIR:-$BENCH_HOME/runs}"
+OUT="$RUNS_DIR/${STAMP}-aws-sev-snp"
 BIN="$(mktemp -d)"
-export AWS_PAGER="" GOWORK=off
 mkdir -p "$OUT"
 echo "$CODE_REV" > "$OUT/code-rev.txt"
 ID="" SG="" KEY="$NAME"

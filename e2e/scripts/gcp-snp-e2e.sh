@@ -5,14 +5,19 @@
 # RATS-unaware mTLS service. The guest reaches the bench through an SSH reverse tunnel; TLS runs end to end over it.
 # The guest receives trust anchors, the Vault's public origin keys and the epoch marker: nothing secret.
 #
-#   e2e/scripts/gcp-snp-e2e.sh [PROJECT] [ZONE]
+#   e2e/scripts/gcp-snp-e2e.sh                (make demo PLATFORM=gcp-snp)
+#   TEE=tdx e2e/scripts/gcp-snp-e2e.sh        (make demo PLATFORM=gcp-tdx)
+#
+# GCP_PROJECT, GCP_ZONE: where the VM goes (scripts/lib.sh). RUNS_DIR: where the run directory goes (default
+# BENCH_HOME/runs).
 #
 # CAS_OUTSIDE=1 runs the CAS Client (caapi-est, the conduit) outside the guest, on this machine, and gives the
 # workload's CAI the way to it through the reverse tunnel (tacra-est N1: "a run with the conduit outside the guest").
 set -euo pipefail
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
-PROJECT="${1:-rats-probe}"
-ZONE="${2:-us-central1-c}"
+[ $# -eq 0 ] || bench_die "no arguments: the project and zone come from GCP_PROJECT and GCP_ZONE (scripts/lib.sh)"
+bench_gcp
+PROJECT="$GCP_PROJECT" ZONE="$GCP_ZONE"
 TEE="${TEE:-sev-snp}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 NAME="tacra-e2e-$(echo "$STAMP" | tr -d 'TZ' | cut -c3-12)"
@@ -21,15 +26,15 @@ B="$BENCH_HOME"
 # the bench's RATS model (bench.sh config, RATS_MODEL): who asks the verifiers
 MODEL="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('rats_model') or 'passport')" "$B/config/vault-gateway.json")"
 CAS_OUTSIDE="${CAS_OUTSIDE:-}"
-OUT="$HERE/e2e/evidence/${STAMP}-gcp-${TEE}-e2e-${MODEL}${CAS_OUTSIDE:+-cas-outside}"
+RUNS_DIR="${RUNS_DIR:-$B/runs}"
+OUT="$RUNS_DIR/${STAMP}-gcp-${TEE}-e2e-${MODEL}${CAS_OUTSIDE:+-cas-outside}"
 BIN="$(mktemp -d)"
-export CLOUDSDK_CORE_DISABLE_PROMPTS=1 GOWORK=off
 mkdir -p "$OUT/bench-logs"
 SSH=(gcloud compute ssh "$NAME" --project="$PROJECT" --zone="$ZONE")
 
 echo "== bench"
 "$HERE/e2e/scripts/bench.sh" status | tee "$OUT/bench-status.txt"
-if grep -q stopped "$OUT/bench-status.txt"; then echo "!! start the bench first: e2e/scripts/bench.sh start"; exit 1; fi
+if grep -q stopped "$OUT/bench-status.txt"; then echo "!! start the bench first: make start"; exit 1; fi
 { echo "attestation-bench $(git -C "$HERE" rev-parse --short=12 HEAD)$(git -C "$HERE" diff --quiet HEAD -- platform cai bundle rrp e2e/cmd || echo -dirty)"
   # the sources of the EST server and of the deployed Veraison (upstream commit, our patches, tree)
   "$HERE/third_party/describe.sh" globalsign-est veraison-services go-gen-ref | grep -v -e '/src-fork ' -e '/src-der '

@@ -34,14 +34,19 @@ check-mtls:
 third-party:
 	@third_party/fetch.sh
 
-## demo: the end-to-end run locally, software stand-in TEE (no hardware, no cost, no security): 10 Targets
+# PLATFORM picks where the TEE runs for demo, attacks and redirect: local (default: this machine, the software
+# stand-in TEE, no hardware, no cost, no security), or gcp-snp, gcp-tdx, aws-snp (real hardware: one VM in your own
+# cloud account, deleted at the end; scripts/lib.sh). See scripts/run.sh.
+PLATFORM ?= local
+
+## demo: end to end, 10 Targets acquire their credentials and use them   [PLATFORM=local|gcp-snp|gcp-tdx|aws-snp]
 demo:
-	@scripts/local-e2e.sh
+	@scripts/run.sh demo $(PLATFORM)
 
-## attacks: the substitution suite locally (software stand-in TEE), in process and through the sim-verifier
+## attacks: the substitution suite, every attack refused for its own reason   [PLATFORM=local|gcp-snp|gcp-tdx|aws-snp]
 attacks:
-	@scripts/local-attacks.sh
+	@scripts/run.sh attacks $(PLATFORM)
 
-## redirect: the #20 redirection experiment locally (software stand-in TEE); leaves the bench in Background Check
+## redirect: the #20 redirection experiment; leaves the bench in Background Check   [PLATFORM=local|gcp-snp|...]
 redirect:
-	@hwcheck/scripts/redirect.sh local
+	@scripts/run.sh redirect $(PLATFORM)

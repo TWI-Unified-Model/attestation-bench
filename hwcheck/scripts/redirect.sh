@@ -5,37 +5,41 @@
 # with the RRP identifier in the binding (both CAs bind their own), and without it (OMIT_RRP_ID=1, both bind none).
 # This measures, per Freshness Kind, what the RRP identifier prevents.
 #
-#   hwcheck/scripts/redirect.sh gcp-snp|gcp-tdx|aws-snp|local
+#   hwcheck/scripts/redirect.sh gcp-snp|gcp-tdx|aws-snp|local      (make redirect PLATFORM=...)
 #
 # The guest only runs hwrun (offline); all gateway interaction is on this machine, where the bench runs. "local" runs
 # hwrun here with the bench's software stand-in TEE (no VM, no cost, no security). The bench is
 # reconfigured between passes (OMIT_RRP_ID) and left in background-check mode, no omit, at the end.
+#
+# GCP_PROJECT, GCP_ZONE, AWS_REGION, AWS_AZ: where the VM goes (scripts/lib.sh). RUNS_DIR: where the run directory
+# goes (default BENCH_HOME/runs).
 set -euo pipefail
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
 CLOUD="${1:?usage: redirect.sh gcp-snp|gcp-tdx|aws-snp|local}"
+case "$CLOUD" in
+  gcp-snp) TEE=sev-snp; MACHINE=(--machine-type=n2d-standard-2 --min-cpu-platform="AMD Milan" --confidential-compute-type=SEV_SNP);;
+  gcp-tdx) TEE=tdx;     MACHINE=(--machine-type=c3-standard-4 --confidential-compute-type=TDX);;
+  aws-snp) TEE=sev-snp; TYPE=c6a.large;;
+  local)   TEE=sim;;
+  *) echo "unknown cloud $CLOUD" >&2; exit 2;;
+esac
+case "$CLOUD" in
+  gcp-*) bench_gcp; ZONE="$GCP_ZONE";;
+  aws-*) bench_aws; REGION="$AWS_REGION"; AZ="$AWS_AZ";;
+esac
 HW="$(cd "$(dirname "$0")/.." && pwd)"; REPO="$(cd "$HW/.." && pwd)"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 NAME="tacra-redir-$(echo "$STAMP" | tr -d 'TZ' | cut -c3-12)"
-# a local run goes to BENCH_HOME/runs, a hardware run to the repository's evidence, unless RUNS_DIR says otherwise
-if [ "$CLOUD" = local ]; then OUT_BASE="${RUNS_DIR:-$BENCH_HOME/runs}"; else OUT_BASE="${RUNS_DIR:-$HW/evidence}"; fi
-OUT="$OUT_BASE/${STAMP}-${CLOUD}-redirect"; BIN="$(mktemp -d)"
+RUNS_DIR="${RUNS_DIR:-$BENCH_HOME/runs}"
+OUT="$RUNS_DIR/${STAMP}-${CLOUD}-redirect"; BIN="$(mktemp -d)"
 CA1=https://127.0.0.1:9101; CA2=https://127.0.0.1:9103
 CA1_ID=https://ca1.tacra.example; CA2_ID=https://ca2.tacra.example
 B="$BENCH_HOME"; CERT="$B/tls/clients/est-server.crt"; KEY_C="$B/tls/clients/est-server.key"; ROOT="$B/tls/root.crt"
-export CLOUDSDK_CORE_DISABLE_PROMPTS=1 GOWORK=off
 mkdir -p "$OUT"
 git -C "$REPO" rev-parse --short=12 HEAD > "$OUT/code-rev.txt"
 "$REPO/e2e/scripts/veraison-build-info.sh" > "$OUT/veraison-build.txt"  # the Verifier the gateways ask (SEV-SNP)
 ORDER=(nonce epoch lepoch time none)  # short name of each Target; fresh_of maps it to the Freshness Kind (bash 3.2: no associative arrays)
 fresh_of() { case "$1" in nonce) echo present-nonce;; epoch) echo present-epoch;; lepoch) echo absent-epoch;; time) echo absent-timestamp;; none) echo absent-none;; esac; }
-
-case "$CLOUD" in
-  gcp-snp) TEE=sev-snp; ZONE=us-central1-c; MACHINE=(--machine-type=n2d-standard-2 --min-cpu-platform="AMD Milan" --confidential-compute-type=SEV_SNP);;
-  gcp-tdx) TEE=tdx;     ZONE=us-central1-a; MACHINE=(--machine-type=c3-standard-4 --confidential-compute-type=TDX);;
-  aws-snp) TEE=sev-snp; REGION=us-east-2; AZ=us-east-2a; TYPE=c6a.large;;
-  local)   TEE=sim;;
-  *) echo "unknown cloud $CLOUD" >&2; exit 2;;
-esac
 
 echo "== build hwrun and rrp-issue"
 if [ "$CLOUD" = local ]; then
@@ -54,21 +58,21 @@ if [ "$CLOUD" = local ]; then
   vm_delete() { :; }
   wait_ssh()  { return 0; }
 elif [ "${CLOUD#gcp}" != "$CLOUD" ]; then
-  GSSH=(gcloud compute ssh "$NAME" --project=rats-probe --zone="$ZONE" --command)
+  GSSH=(gcloud compute ssh "$NAME" --project="$GCP_PROJECT" --zone="$ZONE" --command)
   vm_create() {
     echo "== create $NAME ($ZONE, $TEE)"
-    gcloud compute instances create "$NAME" --project=rats-probe --zone="$ZONE" "${MACHINE[@]}" \
+    gcloud compute instances create "$NAME" --project="$GCP_PROJECT" --zone="$ZONE" "${MACHINE[@]}" \
       --maintenance-policy=TERMINATE --image-family=ubuntu-2404-lts-amd64 --image-project=ubuntu-os-cloud \
       --boot-disk-size=20GB --labels=purpose=tacra-redir --metadata=enable-oslogin=TRUE >/dev/null
   }
   vm_delete() {
-    gcloud compute instances delete "$NAME" --project=rats-probe --zone="$ZONE" --quiet >/dev/null 2>&1 || true
-    left="$(gcloud compute instances list --project=rats-probe --filter="name=$NAME" --format='value(name)' 2>/dev/null)"
+    gcloud compute instances delete "$NAME" --project="$GCP_PROJECT" --zone="$ZONE" --quiet >/dev/null 2>&1 || true
+    left="$(gcloud compute instances list --project="$GCP_PROJECT" --filter="name=$NAME" --format='value(name)' 2>/dev/null)"
     [ -z "$left" ] && echo "$NAME is gone" | tee "$OUT/vm-deleted.txt" || echo "!! $NAME still exists"
   }
   guest_ssh() { "${GSSH[@]}" "$1" ; }
-  guest_in()  { gcloud compute scp "$@" "$NAME:~/" --project=rats-probe --zone="$ZONE" >/dev/null ; }
-  guest_out() { gcloud compute scp --recurse "$NAME:~/$1" "$2" --project=rats-probe --zone="$ZONE" >/dev/null ; }
+  guest_in()  { gcloud compute scp "$@" "$NAME:~/" --project="$GCP_PROJECT" --zone="$ZONE" >/dev/null ; }
+  guest_out() { gcloud compute scp --recurse "$NAME:~/$1" "$2" --project="$GCP_PROJECT" --zone="$ZONE" >/dev/null ; }
   wait_ssh()  { for i in $(seq 1 30); do guest_ssh true >/dev/null 2>&1 && return 0; sleep 10; done; return 1; }
 else
   vm_create() {

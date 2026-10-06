@@ -4,20 +4,23 @@
 # the VM, mints the Freshness Handles (RRP side), copies hwrun and the handles in, runs it as root (configfs-tsm),
 # copies the output back, deletes the VM and checks that it is gone.
 #
-#   hwcheck/scripts/gcp-tdx-hwcheck.sh [PROJECT] [ZONE]
+#   hwcheck/scripts/gcp-tdx-hwcheck.sh        (make attacks PLATFORM=gcp-tdx)
 #
-# Cost: one c3-standard-4 confidential VM for ~10 minutes.
+# GCP_PROJECT, GCP_ZONE: where the VM goes (scripts/lib.sh). RUNS_DIR: where the run directory goes (default
+# BENCH_HOME/runs). Cost: one c3-standard-4 confidential VM for ~10 minutes.
 set -euo pipefail
-PROJECT="${1:-rats-probe}"
-ZONE="${2:-us-central1-a}"
+. "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, pinned tools, cloud settings
+[ $# -eq 0 ] || bench_die "no arguments: the project and zone come from GCP_PROJECT and GCP_ZONE (scripts/lib.sh)"
+bench_gcp
+PROJECT="$GCP_PROJECT" ZONE="$GCP_ZONE"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 NAME="tacra-hwcheck-$(echo "$STAMP" | tr -d 'TZ' | cut -c3-12)"
 HW="$(cd "$(dirname "$0")/.." && pwd)"
 REPO="$(cd "$HW/.." && pwd)"
 CODE_REV="$(git -C "$REPO" rev-parse --short=12 HEAD)$(git -C "$REPO" diff --quiet HEAD -- platform cai hwcheck/cmd || echo -dirty)"
-OUT="$HW/evidence/${STAMP}-gcp-tdx"
+RUNS_DIR="${RUNS_DIR:-$BENCH_HOME/runs}"
+OUT="$RUNS_DIR/${STAMP}-gcp-tdx"
 BIN="$(mktemp -d)"
-export CLOUDSDK_CORE_DISABLE_PROMPTS=1 GOWORK=off
 mkdir -p "$OUT"
 echo "$CODE_REV" > "$OUT/code-rev.txt"
 

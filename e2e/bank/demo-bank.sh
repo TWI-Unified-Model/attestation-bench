@@ -12,12 +12,14 @@
 #   e2e/bank/demo-bank.sh approve tdx|snp MEASUREMENT     (only on Google's signed endorsement)
 #   e2e/bank/demo-bank.sh audit
 #   e2e/bank/demo-bank.sh down
+#
+# GCP_PROJECT, GCP_ZONE: where the bank's VMs go; AWS_REGION, AWS_AZ: where "pay aws-snp" goes (scripts/lib.sh).
+# RUNS_DIR: where the bank's run directory goes (default BENCH_HOME/runs).
 set -euo pipefail
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
-PROJECT="${PROJECT:-rats-probe}"
-ZONE="${ZONE:-us-central1-c}"
-AWS_REGION="${AWS_REGION:-us-east-2}"
-AWS_AZ="${AWS_AZ:-us-east-2a}"
+bench_gcp
+PROJECT="$GCP_PROJECT" ZONE="$GCP_ZONE"
+RUNS_DIR="${RUNS_DIR:-$BENCH_HOME/runs}"
 HERE="$(cd "$(dirname "$0")/../.." && pwd)"
 ST="${DEMO_BANK_STATE:-$BENCH_HOME/demo-bank}"   # state and staging, outside git
 D=/opt/demobank
@@ -78,7 +80,7 @@ create_gcp() { # name machine-args...
 
 up() {
   STAMP="$(date -u +%Y%m%dT%H%M%SZ)"; local id; id="$(echo "$STAMP" | tr -d 'TZ' | cut -c3-12)"
-  TRUST="demobank-trust-$id" CORE="demobank-core-$id" OUT="$HERE/e2e/evidence/${STAMP}-demo-bank"
+  TRUST="demobank-trust-$id" CORE="demobank-core-$id" OUT="$RUNS_DIR/${STAMP}-demo-bank"
   mkdir -p "$OUT/up" "$OUT/public" "$OUT/runs"; save
   log "build (linux/amd64)"; build
   log "create $TRUST (SEV-SNP n2d-standard-4) and $CORE (e2-standard-2) in $ZONE"
@@ -204,6 +206,7 @@ PY
 
 pay() {
   local kind="${1:?kind}" rs name R MACHINE=() FLAGS="" TEE=sev-snp EXPECT=pay
+  if [ "$kind" = aws-snp ]; then bench_aws; fi
   rs="$(date -u +%Y%m%dT%H%M%SZ)"; name="demobank-pay-$(echo "$rs" | tr -d 'TZ' | cut -c7-12)-$kind"
   R="$OUT/runs/${rs}-$kind"; mkdir -p "$R"
   case "$kind" in

@@ -5,21 +5,23 @@
 # Handles (RRP side), copies hwrun and the handles in, runs it as root (configfs-tsm), copies the output back,
 # deletes the VM and checks that it is gone.
 #
-#   hwcheck/scripts/gcp-snp-hwcheck.sh [PROJECT] [ZONE]
+#   hwcheck/scripts/gcp-snp-hwcheck.sh        (make attacks PLATFORM=gcp-snp)
 #
-# Cost: one n2d-standard-2 confidential VM for ~10 minutes.
+# GCP_PROJECT, GCP_ZONE: where the VM goes (scripts/lib.sh). RUNS_DIR: where the run directory goes (default
+# BENCH_HOME/runs). Cost: one n2d-standard-2 confidential VM for ~10 minutes.
 set -euo pipefail
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
-PROJECT="${1:-rats-probe}"
-ZONE="${2:-us-central1-c}"
+[ $# -eq 0 ] || bench_die "no arguments: the project and zone come from GCP_PROJECT and GCP_ZONE (scripts/lib.sh)"
+bench_gcp
+PROJECT="$GCP_PROJECT" ZONE="$GCP_ZONE"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 NAME="tacra-hwcheck-$(echo "$STAMP" | tr -d 'TZ' | cut -c3-12)"
 HW="$(cd "$(dirname "$0")/.." && pwd)"
 REPO="$(cd "$HW/.." && pwd)"
 CODE_REV="$(git -C "$REPO" rev-parse --short=12 HEAD)$(git -C "$REPO" diff --quiet HEAD -- platform cai hwcheck/cmd || echo -dirty)"
-OUT="$HW/evidence/${STAMP}-gcp-sev-snp"
+RUNS_DIR="${RUNS_DIR:-$BENCH_HOME/runs}"
+OUT="$RUNS_DIR/${STAMP}-gcp-sev-snp"
 BIN="$(mktemp -d)"
-export CLOUDSDK_CORE_DISABLE_PROMPTS=1 GOWORK=off
 mkdir -p "$OUT"
 echo "$CODE_REV" > "$OUT/code-rev.txt"
 
