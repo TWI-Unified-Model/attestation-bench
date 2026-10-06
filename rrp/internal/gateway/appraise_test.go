@@ -135,7 +135,7 @@ func TestBackgroundCheck(t *testing.T) {
 			t.Fatal(err)
 		}
 		return &SecondLeg{FreshnessKind: fresh.PresentNonce, Target: target, CredentialType: "x509", Handle: resp.Handle},
-			platform.BindingValue(resp.Handle, rrpID, target, subject)
+			platform.BindingValue(resp.Handle, target, rrpID, subject)
 	}
 
 	v := newFakeVerifier(t, key, tmpl)

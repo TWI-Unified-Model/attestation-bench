@@ -107,7 +107,7 @@ func TestEnrollThroughStepCA(t *testing.T) {
 		return resp.Handle
 	}
 	request := func(handle, csr []byte, h string, nonceTarget string, key *ecdsa.PrivateKey) *EnrollRequest {
-		bv := platform.BindingValue(handle, rrpID, nonceTarget, csr)
+		bv := platform.BindingValue(handle, nonceTarget, rrpID, csr)
 		jws, err := gateway.SignTestEAR(key, tmpl, bv[:], time.Now(), "")
 		if err != nil {
 			t.Fatal(err)
@@ -199,7 +199,7 @@ func TestNameFromBoundCSR(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		bv := platform.BindingValue(resp.Handle, rrpID, target, csr)
+		bv := platform.BindingValue(resp.Handle, target, rrpID, csr)
 		jws, err := gateway.SignTestEAR(earKey, strings.TrimSpace(string(tmpl)), bv[:], time.Now(), "")
 		if err != nil {
 			t.Fatal(err)

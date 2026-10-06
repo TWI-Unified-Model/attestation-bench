@@ -182,7 +182,7 @@ func verify(args []string) {
 				tdxOtherRoots = otherRoots()
 			}
 			bv := func(e []byte, r, t string, subj []byte) []byte {
-				v := platform.BindingValue(e, r, t, subj)
+				v := platform.BindingValue(e, t, r, subj)
 				return v[:]
 			}
 			honestPassed := false
@@ -254,15 +254,15 @@ func verify(args []string) {
 				bv     [64]byte
 				ta     []*comid.KeyTriple
 			}{
-				{"honest", "pass", "", platform.BindingValue(elem, rrp, *target, subject), ta},
+				{"honest", "pass", "", platform.BindingValue(elem, *target, rrp, subject), ta},
 				{"other Target", "fail", nonceRefusal,
-					platform.BindingValue(elem, rrp, "https://other.tacra.example", subject), ta},
-				{"other RRP identifier", "fail", nonceRefusal, platform.BindingValue(elem, otherRRP, *target, subject), ta},
-				{"other CSR / CEKpub", "fail", nonceRefusal, platform.BindingValue(elem, rrp, *target, flipped), ta},
+					platform.BindingValue(elem, "https://other.tacra.example", rrp, subject), ta},
+				{"other RRP identifier", "fail", nonceRefusal, platform.BindingValue(elem, *target, otherRRP, subject), ta},
+				{"other CSR / CEKpub", "fail", nonceRefusal, platform.BindingValue(elem, *target, rrp, flipped), ta},
 				{"other freshness element", "fail", nonceRefusal,
-					platform.BindingValue(otherElem, rrp, *target, subject), ta},
+					platform.BindingValue(otherElem, *target, rrp, subject), ta},
 				{"trust anchor = ASK, not ARK", "fail", taRefusal,
-					platform.BindingValue(elem, rrp, *target, subject), otherTA},
+					platform.BindingValue(elem, *target, rrp, subject), otherTA},
 			}
 			honestPassed := false
 			for _, c := range checks {

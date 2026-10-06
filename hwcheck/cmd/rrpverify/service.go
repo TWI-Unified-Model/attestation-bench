@@ -221,11 +221,11 @@ func serviceVerify(args []string) {
 			name, want string
 			bv         [64]byte
 		}{
-			{"honest", "pass", platform.BindingValue(elem, rrp, *target, subject)},
-			{"other Target", "fail", platform.BindingValue(elem, rrp, "https://other.tacra.example", subject)},
-			{"other RRP identifier", "fail", platform.BindingValue(elem, otherRRP, *target, subject)},
-			{"other CSR / CEKpub", "fail", platform.BindingValue(elem, rrp, *target, flipped)},
-			{"other freshness element", "fail", platform.BindingValue(otherElem, rrp, *target, subject)},
+			{"honest", "pass", platform.BindingValue(elem, *target, rrp, subject)},
+			{"other Target", "fail", platform.BindingValue(elem, "https://other.tacra.example", rrp, subject)},
+			{"other RRP identifier", "fail", platform.BindingValue(elem, *target, otherRRP, subject)},
+			{"other CSR / CEKpub", "fail", platform.BindingValue(elem, *target, rrp, flipped)},
+			{"other freshness element", "fail", platform.BindingValue(otherElem, *target, rrp, subject)},
 		} {
 			t0 := time.Now()
 			ear, err := v.verify(token, c.bv[:])

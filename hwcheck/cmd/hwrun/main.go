@@ -134,7 +134,7 @@ func main() {
 			if k.kind == platform.FreshnessKindAbsentTimestamp {
 				req.FreshnessHandle = elem // the element the request would carry in its handle field
 			}
-			bv := platform.BindingValue(elem, req.RelyingParty, req.Target, subject)
+			bv := platform.BindingValue(elem, req.Target, req.RelyingParty, subject)
 			m.BindingValueHex = hex.EncodeToString(bv[:])
 			t0 := time.Now()
 			ev, err := p.GenerateEvidence(req)

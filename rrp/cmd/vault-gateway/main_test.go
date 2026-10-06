@@ -87,7 +87,7 @@ func TestRetrieveThroughVault(t *testing.T) {
 		return r.Handle
 	}
 	request := func(h, cekPub []byte, rrp, hnt string, key *ecdsa.PrivateKey) *RetrieveRequest {
-		bv := platform.BindingValue(h, rrp, target, cekPub)
+		bv := platform.BindingValue(h, target, rrp, cekPub)
 		jws, err := gateway.SignTestEAR(key, tmpl, bv[:], time.Now(), "")
 		if err != nil {
 			t.Fatal(err)
@@ -138,7 +138,7 @@ func TestRetrieveThroughVault(t *testing.T) {
 	}
 	// results that are not affirming: 403
 	h := handle()
-	bv := platform.BindingValue(h, rrpID, target, xSPKI)
+	bv := platform.BindingValue(h, target, rrpID, xSPKI)
 	jws, _ := gateway.SignTestEAR(earKey, tmpl, bv[:], time.Now(), "contraindicated")
 	req := &RetrieveRequest{SecondLeg: gateway.SecondLeg{FreshnessKind: fresh.PresentNonce, Target: target,
 		CredentialType: "api-key", Handle: h, CredentialHint: hint, EAR: jws}, CEKPub: xSPKI}
@@ -188,7 +188,7 @@ func TestRetrieveSigned(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		bv := platform.BindingValue(r.Handle, rrpID, target, cekPub)
+		bv := platform.BindingValue(r.Handle, target, rrpID, cekPub)
 		jws, err := gateway.SignTestEAR(earKey, tmpl, bv[:], time.Now(), "")
 		if err != nil {
 			t.Fatal(err)
@@ -301,7 +301,7 @@ func TestGroupPerTarget(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		bv := platform.BindingValue(r.Handle, rrpID, target, cekPub)
+		bv := platform.BindingValue(r.Handle, target, rrpID, cekPub)
 		jws, _ := gateway.SignTestEAR(earKey, tmpl, bv[:], time.Now(), "")
 		b, err := s.retrieve(&RetrieveRequest{SecondLeg: gateway.SecondLeg{FreshnessKind: fresh.PresentNonce, Target: target,
 			CredentialType: "api-key", Handle: r.Handle, CredentialHint: hint, EAR: jws}, CEKPub: cekPub})

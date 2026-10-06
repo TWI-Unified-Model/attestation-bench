@@ -385,7 +385,7 @@ func (g *Gateway) Check(req *SecondLeg, subject []byte) (*ear.Result, *Target, e
 		}
 		return nil, nil, refuse(http.StatusBadRequest, "freshness", err)
 	}
-	bv := platform.BindingValue(req.Handle, g.Config.RRPID, req.Target, subject)
+	bv := platform.BindingValue(req.Handle, req.Target, g.Config.RRPID, subject)
 	jws := req.EAR
 	if g.Config.RATSModel == BackgroundCheck {
 		// the RRP asks the verifier itself; Attestation Results that arrive with the request are not taken
