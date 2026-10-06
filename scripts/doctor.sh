@@ -5,6 +5,7 @@
 #
 #   scripts/doctor.sh            (make doctor)
 set -uo pipefail
+# shellcheck source=SCRIPTDIR/lib.sh
 . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
 missing=0
@@ -64,6 +65,7 @@ fi
 tool curl curl curl
 tool unzip unzip unzip
 tool openssl openssl openssl
+tool shasum perl perl "SHA-256 of every run's files"
 tool jq jq jq
 tool nc netcat netcat-openbsd "port checks"
 tool sqlite3 sqlite sqlite3 "Veraison's stores"

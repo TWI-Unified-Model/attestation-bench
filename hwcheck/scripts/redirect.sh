@@ -14,6 +14,7 @@
 # GCP_PROJECT, GCP_ZONE, AWS_REGION, AWS_AZ: where the VM goes (scripts/lib.sh). RUNS_DIR: where the run directory
 # goes (default BENCH_HOME/runs).
 set -euo pipefail
+# shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
 CLOUD="${1:?usage: redirect.sh gcp-snp|gcp-tdx|aws-snp|local}"
 case "$CLOUD" in
@@ -33,7 +34,7 @@ NAME="tacra-redir-$(echo "$STAMP" | tr -d 'TZ' | cut -c3-12)"
 RUNS_DIR="${RUNS_DIR:-$BENCH_HOME/runs}"
 OUT="$RUNS_DIR/${STAMP}-${CLOUD}-redirect"; BIN="$(mktemp -d)"
 CA1=https://127.0.0.1:9101; CA2=https://127.0.0.1:9103
-CA1_ID=https://ca1.tacra.example; CA2_ID=https://ca2.tacra.example
+CA1_ID=https://ca1.tacra.example   # the RRP identifier the honest EST server's Credential Authority binds
 B="$BENCH_HOME"; CERT="$B/tls/clients/est-server.crt"; KEY_C="$B/tls/clients/est-server.key"; ROOT="$B/tls/root.crt"
 mkdir -p "$OUT"
 git -C "$REPO" rev-parse --short=12 HEAD > "$OUT/code-rev.txt"
@@ -73,7 +74,7 @@ elif [ "${CLOUD#gcp}" != "$CLOUD" ]; then
   guest_ssh() { "${GSSH[@]}" "$1" ; }
   guest_in()  { gcloud compute scp "$@" "$NAME:~/" --project="$GCP_PROJECT" --zone="$ZONE" >/dev/null ; }
   guest_out() { gcloud compute scp --recurse "$NAME:~/$1" "$2" --project="$GCP_PROJECT" --zone="$ZONE" >/dev/null ; }
-  wait_ssh()  { for i in $(seq 1 30); do guest_ssh true >/dev/null 2>&1 && return 0; sleep 10; done; return 1; }
+  wait_ssh()  { for _ in $(seq 1 30); do guest_ssh true >/dev/null 2>&1 && return 0; sleep 10; done; return 1; }
 else
   vm_create() {
     echo "== launch $NAME ($REGION/$AZ, $TYPE, SEV-SNP)"
@@ -104,10 +105,11 @@ else
   guest_ssh() { "${SSHC[@]}" "$1" ; }
   guest_in()  { "${SCPC[@]}" "$@" "ubuntu@$IP:~/" >/dev/null ; }
   guest_out() { "${SCPC[@]}" -r "ubuntu@$IP:~/$1" "$2" >/dev/null ; }
-  wait_ssh()  { for i in $(seq 1 40); do guest_ssh true >/dev/null 2>&1 && return 0; sleep 10; done; return 1; }
+  wait_ssh()  { for _ in $(seq 1 40); do guest_ssh true >/dev/null 2>&1 && return 0; sleep 10; done; return 1; }
 fi
 trap 'vm_delete; rm -rf "$BIN"' EXIT
 
+# shellcheck disable=SC2016  # the $ in the single-quoted script expands in the guest, not here
 PROVISION='set -e
 if [ "'"$TEE"'" = tdx ]; then :; else sudo modprobe sev-guest 2>/dev/null || true; if [ ! -e /dev/sev-guest ]; then sudo apt-get update -qq >/dev/null; sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq linux-modules-extra-$(uname -r) >/dev/null; sudo modprobe sev-guest || true; fi; fi
 mountpoint -q /sys/kernel/config || sudo mount -t configfs none /sys/kernel/config
@@ -186,7 +188,7 @@ echo "== bench: back to background-check, no omit"
 reconfigure normal
 
 cat "$OUT"/*/results.jsonl > "$OUT/results.jsonl"
-(cd "$OUT" && find . -type f ! -name sha256sums.txt | sort | xargs shasum -a 256 > sha256sums.txt)
+bench_seal "$OUT"
 echo "== evidence in $OUT"
 python3 - "$OUT/results.jsonl" <<'PY'
 import sys, json

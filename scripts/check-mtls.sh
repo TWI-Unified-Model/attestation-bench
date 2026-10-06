@@ -7,15 +7,18 @@
 #
 # RUNS_DIR: where run directories go (default BENCH_HOME/runs).
 set -euo pipefail
+# shellcheck source=SCRIPTDIR/lib.sh
 . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 RUNS_DIR="${RUNS_DIR:-$BENCH_HOME/runs}"
-OUT="$RUNS_DIR/$(date -u +%Y%m%dT%H%M%SZ)-bench-mtls"
+MODEL="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("rats_model") or "passport")' \
+  "$BENCH_HOME/config/vault-gateway.json")"
+OUT="$RUNS_DIR/$(date -u +%Y%m%dT%H%M%SZ)-bench-mtls-$MODEL"
 mkdir -p "$OUT"
 git -C "$BENCH_REPO" rev-parse --short=12 HEAD >"$OUT/code-rev.txt"
 "$BENCH_REPO/e2e/scripts/veraison-build-info.sh" >"$OUT/veraison-build.txt"
-python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("rats_model") or "passport")' \
-  "$BENCH_HOME/config/vault-gateway.json" >"$OUT/rats-model.txt"
+echo "$MODEL" >"$OUT/rats-model.txt"
 if python3 "$BENCH_REPO/e2e/scripts/bench-mtls-check.py" "$OUT/mtls.json" >"$OUT/run.log" 2>&1; then rc=0; else rc=$?; fi
+bench_seal "$OUT"
 tail -1 "$OUT/run.log"
-echo "run directory: $OUT"
+echo "== run directory: $OUT"
 exit "$rc"

@@ -4,6 +4,7 @@
 #
 #   e2e/scripts/veraison-local.sh start|stop|status
 set -euo pipefail
+# shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"
 D="$VERAISON_DEPLOYMENT"
 CFG="$D/config/services/config.yaml"

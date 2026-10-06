@@ -9,6 +9,7 @@
 # GCP_PROJECT, GCP_ZONE: where the VM goes (scripts/lib.sh). RUNS_DIR: where the run directory goes (default
 # BENCH_HOME/runs). Cost: one c3-standard-4 confidential VM for ~10 minutes.
 set -euo pipefail
+# shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, pinned tools, cloud settings
 [ $# -eq 0 ] || bench_die "no arguments: the project and zone come from GCP_PROJECT and GCP_ZONE (scripts/lib.sh)"
 bench_gcp
@@ -49,7 +50,7 @@ cleanup() {
 trap 'cleanup; rm -rf "$BIN"' EXIT
 
 echo "== wait for ssh"
-for i in $(seq 1 30); do
+for _ in $(seq 1 30); do
   if gcloud compute ssh "$NAME" --project="$PROJECT" --zone="$ZONE" --command='true' >/dev/null 2>&1; then break; fi
   sleep 10
 done
@@ -86,5 +87,5 @@ echo "== RRP verification (go-tdx-guest, Intel PCS collateral)"
 "$BIN/rrpverify" verify -in "$OUT" -handles "$OUT/handles.json" -not-before "$NB" -not-after "$NA" \
   -out "$OUT/rrpverify-tdx.json" > "$OUT/rrpverify-tdx.txt" 2> "$OUT/rrpverify-tdx.stderr.log"
 tail -1 "$OUT/rrpverify-tdx.txt"
-(cd "$OUT" && find . -type f ! -name sha256sums.txt | sort | xargs shasum -a 256 > sha256sums.txt)
+bench_seal "$OUT"
 echo "== evidence in $OUT"

@@ -20,6 +20,7 @@
 # RATS_MODEL: passport (default) or background-check, set when the bank comes up. RUNS_DIR: where the bank's run
 # directory goes (default BENCH_HOME/runs).
 set -euo pipefail
+# shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
 bench_gcp
 PROJECT="$GCP_PROJECT" ZONE="$GCP_ZONE"
@@ -33,6 +34,7 @@ D=/opt/demobank
 TRUST_LOGS="est-server ca-gateway vault-gateway tdx-verifier veraison-vts veraison-verification step-ca"
 export AWS_PAGER=""
 mkdir -p "$ST"
+# shellcheck source=/dev/null  # the bank's state, written by save()
 [ -f "$ST/state" ] && . "$ST/state"
 
 save() { printf '%s\n' "STAMP=$STAMP" "TRUST=$TRUST" "CORE=$CORE" "OUT=$OUT" "RATS_MODEL=$RATS_MODEL" "TRUST_INT=${TRUST_INT:-}" \
@@ -224,17 +226,18 @@ PY
   rm -f "$1"/.trust-marks "$1"/.core-marks
 }
 
-guest_run() { # how-to-ssh... ; env: TRUST_IP CORE_IP FLAGS
+guest_run() { # trust-zone-ip core-ip payments-flags how-to-ssh...
+  local trust_ip="$1" core_ip="$2" flags="$3"; shift 3
   "$@" "
 set -e
 sudo modprobe sev-guest 2>/dev/null || sudo modprobe tdx_guest 2>/dev/null || true
 mountpoint -q /sys/kernel/config || sudo mount -t configfs none /sys/kernel/config
 ls -ld /sys/kernel/config/tsm/report 2>&1 || true
-printf '%s trust.demobank.internal\n%s core.demobank.internal\n' $TRUST_IP $CORE_IP | sudo tee -a /etc/hosts >/dev/null
+printf '%s trust.demobank.internal\n%s core.demobank.internal\n' $trust_ip $core_ip | sudo tee -a /etc/hosts >/dev/null
 nohup ~/caapi-est -listen 127.0.0.1:50061 -est trust.demobank.internal:18443 -anchor ~/trust-tls-root.crt > ~/caapi-est.log 2>&1 &
 echo \$! > ~/caapi-est.pid
 sleep 1
-sudo ~/payments -config ~/payments.json -from ACC-1001 -to ACC-2002 -amount 125.50 -out ~/report.json $FLAGS 2>&1 || true
+sudo ~/payments -config ~/payments.json -from ACC-1001 -to ACC-2002 -amount 125.50 -out ~/report.json $flags 2>&1 || true
 sudo chown \$(id -u):\$(id -g) ~/report.json
 uname -a > ~/kernel.txt
 kill \"\$(cat ~/caapi-est.pid)\" || true"
@@ -286,11 +289,12 @@ pay() {
   mark_logs "$R"
   log "$kind: create $name (${MACHINE[*]})"
   create_gcp "$name" "${MACHINE[@]}"
-  trap "gcloud compute instances delete '$name' --project='$PROJECT' --zone='$ZONE' --quiet >/dev/null 2>&1" EXIT
+  PAY_VM="$name"   # deleted however the run ends
+  trap 'gcloud compute instances delete "$PAY_VM" --project="$PROJECT" --zone="$ZONE" --quiet >/dev/null 2>&1' EXIT
   wait_ssh "$name"
   gscp "$ST/stage/workload/payments" "$ST/stage/workload/caapi-est" "$R/payments.json" "$OUT/public/trust-tls-root.crt" "$name:~/"
   log "$kind: run the payment service"
-  TRUST_IP="$TRUST_INT" CORE_IP="$CORE_INT" FLAGS="$FLAGS" guest_run gssh "$name" | tee "$R/guest-stdout.txt"
+  guest_run "$TRUST_INT" "$CORE_INT" "$FLAGS" gssh "$name" | tee "$R/guest-stdout.txt"
   gscp "$name:~/report.json" "$name:~/caapi-est.log" "$name:~/kernel.txt" "$R/"
   gcloud compute instances describe "$name" --project="$PROJECT" --zone="$ZONE" \
     --format="yaml(name,machineType,confidentialInstanceConfig,cpuPlatform)" > "$R/instance.yaml" 2>/dev/null || true
@@ -300,7 +304,7 @@ pay() {
   [ -z "$(gcloud compute instances list --project="$PROJECT" --filter="name=$name" --format='value(name)')" ] \
     && echo "$name is gone" > "$R/vm-deleted.txt"
   slice_logs "$R"
-  (cd "$R" && find . -type f ! -name sha256sums.txt | sort | xargs shasum -a 256 > sha256sums.txt)
+  bench_seal "$R"
   verdict "$R" "$EXPECT"
 }
 
@@ -344,12 +348,12 @@ pay_aws() { # run dir
   for _ in $(seq 1 40); do ssh "${SSHO[@]}" "ubuntu@$IP" true >/dev/null 2>&1 && break; sleep 8; done
   scp "${SSHO[@]}" "$ST/stage/workload/payments" "$ST/stage/workload/caapi-est" "$R/payments.json" "$OUT/public/trust-tls-root.crt" "ubuntu@$IP:~/" >/dev/null 2>>"$OUT/ssh.stderr"
   log "aws-snp: run the payment service (over the internet to the bank in GCP)"
-  TRUST_IP="$TRUST_EXT" CORE_IP="$CORE_EXT" FLAGS="" guest_run ssh "${SSHO[@]}" "ubuntu@$IP" | tee "$R/guest-stdout.txt"
+  guest_run "$TRUST_EXT" "$CORE_EXT" "" ssh "${SSHO[@]}" "ubuntu@$IP" | tee "$R/guest-stdout.txt"
   scp "${SSHO[@]}" "ubuntu@$IP:~/report.json" "ubuntu@$IP:~/caapi-est.log" "ubuntu@$IP:~/kernel.txt" "$R/" >/dev/null 2>>"$OUT/ssh.stderr"
   log "aws-snp: terminate, delete the security group, key pair and firewall rule"
   aws_cleanup; trap - EXIT
   slice_logs "$R"
-  (cd "$R" && find . -type f ! -name sha256sums.txt | sort | xargs shasum -a 256 > sha256sums.txt)
+  bench_seal "$R"
   verdict "$R" pay
 }
 
@@ -429,7 +433,7 @@ down() {
   if [ -d "$OUT/up" ]; then
     python3 "$HERE/e2e/bank/report.py" "$OUT" >/dev/null && echo "== report: $OUT/README.md"
   fi
-  (cd "$OUT" && find . -type f ! -name sha256sums.txt | sort | xargs shasum -a 256 > sha256sums.txt)
+  bench_seal "$OUT"
   echo "== run directory: $OUT"
 }
 

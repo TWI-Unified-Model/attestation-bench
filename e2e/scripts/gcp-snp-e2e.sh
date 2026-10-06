@@ -14,6 +14,7 @@
 # CAS_OUTSIDE=1 runs the CAS Client (caapi-est, the conduit) outside the guest, on this machine, and gives the
 # workload's CAI the way to it through the reverse tunnel (tacra-est N1: "a run with the conduit outside the guest").
 set -euo pipefail
+# shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
 [ $# -eq 0 ] || bench_die "no arguments: the project and zone come from GCP_PROJECT and GCP_ZONE (scripts/lib.sh)"
 bench_gcp
@@ -87,7 +88,7 @@ cleanup() {
 trap cleanup EXIT
 
 echo "== wait for ssh"
-for i in $(seq 1 30); do "${SSH[@]}" --command=true >/dev/null 2>&1 && break; sleep 10; done
+for _ in $(seq 1 30); do "${SSH[@]}" --command=true >/dev/null 2>&1 && break; sleep 10; done
 "${SSH[@]}" --command='
 set -e
 sudo modprobe sev-guest 2>/dev/null || sudo modprobe tdx_guest 2>/dev/null || true
@@ -102,7 +103,7 @@ if [ -n "$CAS_OUTSIDE" ]; then
   echo "== the CAS Client outside the guest, on this machine (127.0.0.1:50061, through the tunnel to the guest)"
   "$BIN/caapi-est-local" -listen 127.0.0.1:50061 -est localhost:18443 -anchor "$B/tls/root.crt" > "$OUT/caapi-est-outside.log" 2>&1 &
   CAS_PID=$!
-  for i in $(seq 1 20); do nc -z 127.0.0.1 50061 2>/dev/null && break; sleep 0.5; done
+  for _ in $(seq 1 20); do nc -z 127.0.0.1 50061 2>/dev/null && break; sleep 0.5; done
   echo "outside the guest: caapi-est on the bench machine, pid $CAS_PID, reached by the guest through ssh -R 50061" > "$OUT/cas-placement.txt"
 else
   echo "inside the guest: caapi-est on 127.0.0.1:50061 of the guest" > "$OUT/cas-placement.txt"
@@ -113,7 +114,7 @@ FWD=(-R 18443:127.0.0.1:18443 -R 19443:127.0.0.1:19443)
 [ -n "$CAS_OUTSIDE" ] && FWD+=(-R 50061:127.0.0.1:50061)
 "${SSH[@]}" -- -N -o ExitOnForwardFailure=yes "${FWD[@]}" 2>>"$OUT/ssh.stderr" &
 TUNNEL=$!
-for i in $(seq 1 20); do "${SSH[@]}" --command='nc -z 127.0.0.1 18443 && nc -z 127.0.0.1 19443' >/dev/null 2>&1 && break; sleep 3; done
+for _ in $(seq 1 20); do "${SSH[@]}" --command='nc -z 127.0.0.1 18443 && nc -z 127.0.0.1 19443' >/dev/null 2>&1 && break; sleep 3; done
 
 echo "== run in the guest"
 NB="$(date -u +%s)"
@@ -124,6 +125,7 @@ else
 echo $! > ~/caapi-est.pid
 sleep 1'
 fi
+# shellcheck disable=SC2016  # the $ in the single-quoted script expands in the guest, not here
 "${SSH[@]}" --command="
 set -e
 $START_CAS"'
@@ -153,5 +155,5 @@ print(f"{ok} of {len(r)} Targets: credential acquired and admitted by the relyin
 for x in r:
     print(("ok " if x["ok"] else "BAD"), x["target"].ljust(38), x["type"].ljust(8), f'{x["acquire_ms"]:8.1f} ms', x["rup_status"], x.get("error", "")[:120])
 PY
-(cd "$OUT" && find . -type f ! -name sha256sums.txt | sort | xargs shasum -a 256 > sha256sums.txt)
+bench_seal "$OUT"
 echo "== evidence in $OUT"

@@ -15,6 +15,7 @@
 #
 # RUNS_DIR: where run directories go (default BENCH_HOME/runs).
 set -euo pipefail
+# shellcheck source=SCRIPTDIR/lib.sh
 . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 B="$BENCH_HOME"
 HW="$BENCH_REPO/hwcheck"
@@ -49,7 +50,7 @@ echo "== the same checks through the bench's sim-verifier (https://localhost:846
   -submod SIM -not-before "$NB" -not-after "$NA" -out "$OUT/rrpverify-service.json" >"$OUT/rrpverify-service.txt"
 tail -1 "$OUT/rrpverify-service.txt"
 
-(cd "$OUT" && find . -type f ! -name sha256sums.txt | sort | xargs shasum -a 256 >sha256sums.txt)
+bench_seal "$OUT"
 echo "== run directory: $OUT"
 if grep -q ' 0 not as expected' "$OUT/rrpverify-sim.txt" && grep -q ' 0 not as expected' "$OUT/rrpverify-service.txt"; then
   echo "every attack refused for its own reason, every honest check passed"

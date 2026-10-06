@@ -52,7 +52,7 @@ install() {
     sed -i 's#^  server-addr: localhost:50051$#  server-addr: localhost:50051\n  listen-addr: 127.0.0.1:50051#' "$V/config/services/config.yaml"
   echo "installed: $(go version | cut -d' ' -f3), $("$D/bin/vault" version | cut -d' ' -f1-2)," \
     "$("$D/venv/bin/python3" -c 'from importlib.metadata import version as v; print("cryptography", v("cryptography"), "cbor2", v("cbor2"))')," \
-    "veraison $(ls "$V/bin" | tr '\n' ' ')"
+    "veraison $(cd "$V/bin" && printf '%s ' *)"
 }
 
 veraison_step() { # one step of Veraison's native deployment, logged

@@ -5,6 +5,7 @@
 #
 #   e2e/scripts/veraison-build-info.sh [DEPLOYMENT]
 set -euo pipefail
+# shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"
 D="${1:-$VERAISON_DEPLOYMENT}"
 for f in bin/verification-service bin/vts-service plugins/scheme-sevsnp.plugin; do

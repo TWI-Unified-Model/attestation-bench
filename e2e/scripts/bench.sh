@@ -14,6 +14,7 @@
 #   e2e/scripts/bench.sh start|stop|status
 set -euo pipefail
 # BENCH_HOME (default ~/.attestation-bench) and VERAISON_DEPLOYMENT, the pinned tools on PATH: scripts/lib.sh
+# shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"
 B="$BENCH_HOME"
 HERE="$BENCH_REPO"

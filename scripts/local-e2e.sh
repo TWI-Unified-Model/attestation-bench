@@ -14,6 +14,7 @@
 #
 # RUNS_DIR: where run directories go (default BENCH_HOME/runs).
 set -euo pipefail
+# shellcheck source=SCRIPTDIR/lib.sh
 . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 B="$BENCH_HOME"
 HERE="$BENCH_REPO"
@@ -88,7 +89,7 @@ tail -n +"$(($(cat "$OUT/bench-logs/.vts.start") + 1))" "$VERAISON_DEPLOYMENT/lo
 tail -n +"$(($(cat "$OUT/bench-logs/.verification.start") + 1))" "$VERAISON_DEPLOYMENT/logs/verification.log" | grep -v DEBUG \
   >"$OUT/bench-logs/veraison-verification.log" || true
 rm -f "$OUT"/bench-logs/.*.start
-(cd "$OUT" && find . -type f ! -name sha256sums.txt | sort | xargs shasum -a 256 >sha256sums.txt)
+bench_seal "$OUT"
 python3 - "$OUT/results.json" <<'PY'
 import json, sys
 r = json.load(open(sys.argv[1]))

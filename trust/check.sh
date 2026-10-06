@@ -4,6 +4,7 @@
 #
 #   trust/check.sh        (make trust-check)
 set -euo pipefail
+# shellcheck source=SCRIPTDIR/../scripts/lib.sh
 . "$(cd "$(dirname "$0")/.." && pwd)/scripts/lib.sh"
 T="$BENCH_REPO/trust"
 bad=0

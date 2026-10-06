@@ -41,6 +41,24 @@ bench_sha256() {
   if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | cut -d' ' -f1; else shasum -a 256 "$1" | cut -d' ' -f1; fi
 }
 
+# bench_seal DIR: writes DIR/sha256sums.txt, the SHA-256 of every other file under DIR in path order. It is a run
+# directory's last step: later, `shasum -a 256 -c sha256sums.txt` (or sha256sum -c) inside DIR shows that nothing in
+# it has changed.
+bench_seal() {
+  local tmp
+  tmp="$(mktemp)"
+  if (
+    cd "$1" || exit 1
+    find . -type f ! -name sha256sums.txt -print0 | LC_ALL=C sort -z \
+      | if command -v sha256sum >/dev/null 2>&1; then xargs -0 sha256sum; else xargs -0 shasum -a 256; fi
+  ) >"$tmp"; then
+    chmod 644 "$tmp" && mv "$tmp" "$1/sha256sums.txt"
+  else
+    rm -f "$tmp"
+    return 1
+  fi
+}
+
 # wait for a TCP port on 127.0.0.1 (30 s)
 bench_wait_port() {
   local _

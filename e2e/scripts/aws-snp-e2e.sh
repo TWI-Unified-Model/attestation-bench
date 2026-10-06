@@ -10,6 +10,7 @@
 # AWS_REGION, AWS_AZ: where the instance goes (scripts/lib.sh). RUNS_DIR: where the run directory goes (default
 # BENCH_HOME/runs). Env: TYPE (default c6a.large), AMI_PARAM (SSM parameter of the image; default Ubuntu 24.04).
 set -euo pipefail
+# shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
 [ $# -eq 0 ] || bench_die "no arguments: the region and zone come from AWS_REGION and AWS_AZ (scripts/lib.sh)"
 bench_aws
@@ -94,7 +95,7 @@ SSHO=(-i "$BIN/key" -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$
 SSH=(ssh "${SSHO[@]}" "ubuntu@$IP")
 
 echo "== wait for ssh"
-for i in $(seq 1 40); do "${SSH[@]}" true >/dev/null 2>&1 && break; sleep 10; done
+for _ in $(seq 1 40); do "${SSH[@]}" true >/dev/null 2>&1 && break; sleep 10; done
 "${SSH[@]}" '
 set -e
 sudo modprobe sev-guest 2>/dev/null || true
@@ -107,10 +108,11 @@ scp "${SSHO[@]}" "$BIN/e2e-attester" "$BIN/caapi-est" "$BIN/e2e-attester.json" "
 echo "== reverse tunnel to the bench (EST server 18443, mTLS service 19443)"
 ssh "${SSHO[@]}" -N -o ExitOnForwardFailure=yes -R 18443:127.0.0.1:18443 -R 19443:127.0.0.1:19443 "ubuntu@$IP" 2>>"$OUT/ssh.stderr" &
 TUNNEL=$!
-for i in $(seq 1 20); do "${SSH[@]}" 'nc -z 127.0.0.1 18443 && nc -z 127.0.0.1 19443' >/dev/null 2>&1 && break; sleep 3; done
+for _ in $(seq 1 20); do "${SSH[@]}" 'nc -z 127.0.0.1 18443 && nc -z 127.0.0.1 19443' >/dev/null 2>&1 && break; sleep 3; done
 
 echo "== run in the guest"
 NB="$(date -u +%s)"
+# shellcheck disable=SC2016  # the $ in the single-quoted script expands in the guest, not here
 "${SSH[@]}" '
 set -e
 nohup ~/caapi-est -listen 127.0.0.1:50061 -est localhost:18443 -anchor ~/bench-tls-root.crt > ~/caapi-est.log 2>&1 &
@@ -140,5 +142,5 @@ print(f"{ok} of {len(r)} Targets: credential acquired and admitted by the relyin
 for x in r:
     print(("ok " if x["ok"] else "BAD"), x["target"].ljust(38), x["type"].ljust(8), f'{x["acquire_ms"]:8.1f} ms', x["rup_status"], x.get("error", "")[:120])
 PY
-(cd "$OUT" && find . -type f ! -name sha256sums.txt | sort | xargs shasum -a 256 > sha256sums.txt)
+bench_seal "$OUT"
 echo "== evidence in $OUT"

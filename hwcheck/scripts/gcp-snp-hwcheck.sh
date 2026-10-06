@@ -10,6 +10,7 @@
 # GCP_PROJECT, GCP_ZONE: where the VM goes (scripts/lib.sh). RUNS_DIR: where the run directory goes (default
 # BENCH_HOME/runs). Cost: one n2d-standard-2 confidential VM for ~10 minutes.
 set -euo pipefail
+# shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
 [ $# -eq 0 ] || bench_die "no arguments: the project and zone come from GCP_PROJECT and GCP_ZONE (scripts/lib.sh)"
 bench_gcp
@@ -53,12 +54,13 @@ cleanup() {
 trap 'cleanup; rm -rf "$BIN"' EXIT
 
 echo "== wait for ssh"
-for i in $(seq 1 30); do
+for _ in $(seq 1 30); do
   if gcloud compute ssh "$NAME" --project="$PROJECT" --zone="$ZONE" --command='true' >/dev/null 2>&1; then break; fi
   sleep 10
 done
 
 echo "== provision: sev-guest module, configfs-tsm"
+# shellcheck disable=SC2016  # the $ in the single-quoted script expands in the guest, not here
 gcloud compute ssh "$NAME" --project="$PROJECT" --zone="$ZONE" --command='
 set -e
 sudo modprobe sev-guest 2>/dev/null || true
@@ -99,5 +101,5 @@ if curl -sf --cacert "$VERAISON_DEPLOYMENT/certs/rootCA.crt" --cert "$BENCH_HOME
   "$BIN/rrpverify-fixed" service -in "$OUT" -handles "$OUT/handles.json" -not-before "$NB" -not-after "$NA" \
     -out "$OUT/rrpverify-service.json" | tee "$OUT/rrpverify-service.txt"
 fi
-(cd "$OUT" && find . -type f ! -name sha256sums.txt | sort | xargs shasum -a 256 > sha256sums.txt)
+bench_seal "$OUT"
 echo "== evidence in $OUT"

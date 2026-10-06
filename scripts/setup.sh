@@ -20,6 +20,7 @@
 # Network: proxy.golang.org, pypi.org, github.com and releases.hashicorp.com. Every key and password is generated on
 # this machine and stays in BENCH_HOME.
 set -euo pipefail
+# shellcheck source=SCRIPTDIR/lib.sh
 . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 B="$BENCH_HOME"
 V="$VERAISON_DEPLOYMENT"
@@ -233,7 +234,7 @@ vault_setup() {
 veraison_provision() {
   bench_say "9/10 Veraison started and provisioned (AMD Milan ARK, approved SEV-SNP launches)"
   "$BENCH_REPO/e2e/scripts/veraison-local.sh" start
-  bench_wait_port 50051 && bench_wait_port 9443 && bench_wait_port 8443 || fail "Veraison did not start (see $V/logs)"
+  if ! { bench_wait_port 50051 && bench_wait_port 9443 && bench_wait_port 8443; }; then fail "Veraison did not start (see $V/logs)"; fi
   # trust/veraison-corim-milan.cbor; submitted again when it changes (its SHA-256 is kept next to the answer)
   local corim="$BENCH_REPO/trust/veraison-corim-milan.cbor" mark="$V/logs/corim-submit.json" sum
   sum="$(bench_sha256 "$corim")"
