@@ -1,0 +1,52 @@
+# 2026-10-06T18:15:00Z veraison 675fe11 + go-sev-guest v0.15.0 + amdRoots fix + VLEK tests (incl. changed MEASUREMENT): the whole sevsnp package
+=== RUN   TestProfile
+=== RUN   TestProfile/ok
+=== RUN   TestProfile/bad_TA_env_no_model
+=== RUN   TestProfile/bad_TA_env_no_vendor
+=== RUN   TestProfile/bad_RefVal_no_mkey
+=== RUN   TestProfile/bad_RefVal_mkey_type
+--- PASS: TestProfile (0.00s)
+    --- PASS: TestProfile/ok (0.00s)
+    --- PASS: TestProfile/bad_TA_env_no_model (0.00s)
+    --- PASS: TestProfile/bad_TA_env_no_vendor (0.00s)
+    --- PASS: TestProfile/bad_RefVal_no_mkey (0.00s)
+    --- PASS: TestProfile/bad_RefVal_mkey_type (0.00s)
+=== RUN   Test_ValidateEvidenceIntegrity_DERCertTable
+=== RUN   Test_ValidateEvidenceIntegrity_DERCertTable/PEM_certificate_table
+=== RUN   Test_ValidateEvidenceIntegrity_DERCertTable/DER_certificate_table
+=== RUN   Test_ValidateEvidenceIntegrity_DERCertTable/DER_certificate_table,_other_nonce
+--- PASS: Test_ValidateEvidenceIntegrity_DERCertTable (0.01s)
+    --- PASS: Test_ValidateEvidenceIntegrity_DERCertTable/PEM_certificate_table (0.00s)
+    --- PASS: Test_ValidateEvidenceIntegrity_DERCertTable/DER_certificate_table (0.00s)
+    --- PASS: Test_ValidateEvidenceIntegrity_DERCertTable/DER_certificate_table,_other_nonce (0.00s)
+=== RUN   Test_ValidateEvidenceIntegrity_DERCertTable_TAMismatch
+--- PASS: Test_ValidateEvidenceIntegrity_DERCertTable_TAMismatch (0.00s)
+=== RUN   Test_GetTrustAnchorIDs_ok
+--- PASS: Test_GetTrustAnchorIDs_ok (0.00s)
+=== RUN   Test_GetReferenceValueIDs_ok
+--- PASS: Test_GetReferenceValueIDs_ok (0.00s)
+=== RUN   Test_ExtractClaims_ok
+--- PASS: Test_ExtractClaims_ok (0.00s)
+=== RUN   Test_ValidateEvidenceIntegrity_ok
+=== RUN   Test_ValidateEvidenceIntegrity_ok/valid_nonce
+=== RUN   Test_ValidateEvidenceIntegrity_ok/invalid_nonce
+--- PASS: Test_ValidateEvidenceIntegrity_ok (0.00s)
+    --- PASS: Test_ValidateEvidenceIntegrity_ok/valid_nonce (0.00s)
+    --- PASS: Test_ValidateEvidenceIntegrity_ok/invalid_nonce (0.00s)
+=== RUN   Test_AppraiseClaims_ok
+2026-10-06T13:15:02.510-0500	DEBUG	SEVSNP	sevsnp/scheme.go:248	attempting to match endorsement 0...
+2026-10-06T13:15:02.510-0500	DEBUG	SEVSNP	sevsnp/scheme.go:261	success!
+--- PASS: Test_AppraiseClaims_ok (0.00s)
+=== RUN   Test_amdRoots
+--- PASS: Test_amdRoots (0.00s)
+=== RUN   Test_ValidateEvidenceIntegrity_VLEK
+=== RUN   Test_ValidateEvidenceIntegrity_VLEK/VLEK_report
+=== RUN   Test_ValidateEvidenceIntegrity_VLEK/VLEK_report,_other_nonce
+=== RUN   Test_ValidateEvidenceIntegrity_VLEK/VLEK_report,_MEASUREMENT_changed
+--- PASS: Test_ValidateEvidenceIntegrity_VLEK (0.00s)
+    --- PASS: Test_ValidateEvidenceIntegrity_VLEK/VLEK_report (0.00s)
+    --- PASS: Test_ValidateEvidenceIntegrity_VLEK/VLEK_report,_other_nonce (0.00s)
+    --- PASS: Test_ValidateEvidenceIntegrity_VLEK/VLEK_report,_MEASUREMENT_changed (0.00s)
+PASS
+ok  	github.com/veraison/services/scheme/sevsnp	0.502s
+?   	github.com/veraison/services/scheme/sevsnp/plugin	[no test files]

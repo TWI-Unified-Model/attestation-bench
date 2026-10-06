@@ -1,0 +1,10 @@
+# 2026-10-06T18:13:29Z same test, deployed pin (go.mod of 675fe11: go-sev-guest v0.14.2-0.20251119154202-af1c107a648f), NO fix
+=== RUN   Test_ValidateEvidenceIntegrity_VLEK
+=== RUN   Test_ValidateEvidenceIntegrity_VLEK/VLEK_report
+=== RUN   Test_ValidateEvidenceIntegrity_VLEK/VLEK_report,_other_nonce
+--- PASS: Test_ValidateEvidenceIntegrity_VLEK (0.00s)
+    --- PASS: Test_ValidateEvidenceIntegrity_VLEK/VLEK_report (0.00s)
+    --- PASS: Test_ValidateEvidenceIntegrity_VLEK/VLEK_report,_other_nonce (0.00s)
+PASS
+ok  	github.com/veraison/services/scheme/sevsnp	0.394s
+github.com/google/go-sev-guest v0.14.2-0.20251119154202-af1c107a648f

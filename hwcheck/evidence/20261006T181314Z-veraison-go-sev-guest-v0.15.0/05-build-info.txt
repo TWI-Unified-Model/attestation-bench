@@ -1,0 +1,28 @@
+# build info of the new binaries (go version -m): name, go-sev-guest, vcs.revision, vcs.modified
+provisioning-service  2d18260862cb8652fd34a2a8e667fa3c017404f6 true
+verification-service  2d18260862cb8652fd34a2a8e667fa3c017404f6 true
+management-service v0.15.0 2d18260862cb8652fd34a2a8e667fa3c017404f6 false
+coserv-service  2d18260862cb8652fd34a2a8e667fa3c017404f6 false
+vts-service v0.15.0 2d18260862cb8652fd34a2a8e667fa3c017404f6 true
+coserv-amd-kds.plugin  2d18260862cb8652fd34a2a8e667fa3c017404f6 true
+coserv-nvidia.plugin  2d18260862cb8652fd34a2a8e667fa3c017404f6 true
+scheme-arm-cca.plugin  2d18260862cb8652fd34a2a8e667fa3c017404f6 true
+scheme-parsec-cca.plugin  2d18260862cb8652fd34a2a8e667fa3c017404f6 true
+scheme-parsec-tpm.plugin  2d18260862cb8652fd34a2a8e667fa3c017404f6 true
+scheme-psa-iot.plugin  2d18260862cb8652fd34a2a8e667fa3c017404f6 true
+scheme-riot.plugin  2d18260862cb8652fd34a2a8e667fa3c017404f6 true
+scheme-sevsnp.plugin v0.15.0 2d18260862cb8652fd34a2a8e667fa3c017404f6 true
+scheme-tpm-enacttrust.plugin  2d18260862cb8652fd34a2a8e667fa3c017404f6 true
+
+# vcs.modified=true: the build's protogen step rewrote only generated-code version comments in proto/*.pb.go;
+# that working-tree diff is byte-identical to the one in ~/dev/veraison-services-der, from which the deployed 0.14.2-pre build was made:
+ proto/appraisal_context.pb.go | 4 ++--
+ proto/endorsement_query.pb.go | 4 ++--
+ proto/evidence.pb.go          | 4 ++--
+ proto/scheme.pb.go            | 4 ++--
+ proto/state.pb.go             | 4 ++--
+ proto/status.pb.go            | 4 ++--
+ proto/token.pb.go             | 4 ++--
+ proto/vts.pb.go               | 4 ++--
+ proto/vts_grpc.pb.go          | 4 ++++
+ 9 files changed, 20 insertions(+), 16 deletions(-)

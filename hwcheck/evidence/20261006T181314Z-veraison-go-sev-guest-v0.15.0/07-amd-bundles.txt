@@ -1,0 +1,26 @@
+# 2026-10-06T18:23:31Z hwcheck/scripts/compare-amd-bundles.py <go-sev-guest v0.15.0 verify/trust> <KDS Milan VLEK chain from 20261006T161751Z-aws-sev-snp>
+Milan VCEK: ask_ark_milan.pem bytes=4602 certs=2 tail=b'---\n'
+   SEV-Milan        sha256(DER)=67d303bd3905fd38db8b20e0793699870e7fa612eaad5dec358293fd8c0bac1b
+   ARK-Milan        sha256(DER)=69d063b45344d26a2e94e1f4210de49ef555308287d4c174445c95639a540bcd
+Milan VLEK: ask_ark_milan_vlek.pem bytes=4611 certs=2 tail=b'---\n'
+   SEV-VLEK-Milan   sha256(DER)=c5e081f59b7efab1fe2f8b505e159704e72f29cab7ef7cf628a05a42439082f5
+   ARK-Milan        sha256(DER)=69d063b45344d26a2e94e1f4210de49ef555308287d4c174445c95639a540bcd
+   => Milan: ARK in VCEK bundle == ARK in VLEK bundle: True
+Genoa VCEK: ask_ark_genoa.pem bytes=4602 certs=2 tail=b'---\n'
+   SEV-Genoa        sha256(DER)=5464738c1546aed5f2cecf1dc98c5c960a92e8913238a61711bc90ec6e828521
+   ARK-Genoa        sha256(DER)=4c6598d19c18719c5dfd4a7d335f674e5bfe1d8f800cea2cf270c10d103db2f1
+Genoa VLEK: ask_ark_genoa_vlek.pem bytes=4611 certs=2 tail=b'---\n'
+   SEV-VLEK-Genoa   sha256(DER)=197e610743a917d6b9bb982a5a9226ccc0a15b611be0619e626aca9151457372
+   ARK-Genoa        sha256(DER)=4c6598d19c18719c5dfd4a7d335f674e5bfe1d8f800cea2cf270c10d103db2f1
+   => Genoa: ARK in VCEK bundle == ARK in VLEK bundle: True
+Turin VCEK: ask_ark_turin_vcek.pem bytes=4676 certs=2 tail=b'--\r\n'
+   SEV-Turin        sha256(DER)=5b77ef5fe7a7a004fd9032668fba9d0fda22f88c4442069a479636a6ae3b3185
+   ARK-Turin        sha256(DER)=1f084161a44bb6d93778a904877d4819cafa5d05ef4193b2ded9dd9c73dd3f6a
+Turin VLEK: ask_ark_turin_vlek.pem bytes=4688 certs=2 tail=b'\r\n\r\n'
+   SEV-VLEK-Turin   sha256(DER)=104e10a8bd060a3c20a434261a57d0588fd65a88915b4f65b08bdecaf8df1a3c
+   ARK-Turin        sha256(DER)=1f084161a44bb6d93778a904877d4819cafa5d05ef4193b2ded9dd9c73dd3f6a
+   => Turin: ARK in VCEK bundle == ARK in VLEK bundle: True
+AMD KDS Milan VLEK (bench): amd-kds-milan-vlek-cert_chain.pem bytes=4611 certs=2 tail=b'---\n'
+   SEV-VLEK-Milan   sha256(DER)=c5e081f59b7efab1fe2f8b505e159704e72f29cab7ef7cf628a05a42439082f5
+   ARK-Milan        sha256(DER)=69d063b45344d26a2e94e1f4210de49ef555308287d4c174445c95639a540bcd
+   => KDS Milan VLEK == embedded Milan VLEK (all certs, DER): True

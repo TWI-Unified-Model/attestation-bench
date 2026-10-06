@@ -1,0 +1,54 @@
+# 2026-10-06T18:16:18Z make -C ~/dev/veraison-v015 COMBINED_PLUGINS=1 (as deployments/native/deployment.sh build) at 2d18260, go version go1.27.0 darwin/arm64
+make[1]: Nothing to be done for `all'.
+make[1]: Nothing to be done for `all'.
+make[2]: Nothing to be done for `all'.
+CGO_ENABLED=1 go build -o coserv-service -ldflags \
+	"-X 'github.com/veraison/services/config.Version=+2d18260' \
+	 -X 'github.com/veraison/services/config.SchemeLoader=plugins'"
+make[1]: Nothing to be done for `all'.
+make[1]: Nothing to be done for `all'.
+make[1]: Nothing to be done for `all'.
+make[2]: Nothing to be done for `all'.
+CGO_ENABLED=1 go build -o management-service -ldflags \
+	"-X 'github.com/veraison/services/config.Version=+2d18260' \
+	 -X 'github.com/veraison/services/config.SchemeLoader=plugins'"
+make -C redshirt
+CGO_ENABLED=1 go build  -o ../bin/redshirt.plugin
+make -C trooper
+CGO_ENABLED=1 go build  -o ../bin/trooper.plugin
+make[1]: Nothing to be done for `all'.
+protoc --go_out=. --go_opt=paths=source_relative --proto_path=. \
+		 \
+		--go-grpc_out=. --go-grpc_opt=paths=source_relative \
+		--go-json_out=. --go-json_opt=paths=source_relative token.proto evidence.proto appraisal_context.proto state.proto vts.proto status.proto endorsement_query.proto scheme.proto
+scheme.proto:4:1: warning: Import google/protobuf/struct.proto is unused.
+make[2]: Nothing to be done for `all'.
+make[2]: Nothing to be done for `all'.
+/Applications/Xcode.app/Contents/Developer/usr/bin/make -C ../../../proto protogen
+make[3]: `protogen' is up to date.
+CGO_ENABLED=1 go build -o provisioning-service -ldflags \
+	"-X 'github.com/veraison/services/config.Version=+2d18260' \
+	 -X 'github.com/veraison/services/config.SchemeLoader=plugins'"
+make[2]: Nothing to be done for `all'.
+CGO_ENABLED=1 go build  -o ../../bin/scheme-arm-cca.plugin
+CGO_ENABLED=1 go build  -o ../../bin/scheme-parsec-cca.plugin
+CGO_ENABLED=1 go build  -o ../../bin/scheme-parsec-tpm.plugin
+CGO_ENABLED=1 go build  -o ../../bin/scheme-psa-iot.plugin
+CGO_ENABLED=1 go build  -o ../../bin/scheme-riot.plugin
+CGO_ENABLED=1 go build  -o ../../bin/scheme-sevsnp.plugin
+CGO_ENABLED=1 go build  -o ../../bin/scheme-tpm-enacttrust.plugin
+CGO_ENABLED=1 go build  -o ../../bin/coserv-amd-kds.plugin
+CGO_ENABLED=1 go build  -o ../../bin/coserv-nvidia.plugin
+make[2]: Nothing to be done for `all'.
+make[2]: Nothing to be done for `all'.
+make[2]: Nothing to be done for `all'.
+CGO_ENABLED=1 go build -o verification-service -ldflags \
+	"-X 'github.com/veraison/services/config.Version=+2d18260' \
+	 -X 'github.com/veraison/services/config.SchemeLoader=plugins'"
+make[2]: Nothing to be done for `all'.
+make[2]: Nothing to be done for `all'.
+CGO_ENABLED=1 go build -o vts-service -ldflags \
+	"-X 'github.com/veraison/services/config.Version=+2d18260' \
+	 -X 'github.com/veraison/services/config.SchemeLoader=plugins'"
+make[1]: Nothing to be done for `all'.
+# exit=0 at 2026-10-06T18:17:08Z
