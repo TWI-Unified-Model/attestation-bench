@@ -56,6 +56,9 @@ type caseMeta struct {
 func main() {
 	out := flag.String("out", "hwrun-out", "output directory")
 	target := flag.String("target", "https://db.tacra.example", "Target")
+	// targetsPath, when given, is a JSON object {freshness-kind: Target} so one run can bind each kind to the Target
+	// the bench configures for it (db-nonce is present-nonce, db-epoch present-epoch, ...); kinds it omits use -target.
+	targetsPath := flag.String("targets", "", "per-kind Targets (JSON {kind: target}); -target is the fallback")
 	rrpCA := flag.String("rrp-ca", "https://ca1.tacra.example", "RRP identifier for Enrollment")
 	rrpVault := flag.String("rrp-vault", "https://vault1.tacra.example", "RRP identifier for Retrieval")
 	handlesPath := flag.String("handles", "", "Freshness Handles minted by the RRP (rrpverify mint); random if empty")
@@ -63,6 +66,19 @@ func main() {
 	tee := flag.String("tee", "sev-snp", "sev-snp or tdx")
 	flag.Parse()
 	must(os.MkdirAll(*out, 0o755))
+
+	perKindTarget := map[string]string{}
+	if *targetsPath != "" {
+		b, err := os.ReadFile(*targetsPath)
+		must(err)
+		must(json.Unmarshal(b, &perKindTarget))
+	}
+	targetOf := func(kind string) string {
+		if t, ok := perKindTarget[kind]; ok {
+			return t
+		}
+		return *target
+	}
 
 	h := handles{NonceEnroll: random(32), NonceRetrieve: random(32), Epoch: random(32)}
 	if *handlesPath != "" {
@@ -94,8 +110,9 @@ func main() {
 	for _, k := range kinds {
 		for _, mode := range []string{"enroll", "retrieve"} {
 			name := fmt.Sprintf("%s-%s", mode, k.name)
-			m := caseMeta{Case: name, Mode: mode, FreshnessKind: k.name, Target: *target}
-			req := platform.EvidenceRequest{FreshnessKind: k.kind, Target: *target}
+			kindTarget := targetOf(k.name)
+			m := caseMeta{Case: name, Mode: mode, FreshnessKind: k.name, Target: kindTarget}
+			req := platform.EvidenceRequest{FreshnessKind: k.kind, Target: kindTarget}
 			switch k.kind {
 			case platform.FreshnessKindPresentNonce: // the Handle the RRP returned at Initiate
 				req.FreshnessHandle = h.NonceEnroll
