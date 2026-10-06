@@ -9,35 +9,36 @@
 #
 #   e2e/bank/demo-bank.sh up                (then provision again after a fix: e2e/bank/demo-bank.sh provision)
 #   e2e/bank/demo-bank.sh pay gcp-snp | gcp-tdx | aws-snp | ordinary | unapproved
-#   e2e/bank/demo-bank.sh approve tdx|snp MEASUREMENT     (only on Google's signed endorsement)
+#   e2e/bank/demo-bank.sh approve tdx MRTD  (only on Google's signed endorsement)
 #   e2e/bank/demo-bank.sh audit
 #   e2e/bank/demo-bank.sh down
 #
+# The trust zone is configured by the bench's own program (scripts/trustzone.py) from packs/demo-bank and the launches
+# the bank approves: trust/approved-launches.json when the bank comes up, plus what it approves while it runs.
+#
 # GCP_PROJECT, GCP_ZONE: where the bank's VMs go; AWS_REGION, AWS_AZ: where "pay aws-snp" goes (scripts/lib.sh).
-# RUNS_DIR: where the bank's run directory goes (default BENCH_HOME/runs).
+# RATS_MODEL: passport (default) or background-check, set when the bank comes up. RUNS_DIR: where the bank's run
+# directory goes (default BENCH_HOME/runs).
 set -euo pipefail
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
 bench_gcp
 PROJECT="$GCP_PROJECT" ZONE="$GCP_ZONE"
 RUNS_DIR="${RUNS_DIR:-$BENCH_HOME/runs}"
+RATS_MODEL="${RATS_MODEL:-passport}"
 HERE="$(cd "$(dirname "$0")/../.." && pwd)"
 ST="${DEMO_BANK_STATE:-$BENCH_HOME/demo-bank}"   # state and staging, outside git
+APPROVED="$ST/approved-launches.json"            # the launches this bank approves
+PACK="$HERE/packs/demo-bank/pack.json"
 D=/opt/demobank
-# launch measurements the bank approves: GCP n2d-standard-2 and AWS c6a.large SEV-SNP, GCP c3-standard-4 TDX (MRTD);
-# the same values as the bench, taken from the hardware runs in e2e/evidence and hwcheck/evidence
-SNP_MEASUREMENTS="ccdc5cf01ba25526bd65503d95931b787b4385a3277cfe4448addf9c3e894948ae8cf7b099620e3e22717de2fb5d26fa 7a89cceaaba0bbdddc4f775acca3ef15d1f9bf8abccdc6115cfad7fb8eae113df3ee0bb50efa34db9c53ae065b1dc766"
-TDX_MRTDS="c1ee9c16e3afc506cfe042c5b846a368528f3b37618eafb27469bc114cf914e9222c91618470e7f2b28ac360968270a5"
-# what the bank has approved since, each on Google's signed endorsement (demo-bank.sh approve)
-[ -s "$ST/approved-snp" ] && SNP_MEASUREMENTS="$(tr '\n' ' ' < "$ST/approved-snp")"
-[ -s "$ST/approved-tdx" ] && TDX_MRTDS="$(tr '\n' ' ' < "$ST/approved-tdx")"
-TRUST_LOGS="est-server est ca-gateway vault-gateway tdx-verifier veraison-vts veraison-verification step-ca"
-export CLOUDSDK_CORE_DISABLE_PROMPTS=1 GOWORK=off AWS_PAGER=""
+TRUST_LOGS="est-server ca-gateway vault-gateway tdx-verifier veraison-vts veraison-verification step-ca"
+export AWS_PAGER=""
 mkdir -p "$ST"
 [ -f "$ST/state" ] && . "$ST/state"
 
-save() { printf '%s\n' "STAMP=$STAMP" "TRUST=$TRUST" "CORE=$CORE" "OUT=$OUT" "TRUST_INT=${TRUST_INT:-}" \
+save() { printf '%s\n' "STAMP=$STAMP" "TRUST=$TRUST" "CORE=$CORE" "OUT=$OUT" "RATS_MODEL=$RATS_MODEL" "TRUST_INT=${TRUST_INT:-}" \
   "TRUST_EXT=${TRUST_EXT:-}" "CORE_INT=${CORE_INT:-}" "CORE_EXT=${CORE_EXT:-}" > "$ST/state"; }
 log() { echo "== $*" | tee -a "$OUT/console.log"; }
+need_bank() { [ -n "${OUT:-}" ] && [ -n "${TRUST:-}" ] || bench_die "no Demo Bank is up (no state in $ST): make bank-up"; }
 gssh() { local vm="$1"; shift; gcloud compute ssh "$vm" --project="$PROJECT" --zone="$ZONE" --command="$*" 2>>"$OUT/ssh.stderr"; }
 gscp() { gcloud compute scp --project="$PROJECT" --zone="$ZONE" "$@" >/dev/null 2>>"$OUT/ssh.stderr"; }
 wait_ssh() { for _ in $(seq 1 40); do gssh "$1" true >/dev/null 2>&1 && return 0; sleep 8; done; echo "!! no ssh to $1"; return 1; }
@@ -46,29 +47,59 @@ ip_of() { gcloud compute instances describe "$1" --project="$PROJECT" --zone="$Z
 
 build() {
   local S="$ST/stage" L=(env GOOS=linux GOARCH=amd64 CGO_ENABLED=0 GOWORK=off)
-  rm -rf "$S"; mkdir -p "$S"/{trust/bin,trust/src,core/bin,workload}
+  rm -rf "${S:?}"; mkdir -p "$S"/{trust/bin,trust/src,core/bin,workload}
   (cd "$HERE/rrp" && for c in ca-gateway vault-gateway tdx-verifier; do "${L[@]}" go build -trimpath -o "$S/trust/bin/$c" ./cmd/$c; done)
   (cd "$HERE/third_party/globalsign-est/src" && "${L[@]}" go build -trimpath -o "$S/trust/bin/estserver" ./cmd/estserver)
   (cd "$HERE/e2e" && "${L[@]}" go build -trimpath -o "$S/workload/payments" ./bank/cmd/payments \
     && "${L[@]}" go build -trimpath -o "$S/workload/caapi-est" ./cmd/caapi-est \
     && "${L[@]}" go build -trimpath -o "$S/core/bin/fraud-api" ./bank/cmd/fraud-api)
-  local m # step-ca and the step CLI from their released modules, built in the module cache as released
-  for m in github.com/smallstep/certificates@v0.30.2 github.com/smallstep/cli@v0.30.2; do go mod download "$m"; done
+  local m # step-ca and the step CLI from their released modules (scripts/versions.env), built in the module cache
+  for m in "github.com/smallstep/certificates@$STEP_VERSION" "github.com/smallstep/cli@$STEP_VERSION"; do go mod download "$m"; done
   m="$(go env GOMODCACHE)"
-  (cd "$m/github.com/smallstep/certificates@v0.30.2" && "${L[@]}" go build -trimpath -o "$S/trust/bin/step-ca" ./cmd/step-ca)
-  (cd "$m/github.com/smallstep/cli@v0.30.2" && "${L[@]}" go build -trimpath -o "$S/trust/bin/step" ./cmd/step)
+  (cd "$m/github.com/smallstep/certificates@$STEP_VERSION" && "${L[@]}" go build -trimpath -o "$S/trust/bin/step-ca" ./cmd/step-ca)
+  (cd "$m/github.com/smallstep/cli@$STEP_VERSION" && "${L[@]}" go build -trimpath -o "$S/trust/bin/step" ./cmd/step)
   cp "$S/trust/bin/step" "$S/core/bin/"
   # the tested source trees (pinned upstream + our patches, third_party/fetch.sh), as git holds them in the index: their
   # go-gen-ref path (../go-gen-ref-v123) is the trust VM's layout
   local V="$HERE/third_party/veraison-services/src" G="$HERE/third_party/go-gen-ref/src"
   git -C "$V" archive --format=tar.gz --prefix=veraison-services/ "$(git -C "$V" write-tree)" -- . ':(exclude)perf' > "$S/trust/src/veraison-services.tgz"
   git -C "$G" archive --format=tar.gz --prefix=go-gen-ref-v123/ "$(git -C "$G" write-tree)" > "$S/trust/src/go-gen-ref-v123.tgz"
-  cp "$HERE/trust/veraison-corim-milan.cbor" "$S/trust/src/corim-milan.cbor"
-  cp "$HERE/e2e/bank/remote/trust.sh" "$S/trust/"; cp "$HERE/e2e/bank/remote/core.sh" "$S/core/"
-  { echo "attestation-bench $(git -C "$HERE" rev-parse --short=12 HEAD)$(git -C "$HERE" diff --quiet HEAD -- platform cai bundle rrp e2e || echo -dirty)"
+  stage_text "$S/trust"
+  cp "$HERE/e2e/bank/remote/core.sh" "$S/core/"
+  { echo "attestation-bench $(git -C "$HERE" rev-parse --short=12 HEAD)$(git -C "$HERE" diff --quiet HEAD -- platform cai bundle rrp e2e scripts packs trust || echo -dirty)"
     "$HERE/third_party/describe.sh" globalsign-est veraison-services go-gen-ref | grep -v -e '/src-fork ' -e '/src-der '
-    echo "step-ca v0.30.2, step v0.30.2, vault 2.1.1 (official release, SHA-256 checked on the VM)"; } > "$OUT/code-revs.txt"
+    echo "step-ca $STEP_VERSION, step $STEP_VERSION (built from their release modules); vault $VAULT_VERSION, go $GO_VM_VERSION" \
+      "(official releases, SHA-256 checked on the VM against scripts/versions.env)"; } > "$OUT/code-revs.txt"
   (cd "$S" && find . -type f | sort | xargs shasum -a 256) > "$OUT/staged-files.sha256"
+}
+
+# The trust VM's text files, staged by build and copied again by provision: the trust zone's script, the bench's
+# configuration program, the bank's pack, the launches it approves, Veraison's CoRIM, the pinned versions.
+stage_text() { # dir
+  mkdir -p "$1/scripts" "$1/packs/demo-bank" "$1/trust"
+  cp "$HERE/e2e/bank/remote/trust.sh" "$HERE/scripts/versions.env" "$HERE/scripts/requirements.txt" "$1/"
+  cp "$HERE/scripts/trustzone.py" "$1/scripts/"
+  cp "$PACK" "$1/packs/demo-bank/"
+  cp "$APPROVED" "$1/trust/approved-launches.json"
+  cp "$HERE/trust/veraison-corim-milan.cbor" "$1/trust/"
+}
+
+# Google's signed endorsement of each launch the bank approves at start, checked again and kept with the run
+# (rrp/cmd/gce-endorsement against the pinned root); a launch Google does not endorse, AWS's, is recorded as such.
+initial_endorsements() {
+  (cd "$HERE/rrp" && go build -o "$ST/gce-endorsement" ./cmd/gce-endorsement)
+  log "Google's endorsements of the approved launches, verified to the pinned GCE TCB root"
+  local tech v r said
+  python3 -c 'import json,sys; a=json.load(open(sys.argv[1])); [print("snp", e["measurement"]) for e in a["sev-snp"]]; [print("tdx", e["mrtd"]) for e in a["tdx"]]' \
+    "$APPROVED" > "$ST/approved.list"
+  while read -r tech v; do
+    r="$OUT/refvals/initial-$tech-$v"
+    "$ST/gce-endorsement" -root "$HERE/trust/GCE-cc-tcb-root_1.crt" "-$tech" "$v" -save "$r.binarypb" > "$r.json" || true
+    said="$(python3 -c 'import json,sys; j=json.load(open(sys.argv[1])); print("endorsed by Google" if j["endorsed"] else "not endorsed: " + j.get("reason", ""))' \
+      "$r.json" 2>/dev/null || echo "no answer")"
+    echo "   $tech ${v:0:16}...: $said" | tee -a "$OUT/console.log"
+  done < "$ST/approved.list"
+  rm -f "$ST/approved.list"
 }
 
 create_gcp() { # name machine-args...
@@ -81,8 +112,11 @@ create_gcp() { # name machine-args...
 up() {
   STAMP="$(date -u +%Y%m%dT%H%M%SZ)"; local id; id="$(echo "$STAMP" | tr -d 'TZ' | cut -c3-12)"
   TRUST="demobank-trust-$id" CORE="demobank-core-$id" OUT="$RUNS_DIR/${STAMP}-demo-bank"
-  mkdir -p "$OUT/up" "$OUT/public" "$OUT/runs"; save
+  mkdir -p "$OUT/up" "$OUT/public" "$OUT/runs" "$OUT/refvals"; save
+  echo "$RATS_MODEL" > "$OUT/rats-model.txt"
+  cp "$HERE/trust/approved-launches.json" "$APPROVED"   # the bank starts from the bench's approved launches
   log "build (linux/amd64)"; build
+  initial_endorsements
   log "create $TRUST (SEV-SNP n2d-standard-4) and $CORE (e2-standard-2) in $ZONE"
   create_gcp "$TRUST" --machine-type=n2d-standard-4 --min-cpu-platform="AMD Milan" --confidential-compute-type=SEV_SNP \
     --maintenance-policy=TERMINATE --tags=demobank
@@ -94,16 +128,21 @@ up() {
   log "copy programs and sources"
   gscp --recurse "$ST/stage/trust" "$TRUST:~/"
   gscp --recurse "$ST/stage/core" "$CORE:~/"
-  gssh "$TRUST" "sudo mkdir -p $D/src $D/bin && sudo cp ~/trust/bin/* $D/bin/ && sudo cp ~/trust/trust.sh $D/ && sudo cp ~/trust/src/corim-milan.cbor $D/src/ \
-    && sudo tar -C $D/src -xzf ~/trust/src/veraison-services.tgz && sudo tar -C $D/src -xzf ~/trust/src/go-gen-ref-v123.tgz && rm -rf ~/trust"
-  gssh "$CORE" "sudo mkdir -p $D/bin $D/public && sudo cp ~/core/bin/* $D/bin/ && sudo cp ~/core/core.sh $D/ && rm -rf ~/core"
+  gssh "$TRUST" "sudo mkdir -p ${D:?} && sudo cp -r ~/trust/. ${D:?}/ && sudo tar -C ${D:?}/src -xzf ${D:?}/src/veraison-services.tgz \
+    && sudo tar -C ${D:?}/src -xzf ${D:?}/src/go-gen-ref-v123.tgz && rm -r ~/trust"
+  gssh "$CORE" "sudo mkdir -p ${D:?}/bin ${D:?}/public && sudo cp ~/core/bin/* ${D:?}/bin/ && sudo cp ~/core/core.sh ${D:?}/ && rm -r ~/core"
   provision
 }
 
 # install, configure and start both machines; every step is safe to repeat
 provision() {
-  gscp "$HERE/e2e/bank/remote/trust.sh" "$TRUST:~/trust.sh"; gssh "$TRUST" "sudo cp ~/trust.sh $D/trust.sh && rm ~/trust.sh"
-  gscp "$HERE/e2e/bank/remote/core.sh" "$CORE:~/core.sh"; gssh "$CORE" "sudo cp ~/core.sh $D/core.sh && rm ~/core.sh"
+  need_bank
+  local T; T="$(mktemp -d)"
+  stage_text "$T/trust"
+  gscp --recurse "$T/trust" "$TRUST:~/"
+  rm -r "${T:?}"
+  gssh "$TRUST" "sudo cp -r ~/trust/. ${D:?}/ && rm -r ~/trust"
+  gscp "$HERE/e2e/bank/remote/core.sh" "$CORE:~/core.sh"; gssh "$CORE" "sudo cp ~/core.sh ${D:?}/core.sh && rm ~/core.sh"
   log "install both (Veraison builds on the trust zone)"
   local tp cp code=0
   gssh "$TRUST" "sudo bash $D/trust.sh install" > "$OUT/up/trust-install.txt" 2>&1 & tp=$!
@@ -111,9 +150,10 @@ provision() {
   wait "$tp" || code=$?; wait "$cp" || code=$?
   cat "$OUT/up/trust-install.txt" "$OUT/up/core-install.txt"
   [ "$code" = 0 ] || { echo "!! install failed ($code)"; exit 1; }
-  log "trust zone: keys, CA, stores, policy"
-  gssh "$TRUST" "sudo INTERNAL_IP=$TRUST_INT EXTERNAL_IP=$TRUST_EXT SNP_MEASUREMENTS='$SNP_MEASUREMENTS' TDX_MRTDS='$TDX_MRTDS' bash $D/trust.sh setup" | tee "$OUT/up/trust-setup.txt"
-  gscp "$TRUST:$D/public/workload-ca.pem" "$TRUST:$D/public/trust-tls-root.crt" "$TRUST:$D/public/epoch.hex" "$TRUST:$D/public/policy.json" "$OUT/public/"
+  log "trust zone: TLS, the workload CA, the configuration (RATS model: $RATS_MODEL)"
+  gssh "$TRUST" "sudo INTERNAL_IP=$TRUST_INT EXTERNAL_IP=$TRUST_EXT RATS_MODEL=$RATS_MODEL bash $D/trust.sh setup" | tee "$OUT/up/trust-setup.txt"
+  gscp "$TRUST:$D/public/workload-ca.pem" "$TRUST:$D/public/workload-ca-intermediate.crt" "$TRUST:$D/public/trust-tls-root.crt" \
+    "$TRUST:$D/public/epoch.hex" "$TRUST:$D/public/policy.json" "$OUT/public/"
   log "core: the ledger trusts the bank's workload CA for client logins"
   gscp "$OUT/public/workload-ca.pem" "$CORE:~/"
   gssh "$CORE" "sudo cp ~/workload-ca.pem $D/public/ && sudo INTERNAL_IP=$CORE_INT EXTERNAL_IP=$CORE_EXT bash $D/core.sh setup && sudo bash $D/core.sh start" | tee "$OUT/up/core-setup.txt"
@@ -130,19 +170,29 @@ provision() {
   log "up: $TRUST, $CORE"
 }
 
-# payment-service configuration: public material only (trust anchors, the Vault's origin keys, the epoch marker)
+# payment-service configuration: public material only (trust anchors, the Vault's public keys, the epoch marker); the
+# Targets and RRP identifiers come from packs/demo-bank
 workload_config() { # tee out
-  TEE="$1" P="$OUT/public" python3 - > "$2" <<'PY'
+  TEE="$1" P="$OUT/public" PACK="$PACK" python3 - > "$2" <<'PY'
 import json, os
-P = os.environ["P"]
+P, pack = os.environ["P"], json.load(open(os.environ["PACK"]))
+kind = {r["name"]: r["kind"] for r in pack["rrps"] if "kind" in r}
+rrp_id = {r["name"]: r["rrp_id"] for r in pack["rrps"]}
+ledger = next(t for t in pack["targets"] if kind[t["rrp"]] == "credential-authority")
+fraud = next(t for t in pack["targets"] if kind[t["rrp"]] == "secret-vault")
+ca, vault = rrp_id[ledger["rrp"]], rrp_id[fraud["rrp"]]
+keys = json.load(open(f"{P}/origin-keys.json"))
 core_root = open(f"{P}/core-tls-root.crt").read()
-ledger, fraud = "https://ledger-db.demobank.example", "https://fraud-api.demobank.example"
-print(json.dumps({"tee": os.environ["TEE"], "caapi": "127.0.0.1:50061", "hint": "payments.workload.demobank.example",
-  "ledger": {"target": ledger, "host": "core.demobank.internal", "port": 5432, "database": "bank", "user": "payments",
-             "server_ca_pem": core_root},
-  "fraud": {"target": fraud, "url": "https://core.demobank.internal:8444", "server_ca_pem": core_root},
-  "relying_parties": {ledger: {"enroll": "https://ca.demobank.example"}, fraud: {"retrieve": "https://vault.demobank.example"}},
-  "vault_origins": {"https://vault.demobank.example": json.load(open(f"{P}/origin-keys.json"))},
+print(json.dumps({"tee": os.environ["TEE"], "caapi": "127.0.0.1:50061", "hint": pack["workload"]["hint"],
+  "ledger": {"target": ledger["target"], "host": "core.demobank.internal", "port": 5432, "database": "bank",
+             "user": "payments", "server_ca_pem": core_root},
+  "fraud": {"target": fraud["target"], "url": "https://core.demobank.internal:8444", "server_ca_pem": core_root},
+  "relying_parties": {ledger["target"]: {"enroll": ca}, fraud["target"]: {"retrieve": vault}},
+  "vault_origins": {vault: {k: v for k, v in keys.items() if k.startswith("DHKEM")}},
+  # the hpke-base-signed container's trust anchor: the Vault's signature key, held for its RRP identifier
+  "vault_signers": {vault: keys["ECDSA-P256-SHA256"]},
+  # tacra-est N15: the CA the CAI holds for Enrollment, the bank's step-ca intermediate (public)
+  "ca_anchors": {ca: open(f"{P}/workload-ca-intermediate.crt").read()},
   "local_epoch_hex": open(f"{P}/epoch.hex").read().strip()}, indent=1))
 PY
 }
@@ -158,6 +208,16 @@ slice_logs() { # run dir
   spec="$(tr '\n' ' ' < "$1/.trust-marks")"
   gssh "$TRUST" "set -- $spec; while [ \$# -gt 0 ]; do echo \"### \$1\"; sudo tail -n +\$((\$2 + 1)) $D/logs/\$1.log 2>/dev/null | grep -v 'TLS handshake error' || true; shift 2; done" \
     | awk -v dir="$1/trust-logs" '/^### /{f=dir "/" $2 ".log"; printf "" > f; next} f != "" {print >> f}'
+  # step-ca logs each signing request's one-time token: single-use and expired by now, and not evidence
+  python3 - "$1/trust-logs/step-ca.log" <<'PY'
+import re, sys
+try:
+    s = open(sys.argv[1]).read()
+except OSError:
+    sys.exit(0)
+open(sys.argv[1], "w").write(re.sub(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*",
+                                    "REDACTED(single-use step-ca token, used and expired)", s))
+PY
   spec="$(tr '\n' ' ' < "$1/.core-marks")"
   gssh "$CORE" "set -- $spec; echo '### postgresql'; sudo tail -n +\$((\$2 + 1)) /var/log/postgresql/postgresql-16-main.log; echo '### fraud-api'; sudo tail -n +\$((\$4 + 1)) $D/logs/fraud-api.log" \
     | awk -v dir="$1/core-logs" '/^### /{f=dir "/" $2 ".log"; printf "" > f; next} f != "" {print >> f}'
@@ -205,7 +265,12 @@ PY
 }
 
 pay() {
-  local kind="${1:?kind}" rs name R MACHINE=() FLAGS="" TEE=sev-snp EXPECT=pay
+  local kind="${1:-}" rs name R MACHINE=() FLAGS="" TEE=sev-snp EXPECT=pay
+  case "$kind" in
+    gcp-snp | gcp-tdx | aws-snp | ordinary | unapproved) ;;
+    *) echo "pay: gcp-snp, gcp-tdx or aws-snp (a confidential VM), or the controls ordinary or unapproved" >&2; exit 2 ;;
+  esac
+  need_bank
   if [ "$kind" = aws-snp ]; then bench_aws; fi
   rs="$(date -u +%Y%m%dT%H%M%SZ)"; name="demobank-pay-$(echo "$rs" | tr -d 'TZ' | cut -c7-12)-$kind"
   R="$OUT/runs/${rs}-$kind"; mkdir -p "$R"
@@ -289,50 +354,83 @@ pay_aws() { # run dir
 }
 
 # approve a launch measurement on Google's signed firmware endorsement, then have the trust zone apply the policy
-approve() { # tdx|snp MEASUREMENT
-  local tech="${1:?tdx or snp}" m="${2:?measurement}" f
-  (cd "$HERE/rrp" && GOWORK=off go build -o "$ST/gce-endorsement" ./cmd/gce-endorsement)
+# A new TDX firmware build, approved only on Google's signed endorsement. A new SEV-SNP launch needs a reference value
+# in Veraison's CoRIM as well (hwcheck/cmd/mkcorim; trust/README.md), so it is not approved here.
+approve() { # tdx MRTD
+  local tech="${1:?tdx}" m="${2:?MRTD}"
+  need_bank
+  [ "$tech" = tdx ] || { echo "approve: TDX only; a SEV-SNP launch needs a new CoRIM for Veraison too (trust/README.md)" >&2; exit 2; }
+  (cd "$HERE/rrp" && go build -o "$ST/gce-endorsement" ./cmd/gce-endorsement)
   mkdir -p "$OUT/refvals"
-  log "approve $tech $m: Google's endorsement, verified against the pinned GCE TCB root"
-  "$ST/gce-endorsement" -root "$HERE/trust/GCE-cc-tcb-root_1.crt" "-$tech" "$m" -save "$OUT/refvals/$tech-$m.binarypb" \
-    | tee "$OUT/refvals/$tech-$m.json"   # exits non-zero unless Google endorses it
-  f="$ST/approved-$tech"
-  [ -s "$f" ] || { if [ "$tech" = tdx ]; then echo "$TDX_MRTDS"; else echo "$SNP_MEASUREMENTS"; fi; } | tr ' ' '\n' | grep . > "$f"
-  grep -qx "$m" "$f" || echo "$m" >> "$f"
-  [ -s "$ST/approved-snp" ] && SNP_MEASUREMENTS="$(tr '\n' ' ' < "$ST/approved-snp")"
-  [ -s "$ST/approved-tdx" ] && TDX_MRTDS="$(tr '\n' ' ' < "$ST/approved-tdx")"
-  log "trust zone: new policy, restart the verifier and the gateways"
-  gscp "$HERE/e2e/bank/remote/trust.sh" "$TRUST:~/trust.sh"; gssh "$TRUST" "sudo cp ~/trust.sh $D/trust.sh && rm ~/trust.sh"
-  gssh "$TRUST" "sudo INTERNAL_IP=$TRUST_INT EXTERNAL_IP=$TRUST_EXT SNP_MEASUREMENTS='$SNP_MEASUREMENTS' TDX_MRTDS='$TDX_MRTDS' bash $D/trust.sh setup \
-    && sudo bash $D/trust.sh restart tdx-verifier ca-gateway vault-gateway" | tee -a "$OUT/refvals/policy-changes.txt"
+  log "approve tdx $m: Google's endorsement, verified against the pinned GCE TCB root"
+  "$ST/gce-endorsement" -root "$HERE/trust/GCE-cc-tcb-root_1.crt" -tdx "$m" -save "$OUT/refvals/tdx-$m.binarypb" \
+    | tee "$OUT/refvals/tdx-$m.json"   # exits non-zero unless Google endorses it
+  python3 - "$APPROVED" "$m" "$OUT/refvals/tdx-$m.json" <<'PY'
+import json, re, sys
+path, m, record = sys.argv[1:]
+a, e = json.load(open(path)), json.load(open(record))
+if m not in [x["mrtd"] for x in a["tdx"]]:
+    signer = (re.search(r"CN=([^,]+)", e.get("signer", "")) or [None, "?"])[1]
+    a["tdx"].append({"mrtd": m, "launch": "Google Cloud confidential VM with Intel TDX: Google's TDX firmware build",
+                     "endorsement": f"Google's signed launch endorsement ({signer}), SVN {e['svn']}, {e['timestamp']}",
+                     "checked": f"this bank's run directory: refvals/tdx-{m}.json"})
+    with open(path, "w") as f:
+        json.dump(a, f, indent=1)
+PY
+  log "trust zone: the new policy; the verifier and the gateways read it again"
+  gscp "$APPROVED" "$TRUST:~/approved-launches.json"
+  gssh "$TRUST" "sudo cp ~/approved-launches.json ${D:?}/trust/approved-launches.json && rm ~/approved-launches.json \
+    && sudo RATS_MODEL=$RATS_MODEL bash $D/trust.sh config && sudo bash $D/trust.sh restart tdx-verifier ca-gateway vault-gateway" \
+    | tee -a "$OUT/refvals/policy-changes.txt"
   gscp "$TRUST:$D/public/policy.json" "$OUT/public/policy.json"
 }
 
 audit() {
+  need_bank
   mkdir -p "$OUT/audit"
   gssh "$CORE" "sudo bash $D/core.sh audit" | tee "$OUT/audit/ledger.txt"
   gssh "$TRUST" "sudo bash $D/trust.sh status" > "$OUT/audit/trust-status.txt"
   gssh "$CORE" "sudo bash $D/core.sh status" > "$OUT/audit/core-status.txt"
 }
 
+# Deletes every VM labelled purpose=demo-bank (the trust zone, the core, any payment VM a broken run left) and every
+# demobank-* firewall rule, then checks both clouds and writes the bank's report. Without a bank in the state it still
+# cleans up, and records it in a run directory of its own.
 down() {
+  [ -n "${OUT:-}" ] || OUT="$RUNS_DIR/$(date -u +%Y%m%dT%H%M%SZ)-demo-bank-down"
   mkdir -p "$OUT"
-  log "delete $TRUST and $CORE"
-  gcloud compute instances delete "$TRUST" "$CORE" --project="$PROJECT" --zone="$ZONE" --quiet >/dev/null 2>&1 || true
+  local name zone fw
+  gcloud compute instances list --project="$PROJECT" --filter='labels.purpose=demo-bank' --format='value(name,zone.basename())' \
+    > "$ST/vms.list"
+  while read -r name zone; do
+    log "delete $name ($zone)"
+    gcloud compute instances delete "$name" --project="$PROJECT" --zone="$zone" --quiet >/dev/null 2>&1 || true
+  done < "$ST/vms.list"
+  rm -f "$ST/vms.list"
   for fw in $(gcloud compute firewall-rules list --project="$PROJECT" --filter="name~^demobank-" --format='value(name)'); do
     gcloud compute firewall-rules delete "$fw" --project="$PROJECT" --quiet >/dev/null 2>&1
   done
   {
     echo "GCP instances labelled purpose=demo-bank: $(gcloud compute instances list --project="$PROJECT" --filter='labels.purpose=demo-bank' --format='value(name)' | wc -l | tr -d ' ')"
-    echo "GCP instances in $PROJECT: $(gcloud compute instances list --project="$PROJECT" --format='value(name)' | wc -l | tr -d ' ')"
+    echo "GCP instances in the project, any purpose: $(gcloud compute instances list --project="$PROJECT" --format='value(name)' | wc -l | tr -d ' ')"
     echo "GCP firewall rules demobank-*: $(gcloud compute firewall-rules list --project="$PROJECT" --filter='name~^demobank-' --format='value(name)' | wc -l | tr -d ' ')"
-    echo "AWS $AWS_REGION instances tagged purpose=demo-bank, not terminated: $(aws ec2 describe-instances --region "$AWS_REGION" \
-      --filters Name=tag:purpose,Values=demo-bank Name=instance-state-name,Values=pending,running,stopping,stopped \
-      --query 'length(Reservations[].Instances[])' --output text)"
-    echo "AWS $AWS_REGION key pairs demobank-*: $(aws ec2 describe-key-pairs --region "$AWS_REGION" --filters 'Name=key-name,Values=demobank-*' --query 'length(KeyPairs)' --output text)"
-    echo "AWS $AWS_REGION security groups demobank-*: $(aws ec2 describe-security-groups --region "$AWS_REGION" --filters 'Name=group-name,Values=demobank-*' --query 'length(SecurityGroups)' --output text)"
+    # AWS only where this machine has a signed-in AWS CLI (the bank uses AWS for "pay aws-snp" alone)
+    if command -v aws >/dev/null 2>&1 && aws sts get-caller-identity --region "$AWS_REGION" >/dev/null 2>&1; then
+      echo "AWS $AWS_REGION instances tagged purpose=demo-bank, not terminated: $(aws ec2 describe-instances --region "$AWS_REGION" \
+        --filters Name=tag:purpose,Values=demo-bank Name=instance-state-name,Values=pending,running,stopping,stopped \
+        --query 'length(Reservations[].Instances[])' --output text)"
+      echo "AWS $AWS_REGION key pairs demobank-*: $(aws ec2 describe-key-pairs --region "$AWS_REGION" --filters 'Name=key-name,Values=demobank-*' --query 'length(KeyPairs)' --output text)"
+      echo "AWS $AWS_REGION security groups demobank-*: $(aws ec2 describe-security-groups --region "$AWS_REGION" --filters 'Name=group-name,Values=demobank-*' --query 'length(SecurityGroups)' --output text)"
+    else
+      echo "AWS: not checked (no signed-in AWS CLI on this machine)"
+    fi
   } | tee "$OUT/teardown.txt"
-  rm -f "$ST/state"
+  rm -f "$ST/state" "$APPROVED"
+  if [ -d "$OUT/up" ]; then
+    python3 "$HERE/e2e/bank/report.py" "$OUT" >/dev/null && echo "== report: $OUT/README.md"
+  fi
+  (cd "$OUT" && find . -type f ! -name sha256sums.txt | sort | xargs shasum -a 256 > sha256sums.txt)
+  echo "== run directory: $OUT"
 }
 
 case "${1:-}" in
@@ -342,5 +440,5 @@ case "${1:-}" in
   approve) shift; approve "$@" ;;
   audit) audit ;;
   down) down ;;
-  *) echo "usage: $0 up | pay KIND | audit | down" >&2; exit 2 ;;
+  *) echo "usage: $0 up | provision | pay gcp-snp|gcp-tdx|aws-snp|ordinary|unapproved | approve tdx MRTD | audit | down" >&2; exit 2 ;;
 esac

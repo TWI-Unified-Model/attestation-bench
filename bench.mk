@@ -4,7 +4,8 @@
 # BENCH_HOME (default ~/.attestation-bench) holds the running bench; RUNS_DIR (default BENCH_HOME/runs) the run
 # directories. See scripts/lib.sh.
 
-.PHONY: doctor setup start stop status config check-mtls trust-check third-party demo attacks redirect
+.PHONY: doctor setup start stop status config check-mtls trust-check third-party demo attacks redirect \
+	bank-up bank-pay bank-audit bank-down
 
 ## doctor: checks this machine for what the bench needs: tools and versions, ports, disk
 doctor:
@@ -58,3 +59,22 @@ attacks:
 ## redirect: the #20 redirection experiment; leaves the bench in Background Check   [PLATFORM=local|gcp-snp|...]
 redirect:
 	@scripts/run.sh redirect $(PLATFORM)
+
+# The Demo Bank: a fictional bank in your Google Cloud project, its payment service on real hardware (e2e/bank).
+# Every bank command writes into the bank's run directory under RUNS_DIR; bank-down deletes everything it created.
+
+## bank-up: the Demo Bank's trust zone and core VMs in your Google Cloud project (about 15 minutes)
+bank-up:
+	@e2e/bank/demo-bank.sh up
+
+## bank-pay: one payment by the bank's payment service   [PLATFORM=gcp-snp|gcp-tdx|aws-snp, controls: ordinary|unapproved]
+bank-pay:
+	@e2e/bank/demo-bank.sh pay $(PLATFORM)
+
+## bank-audit: the ledger's record of who moved money, and the state of every service
+bank-audit:
+	@e2e/bank/demo-bank.sh audit
+
+## bank-down: deletes the bank's VMs and firewall rules, checks that nothing is left, writes the bank's report
+bank-down:
+	@e2e/bank/demo-bank.sh down

@@ -27,6 +27,10 @@ w("Trust zone: Veraison (sevsnp scheme, reference values for the approved launch
   "Authority and Secret Vault gateways, the TDX verifier, the EST server (the only port workloads reach). Core: the "
   "ledger (PostgreSQL; the payment service's role logs in only by a client certificate from the bank's workload CA) "
   "and the fraud-scoring service (pre-shared API key). The payment service holds no credential of its own.\n")
+w("Configuration: written by the bench's own program, `scripts/trustzone.py`, from `packs/demo-bank` and the approved "
+  "launches, as on the bench: mutual TLS between the components (tacra-est N23), the verifiers' EAR keys given to the "
+  "gateways as files (N24), the API key released in the signed container (MLKEM768-P256, signed by the Vault). "
+  f"RATS model: {read('rats-model.txt').strip() or '(not recorded)'}.\n")
 w("## Code\n")
 w("```\n" + read("code-revs.txt").strip() + "\n```\n")
 
@@ -148,11 +152,9 @@ w("- Provisioning, not the protocol: the fraud service's API key was handed once
   "Vault by piping it through the operator's console (`gcloud compute ssh ... | gcloud compute ssh ...`), never written "
   "to the console's disk; the file on the trust zone was deleted after loading into Vault. Every payment then got the "
   "key only through TACRA.\n"
-  "- step-ca logs the one-time token of each signing request; the tokens are redacted in `trust-logs/step-ca.log` "
-  "(single-use, expired, and the CA no longer exists) and the per-run `sha256sums.txt` were computed after redaction.\n"
-  "- `TLS handshake error from 127.0.0.1` lines in the fraud service's log are the start script's port checks.\n"
-  "- Transfer 1 recorded the issuer with `ssl_issuer_dn()`, which PostgreSQL cuts at 63 bytes; later transfers record "
-  "the issuer's common name with `ssl_issuer_field('commonName')`.\n")
+  "- step-ca logs the one-time token of each signing request; `demo-bank.sh` redacts the tokens in "
+  "`trust-logs/step-ca.log` (single-use and expired) before the per-run `sha256sums.txt` is computed.\n"
+  "- `TLS handshake error from 127.0.0.1` lines in the fraud service's log are the start script's port checks.\n")
 w("## Limits of this demonstration\n")
 w("- GCP reference values are Google-endorsed (above); the AWS launch measurement is still the value observed in an "
   "earlier run (trust on first use): Google does not endorse AWS firmware, and AWS's own firmware measurements were "

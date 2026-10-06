@@ -17,6 +17,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"flag"
 	"fmt"
@@ -55,6 +56,8 @@ type config struct {
 	} `json:"fraud"`
 	RelyingParties map[string]map[string]string `json:"relying_parties"` // Target -> mode -> RRP identifier held
 	VaultOrigins   map[string]map[string]string `json:"vault_origins"`
+	VaultSigners   map[string]string            `json:"vault_signers"` // RRP id -> signature key SPKI (base64url), hpke-base-signed
+	CAAnchors      map[string]string            `json:"ca_anchors"`    // RRP id -> the Credential Authority's certificates (PEM): tacra-est N15
 	LocalEpochHex  string                       `json:"local_epoch_hex"`
 }
 
@@ -220,6 +223,33 @@ func newCAI(cfg *config) (*cai.Client, error) {
 			opts = append(opts, cai.WithVaultOrigin(rrp, kem, spki))
 		}
 	}
+	for rrp, b64 := range cfg.VaultSigners {
+		spki, err := base64.RawURLEncoding.DecodeString(b64)
+		if err != nil {
+			return nil, fmt.Errorf("vault signer: %w", err)
+		}
+		opts = append(opts, cai.WithVaultSigner(rrp, spki))
+	}
+	for rrp, pemText := range cfg.CAAnchors {
+		var certs []*x509.Certificate
+		for rest := []byte(pemText); ; {
+			var b *pem.Block
+			if b, rest = pem.Decode(rest); b == nil {
+				break
+			}
+			cert, err := x509.ParseCertificate(b.Bytes)
+			if err != nil {
+				return nil, fmt.Errorf("ca anchor: %w", err)
+			}
+			certs = append(certs, cert)
+		}
+		if len(certs) == 0 {
+			return nil, fmt.Errorf("ca anchor: no certificate for %s", rrp)
+		}
+		opts = append(opts, cai.WithCertificateAuthority(rrp, certs...))
+	}
+	// the bank profile's longest certificate (tacra-est decision 6)
+	opts = append(opts, cai.WithCertificateMaxValidity(time.Hour))
 	return cai.New(plugin, caapiv1.NewCredentialAcquisitionServiceClient(conn), opts...)
 }
 
