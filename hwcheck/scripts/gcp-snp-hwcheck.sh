@@ -88,7 +88,7 @@ trap 'rm -rf "$BIN"' EXIT
 cleanup
 
 echo "== RRP verification: Veraison fork as it is, with the DER and signer-info fixes, and on v0.15.0 with AMD roots"
-cp "$HW/evidence/amd-kds-milan-cert_chain.pem" "$OUT/amd-kds-milan-cert_chain.pem"
+cp "$REPO/trust/amd-kds-milan-cert_chain.pem" "$OUT/amd-kds-milan-cert_chain.pem"
 for v in fork fixed v015; do
   "$BIN/rrpverify-$v" verify -in "$OUT" -handles "$OUT/handles.json" -ark "$OUT/amd-kds-milan-cert_chain.pem" \
     -not-before "$NB" -not-after "$NA" -out "$OUT/rrpverify-veraison-$v.json" | tee "$OUT/rrpverify-veraison-$v.txt"

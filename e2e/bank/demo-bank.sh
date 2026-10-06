@@ -63,7 +63,7 @@ build() {
   local V="$HERE/third_party/veraison-services/src" G="$HERE/third_party/go-gen-ref/src"
   git -C "$V" archive --format=tar.gz --prefix=veraison-services/ "$(git -C "$V" write-tree)" -- . ':(exclude)perf' > "$S/trust/src/veraison-services.tgz"
   git -C "$G" archive --format=tar.gz --prefix=go-gen-ref-v123/ "$(git -C "$G" write-tree)" > "$S/trust/src/go-gen-ref-v123.tgz"
-  cp "$HERE/hwcheck/evidence/veraison-provisioned-corim-milan.cbor" "$S/trust/src/corim-milan.cbor"
+  cp "$HERE/trust/veraison-corim-milan.cbor" "$S/trust/src/corim-milan.cbor"
   cp "$HERE/e2e/bank/remote/trust.sh" "$S/trust/"; cp "$HERE/e2e/bank/remote/core.sh" "$S/core/"
   { echo "attestation-bench $(git -C "$HERE" rev-parse --short=12 HEAD)$(git -C "$HERE" diff --quiet HEAD -- platform cai bundle rrp e2e || echo -dirty)"
     "$HERE/third_party/describe.sh" globalsign-est veraison-services go-gen-ref | grep -v -e '/src-fork ' -e '/src-der '
@@ -294,7 +294,7 @@ approve() { # tdx|snp MEASUREMENT
   (cd "$HERE/rrp" && GOWORK=off go build -o "$ST/gce-endorsement" ./cmd/gce-endorsement)
   mkdir -p "$OUT/refvals"
   log "approve $tech $m: Google's endorsement, verified against the pinned GCE TCB root"
-  "$ST/gce-endorsement" -root "$HERE/e2e/bank/refvals/GCE-cc-tcb-root_1.crt" "-$tech" "$m" -save "$OUT/refvals/$tech-$m.binarypb" \
+  "$ST/gce-endorsement" -root "$HERE/trust/GCE-cc-tcb-root_1.crt" "-$tech" "$m" -save "$OUT/refvals/$tech-$m.binarypb" \
     | tee "$OUT/refvals/$tech-$m.json"   # exits non-zero unless Google endorses it
   f="$ST/approved-$tech"
   [ -s "$f" ] || { if [ "$tech" = tdx ]; then echo "$TDX_MRTDS"; else echo "$SNP_MEASUREMENTS"; fi; } | tr ' ' '\n' | grep . > "$f"

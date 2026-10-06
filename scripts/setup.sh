@@ -234,19 +234,24 @@ veraison_provision() {
   bench_say "9/10 Veraison started and provisioned (AMD Milan ARK, approved SEV-SNP launches)"
   "$BENCH_REPO/e2e/scripts/veraison-local.sh" start
   bench_wait_port 50051 && bench_wait_port 9443 && bench_wait_port 8443 || fail "Veraison did not start (see $V/logs)"
-  local mark="$V/logs/corim-submit.json"
-  if grep -q success "$mark" 2>/dev/null; then echo "  already provisioned"; return; fi
+  # trust/veraison-corim-milan.cbor; submitted again when it changes (its SHA-256 is kept next to the answer)
+  local corim="$BENCH_REPO/trust/veraison-corim-milan.cbor" mark="$V/logs/corim-submit.json" sum
+  sum="$(bench_sha256 "$corim")"
+  if grep -q success "$mark" 2>/dev/null; then
+    [ -f "$mark.sha256" ] || echo "$sum" >"$mark.sha256"   # provisioned before the SHA-256 was kept: this CoRIM
+    if [ "$(cat "$mark.sha256")" = "$sum" ]; then echo "  already provisioned"; return; fi
+  fi
   # retried while the provisioning service's connection to VTS is still coming up (gRPC Unavailable)
   for _ in 1 2 3 4 5 6 7 8 9 10; do
     curl -sS --cacert "$V/certs/rootCA.crt" -X POST \
       -H 'Content-Type: application/rim+cbor; profile="tag:amd.com,2024:snp-corim-profile"' \
-      --data-binary @"$BENCH_REPO/hwcheck/evidence/veraison-provisioned-corim-milan.cbor" \
-      https://localhost:9443/endorsement-provisioning/v1/submit >"$mark" || fail "CoRIM submission"
+      --data-binary @"$corim" https://localhost:9443/endorsement-provisioning/v1/submit >"$mark" || fail "CoRIM submission"
     grep -q success "$mark" && break
     grep -q Unavailable "$mark" || break
     sleep 3
   done
   grep -q success "$mark" || fail "Veraison did not accept the CoRIM: $(cat "$mark")"
+  echo "$sum" >"$mark.sha256"
   echo "  CoRIM accepted"
 }
 

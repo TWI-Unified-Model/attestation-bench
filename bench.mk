@@ -4,7 +4,7 @@
 # BENCH_HOME (default ~/.attestation-bench) holds the running bench; RUNS_DIR (default BENCH_HOME/runs) the run
 # directories. See scripts/lib.sh.
 
-.PHONY: doctor setup start stop status check-mtls third-party demo attacks redirect
+.PHONY: doctor setup start stop status config check-mtls trust-check third-party demo attacks redirect
 
 ## doctor: checks this machine for what the bench needs: tools and versions, ports, disk
 doctor:
@@ -26,9 +26,17 @@ stop:
 status:
 	@e2e/scripts/bench.sh status
 
+## config: writes the trust zone's configuration again (after a change in packs/ or trust/); then: make stop start
+config:
+	@e2e/scripts/bench.sh config
+
 ## check-mtls: mutual TLS between the components (N23), locally, no hardware
 check-mtls:
 	@scripts/check-mtls.sh
+
+## trust-check: compares trust/ with its online sources; checks the approved launches against Veraison's CoRIM
+trust-check:
+	@trust/check.sh
 
 ## third-party: fetches the EST server, Veraison and go-gen-ref (pinned upstream + our patches)
 third-party:
