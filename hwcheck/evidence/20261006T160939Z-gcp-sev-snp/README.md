@@ -38,3 +38,7 @@
 - row 10 in the form of reference values.
 
 The conduit attacks that need a second RRP running (rows 4, 5, 11) come with S4.
+
+**Added afterwards, through the deployed Veraison (`rrpverify service`, after the tool fix `5465972`, on the Evidence
+saved here):** see `rrpverify-service.txt` and `rrpverify-service.json`. The script had skipped this check, because
+since N23 the deployed Veraison requires a client certificate and the probe sent none.
