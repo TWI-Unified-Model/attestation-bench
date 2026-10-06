@@ -1,0 +1,5 @@
+2026/10/06 11:00:45 released: target=https://ledger-nonce.tacra.example kind=present-nonce group=eb2836d9f9b0f4fa container=hpke-base-signed kem=MLKEM768-P256 caller=[est-server.bench.tacra.example]
+2026/10/06 11:00:46 released: target=https://ledger-epoch.tacra.example kind=present-epoch group=8432307a77a86d88 container=hpke-base-signed kem=MLKEM768-P256 caller=[est-server.bench.tacra.example]
+2026/10/06 11:00:46 released: target=https://ledger-lepoch.tacra.example kind=absent-epoch group=dd0f4729963627fd container=hpke-base-signed kem=MLKEM768-P256 caller=[est-server.bench.tacra.example]
+2026/10/06 11:00:47 released: target=https://ledger-time.tacra.example kind=absent-timestamp group=aaf5b49fd5e15e55 container=hpke-base-signed kem=MLKEM768-P256 caller=[est-server.bench.tacra.example]
+2026/10/06 11:00:48 released: target=https://ledger-none.tacra.example kind=absent-none group=2e9e74a4b7e14def container=hpke-base-signed kem=MLKEM768-P256 caller=[est-server.bench.tacra.example]
