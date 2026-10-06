@@ -90,6 +90,8 @@ def main() -> int:
          {"operator": 200, "est-server": 200, "foreign": "tls", "none": "tls"}, "operator"),
         ("EST server or gateway -> TDX verifier: new session", 8453, ROOT, "POST", "/challenge-response/v1/newSession" + nonce, None,
          {"est-server": 201, "ca-gateway": 201, "vault-gateway": 201, "operator": 403, "foreign": "tls", "none": "tls"}, "est-server"),
+        ("EST server or gateway -> sim-verifier: new session", 8463, ROOT, "POST", "/challenge-response/v1/newSession" + nonce, None,
+         {"est-server": 201, "ca-gateway": 201, "vault-gateway": 201, "operator": 403, "foreign": "tls", "none": "tls"}, "est-server"),
         ("EST server or gateway -> Veraison: new session", 8443, VERAISON_CA, "POST", "/challenge-response/v1/newSession" + nonce, None,
          {"est-server": 201, "ca-gateway": 201, "foreign": "tls", "none": "tls"}, "est-server"),
         ("Vault gateway -> HashiCorp Vault: health", 8200, ROOT, "GET", "/v1/sys/health", None,

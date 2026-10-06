@@ -65,8 +65,25 @@ for name in ("est-server", "ca-gateway", "vault-gateway", "operator"):
     print("client certificate", dns, "until", cert.not_valid_after_utc.date())
 PY
   B="$B" MEASUREMENTS="$MEASUREMENTS" TDX_MRTDS="$TDX_MRTDS" python3 - <<'PY'
-import json, os, re
-B = os.environ["B"]; tdx = os.environ["TDX_MRTDS"].split(); meas = os.environ["MEASUREMENTS"].split() + tdx
+import base64, hashlib, json, os, re
+B = os.environ["B"]; tdx = os.environ["TDX_MRTDS"].split()
+# The software stand-in TEE (platform.SimTEE; NO isolation, NO security), so the bench runs on a laptop: its attestation
+# key (an ordinary file; the local attester holds it, the sim-verifier trusts its public half) and the one launch
+# measurement the bench approves for it, SHA-384 of a fixed label. A real RRP never takes it (allow_simulated_tee).
+sim_m = hashlib.sha384(b"attestation-bench simulated TEE: approved workload").hexdigest()
+open(f"{B}/sim-measurement.hex", "w").write(sim_m + "\n")
+ak, ak_pub = f"{B}/secrets/sim-tee-ak.jwk", f"{B}/gateways/sim-tee-ak.pub.jwk"
+if not os.path.exists(ak):
+    from cryptography.hazmat.primitives.asymmetric import ec
+    n = ec.generate_private_key(ec.SECP256R1()).private_numbers()
+    b64 = lambda v: base64.urlsafe_b64encode(v.to_bytes(32, "big")).rstrip(b"=").decode()
+    old = os.umask(0o077)
+    json.dump({"kty": "EC", "crv": "P-256", "x": b64(n.public_numbers.x), "y": b64(n.public_numbers.y), "d": b64(n.private_value)},
+              open(ak, "w"))
+    os.umask(old)
+j = json.load(open(ak))
+json.dump({k: j[k] for k in ("kty", "crv", "x", "y")}, open(ak_pub, "w"))
+meas = os.environ["MEASUREMENTS"].split() + tdx + [sim_m]
 hint = "payments.workload.tacra.example"
 kinds = {"nonce": "present-nonce", "epoch": "present-epoch", "lepoch": "absent-epoch", "time": "absent-timestamp", "none": "absent-none"}
 def target(kind, extra):
@@ -81,15 +98,21 @@ def ident(name):   # a component's client certificate on its calls (N23)
 VD = os.environ["VERAISON_DEPLOYMENT"]
 veraison = {"url": "https://localhost:8443", "ca": f"{VD}/certs/rootCA.crt"}
 tdxv = {"url": "https://localhost:8453", "ca": root}
+simv = {"url": "https://localhost:8463", "ca": root}
 # the verifiers the RRPs may take, by name, with their EAR keys as provisioned files (N24: never fetched from them)
 verifiers = [dict(veraison, name="veraison", ear_key=f"{B}/gateways/veraison.ear.jwk", submods=["SEVSNP"], provider="sev_guest"),
-             dict(tdxv, name="tdx", ear_key=f"{B}/gateways/tdx-verifier.ear.jwk", submods=["TDX"], provider="tdx_guest")]
-both = ["veraison", "tdx"]
+             dict(tdxv, name="tdx", ear_key=f"{B}/gateways/tdx-verifier.ear.jwk", submods=["TDX"], provider="tdx_guest"),
+             dict(simv, name="sim", ear_key=f"{B}/gateways/sim-verifier.ear.jwk", submods=["SIM"], provider="sim_guest")]
+# the verifiers the bank's Targets take: each platform's, the stand-in's included (the -snp-only and -tdx-only Targets
+# take one, so Evidence of another platform is refused there: N24)
+takes = ["veraison", "tdx", "sim"]
 model = os.environ.get("RATS_MODEL", "passport")   # who asks the verifiers: the EST server, or the gateways
 common = {"verifiers": verifiers, "ear": {"max_age": 120, "skew": 5}, "epoch_file": f"{B}/epoch.hex", "rats_model": model,
-          "client_ca": root, "clients": [infra["est-server"]]}
+          "client_ca": root, "clients": [infra["est-server"]],
+          # bench only: accept the software stand-in TEE's results (submodule SIM); a production RRP never sets it
+          "allow_simulated_tee": True}
 identity = {hint: {"sans": [hint, "spiffe://tacra.example/payments"], "measurements": meas, "validity": "1h"}}
-catargets = {f"https://db-{k}.tacra.example": target(v, {"verifiers": both, "acceptable": ["ecdsa-p256-sha256"], "identities": identity})
+catargets = {f"https://db-{k}.tacra.example": target(v, {"verifiers": takes, "acceptable": ["ecdsa-p256-sha256"], "identities": identity})
              for k, v in kinds.items()}
 # N24: Targets whose policy takes one platform's verifier; Evidence of the other platform is refused there
 catargets["https://db-snp-only.tacra.example"] = target("present-nonce", {"verifiers": ["veraison"], "acceptable": ["ecdsa-p256-sha256"],
@@ -111,7 +134,7 @@ if os.environ.get("OMIT_RRP_ID") == "1":
 vault = dict(common, **ident("vault-gateway"), rrp_id="https://vault1.tacra.example", listen="127.0.0.1:9102",
              tls_cert=f"{B}/tls/vault-gateway.crt", tls_key=f"{B}/tls/vault-gateway.key",
              # the hpke-base-signed container only (tacra-est decision 4): an MLKEM768-P256 CEK, the Vault's signature
-             targets={f"https://ledger-{k}.tacra.example": target(v, {"verifiers": both, "acceptable": ["MLKEM768-P256+HKDF-SHA256+AES-256-GCM"],
+             targets={f"https://ledger-{k}.tacra.example": target(v, {"verifiers": takes, "acceptable": ["MLKEM768-P256+HKDF-SHA256+AES-256-GCM"],
                       # key-block attributes the CAI requires of a signed container's items: the API key authenticates,
                       # an opaque bearer value; 3600 s, the bank profile's longest
                       "groups": {hint: {"secret_path": "tacra/payments", "measurements": meas, "policy_version": "1",
@@ -130,18 +153,23 @@ except (OSError, KeyError, ValueError):
 est = {"tls": {"listen_address": "127.0.0.1:18443", "certificates": f"{B}/tls/est-server.crt", "private_key": f"{B}/tls/est-server.key"},
        "healthcheck_password": hc, "timeout": 60, "rate_limit": 0, "log_file": f"{B}/est-server.log",
        "tacra": dict(ident("est-server"),
-                     verifiers={"veraison": dict(veraison, provider="sev_guest"), "tdx": dict(tdxv, provider="tdx_guest")},
+                     verifiers={"veraison": dict(veraison, provider="sev_guest"), "tdx": dict(tdxv, provider="tdx_guest"),
+                                "sim": dict(simv, provider="sim_guest")},
                      acceptable_evidence=["application/vnd.veraison.tsm-report+cbor"],
                      ca_certs=f"{B}/step/certs/intermediate_ca.crt",
                      rrps={"ca": {"url": "https://127.0.0.1:9101", "ca": root, "rrp_id": ca["rrp_id"], "mode": "enroll",
-                                  "rats_model": model, "verifiers": both},
+                                  "rats_model": model, "verifiers": takes},
                            "vault": {"url": "https://127.0.0.1:9102", "ca": root, "rrp_id": vault["rrp_id"], "mode": "retrieve",
-                                     "rats_model": model, "verifiers": both}},
+                                     "rats_model": model, "verifiers": takes}},
                      targets=targets)}
 tdxcfg = {"listen": "127.0.0.1:8453", "tls_cert": f"{B}/tls/tdx-verifier.crt", "tls_key": f"{B}/tls/tdx-verifier.key",
           "client_ca": root, "clients": [infra["est-server"], infra["ca-gateway"], infra["vault-gateway"]],
           "signing_key": f"{B}/secrets/tdx-verifier.jwk", "reference_mrtd": tdx}
-for name, c in (("ca-gateway", ca), ("ca-gateway-2", ca2), ("vault-gateway", vault), ("est-server", est), ("tdx-verifier", tdxcfg)):
+simcfg = {"listen": "127.0.0.1:8463", "tls_cert": f"{B}/tls/sim-verifier.crt", "tls_key": f"{B}/tls/sim-verifier.key",
+          "client_ca": root, "clients": [infra["est-server"], infra["ca-gateway"], infra["vault-gateway"]],
+          "signing_key": f"{B}/secrets/sim-verifier.jwk", "attestation_keys": [ak_pub], "reference_measurements": [sim_m]}
+for name, c in (("ca-gateway", ca), ("ca-gateway-2", ca2), ("vault-gateway", vault), ("est-server", est), ("tdx-verifier", tdxcfg),
+                ("sim-verifier", simcfg)):
     p = f"{B}/config/{name}.json"
     with open(p, "w") as f: json.dump(c, f, indent=1)
     os.chmod(p, 0o600)
@@ -174,11 +202,12 @@ if c.get("tls", {}).get("minVersion") != 1.3:
 print("configuration written to", f"{B}/config", "(RATS model: %s)" % model)
 PY
   (cd "$HERE/rrp" && GOWORK=off go build -o "$BIN/ca-gateway" ./cmd/ca-gateway && GOWORK=off go build -o "$BIN/vault-gateway" ./cmd/vault-gateway \
-    && GOWORK=off go build -o "$BIN/tdx-verifier" ./cmd/tdx-verifier)
+    && GOWORK=off go build -o "$BIN/tdx-verifier" ./cmd/tdx-verifier && GOWORK=off go build -o "$BIN/sim-verifier" ./cmd/sim-verifier)
   (cd "$EST" && GOWORK=off go build -o "$BIN/estserver" ./cmd/estserver)
   (cd "$HERE/e2e" && GOWORK=off go build -o "$BIN/rup" ./cmd/rup)
   # the TDX verifier's EAR key, provisioned to the gateways as a file (its signing key is created if absent)
   "$BIN/tdx-verifier" -config "$B/config/tdx-verifier.json" -public-jwk > "$B/gateways/tdx-verifier.ear.jwk"
+  "$BIN/sim-verifier" -config "$B/config/sim-verifier.json" -public-jwk > "$B/gateways/sim-verifier.ear.jwk"
   echo "binaries in $BIN"
 }
 
@@ -208,7 +237,8 @@ case "${1:-status}" in
       vault operator unseal "$(python3 -c "import json;print(json.load(open('$B/secrets/vault-init.json'))['unseal_keys_b64'][0])")" >/dev/null && echo "vault unsealed"
     fi
     start_one tdx-verifier "$BIN/tdx-verifier" -config "$B/config/tdx-verifier.json"
-    wait_port 8453
+    start_one sim-verifier "$BIN/sim-verifier" -config "$B/config/sim-verifier.json"
+    wait_port 8453; wait_port 8463
     start_one ca-gateway "$BIN/ca-gateway" -config "$B/config/ca-gateway.json"
     [ -f "$B/config/ca-gateway-2.json" ] && start_one ca-gateway-2 "$BIN/ca-gateway" -config "$B/config/ca-gateway-2.json"
     start_one vault-gateway "$BIN/vault-gateway" -config "$B/config/vault-gateway.json"
@@ -218,14 +248,14 @@ case "${1:-status}" in
       -client-ca "$B/workload-ca.pem" -allow payments.workload.tacra.example -api-key-file "$B/secrets/rup-api-key"
     wait_port 18443; wait_port 19443 ;;
   stop)
-    for s in rup est-server vault-gateway ca-gateway-2 ca-gateway tdx-verifier vault step-ca; do
+    for s in rup est-server vault-gateway ca-gateway-2 ca-gateway sim-verifier tdx-verifier vault step-ca; do
       if running "$s"; then pid="$(cat "$B/$s.pid")"; kill "$pid"; for _ in 1 2 3 4 5 6 7 8 9 10; do kill -0 "$pid" 2>/dev/null || break; sleep 0.5; done; echo "$s stopped"; fi
       rm -f "$B/$s.pid"
     done
     "$HERE/e2e/scripts/veraison-local.sh" stop ;;
   status)
     "$HERE/e2e/scripts/veraison-local.sh" status
-    for s in step-ca vault tdx-verifier ca-gateway ca-gateway-2 vault-gateway est-server rup; do
+    for s in step-ca vault tdx-verifier sim-verifier ca-gateway ca-gateway-2 vault-gateway est-server rup; do
       if running "$s"; then echo "$s running ($(cat "$B/$s.pid"))"; else echo "$s stopped"; fi
     done ;;
   *) echo "usage: $0 config|start|stop|status" >&2; exit 2 ;;

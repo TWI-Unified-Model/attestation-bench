@@ -5,17 +5,20 @@
 # with the RRP identifier in the binding (both CAs bind their own), and without it (OMIT_RRP_ID=1, both bind none).
 # This measures, per Freshness Kind, what the RRP identifier prevents.
 #
-#   hwcheck/scripts/redirect.sh gcp-snp|gcp-tdx|aws-snp
+#   hwcheck/scripts/redirect.sh gcp-snp|gcp-tdx|aws-snp|local
 #
-# The guest only runs hwrun (offline); all gateway interaction is on this machine, where the bench runs. The bench is
+# The guest only runs hwrun (offline); all gateway interaction is on this machine, where the bench runs. "local" runs
+# hwrun here with the bench's software stand-in TEE (no VM, no cost, no security). The bench is
 # reconfigured between passes (OMIT_RRP_ID) and left in background-check mode, no omit, at the end.
 set -euo pipefail
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
-CLOUD="${1:?usage: redirect.sh gcp-snp|gcp-tdx|aws-snp}"
+CLOUD="${1:?usage: redirect.sh gcp-snp|gcp-tdx|aws-snp|local}"
 HW="$(cd "$(dirname "$0")/.." && pwd)"; REPO="$(cd "$HW/.." && pwd)"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 NAME="tacra-redir-$(echo "$STAMP" | tr -d 'TZ' | cut -c3-12)"
-OUT="$HW/evidence/${STAMP}-${CLOUD}-redirect"; BIN="$(mktemp -d)"
+# a local run goes to BENCH_HOME/runs, a hardware run to the repository's evidence, unless RUNS_DIR says otherwise
+if [ "$CLOUD" = local ]; then OUT_BASE="${RUNS_DIR:-$BENCH_HOME/runs}"; else OUT_BASE="${RUNS_DIR:-$HW/evidence}"; fi
+OUT="$OUT_BASE/${STAMP}-${CLOUD}-redirect"; BIN="$(mktemp -d)"
 CA1=https://127.0.0.1:9101; CA2=https://127.0.0.1:9103
 CA1_ID=https://ca1.tacra.example; CA2_ID=https://ca2.tacra.example
 B="$BENCH_HOME"; CERT="$B/tls/clients/est-server.crt"; KEY_C="$B/tls/clients/est-server.key"; ROOT="$B/tls/root.crt"
@@ -30,16 +33,27 @@ case "$CLOUD" in
   gcp-snp) TEE=sev-snp; ZONE=us-central1-c; MACHINE=(--machine-type=n2d-standard-2 --min-cpu-platform="AMD Milan" --confidential-compute-type=SEV_SNP);;
   gcp-tdx) TEE=tdx;     ZONE=us-central1-a; MACHINE=(--machine-type=c3-standard-4 --confidential-compute-type=TDX);;
   aws-snp) TEE=sev-snp; REGION=us-east-2; AZ=us-east-2a; TYPE=c6a.large;;
+  local)   TEE=sim;;
   *) echo "unknown cloud $CLOUD" >&2; exit 2;;
 esac
 
-echo "== build hwrun (linux/amd64) and rrp-issue"
-(cd "$HW" && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -o "$BIN/hwrun" ./cmd/hwrun)
+echo "== build hwrun and rrp-issue"
+if [ "$CLOUD" = local ]; then
+  (cd "$HW" && go build -trimpath -o "$BIN/hwrun" ./cmd/hwrun)
+  shasum -a 256 "$BIN/hwrun" | awk '{print $1"  hwrun (this machine; -tee sim)"}' > "$OUT/binaries.sha256"
+  echo "software stand-in TEE (platform.SimTEE): no hardware, no isolation, no security" > "$OUT/platform.txt"
+else
+  (cd "$HW" && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -o "$BIN/hwrun" ./cmd/hwrun)
+  shasum -a 256 "$BIN/hwrun" | awk '{print $1"  hwrun (linux/amd64)"}' > "$OUT/binaries.sha256"
+fi
 (cd "$HW" && go build -o "$BIN/rrp-issue" ./cmd/rrp-issue)
-shasum -a 256 "$BIN/hwrun" | awk '{print $1"  hwrun (linux/amd64)"}' > "$OUT/binaries.sha256"
 
 # --- cloud glue: GUEST_SSH "<cmd>", GUEST_SCP_IN <files...> dst, GUEST_SCP_OUT src dst, vm_create, vm_delete ---
-if [ "${CLOUD#gcp}" != "$CLOUD" ]; then
+if [ "$CLOUD" = local ]; then
+  vm_create() { echo "== local: the software stand-in TEE on this machine, no VM"; }
+  vm_delete() { :; }
+  wait_ssh()  { return 0; }
+elif [ "${CLOUD#gcp}" != "$CLOUD" ]; then
   GSSH=(gcloud compute ssh "$NAME" --project=rats-probe --zone="$ZONE" --command)
   vm_create() {
     echo "== create $NAME ($ZONE, $TEE)"
@@ -117,12 +131,18 @@ json.dump({"present-nonce": "https://db-nonce.tacra.example", "present-epoch": "
            "absent-epoch": "https://db-lepoch.tacra.example", "absent-timestamp": "https://db-time.tacra.example",
            "absent-none": "https://db-none.tacra.example"}, open(os.path.join(d, "targets.json"), "w"))
 PY
+  if [ "$CLOUD" = local ]; then
+    "$BIN/hwrun" -tee sim -sim-key "$B/secrets/sim-tee-ak.jwk" -sim-measurement "$(tr -d '[:space:]' < "$B/sim-measurement.hex")" \
+      -targets "$d/targets.json" -handles "$d/handles.json" -rrp-ca "$RRPCA" -csr-cn payments.workload.tacra.example \
+      -out "$d/redir" 2>&1 | tee -a "$OUT/hwrun-stdout.txt"
+  else
   guest_in "$BIN/hwrun" "$d/handles.json" "$d/targets.json"
   guest_ssh "set -e
 sudo ~/hwrun -tee $TEE -targets ~/targets.json -handles ~/handles.json -rrp-ca '$RRPCA' -csr-cn payments.workload.tacra.example -out /root/redir 2>&1
 sudo chmod -R a+rX /root/redir; rm -rf ~/redir; sudo cp -r /root/redir ~/redir; sudo chown -R \$(id -u):\$(id -g) ~/redir" \
     2>>"$OUT/run-ssh.stderr" | tee -a "$OUT/hwrun-stdout.txt"
   guest_out redir "$d/"
+  fi
   local k fresh tgt ev subj handle res
   : > "$d/results.jsonl"
   for k in "${ORDER[@]}"; do
@@ -150,7 +170,7 @@ echo "== bench: background-check, RRP identifier IN the binding"
 reconfigure normal
 vm_create
 wait_ssh || { echo "ssh never came up" >&2; exit 1; }
-guest_ssh "$PROVISION" 2>>"$OUT/run-ssh.stderr"
+[ "$CLOUD" = local ] || guest_ssh "$PROVISION" 2>>"$OUT/run-ssh.stderr"
 run_pass with-rrp-id "$CA1_ID"
 
 echo "== bench: background-check, NO RRP identifier in the binding"
