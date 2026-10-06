@@ -4,22 +4,28 @@
 hpke-base-signed container's trust anchor, from 01.10 on, so Retrieval on AWS failed (evidence
 20261006T160234Z-aws-sev-snp-e2e). Public material only: trust anchors, the Vault's public keys, the epoch marker.
 
-    TEE=sev-snp|tdx B=$BENCH_HOME BIN=<dir holding origin-keys.json> python3 e2e/scripts/guest_config.py
+    TEE=sev-snp|tdx|sim B=$BENCH_HOME BIN=<dir holding origin-keys.json> python3 e2e/scripts/guest_config.py
+
+The Targets, the RRP identifiers and the workload's name come from the bench's pack (packs/tacra-bench/pack.json):
+the Targets every platform's verifier serves, each asked for the credential its RRP issues.
 """
 import json, os
 B, BIN = os.environ["B"], os.environ["BIN"]
-kinds = ["nonce", "epoch", "lepoch", "time", "none"]
-targets = [{"target": f"https://db-{k}.tacra.example", "type": "x509"} for k in kinds] + \
-          [{"target": f"https://ledger-{k}.tacra.example", "type": "api-key"} for k in kinds]
-rp = {t["target"]: ({"enroll": "https://ca1.tacra.example"} if "/db-" in t["target"] else {"retrieve": "https://vault1.tacra.example"}) for t in targets}
-cfg = {"tee": os.environ["TEE"], "caapi": "127.0.0.1:50061", "hint": "payments.workload.tacra.example",
+pack = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "packs", "tacra-bench", "pack.json")))
+rrps = {r["name"]: r for r in pack["rrps"] if "same_as" not in r}
+ca = next(r["rrp_id"] for r in rrps.values() if r["kind"] == "credential-authority")
+vault = next(r["rrp_id"] for r in rrps.values() if r["kind"] == "secret-vault")
+issues = {"credential-authority": "x509", "secret-vault": "api-key"}
+targets = [{"target": t["target"], "type": issues[rrps[t["rrp"]]["kind"]]} for t in pack["targets"] if t["verifiers"] == "all"]
+rp = {t["target"]: ({"enroll": ca} if t["type"] == "x509" else {"retrieve": vault}) for t in targets}
+keys = json.load(open(f"{BIN}/origin-keys.json"))
+cfg = {"tee": os.environ["TEE"], "caapi": "127.0.0.1:50061", "hint": pack["workload"]["hint"],
        "targets": targets, "relying_parties": rp,
-       "vault_origins": {"https://vault1.tacra.example": {k: v for k, v in json.load(open(f"{BIN}/origin-keys.json")).items()
-                                                          if k.startswith("DHKEM")}},
+       "vault_origins": {vault: {k: v for k, v in keys.items() if k.startswith("DHKEM")}},
        # the hpke-base-signed container's trust anchor: the Vault's signature key, held for its RRP identifier
-       "vault_signers": {"https://vault1.tacra.example": json.load(open(f"{BIN}/origin-keys.json"))["ECDSA-P256-SHA256"]},
+       "vault_signers": {vault: keys["ECDSA-P256-SHA256"]},
        # tacra-est N15: the CA the CAI holds for Enrollment, the bench's step-ca intermediate (public)
-       "ca_anchors": {"https://ca1.tacra.example": open(f"{B}/step/certs/intermediate_ca.crt").read()},
+       "ca_anchors": {ca: open(f"{B}/step/certs/intermediate_ca.crt").read()},
        "local_epoch_hex": open(f"{B}/epoch.hex").read().strip(),
        "rup": {"url": "https://localhost:19443", "anchor_pem": open(f"{B}/tls/root.crt").read()}}
 json.dump(cfg, open(f"{BIN}/e2e-attester.json", "w"), indent=1)

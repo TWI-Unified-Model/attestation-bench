@@ -1,0 +1,170 @@
+{
+ "name": "tacra-bench",
+ "infra_domain": "bench.tacra.example",
+ "workload": {
+  "hint": "payments.workload.tacra.example",
+  "sans": ["payments.workload.tacra.example", "spiffe://tacra.example/payments"]
+ },
+ "ear": {"max_age": 120, "skew": 5},
+ "rrps": [
+  {"name": "ca", "kind": "credential-authority", "rrp_id": "https://ca1.tacra.example", "listen": "127.0.0.1:9101"},
+  {
+   "name": "ca-2",
+   "same_as": "ca",
+   "service": "ca-gateway-2",
+   "rrp_id": "https://ca2.tacra.example",
+   "listen": "127.0.0.1:9103"
+  },
+  {"name": "vault", "kind": "secret-vault", "rrp_id": "https://vault1.tacra.example", "listen": "127.0.0.1:9102"}
+ ],
+ "targets": [
+  {
+   "target": "https://db-nonce.tacra.example",
+   "rrp": "ca",
+   "credential_types": ["x509", "api-key"],
+   "freshness_kind": "present-nonce",
+   "expires_in": 300,
+   "verifiers": "all",
+   "acceptable": ["ecdsa-p256-sha256"],
+   "certificate_validity": "1h"
+  },
+  {
+   "target": "https://db-epoch.tacra.example",
+   "rrp": "ca",
+   "credential_types": ["x509", "api-key"],
+   "freshness_kind": "present-epoch",
+   "expires_in": 300,
+   "verifiers": "all",
+   "acceptable": ["ecdsa-p256-sha256"],
+   "certificate_validity": "1h"
+  },
+  {
+   "target": "https://db-lepoch.tacra.example",
+   "rrp": "ca",
+   "credential_types": ["x509", "api-key"],
+   "freshness_kind": "absent-epoch",
+   "verifiers": "all",
+   "acceptable": ["ecdsa-p256-sha256"],
+   "certificate_validity": "1h"
+  },
+  {
+   "target": "https://db-time.tacra.example",
+   "rrp": "ca",
+   "credential_types": ["x509", "api-key"],
+   "freshness_kind": "absent-timestamp",
+   "max_age": 120,
+   "clock_skew": 5,
+   "verifiers": "all",
+   "acceptable": ["ecdsa-p256-sha256"],
+   "certificate_validity": "1h"
+  },
+  {
+   "target": "https://db-none.tacra.example",
+   "rrp": "ca",
+   "credential_types": ["x509", "api-key"],
+   "freshness_kind": "absent-none",
+   "verifiers": "all",
+   "acceptable": ["ecdsa-p256-sha256"],
+   "certificate_validity": "1h"
+  },
+  {
+   "target": "https://db-snp-only.tacra.example",
+   "rrp": "ca",
+   "credential_types": ["x509", "api-key"],
+   "freshness_kind": "present-nonce",
+   "expires_in": 300,
+   "verifiers": ["veraison"],
+   "acceptable": ["ecdsa-p256-sha256"],
+   "certificate_validity": "1h"
+  },
+  {
+   "target": "https://db-tdx-only.tacra.example",
+   "rrp": "ca",
+   "credential_types": ["x509", "api-key"],
+   "freshness_kind": "present-nonce",
+   "expires_in": 300,
+   "verifiers": ["tdx"],
+   "acceptable": ["ecdsa-p256-sha256"],
+   "certificate_validity": "1h"
+  },
+  {
+   "target": "https://ledger-nonce.tacra.example",
+   "rrp": "vault",
+   "credential_types": ["x509", "api-key"],
+   "freshness_kind": "present-nonce",
+   "expires_in": 300,
+   "verifiers": "all",
+   "acceptable": ["MLKEM768-P256+HKDF-SHA256+AES-256-GCM"],
+   "secret": {
+    "path": "tacra/payments",
+    "policy_version": "1",
+    "purpose": ["authenticate"],
+    "algorithm": "opaque-bearer",
+    "validity_seconds": 3600
+   }
+  },
+  {
+   "target": "https://ledger-epoch.tacra.example",
+   "rrp": "vault",
+   "credential_types": ["x509", "api-key"],
+   "freshness_kind": "present-epoch",
+   "expires_in": 300,
+   "verifiers": "all",
+   "acceptable": ["MLKEM768-P256+HKDF-SHA256+AES-256-GCM"],
+   "secret": {
+    "path": "tacra/payments",
+    "policy_version": "1",
+    "purpose": ["authenticate"],
+    "algorithm": "opaque-bearer",
+    "validity_seconds": 3600
+   }
+  },
+  {
+   "target": "https://ledger-lepoch.tacra.example",
+   "rrp": "vault",
+   "credential_types": ["x509", "api-key"],
+   "freshness_kind": "absent-epoch",
+   "verifiers": "all",
+   "acceptable": ["MLKEM768-P256+HKDF-SHA256+AES-256-GCM"],
+   "secret": {
+    "path": "tacra/payments",
+    "policy_version": "1",
+    "purpose": ["authenticate"],
+    "algorithm": "opaque-bearer",
+    "validity_seconds": 3600
+   }
+  },
+  {
+   "target": "https://ledger-time.tacra.example",
+   "rrp": "vault",
+   "credential_types": ["x509", "api-key"],
+   "freshness_kind": "absent-timestamp",
+   "max_age": 120,
+   "clock_skew": 5,
+   "verifiers": "all",
+   "acceptable": ["MLKEM768-P256+HKDF-SHA256+AES-256-GCM"],
+   "secret": {
+    "path": "tacra/payments",
+    "policy_version": "1",
+    "purpose": ["authenticate"],
+    "algorithm": "opaque-bearer",
+    "validity_seconds": 3600
+   }
+  },
+  {
+   "target": "https://ledger-none.tacra.example",
+   "rrp": "vault",
+   "credential_types": ["x509", "api-key"],
+   "freshness_kind": "absent-none",
+   "verifiers": "all",
+   "acceptable": ["MLKEM768-P256+HKDF-SHA256+AES-256-GCM"],
+   "secret": {
+    "path": "tacra/payments",
+    "policy_version": "1",
+    "purpose": ["authenticate"],
+    "algorithm": "opaque-bearer",
+    "validity_seconds": 3600
+   }
+  }
+ ]
+}
