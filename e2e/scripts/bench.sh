@@ -17,8 +17,10 @@ HERE="$(cd "$(dirname "$0")/../.." && pwd)"
 EST="${EST_REPO:-$HOME/dev/globalsign-est}"
 BIN="$B/bin"
 MEASUREMENTS="${MEASUREMENTS:-ccdc5cf01ba25526bd65503d95931b787b4385a3277cfe4448addf9c3e894948ae8cf7b099620e3e22717de2fb5d26fa 7a89cceaaba0bbdddc4f775acca3ef15d1f9bf8abccdc6115cfad7fb8eae113df3ee0bb50efa34db9c53ae065b1dc766}"
-# MRTDs of the GCP TDX launches the TDX verifier admits and the RRPs' policy names
-TDX_MRTDS="${TDX_MRTDS:-c1ee9c16e3afc506cfe042c5b846a368528f3b37618eafb27469bc114cf914e9222c91618470e7f2b28ac360968270a5}"
+# MRTDs of the GCP TDX launches the TDX verifier admits and the RRPs' policy names: Google's two TDX firmware builds
+# in use, each checked against its signed launch endorsement (rrp/cmd/gce-endorsement, SVN 2 both; evidence
+# e2e/evidence/20261006T183422Z-gce-tdx-endorsements). A new VM may get either: both were met on 06.10.
+TDX_MRTDS="${TDX_MRTDS:-c1ee9c16e3afc506cfe042c5b846a368528f3b37618eafb27469bc114cf914e9222c91618470e7f2b28ac360968270a5 f21e6b48743fe14c2d090078ca1197f09ae4c99438677f2c79901ef80e2aeefe2f9a7eb6e3eb3b5047c4f1511731e5d3}"
 export VAULT_ADDR=https://127.0.0.1:8200 VAULT_CACERT="$B/tls/root.crt"
 # the operator's client certificate: Vault's listener requires one (N23)
 export VAULT_CLIENT_CERT="$B/tls/clients/operator.crt" VAULT_CLIENT_KEY="$B/tls/clients/operator.key"

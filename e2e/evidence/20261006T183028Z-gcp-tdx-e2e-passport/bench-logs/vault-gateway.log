@@ -1,0 +1,5 @@
+2026/10/06 13:31:55 retrieve refused: target=https://ledger-nonce.tacra.example kind=present-nonce caller=[est-server.bench.tacra.example]: attestation: ear: not affirming: TDX is "contraindicated"
+2026/10/06 13:31:55 retrieve refused: target=https://ledger-epoch.tacra.example kind=present-epoch caller=[est-server.bench.tacra.example]: attestation: ear: not affirming: TDX is "contraindicated"
+2026/10/06 13:31:56 retrieve refused: target=https://ledger-lepoch.tacra.example kind=absent-epoch caller=[est-server.bench.tacra.example]: attestation: ear: not affirming: TDX is "contraindicated"
+2026/10/06 13:31:57 retrieve refused: target=https://ledger-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: attestation: ear: not affirming: TDX is "contraindicated"
+2026/10/06 13:31:57 retrieve refused: target=https://ledger-none.tacra.example kind=absent-none caller=[est-server.bench.tacra.example]: attestation: ear: not affirming: TDX is "contraindicated"
