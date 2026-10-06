@@ -33,7 +33,13 @@ type veraisonService struct {
 	key    *ecdsa.PublicKey
 }
 
-func newVeraisonService(base, caPath string) (*veraisonService, error) {
+func newVeraisonService(base, caPath, certPath, keyPath string) (*veraisonService, error) {
+	// The deployed Veraison takes callers with a certificate of the bench only (mutual TLS, N23), so this RRP presents
+	// its own, as the gateways do.
+	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
+	if err != nil {
+		return nil, err
+	}
 	pem, err := os.ReadFile(caPath)
 	if err != nil {
 		return nil, err
@@ -44,7 +50,7 @@ func newVeraisonService(base, caPath string) (*veraisonService, error) {
 	}
 	v := &veraisonService{base: strings.TrimRight(base, "/"),
 		client: &http.Client{Timeout: 30 * time.Second, Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}}}}
+			TLSClientConfig: &tls.Config{RootCAs: pool, Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS13}}}}
 	resp, err := v.client.Get(v.base + "/.well-known/veraison/verification")
 	if err != nil {
 		return nil, err
@@ -178,6 +184,8 @@ func serviceVerify(args []string) {
 	handlesPath := fs.String("handles", "handles.json", "the handles this RRP minted")
 	base := fs.String("url", "https://localhost:8443", "Veraison verification service")
 	caPath := fs.String("ca", os.Getenv("HOME")+"/veraison-deployment/certs/rootCA.crt", "CA of the service's TLS certificate")
+	certPath := fs.String("cert", os.Getenv("HOME")+"/tacra-bench/tls/clients/ca-gateway.crt", "this RRP's client certificate (mutual TLS)")
+	keyPath := fs.String("key", os.Getenv("HOME")+"/tacra-bench/tls/clients/ca-gateway.key", "its private key")
 	target := fs.String("target", "https://db.tacra.example", "the Target this RRP answered Initiate for")
 	rrpCA := fs.String("rrp-ca", "https://ca1.tacra.example", "this Credential Authority's identifier")
 	rrpVault := fs.String("rrp-vault", "https://vault1.tacra.example", "this Secret Vault's identifier")
@@ -187,7 +195,7 @@ func serviceVerify(args []string) {
 	out := fs.String("out", "", "results file (default DIR/rrpverify-service.json)")
 	must(fs.Parse(args))
 
-	v, err := newVeraisonService(*base, *caPath)
+	v, err := newVeraisonService(*base, *caPath, *certPath, *keyPath)
 	must(err)
 	var h handles
 	b, err := os.ReadFile(*handlesPath)

@@ -126,7 +126,8 @@ for v in fork fixed; do
   "$BIN/rrpverify-$v" verify -in "$OUT" -handles "$OUT/handles.json" -ark "$OUT/amd-kds-milan-vlek-cert_chain.pem" \
     -not-before "$NB" -not-after "$NA" -out "$OUT/rrpverify-veraison-$v.json" | tee "$OUT/rrpverify-veraison-$v.txt"
 done
-if curl -sf --cacert "$HOME/veraison-deployment/certs/rootCA.crt" https://localhost:8443/.well-known/veraison/verification >/dev/null 2>&1; then
+if curl -sf --cacert "$HOME/veraison-deployment/certs/rootCA.crt" --cert "${TACRA_BENCH:-$HOME/tacra-bench}/tls/clients/ca-gateway.crt" \
+  --key "${TACRA_BENCH:-$HOME/tacra-bench}/tls/clients/ca-gateway.key" https://localhost:8443/.well-known/veraison/verification >/dev/null 2>&1; then
   echo "== RRP verification through the deployed Veraison service (https://localhost:8443)"
   "$BIN/rrpverify-fixed" service -in "$OUT" -handles "$OUT/handles.json" -not-before "$NB" -not-after "$NA" \
     -out "$OUT/rrpverify-service.json" | tee "$OUT/rrpverify-service.txt"
