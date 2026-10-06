@@ -61,6 +61,9 @@ func main() {
 	targetsPath := flag.String("targets", "", "per-kind Targets (JSON {kind: target}); -target is the fallback")
 	rrpCA := flag.String("rrp-ca", "https://ca1.tacra.example", "RRP identifier for Enrollment")
 	rrpVault := flag.String("rrp-vault", "https://vault1.tacra.example", "RRP identifier for Retrieval")
+	// csrCN is the CSR's common name, the identity the Credential Authority is asked to certify. It has to be one the
+	// Target's policy grants the attested launch (the bench's db-* Targets grant payments.workload.tacra.example).
+	csrCN := flag.String("csr-cn", "workload.tacra.example", "the CSR's common name (the identity to certify)")
 	handlesPath := flag.String("handles", "", "Freshness Handles minted by the RRP (rrpverify mint); random if empty")
 	burst := flag.Int("burst", 0, "after the cases, time this many present-nonce Enrollment reports")
 	tee := flag.String("tee", "sev-snp", "sev-snp or tdx")
@@ -132,7 +135,7 @@ func main() {
 				signer, err := csk.Signer()
 				must(err)
 				csr, err := x509.CreateCertificateRequest(rand.Reader, &x509.CertificateRequest{
-					Subject: pkix.Name{CommonName: "workload.tacra.example"}}, signer)
+					Subject: pkix.Name{CommonName: *csrCN}}, signer)
 				must(err)
 				req.BoundKey, req.CSR, req.BoundKeyUse, subject = csk.Public(), csr, platform.BoundKeyUseSign, csr
 			} else {
@@ -193,7 +196,7 @@ func timeBurst(p backend, n int, target, rrp, path string) {
 	var ms []float64
 	for i := 0; i < n; i++ {
 		csr, err := x509.CreateCertificateRequest(rand.Reader, &x509.CertificateRequest{
-			Subject: pkix.Name{CommonName: "workload.tacra.example"}}, signer)
+			Subject: pkix.Name{CommonName: "workload.tacra.example"}}, signer) // burst only times report generation, not issuance
 		must(err)
 		req := platform.EvidenceRequest{FreshnessKind: platform.FreshnessKindPresentNonce, FreshnessHandle: random(32),
 			Target: target, RelyingParty: rrp, BoundKey: csk.Public(), CSR: csr, BoundKeyUse: platform.BoundKeyUseSign}

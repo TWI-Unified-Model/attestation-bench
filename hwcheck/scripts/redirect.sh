@@ -117,7 +117,7 @@ json.dump({"present-nonce": "https://db-nonce.tacra.example", "present-epoch": "
 PY
   guest_in "$BIN/hwrun" "$d/handles.json" "$d/targets.json"
   guest_ssh "set -e
-sudo ~/hwrun -tee $TEE -targets ~/targets.json -handles ~/handles.json -rrp-ca '$RRPCA' -out /root/redir 2>&1
+sudo ~/hwrun -tee $TEE -targets ~/targets.json -handles ~/handles.json -rrp-ca '$RRPCA' -csr-cn payments.workload.tacra.example -out /root/redir 2>&1
 sudo chmod -R a+rX /root/redir; rm -rf ~/redir; sudo cp -r /root/redir ~/redir; sudo chown -R \$(id -u):\$(id -g) ~/redir" \
     2>>"$OUT/run-ssh.stderr" | tee -a "$OUT/hwrun-stdout.txt"
   guest_out redir "$d/"
