@@ -95,6 +95,14 @@ ca = dict(common, **ident("ca-gateway"), rrp_id="https://ca1.tacra.example", lis
           tls_cert=f"{B}/tls/ca-gateway.crt", tls_key=f"{B}/tls/ca-gateway.key", targets=catargets,
           step_ca={"url": "https://127.0.0.1:9000", "root": f"{B}/step/certs/root_ca.crt", "provisioner": "tacra-ca-gateway",
                    "provisioner_key": f"{B}/gateways/ca-provisioner.jwk"})
+# A second Credential Authority, "another bank", for the #19/#20 redirection experiment: a different rrp_id, the same
+# step-ca and verifiers, the same Targets and TLS server certificate (SAN localhost/127.0.0.1). The honest EST server
+# never routes to it; only the experiment driver posts to it directly, to see whether one Evidence is accepted at two
+# RRPs. OMIT_RRP_ID=1 makes both CAs bind no RRP identifier (the variant #20 is about).
+ca2 = dict(ca, rrp_id="https://ca2.tacra.example", listen="127.0.0.1:9103")
+if os.environ.get("OMIT_RRP_ID") == "1":
+    ca["omit_rrp_id_in_binding"] = True
+    ca2["omit_rrp_id_in_binding"] = True
 vault = dict(common, **ident("vault-gateway"), rrp_id="https://vault1.tacra.example", listen="127.0.0.1:9102",
              tls_cert=f"{B}/tls/vault-gateway.crt", tls_key=f"{B}/tls/vault-gateway.key",
              # the hpke-base-signed container only (tacra-est decision 4): an MLKEM768-P256 CEK, the Vault's signature
@@ -123,7 +131,7 @@ est = {"tls": {"listen_address": "127.0.0.1:18443", "certificates": f"{B}/tls/es
 tdxcfg = {"listen": "127.0.0.1:8453", "tls_cert": f"{B}/tls/tdx-verifier.crt", "tls_key": f"{B}/tls/tdx-verifier.key",
           "client_ca": root, "clients": [infra["est-server"], infra["ca-gateway"], infra["vault-gateway"]],
           "signing_key": f"{B}/secrets/tdx-verifier.jwk", "reference_mrtd": tdx}
-for name, c in (("ca-gateway", ca), ("vault-gateway", vault), ("est-server", est), ("tdx-verifier", tdxcfg)):
+for name, c in (("ca-gateway", ca), ("ca-gateway-2", ca2), ("vault-gateway", vault), ("est-server", est), ("tdx-verifier", tdxcfg)):
     p = f"{B}/config/{name}.json"
     with open(p, "w") as f: json.dump(c, f, indent=1)
     os.chmod(p, 0o600)
@@ -192,21 +200,22 @@ case "${1:-status}" in
     start_one tdx-verifier "$BIN/tdx-verifier" -config "$B/config/tdx-verifier.json"
     wait_port 8453
     start_one ca-gateway "$BIN/ca-gateway" -config "$B/config/ca-gateway.json"
+    [ -f "$B/config/ca-gateway-2.json" ] && start_one ca-gateway-2 "$BIN/ca-gateway" -config "$B/config/ca-gateway-2.json"
     start_one vault-gateway "$BIN/vault-gateway" -config "$B/config/vault-gateway.json"
-    wait_port 9101; wait_port 9102
+    wait_port 9101; wait_port 9102; [ -f "$B/config/ca-gateway-2.json" ] && wait_port 9103
     start_one est-server "$BIN/estserver" -config "$B/config/est-server.json"
     start_one rup "$BIN/rup" -listen 127.0.0.1:19443 -cert "$B/tls/rup.crt" -key "$B/tls/rup.key" \
       -client-ca "$B/workload-ca.pem" -allow payments.workload.tacra.example -api-key-file "$B/secrets/rup-api-key"
     wait_port 18443; wait_port 19443 ;;
   stop)
-    for s in rup est-server vault-gateway ca-gateway tdx-verifier vault step-ca; do
+    for s in rup est-server vault-gateway ca-gateway-2 ca-gateway tdx-verifier vault step-ca; do
       if running "$s"; then pid="$(cat "$B/$s.pid")"; kill "$pid"; for _ in 1 2 3 4 5 6 7 8 9 10; do kill -0 "$pid" 2>/dev/null || break; sleep 0.5; done; echo "$s stopped"; fi
       rm -f "$B/$s.pid"
     done
     "$HERE/e2e/scripts/veraison-local.sh" stop ;;
   status)
     "$HERE/e2e/scripts/veraison-local.sh" status
-    for s in step-ca vault tdx-verifier ca-gateway vault-gateway est-server rup; do
+    for s in step-ca vault tdx-verifier ca-gateway ca-gateway-2 vault-gateway est-server rup; do
       if running "$s"; then echo "$s running ($(cat "$B/$s.pid"))"; else echo "$s stopped"; fi
     done ;;
   *) echo "usage: $0 config|start|stop|status" >&2; exit 2 ;;
