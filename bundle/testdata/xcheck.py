@@ -4,11 +4,14 @@
     xcheck.py make-nohint OUT   the same without a Credential Hint
     xcheck.py open IN.json      the reference Attester opens a bundle made elsewhere; prints the content
 
-Run with the tacra-est virtual environment; TACRA_EST_IMPL points at tacra-est/impl.
+Run with the tacra-est virtual environment; TACRA_EST_IMPL points at the impl/ directory of a checkout of
+https://github.com/nikolaichuk7/tacra-est.
 """
 import json, os, sys
 
-sys.path.insert(0, os.environ.get("TACRA_EST_IMPL", os.path.expanduser("~/dev/tacra-est/impl")))
+if not os.environ.get("TACRA_EST_IMPL"):
+    sys.exit("xcheck.py: set TACRA_EST_IMPL to the impl/ directory of a checkout of github.com/nikolaichuk7/tacra-est")
+sys.path.insert(0, os.environ["TACRA_EST_IMPL"])
 from cryptography.hazmat.primitives import serialization  # noqa: E402
 from cryptography.hazmat.primitives.asymmetric import x25519  # noqa: E402
 from common import b64u, b64u_dec  # noqa: E402

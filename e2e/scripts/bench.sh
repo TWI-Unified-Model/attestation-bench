@@ -14,7 +14,7 @@
 set -euo pipefail
 B="${TACRA_BENCH:-$HOME/tacra-bench}"
 HERE="$(cd "$(dirname "$0")/../.." && pwd)"
-EST="${EST_REPO:-$HOME/dev/globalsign-est}"
+EST="${EST_REPO:-$HERE/third_party/globalsign-est/src}"   # fetched by third_party/fetch.sh
 BIN="$B/bin"
 MEASUREMENTS="${MEASUREMENTS:-ccdc5cf01ba25526bd65503d95931b787b4385a3277cfe4448addf9c3e894948ae8cf7b099620e3e22717de2fb5d26fa 7a89cceaaba0bbdddc4f775acca3ef15d1f9bf8abccdc6115cfad7fb8eae113df3ee0bb50efa34db9c53ae065b1dc766}"
 # MRTDs of the GCP TDX launches the TDX verifier admits and the RRPs' policy names: Google's two TDX firmware builds

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Runs hwrun in a live AMD SEV-SNP guest on Google Cloud and verifies what it wrote with rrpverify against the
 # veraison-services fork as it is, with the DER and signer-info fixes, and with those fixes on go-sev-guest v0.15.0
-# with AMD's roots for VCEK and VLEK (veraison-v015). Creates the VM, mints the Freshness
+# with AMD's roots for VCEK and VLEK (third_party/veraison-services). Creates the VM, mints the Freshness
 # Handles (RRP side), copies hwrun and the handles in, runs it as root (configfs-tsm), copies the output back,
 # deletes the VM and checks that it is gone.
 #
@@ -27,10 +27,8 @@ echo "== build hwrun (linux/amd64) and rrpverify (three Veraison builds)"
 (cd "$HW" && go build -o "$BIN/rrpverify-fork" ./cmd/rrpverify && go build -modfile=go.patched.mod -o "$BIN/rrpverify-fixed" ./cmd/rrpverify \
   && go build -modfile=go.v015.mod -o "$BIN/rrpverify-v015" ./cmd/rrpverify)
 shasum -a 256 "$BIN/hwrun" | awk '{print $1"  hwrun (linux/amd64)"}' > "$OUT/binaries.sha256"
-{ echo "veraison-services fork: $(git -C "$REPO/../veraison-services" rev-parse --short=12 HEAD)";
-  echo "veraison-services DER fix: $(git -C "$REPO/../veraison-services-der" rev-parse --short=12 HEAD)";
-  echo "veraison-services v0.15.0 with AMD roots: $(git -C "$REPO/../veraison-v015" rev-parse --short=12 HEAD)";
-  echo "go-gen-ref signer-info fix: $(git -C "$REPO/../go-gen-ref-v123" rev-parse --short=12 HEAD)";
+{ # in-process builds: fork = src-fork, fixed = src-der, v015 = src (third_party/veraison-services/UPSTREAM)
+  "$REPO/third_party/describe.sh" veraison-services go-gen-ref
   "$REPO/e2e/scripts/veraison-build-info.sh"; } > "$OUT/veraison-revs.txt"
 
 echo "== RRP mints the Freshness Handles"

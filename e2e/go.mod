@@ -48,5 +48,5 @@ replace (
 	github.com/TWI-Unified-Model/tacra/cai => ../cai
 	github.com/TWI-Unified-Model/tacra/gen/go => ../gen/go
 	github.com/TWI-Unified-Model/tacra/platform => ../platform
-	github.com/globalsign/est => ../../globalsign-est
+	github.com/globalsign/est => ../third_party/globalsign-est/src
 )

@@ -86,11 +86,20 @@ func opensReference(t *testing.T, name string) {
 	}
 }
 
-// A bundle sealed here is opened by the reference implementation's Attester, when its environment is present.
+// A bundle sealed here is opened by the reference implementation's Attester, when its environment is present:
+// TACRA_EST_IMPL is the impl/ directory of a checkout of github.com/nikolaichuk7/tacra-est, and TACRA_EST_PYTHON its
+// virtual environment's python3 (default: .venv/bin/python3 next to impl/).
 func TestReferenceOpensGoBundle(t *testing.T) {
-	py := filepath.Join(os.Getenv("HOME"), "dev/tacra-est/.venv/bin/python3")
+	impl := os.Getenv("TACRA_EST_IMPL")
+	if impl == "" {
+		t.Skip("TACRA_EST_IMPL not set: the cross-implementation check needs the reference implementation")
+	}
+	py := os.Getenv("TACRA_EST_PYTHON")
+	if py == "" {
+		py = filepath.Join(impl, "..", ".venv", "bin", "python3")
+	}
 	if _, err := os.Stat(py); err != nil {
-		t.Skip("reference implementation environment not present")
+		t.Skipf("no python3 for the reference implementation at %s (set TACRA_EST_PYTHON)", py)
 	}
 	sender, err := GenerateSenderKeys()
 	if err != nil {

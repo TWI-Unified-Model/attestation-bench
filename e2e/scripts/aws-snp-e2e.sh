@@ -26,8 +26,8 @@ ID="" SG="" KEY="$NAME"
 echo "== bench"
 "$HERE/e2e/scripts/bench.sh" status | tee "$OUT/bench-status.txt"
 if grep -q stopped "$OUT/bench-status.txt"; then echo "!! start the bench first: e2e/scripts/bench.sh start"; exit 1; fi
-{ echo "twi-tacra $(git -C "$HERE" rev-parse --short=12 HEAD)$(git -C "$HERE" diff --quiet HEAD -- platform cai bundle rrp e2e/cmd || echo -dirty)"
-  echo "globalsign-est $(git -C "$HOME/dev/globalsign-est" rev-parse --short=12 HEAD)"
+{ echo "attestation-bench $(git -C "$HERE" rev-parse --short=12 HEAD)$(git -C "$HERE" diff --quiet HEAD -- platform cai bundle rrp e2e/cmd || echo -dirty)"
+  "$HERE/third_party/describe.sh" globalsign-est
   # the deployed Veraison, as its binaries say they were built
   "$HERE/e2e/scripts/veraison-build-info.sh"; } > "$OUT/code-revs.txt"
 echo "$MODEL" > "$OUT/rats-model.txt"

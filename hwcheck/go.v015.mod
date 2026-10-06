@@ -101,6 +101,6 @@ require (
 	go.uber.org/zap v1.27.0
 )
 
-replace github.com/veraison/services => ../../veraison-v015
+replace github.com/veraison/services => ../third_party/veraison-services/src
 
-replace github.com/jraman567/go-gen-ref => ../../go-gen-ref-v123
+replace github.com/jraman567/go-gen-ref => ../third_party/go-gen-ref/src

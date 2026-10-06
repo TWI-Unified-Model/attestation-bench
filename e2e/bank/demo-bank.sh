@@ -45,7 +45,7 @@ build() {
   local S="$ST/stage" L=(env GOOS=linux GOARCH=amd64 CGO_ENABLED=0 GOWORK=off)
   rm -rf "$S"; mkdir -p "$S"/{trust/bin,trust/src,core/bin,workload}
   (cd "$HERE/rrp" && for c in ca-gateway vault-gateway tdx-verifier; do "${L[@]}" go build -trimpath -o "$S/trust/bin/$c" ./cmd/$c; done)
-  (cd "$HOME/dev/globalsign-est" && "${L[@]}" go build -trimpath -o "$S/trust/bin/estserver" ./cmd/estserver)
+  (cd "$HERE/third_party/globalsign-est/src" && "${L[@]}" go build -trimpath -o "$S/trust/bin/estserver" ./cmd/estserver)
   (cd "$HERE/e2e" && "${L[@]}" go build -trimpath -o "$S/workload/payments" ./bank/cmd/payments \
     && "${L[@]}" go build -trimpath -o "$S/workload/caapi-est" ./cmd/caapi-est \
     && "${L[@]}" go build -trimpath -o "$S/core/bin/fraud-api" ./bank/cmd/fraud-api)
@@ -55,14 +55,15 @@ build() {
   (cd "$m/github.com/smallstep/certificates@v0.30.2" && "${L[@]}" go build -trimpath -o "$S/trust/bin/step-ca" ./cmd/step-ca)
   (cd "$m/github.com/smallstep/cli@v0.30.2" && "${L[@]}" go build -trimpath -o "$S/trust/bin/step" ./cmd/step)
   cp "$S/trust/bin/step" "$S/core/bin/"
-  git -C "$HOME/dev/veraison-services-der" archive --format=tar.gz --prefix=veraison-services/ HEAD -- . ':(exclude)perf' > "$S/trust/src/veraison-services.tgz"
-  git -C "$HOME/dev/go-gen-ref-v123" archive --format=tar.gz --prefix=go-gen-ref-v123/ HEAD > "$S/trust/src/go-gen-ref-v123.tgz"
+  # the tested source trees (pinned upstream + our patches, third_party/fetch.sh), as git holds them in the index: their
+  # go-gen-ref path (../go-gen-ref-v123) is the trust VM's layout
+  local V="$HERE/third_party/veraison-services/src" G="$HERE/third_party/go-gen-ref/src"
+  git -C "$V" archive --format=tar.gz --prefix=veraison-services/ "$(git -C "$V" write-tree)" -- . ':(exclude)perf' > "$S/trust/src/veraison-services.tgz"
+  git -C "$G" archive --format=tar.gz --prefix=go-gen-ref-v123/ "$(git -C "$G" write-tree)" > "$S/trust/src/go-gen-ref-v123.tgz"
   cp "$HERE/hwcheck/evidence/veraison-provisioned-corim-milan.cbor" "$S/trust/src/corim-milan.cbor"
   cp "$HERE/e2e/bank/remote/trust.sh" "$S/trust/"; cp "$HERE/e2e/bank/remote/core.sh" "$S/core/"
-  { echo "twi-tacra $(git -C "$HERE" rev-parse --short=12 HEAD)$(git -C "$HERE" diff --quiet HEAD -- platform cai bundle rrp e2e || echo -dirty)"
-    echo "globalsign-est $(git -C "$HOME/dev/globalsign-est" rev-parse --short=12 HEAD)"
-    echo "veraison-services $(git -C "$HOME/dev/veraison-services-der" rev-parse --short=12 HEAD)"
-    echo "go-gen-ref $(git -C "$HOME/dev/go-gen-ref-v123" rev-parse --short=12 HEAD)"
+  { echo "attestation-bench $(git -C "$HERE" rev-parse --short=12 HEAD)$(git -C "$HERE" diff --quiet HEAD -- platform cai bundle rrp e2e || echo -dirty)"
+    "$HERE/third_party/describe.sh" globalsign-est veraison-services go-gen-ref | grep -v -e '/src-fork ' -e '/src-der '
     echo "step-ca v0.30.2, step v0.30.2, vault 2.1.1 (official release, SHA-256 checked on the VM)"; } > "$OUT/code-revs.txt"
   (cd "$S" && find . -type f | sort | xargs shasum -a 256) > "$OUT/staged-files.sha256"
 }
