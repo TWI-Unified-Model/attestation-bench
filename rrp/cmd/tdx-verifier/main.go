@@ -214,8 +214,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if *printKey {
-		_ = json.NewEncoder(os.Stdout).Encode(verifierapi.PublicJWK(&key.PublicKey))
+	if *printKey { // the EAR key, for the RRPs' operator to provision (N24)
+		pub, err := verifierapi.PublicJWK(&key.PublicKey)
+		if err == nil {
+			err = json.NewEncoder(os.Stdout).Encode(pub)
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
 		return
 	}
 	maxAge := time.Hour

@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
@@ -12,12 +11,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/big"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/TWI-Unified-Model/tacra/rrp/internal/jwk"
 	"github.com/TWI-Unified-Model/tacra/rrp/internal/mtls"
 )
 
@@ -45,26 +44,14 @@ func newStepCA(c stepCAConfig) (*stepCA, error) {
 	if err != nil {
 		return nil, fmt.Errorf("step-ca: %w", err)
 	}
-	jwk, err := os.ReadFile(c.KeyFile)
+	raw, err := os.ReadFile(c.KeyFile)
 	if err != nil {
 		return nil, err
 	}
-	var k struct{ Kty, Crv, X, Y, D, Kid string }
-	if err := json.Unmarshal(jwk, &k); err != nil {
-		return nil, err
+	priv, k, err := jwk.ParsePrivate(raw)
+	if err != nil {
+		return nil, fmt.Errorf("step-ca: provisioner key %s: %w", c.KeyFile, err)
 	}
-	if k.Kty != "EC" || k.Crv != "P-256" || k.D == "" {
-		return nil, errors.New("step-ca: provisioner key must be a private EC P-256 JWK")
-	}
-	dec := base64.RawURLEncoding.DecodeString
-	x, e1 := dec(k.X)
-	y, e2 := dec(k.Y)
-	d, e3 := dec(k.D)
-	if e1 != nil || e2 != nil || e3 != nil {
-		return nil, errors.New("step-ca: provisioner key is not base64url")
-	}
-	priv := &ecdsa.PrivateKey{PublicKey: ecdsa.PublicKey{Curve: elliptic.P256(), X: new(big.Int).SetBytes(x),
-		Y: new(big.Int).SetBytes(y)}, D: new(big.Int).SetBytes(d)}
 	base := strings.TrimRight(c.URL, "/")
 	return &stepCA{url: base, audience: base + "/1.0/sign", provisioner: c.Provisioner, kid: k.Kid, key: priv,
 		client: &http.Client{Timeout: 30 * time.Second, Transport: &http.Transport{TLSClientConfig: tc}}}, nil

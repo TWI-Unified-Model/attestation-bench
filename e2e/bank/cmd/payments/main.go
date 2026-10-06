@@ -174,7 +174,7 @@ func main() {
 
 	// 5. The ledger moves the money, authenticated by the certificate.
 	t0 = time.Now()
-	tlsCert := tls.Certificate{Certificate: [][]byte{certCred.Document}, PrivateKey: certCred.PrivateKey.(crypto.Signer), Leaf: leaf}
+	tlsCert := tls.Certificate{Certificate: [][]byte{certCred.Document}, PrivateKey: certCred.PrivateKey, Leaf: leaf}
 	receipt, err := transfer(&cfg, &tlsCert, *from, *to, cents, fmt.Sprint(decision["ref"]), leaf)
 	if rep.add("ledger: transfer", t0, "one transaction, client-certificate login", err) {
 		rep.Receipt = receipt
@@ -310,7 +310,7 @@ func transfer(cfg *config, cert *tls.Certificate, from, to string, cents int64, 
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }() // a no-op once the transaction is committed
 	var dbUser string
 	if err := tx.QueryRow(ctx, "SELECT current_user").Scan(&dbUser); err != nil {
 		return nil, err

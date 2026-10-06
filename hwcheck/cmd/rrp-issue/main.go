@@ -95,15 +95,16 @@ func main() {
 	case "mint":
 		fs := flag.NewFlagSet("mint", flag.ExitOnError)
 		url, target, ctype, ca, cert, key := commonFlags(fs)
-		fs.Parse(os.Args[2:])
+		if err := fs.Parse(os.Args[2:]); err != nil {
+			die("%v", err)
+		}
 		c := client(*ca, *cert, *key)
 		st, raw := post(c, strings.TrimRight(*url, "/")+"/tacra/v1/initiate",
 			map[string]string{"target": *target, "credential_type": *ctype})
 		if st != http.StatusOK {
 			die("initiate: HTTP %d: %s", st, raw)
 		}
-		os.Stdout.Write(raw)
-		fmt.Println()
+		fmt.Printf("%s\n", raw)
 	case "enroll":
 		fs := flag.NewFlagSet("enroll", flag.ExitOnError)
 		url, target, ctype, ca, cert, key := commonFlags(fs)
@@ -112,7 +113,9 @@ func main() {
 		evidence := fs.String("evidence", "", "the Evidence file (TSM report, CBOR)")
 		csr := fs.String("csr", "", "the CSR file (DER)")
 		profile := fs.String("profile", "application/vnd.veraison.tsm-report+cbor", "the Evidence media type")
-		fs.Parse(os.Args[2:])
+		if err := fs.Parse(os.Args[2:]); err != nil {
+			die("%v", err)
+		}
 		if *evidence == "" || *csr == "" {
 			die("enroll needs -evidence and -csr")
 		}

@@ -189,7 +189,7 @@ func TestSEVSNPEvidenceAllFreshnessKinds(t *testing.T) {
 			if err := cbor.Unmarshal(ev.Claims, &claims); err != nil {
 				t.Fatal(err)
 			}
-			if got, _ := claims[TSMClaimFreshnessElement].([]byte); !bytes.Equal(got, c.want) && !(len(got) == 0 && len(c.want) == 0) {
+			if got, _ := claims[TSMClaimFreshnessElement].([]byte); !bytes.Equal(got, c.want) {
 				t.Fatalf("%s: freshness element %x, want %x", c.name, got, c.want)
 			}
 		}

@@ -173,7 +173,11 @@ func TestSimKeyFiles(t *testing.T) {
 	if err := json.Unmarshal(pub, &j); err != nil {
 		t.Fatal(err)
 	}
-	j["d"] = encB64(key.D.FillBytes(make([]byte, 32)))
+	d, err := key.Bytes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	j["d"] = encB64(d)
 	priv, _ := json.Marshal(j)
 	path := filepath.Join(t.TempDir(), "ak.jwk")
 	if err := os.WriteFile(path, priv, 0o600); err != nil {

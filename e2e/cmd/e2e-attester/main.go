@@ -11,7 +11,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto"
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
@@ -195,7 +194,7 @@ func main() {
 			r.NotAfter = leaf.NotAfter.UTC().Format(time.RFC3339)
 			r.CertNames = fmt.Sprint(leaf.DNSNames, leaf.URIs)
 			r.RUPStatus, r.RUPResponse, r.Error = present(cfg.RUP.URL+"/hello", pool, &tls.Certificate{
-				Certificate: [][]byte{cred.Document}, PrivateKey: cred.PrivateKey.(crypto.Signer), Leaf: leaf}, nil)
+				Certificate: [][]byte{cred.Document}, PrivateKey: cred.PrivateKey, Leaf: leaf}, nil)
 		case "api-key":
 			sum := sha256.Sum256(cred.Document)
 			r.SecretSHA = hex.EncodeToString(sum[:])

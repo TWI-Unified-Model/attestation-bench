@@ -24,7 +24,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/big"
 	"os"
 	"time"
 
@@ -208,10 +207,17 @@ func LoadSimKey(path string) (*ecdsa.PrivateKey, error) {
 		return nil, fmt.Errorf("platform: %s: %w", path, err)
 	}
 	d, err := base64.RawURLEncoding.DecodeString(j.D)
-	if err != nil || len(d) == 0 {
-		return nil, fmt.Errorf("platform: %s holds no private key", path)
+	if err != nil || len(d) != 32 {
+		return nil, fmt.Errorf("platform: %s holds no private P-256 key (d: 32 octets of base64url)", path)
 	}
-	return &ecdsa.PrivateKey{PublicKey: *pub, D: new(big.Int).SetBytes(d)}, nil
+	priv, err := ecdsa.ParseRawPrivateKey(elliptic.P256(), d)
+	if err != nil {
+		return nil, fmt.Errorf("platform: %s: %w", path, err)
+	}
+	if !priv.PublicKey.Equal(pub) {
+		return nil, fmt.Errorf("platform: %s: x and y are not the public key of d", path)
+	}
+	return priv, nil
 }
 
 // ParseSimPublicJWK parses a SimTEE attestation key's public half, as a Verifier is given it.
@@ -231,9 +237,12 @@ func SimPublicJWK(pub *ecdsa.PublicKey) ([]byte, error) {
 	if pub == nil || pub.Curve != elliptic.P256() {
 		return nil, errors.New("platform: want a P-256 public key")
 	}
+	point, err := pub.Bytes() // 0x04 || x || y, 32 octets each
+	if err != nil {
+		return nil, fmt.Errorf("platform: %w", err)
+	}
 	enc := base64.RawURLEncoding
-	return json.Marshal(simJWK{Kty: "EC", Crv: "P-256", X: enc.EncodeToString(pub.X.FillBytes(make([]byte, 32))),
-		Y: enc.EncodeToString(pub.Y.FillBytes(make([]byte, 32)))})
+	return json.Marshal(simJWK{Kty: "EC", Crv: "P-256", X: enc.EncodeToString(point[1:33]), Y: enc.EncodeToString(point[33:])})
 }
 
 func simPublic(j simJWK) (*ecdsa.PublicKey, error) {
@@ -242,11 +251,11 @@ func simPublic(j simJWK) (*ecdsa.PublicKey, error) {
 	}
 	x, err1 := base64.RawURLEncoding.DecodeString(j.X)
 	y, err2 := base64.RawURLEncoding.DecodeString(j.Y)
-	if err1 != nil || err2 != nil {
-		return nil, errors.New("key coordinates are not base64url")
+	if err1 != nil || err2 != nil || len(x) != 32 || len(y) != 32 {
+		return nil, errors.New("key coordinates are not 32 octets of base64url each")
 	}
-	pub := &ecdsa.PublicKey{Curve: elliptic.P256(), X: new(big.Int).SetBytes(x), Y: new(big.Int).SetBytes(y)}
-	if _, err := pub.ECDH(); err != nil { // refuses a point that is not on P-256
+	pub, err := ecdsa.ParseUncompressedPublicKey(elliptic.P256(), append(append([]byte{4}, x...), y...))
+	if err != nil {
 		return nil, fmt.Errorf("key is not a P-256 point: %w", err)
 	}
 	return pub, nil

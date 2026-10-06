@@ -73,7 +73,15 @@ func TestSessionToEAR(t *testing.T) {
 	if st != http.StatusOK || out["status"] != "complete" {
 		t.Fatalf("Evidence: %d %v", st, out)
 	}
-	pub, err := ear.KeyFromJWK(func() []byte { b, _ := json.Marshal(PublicJWK(&s.Key.PublicKey)); return b }())
+	key, err := PublicJWK(&s.Key.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := json.Marshal(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pub, err := ear.KeyFromJWK(raw)
 	if err != nil {
 		t.Fatal(err)
 	}

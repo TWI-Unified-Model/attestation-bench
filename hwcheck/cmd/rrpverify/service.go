@@ -70,12 +70,11 @@ func newVeraisonService(base, caPath, certPath, keyPath string) (*veraisonServic
 	}
 	x, err1 := base64.RawURLEncoding.DecodeString(wk.Key.X)
 	y, err2 := base64.RawURLEncoding.DecodeString(wk.Key.Y)
-	if err1 != nil || err2 != nil {
-		return nil, errors.New("EAR key coordinates are not base64url")
+	if err1 != nil || err2 != nil || len(x) != 32 || len(y) != 32 {
+		return nil, errors.New("EAR key coordinates are not 32 octets of base64url each")
 	}
-	v.key = &ecdsa.PublicKey{Curve: elliptic.P256(), X: new(big.Int).SetBytes(x), Y: new(big.Int).SetBytes(y)}
-	if !v.key.Curve.IsOnCurve(v.key.X, v.key.Y) {
-		return nil, errors.New("EAR key is not on P-256")
+	if v.key, err = ecdsa.ParseUncompressedPublicKey(elliptic.P256(), append(append([]byte{4}, x...), y...)); err != nil {
+		return nil, fmt.Errorf("EAR key is not a P-256 point: %w", err)
 	}
 	return v, nil
 }

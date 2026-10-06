@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TWI-Unified-Model/tacra/rrp/internal/jwk"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/veraison/corim/comid"
 )
@@ -83,23 +84,11 @@ type Result struct {
 	SIM    map[string]string
 }
 
-// KeyFromJWK parses an EC P-256 public JWK.
+// KeyFromJWK parses an EC P-256 public JWK (strictly: internal/jwk).
 func KeyFromJWK(b []byte) (*ecdsa.PublicKey, error) {
-	var k struct{ Kty, Crv, X, Y string }
-	if err := json.Unmarshal(b, &k); err != nil {
-		return nil, err
-	}
-	if k.Kty != "EC" || k.Crv != "P-256" {
-		return nil, fmt.Errorf("ear: key %s/%s, want EC/P-256", k.Kty, k.Crv)
-	}
-	x, err1 := base64.RawURLEncoding.DecodeString(k.X)
-	y, err2 := base64.RawURLEncoding.DecodeString(k.Y)
-	if err1 != nil || err2 != nil {
-		return nil, errors.New("ear: key coordinates are not base64url")
-	}
-	pub := &ecdsa.PublicKey{Curve: elliptic.P256(), X: new(big.Int).SetBytes(x), Y: new(big.Int).SetBytes(y)}
-	if !pub.Curve.IsOnCurve(pub.X, pub.Y) {
-		return nil, errors.New("ear: key is not on P-256")
+	pub, err := jwk.ParsePublic(b)
+	if err != nil {
+		return nil, fmt.Errorf("ear: %w", err)
 	}
 	return pub, nil
 }

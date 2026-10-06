@@ -12,14 +12,17 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
+	"io/fs"
 	"log"
-	"math/big"
 	"net/http"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/TWI-Unified-Model/tacra/rrp/internal/jwk"
 	"github.com/TWI-Unified-Model/tacra/rrp/internal/mtls"
 )
 
@@ -64,8 +67,13 @@ type session struct {
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /.well-known/veraison/verification", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]any{"ear-verification-key": PublicJWK(&s.Key.PublicKey),
-			"media-types": []string{MediaType}, "service-state": "READY"})
+		key, err := PublicJWK(&s.Key.PublicKey)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"ear-verification-key": key, "media-types": []string{MediaType},
+			"service-state": "READY"})
 	})
 	mux.HandleFunc("POST /challenge-response/v1/newSession", func(w http.ResponseWriter, r *http.Request) {
 		if s.LogSessions {
@@ -155,32 +163,36 @@ func (s *Server) Routes() http.Handler {
 // LoadOrCreateKey reads the verifier's ES256 signing key, an EC P-256 private JWK, creating it (mode 0600) when the
 // file is absent.
 func LoadOrCreateKey(path string) (*ecdsa.PrivateKey, error) {
-	enc := base64.RawURLEncoding
-	if raw, err := os.ReadFile(path); err == nil {
-		var j struct{ D, X, Y string }
-		if err := json.Unmarshal(raw, &j); err != nil {
-			return nil, err
+	raw, err := os.ReadFile(path)
+	if err == nil {
+		k, _, err := jwk.ParsePrivate(raw)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", path, err)
 		}
-		d, _ := enc.DecodeString(j.D)
-		x, _ := enc.DecodeString(j.X)
-		y, _ := enc.DecodeString(j.Y)
-		return &ecdsa.PrivateKey{PublicKey: ecdsa.PublicKey{Curve: elliptic.P256(), X: new(big.Int).SetBytes(x),
-			Y: new(big.Int).SetBytes(y)}, D: new(big.Int).SetBytes(d)}, nil
+		return k, nil
+	}
+	if !errors.Is(err, fs.ErrNotExist) {
+		return nil, err
 	}
 	k, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, err
 	}
-	raw, _ := json.Marshal(map[string]string{"kty": "EC", "crv": "P-256", "d": enc.EncodeToString(k.D.FillBytes(make([]byte, 32))),
-		"x": enc.EncodeToString(k.X.FillBytes(make([]byte, 32))), "y": enc.EncodeToString(k.Y.FillBytes(make([]byte, 32)))})
+	key, err := jwk.FromPrivate(k)
+	if err != nil {
+		return nil, err
+	}
+	if raw, err = json.Marshal(key); err != nil {
+		return nil, err
+	}
 	return k, os.WriteFile(path, raw, 0o600)
 }
 
 // PublicJWK is the EAR verification key as a public JWK: what the RRPs' operator provisions to them.
-func PublicJWK(pub *ecdsa.PublicKey) map[string]string {
-	enc := base64.RawURLEncoding
-	return map[string]string{"kty": "EC", "crv": "P-256", "alg": "ES256",
-		"x": enc.EncodeToString(pub.X.FillBytes(make([]byte, 32))), "y": enc.EncodeToString(pub.Y.FillBytes(make([]byte, 32)))}
+func PublicJWK(pub *ecdsa.PublicKey) (jwk.Key, error) {
+	k, err := jwk.FromPublic(pub)
+	k.Alg = "ES256"
+	return k, err
 }
 
 // SignEAR signs claims as a compact JWS, ES256.

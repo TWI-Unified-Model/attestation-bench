@@ -60,7 +60,7 @@ func TestTimestampWindow(t *testing.T) {
 		{now.Add(4 * time.Second), nil},
 		{now.Add(6 * time.Second), ErrStale},
 	} {
-		if err := s.Accept(AbsentTimestamp, ts(c.at), "t", "x509", time.Minute, 5*time.Second); !errors.Is(err, c.want) && !(err == nil && c.want == nil) {
+		if err := s.Accept(AbsentTimestamp, ts(c.at), "t", "x509", time.Minute, 5*time.Second); !errors.Is(err, c.want) {
 			t.Fatalf("timestamp %v: %v, want %v", c.at.Sub(now), err, c.want)
 		}
 	}
