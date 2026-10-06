@@ -21,6 +21,7 @@ B="${TACRA_BENCH:-$HOME/tacra-bench}"; CERT="$B/tls/clients/est-server.crt"; KEY
 export CLOUDSDK_CORE_DISABLE_PROMPTS=1 GOWORK=off
 mkdir -p "$OUT"
 git -C "$REPO" rev-parse --short=12 HEAD > "$OUT/code-rev.txt"
+"$REPO/e2e/scripts/veraison-build-info.sh" > "$OUT/veraison-build.txt"  # the Verifier the gateways ask (SEV-SNP)
 ORDER=(nonce epoch lepoch time none)  # short name of each Target; fresh_of maps it to the Freshness Kind (bash 3.2: no associative arrays)
 fresh_of() { case "$1" in nonce) echo present-nonce;; epoch) echo present-epoch;; lepoch) echo absent-epoch;; time) echo absent-timestamp;; none) echo absent-none;; esac; }
 

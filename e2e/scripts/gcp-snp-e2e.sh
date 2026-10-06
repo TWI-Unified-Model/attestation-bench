@@ -31,9 +31,8 @@ echo "== bench"
 if grep -q stopped "$OUT/bench-status.txt"; then echo "!! start the bench first: e2e/scripts/bench.sh start"; exit 1; fi
 { echo "twi-tacra $(git -C "$HERE" rev-parse --short=12 HEAD)$(git -C "$HERE" diff --quiet HEAD -- platform cai bundle rrp e2e/cmd || echo -dirty)"
   echo "globalsign-est $(git -C "$HOME/dev/globalsign-est" rev-parse --short=12 HEAD)"
-  echo "veraison-services $(git -C "$HOME/dev/veraison-services-der" rev-parse --short=12 HEAD)"
-  # the deployed verification service may be built from another commit (tacra/verification-client-ca): its hash
-  echo "veraison verification-service sha256 $(shasum -a 256 "$HOME/veraison-deployment/bin/verification-service" | cut -c1-16)"; } > "$OUT/code-revs.txt"
+  # the deployed Veraison, as its binaries say they were built
+  "$HERE/e2e/scripts/veraison-build-info.sh"; } > "$OUT/code-revs.txt"
 echo "$MODEL" > "$OUT/rats-model.txt"
 for f in est-server ca-gateway vault-gateway rup tdx-verifier; do wc -l < "$B/$f.log" > "$OUT/bench-logs/.$f.start"; done
 wc -l < "$HOME/veraison-deployment/logs/vts.log" > "$OUT/bench-logs/.vts.start"
