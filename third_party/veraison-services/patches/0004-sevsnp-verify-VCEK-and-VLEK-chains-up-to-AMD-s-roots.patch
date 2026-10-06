@@ -1,0 +1,321 @@
+From 2d18260862cb8652fd34a2a8e667fa3c017404f6 Mon Sep 17 00:00:00 2001
+From: Serhii Nikolaichuk <nikolaichuk.s.f@gmail.com>
+Date: Tue, 6 Oct 2026 13:15:50 -0500
+Subject: [PATCH 4/4] sevsnp: verify VCEK and VLEK chains up to AMD's roots
+ (go-sev-guest v0.15.0)
+
+go-sev-guest v0.15.0 no longer takes the ASK or ASVK from the evidence's
+certificate chain: with no TrustedRoots it checks the chain only against its
+embedded defaults, which hold the ASK and ARK of each product line but no
+ASVK. Every VLEK report, as AWS hosts issue, then fails with "root of trust
+missing intermediate certificate authority certificate for key VLEK".
+
+Pass TrustedRoots built from the six chains go-sev-guest embeds (VCEK and
+VLEK for Milan, Genoa and Turin), the same chains AMD's KDS serves. The
+Turin VLEK chain ends with a blank line that kds.ParseProductCertChain
+refuses (google/go-sev-guest#206), so it is trimmed first.
+
+The new test runs a real VLEK report from an AWS EC2 c6a.large guest: it
+fails on v0.15.0 without TrustedRoots, passes on v0.14.2-pre and with this
+change, and a report with one bit changed is still refused on its signature.
+---
+ go.mod                                        |   2 +-
+ go.sum                                        |   2 +
+ scheme/sevsnp/scheme.go                       |  43 +++++++-
+ scheme/sevsnp/scheme_vlek_test.go             | 101 ++++++++++++++++++
+ .../test/evidence/sevsnp-vlek-tsm-report.cbor | Bin 0 -> 5963 bytes
+ 5 files changed, 146 insertions(+), 2 deletions(-)
+ create mode 100644 scheme/sevsnp/scheme_vlek_test.go
+ create mode 100644 scheme/sevsnp/test/evidence/sevsnp-vlek-tsm-report.cbor
+
+diff --git a/go.mod b/go.mod
+index 8b2980d..fa0063f 100644
+--- a/go.mod
++++ b/go.mod
+@@ -16,7 +16,7 @@ require (
+ 	github.com/go-playground/assert/v2 v2.2.0
+ 	github.com/go-sql-driver/mysql v1.9.3
+ 	github.com/golang/mock v1.6.0
+-	github.com/google/go-sev-guest v0.14.2-0.20251119154202-af1c107a648f
++	github.com/google/go-sev-guest v0.15.0
+ 	github.com/google/go-tpm v0.3.3
+ 	github.com/google/uuid v1.6.0
+ 	github.com/hashicorp/go-hclog v1.5.0
+diff --git a/go.sum b/go.sum
+index 9ad8895..80f6731 100644
+--- a/go.sum
++++ b/go.sum
+@@ -897,6 +897,8 @@ github.com/google/go-configfs-tsm v0.3.2 h1:ZYmHkdQavfsvVGDtX7RRda0gamelUNUhu0A9
+ github.com/google/go-configfs-tsm v0.3.2/go.mod h1:EL1GTDFMb5PZQWDviGfZV9n87WeGTR/JUg13RfwkgRo=
+ github.com/google/go-sev-guest v0.14.2-0.20251119154202-af1c107a648f h1:UVLafZ3h85JE5e0QU5dUixIJa2PO5G51THLMuXrtnTw=
+ github.com/google/go-sev-guest v0.14.2-0.20251119154202-af1c107a648f/go.mod h1:SK9vW+uyfuzYdVN0m8BShL3OQCtXZe/JPF7ZkpD3760=
++github.com/google/go-sev-guest v0.15.0 h1:Xzfut5mbhcVb7TyPiyc5PolLUzdai7VH3QpyvXwcW9Y=
++github.com/google/go-sev-guest v0.15.0/go.mod h1:SK9vW+uyfuzYdVN0m8BShL3OQCtXZe/JPF7ZkpD3760=
+ github.com/google/go-tpm v0.1.2-0.20190725015402-ae6dd98980d4/go.mod h1:H9HbmUG2YgV/PHITkO7p6wxEEj/v5nlsVWIwumwH2NI=
+ github.com/google/go-tpm v0.3.0/go.mod h1:iVLWvrPp/bHeEkxTFi9WG6K9w0iy2yIszHwZGHPbzAw=
+ github.com/google/go-tpm v0.3.3 h1:P/ZFNBZYXRxc+z7i5uyd8VP7MaDteuLZInzrH2idRGo=
+diff --git a/scheme/sevsnp/scheme.go b/scheme/sevsnp/scheme.go
+index fa0c154..8600c8a 100644
+--- a/scheme/sevsnp/scheme.go
++++ b/scheme/sevsnp/scheme.go
+@@ -13,6 +13,7 @@ import (
+ 	"reflect"
+ 	"slices"
+ 	"strconv"
++	"sync"
+ 	"time"
+ 
+ 	"github.com/google/go-sev-guest/abi"
+@@ -695,20 +696,60 @@ func compareMeasurements(logger *zap.SugaredLogger, refM comid.Measurement, evM
+ 	return true
+ }
+ 
++// amdRoots returns AMD's roots for each product line, one per certificate
++// chain AMD's KDS publishes and go-sev-guest embeds: the ASK and ARK that
++// certify a VCEK, and the ASVK and ARK that certify a VLEK. Without them
++// go-sev-guest (from v0.15.0) trusts only its embedded defaults, which hold
++// no ASVK, and refuses every VLEK report (as AWS hosts issue).
++var amdRoots = sync.OnceValues(func() (map[string][]*trust.AMDRootCerts, error) {
++	chains := []struct {
++		productLine string
++		bundle      []byte
++	}{
++		{"Milan", trust.AskArkMilanVcekBytes},
++		{"Milan", trust.AskArkMilanVlekBytes},
++		{"Genoa", trust.AskArkGenoaVcekBytes},
++		{"Genoa", trust.AskArkGenoaVlekBytes},
++		{"Turin", trust.AskArkTurinVcekBytes},
++		{"Turin", trust.AskArkTurinVlekBytes},
++	}
++
++	roots := map[string][]*trust.AMDRootCerts{}
++	for _, c := range chains {
++		r := trust.AMDRootCertsProduct(c.productLine)
++		// the Turin VLEK chain ends with a blank line, which
++		// kds.ParseProductCertChain refuses (google/go-sev-guest#206)
++		if err := r.FromKDSCertBytes(bytes.TrimSpace(c.bundle)); err != nil {
++			return nil, fmt.Errorf("AMD %s certificate chain: %w", c.productLine, err)
++		}
++		roots[c.productLine] = append(roots[c.productLine], r)
++	}
++
++	return roots, nil
++})
++
+ func validateReportIntegrity(tsm *tokens.TSMReport, certChain *sevsnp.CertificateChain) error {
+ 	var (
+ 		ark, ask, vcek, vlek []byte
+ 		attestation          sevsnp.Attestation
+ 	)
+ 
++	roots, err := amdRoots()
++	if err != nil {
++		return err
++	}
++
+ 	// options: options to use when verifying SEV-SNP evidence
+ 	//          not feasible to enable certificate fetching and
+-	//          checking revocations as AMD KDS rate-limits requests
++	//          checking revocations as AMD KDS rate-limits requests;
++	//          the chain is checked up to AMD's roots, never to the
++	//          ASK, ASVK or ARK the evidence carries
+ 	options := verify.Options{
+ 		Getter:              trust.DefaultHTTPSGetter(),
+ 		Now:                 time.Now(),
+ 		DisableCertFetching: true,
+ 		CheckRevocations:    false,
++		TrustedRoots:        roots,
+ 	}
+ 
+ 	protoReport, err := abi.ReportToProto(tsm.OutBlob)
+diff --git a/scheme/sevsnp/scheme_vlek_test.go b/scheme/sevsnp/scheme_vlek_test.go
+new file mode 100644
+index 0000000..bdfeccb
+--- /dev/null
++++ b/scheme/sevsnp/scheme_vlek_test.go
+@@ -0,0 +1,101 @@
++// Copyright 2026 Contributors to the Veraison project.
++// SPDX-License-Identifier: Apache-2.0
++package sevsnp
++
++import (
++	"bytes"
++	_ "embed"
++	"encoding/hex"
++	"encoding/pem"
++	"testing"
++
++	"github.com/google/go-sev-guest/kds"
++	"github.com/google/go-sev-guest/verify/trust"
++	"github.com/stretchr/testify/require"
++	"github.com/veraison/corim/comid"
++	"github.com/veraison/ratsd/tokens"
++	"github.com/veraison/services/vts/appraisal"
++)
++
++// A report signed with a VLEK, from an AWS EC2 c6a.large (Milan) guest. AWS
++// hosts put only the VLEK in the certificate table; the guest appended the
++// ASVK and ARK from AMD's Milan VLEK chain.
++//
++//go:embed test/evidence/sevsnp-vlek-tsm-report.cbor
++var sevsnpVLEKTSMReportCBOR []byte
++
++// REPORT_DATA of that report
++const sevsnpVLEKReportData = "6131f96c32e9cb962b4c0c7507c9c7fe36ec4c527a73a7809c786251dbe5809fa9b84cd8aec306f3d151a78acb323d8e753e085aa6f829d636792a1ae43fba44"
++
++func Test_amdRoots(t *testing.T) {
++	roots, err := amdRoots()
++	require.NoError(t, err)
++	require.Len(t, roots, 3)
++
++	for _, line := range []string{"Milan", "Genoa", "Turin"} {
++		require.Len(t, roots[line], 2, line)
++		vcek, vlek := roots[line][0].ProductCerts, roots[line][1].ProductCerts
++
++		require.Equal(t, "SEV-"+line, vcek.Ask.Subject.CommonName)
++		require.Nil(t, vcek.Asvk)
++		require.Equal(t, "SEV-VLEK-"+line, vlek.Asvk.Subject.CommonName)
++		require.Nil(t, vlek.Ask)
++
++		require.Equal(t, "ARK-"+line, vcek.Ark.Subject.CommonName)
++		require.Equal(t, vcek.Ark.Raw, vlek.Ark.Raw, line)
++	}
++}
++
++func Test_ValidateEvidenceIntegrity_VLEK(t *testing.T) {
++	_, ark, err := kds.ParseProductCertChain(trust.AskArkMilanVlekBytes)
++	require.NoError(t, err)
++	ta, err := comid.NewPKIXBase64Cert(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ark})))
++	require.NoError(t, err)
++	trustAnchors := []*comid.KeyTriple{{VerifKeys: comid.CryptoKeys{ta}}}
++
++	nonce, err := hex.DecodeString(sevsnpVLEKReportData)
++	require.NoError(t, err)
++
++	// the same report with one bit of MEASUREMENT (0x90) changed
++	var tsm tokens.TSMReport
++	require.NoError(t, tsm.FromCBOR(sevsnpVLEKTSMReportCBOR))
++	tsm.OutBlob = bytes.Clone(tsm.OutBlob)
++	tsm.OutBlob[0x90] ^= 1
++	changed, err := tsm.ToCBOR()
++	require.NoError(t, err)
++
++	for _, tc := range []struct {
++		name    string
++		token   []byte
++		nonce   []byte
++		wantErr string
++	}{
++		{name: "VLEK report", token: sevsnpVLEKTSMReportCBOR, nonce: nonce},
++		{
++			name:    "VLEK report, other nonce",
++			token:   sevsnpVLEKTSMReportCBOR,
++			nonce:   append([]byte{nonce[0] ^ 0xff}, nonce[1:]...),
++			wantErr: "nonce in the evidence doesn't match",
++		},
++		{
++			name:    "VLEK report, MEASUREMENT changed",
++			token:   changed,
++			nonce:   nonce,
++			wantErr: "report signature verification error",
++		},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			evidence := appraisal.Evidence{
++				Data:      tc.token,
++				MediaType: EvidenceMediaTypeTSMCbor,
++				Nonce:     tc.nonce,
++			}
++			err := NewImplementation().ValidateEvidenceIntegrity(&evidence, trustAnchors, nil)
++			if tc.wantErr != "" {
++				require.ErrorContains(t, err, tc.wantErr)
++				return
++			}
++			require.NoError(t, err)
++		})
++	}
++}
+diff --git a/scheme/sevsnp/test/evidence/sevsnp-vlek-tsm-report.cbor b/scheme/sevsnp/test/evidence/sevsnp-vlek-tsm-report.cbor
+new file mode 100644
+index 0000000000000000000000000000000000000000..2ddbee09bdc60b432092650b625418eccd31613c
+GIT binary patch
+literal 5963
+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
+LHqQQzzJC7&-*c7;
+
+literal 0
+HcmV?d00001
+

@@ -1,0 +1,117 @@
+From 3c8603164fbd8ab28412cd01feea03e01b903e06 Mon Sep 17 00:00:00 2001
+From: Serhii Nikolaichuk <nikolaichuk.s.f@gmail.com>
+Date: Mon, 28 Sep 2026 14:18:47 -0500
+Subject: [PATCH] sevsnp: read SIGNER_INFO as a bit field
+
+SIGNER_INFO (report offset 48h) holds SIGNING_KEY in bits 4:2,
+MASK_CHIP_KEY in bit 1 and AUTHOR_KEY_EN in bit 0. ReportToComid
+compared the whole word with 0 and 1, so a VLEK-signed report (0x4, as
+AWS EC2 returns on shared tenancy) failed with "invalid signer info: 4",
+a VCEK report with MASK_CHIP_KEY (0x2) failed too, and a VCEK report
+with AUTHOR_KEY_EN (0x1) was classed as signed by a CSP key.
+
+The key is now taken from abi.ParseSignerInfo, which also rejects the
+reserved key values.
+---
+ cmd/sevsnp/parser.go      | 16 +++++++++----
+ cmd/sevsnp/parser_test.go | 49 +++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 61 insertions(+), 4 deletions(-)
+ create mode 100644 cmd/sevsnp/parser_test.go
+
+diff --git a/cmd/sevsnp/parser.go b/cmd/sevsnp/parser.go
+index 9256bfc..5f8a6cc 100644
+--- a/cmd/sevsnp/parser.go
++++ b/cmd/sevsnp/parser.go
+@@ -27,9 +27,16 @@ func ReportToComid(reportProto *sevsnp.Report, cpu int) (*comid.Comid, error) {
+ 		SetLanguage("en-GB").
+ 		SetTagIdentity(uuid.New(), 0)
+ 
++	// SIGNER_INFO is a bit field (AMD SEV-SNP ABI, ATTESTATION_REPORT):
++	// SIGNING_KEY in bits 4:2, MASK_CHIP_KEY in bit 1, AUTHOR_KEY_EN in bit 0.
++	signerInfo, err := abi.ParseSignerInfo(reportProto.GetSignerInfo())
++	if err != nil {
++		return nil, err
++	}
++
+ 	env := comid.Environment{}
+-	switch reportProto.GetSignerInfo() {
+-	case 0:
++	switch signerInfo.SigningKey {
++	case abi.VcekReportSigner:
+ 		env.Class = comid.NewClassOID(ClassIDByChip)
+ 		if !isAllZeros(reportProto.GetChipId()) {
+ 			env.Instance, err = comid.NewBytesInstance(reportProto.GetChipId())
+@@ -37,7 +44,7 @@ func ReportToComid(reportProto *sevsnp.Report, cpu int) (*comid.Comid, error) {
+ 				return nil, err
+ 			}
+ 		}
+-	case 1:
++	case abi.VlekReportSigner:
+ 		env.Class = comid.NewClassOID(ClassIDByCsp)
+ 		if viper.IsSet("cspId") {
+ 			env.Instance, err = comid.NewBytesInstance([]byte(viper.GetString("cspId")))
+@@ -46,7 +53,8 @@ func ReportToComid(reportProto *sevsnp.Report, cpu int) (*comid.Comid, error) {
+ 			}
+ 		}
+ 	default:
+-		return nil, fmt.Errorf("invalid signer info: %d", reportProto.GetSignerInfo())
++		return nil, fmt.Errorf("unsupported signing key %v (signer info %#x)",
++			signerInfo.SigningKey, reportProto.GetSignerInfo())
+ 	}
+ 
+ 	refVal := comid.ValueTriple{
+diff --git a/cmd/sevsnp/parser_test.go b/cmd/sevsnp/parser_test.go
+new file mode 100644
+index 0000000..74120d1
+--- /dev/null
++++ b/cmd/sevsnp/parser_test.go
+@@ -0,0 +1,49 @@
++package sevsnp
++
++import (
++	"bytes"
++	"testing"
++
++	"github.com/google/go-sev-guest/proto/sevsnp"
++)
++
++// SIGNER_INFO is a bit field: SIGNING_KEY in bits 4:2, MASK_CHIP_KEY in bit 1,
++// AUTHOR_KEY_EN in bit 0. A VLEK-signed report, as AWS returns on shared
++// tenancy, has SIGNER_INFO 0x4.
++func TestReportToComidSignerInfo(t *testing.T) {
++	for _, tc := range []struct {
++		name       string
++		signerInfo uint32
++		wantClass  string // empty: an error is expected
++	}{
++		{"VCEK", 0x0, ClassIDByChip},
++		{"VCEK, AUTHOR_KEY_EN", 0x1, ClassIDByChip},
++		{"VCEK, MASK_CHIP_KEY", 0x2, ClassIDByChip},
++		{"VLEK", 0x4, ClassIDByCsp},
++		{"VLEK, MASK_CHIP_KEY", 0x6, ClassIDByCsp},
++		{"reserved signing key 2", 0x8, ""},
++		{"no signing key", 0x1c, ""},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			report := &sevsnp.Report{
++				Version:     2,
++				SignerInfo:  tc.signerInfo,
++				Measurement: bytes.Repeat([]byte{0x11}, 48),
++			}
++			c, err := ReportToComid(report, 0)
++			if tc.wantClass == "" {
++				if err == nil {
++					t.Fatalf("signer info %#x: want an error", tc.signerInfo)
++				}
++				return
++			}
++			if err != nil {
++				t.Fatalf("signer info %#x: %v", tc.signerInfo, err)
++			}
++			got := c.Triples.ReferenceValues.Values[0].Environment.Class.ClassID.String()
++			if got != tc.wantClass {
++				t.Fatalf("signer info %#x: class %s, want %s", tc.signerInfo, got, tc.wantClass)
++			}
++		})
++	}
++}

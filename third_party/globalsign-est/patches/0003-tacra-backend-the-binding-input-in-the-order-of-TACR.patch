@@ -1,0 +1,97 @@
+From 91c4ab0057d82e67ccff8edcbf42f9ea11532b2d Mon Sep 17 00:00:00 2001
+From: Serhii Nikolaichuk <nikolaichuk.s.f@gmail.com>
+Date: Wed, 30 Sep 2026 17:19:26 -0500
+Subject: [PATCH 3/6] tacra backend: the binding input in the order of TACRA,
+ the Target before the RRP identifier
+
+The backend derived the Verifier's session nonce with est.BindingDigest,
+which puts the server identity before the Target, the order before 30
+September 2026; with Attesters and RRPs in TACRA's order the Verifier would
+refuse honest Evidence. The backend now computes the binding value itself in
+the order of TACRA Section 4.5 and of the EST profile, tested on the EST
+profile's test vector (whose digest is REPORT_DATA of a SEV-SNP report).
+est.BindingDigest is left as it is.
+---
+ internal/tacra/backend.go      |  2 +-
+ internal/tacra/binding.go      | 26 ++++++++++++++++++++++++++
+ internal/tacra/binding_test.go | 25 +++++++++++++++++++++++++
+ 3 files changed, 52 insertions(+), 1 deletion(-)
+ create mode 100644 internal/tacra/binding.go
+ create mode 100644 internal/tacra/binding_test.go
+
+diff --git a/internal/tacra/backend.go b/internal/tacra/backend.go
+index 662499f..4977fdd 100644
+--- a/internal/tacra/backend.go
++++ b/internal/tacra/backend.go
+@@ -356,7 +356,7 @@ func (b *Backend) forward(ctx context.Context, mode, kind, target, credentialTyp
+ 	if err != nil {
+ 		return "", RRP{}, secondLeg{}, err
+ 	}
+-	nonce := est.BindingDigest(handle, rrp.RRPID, target, subject)
++	nonce := bindingValue(handle, target, rrp.RRPID, subject)
+ 	ear, err := b.verify(ctx, evidence, p, nonce)
+ 	if err != nil {
+ 		return "", RRP{}, secondLeg{}, err
+diff --git a/internal/tacra/binding.go b/internal/tacra/binding.go
+new file mode 100644
+index 0000000..a8741ef
+--- /dev/null
++++ b/internal/tacra/binding.go
+@@ -0,0 +1,26 @@
++package tacra
++
++import (
++	"crypto/sha512"
++	"encoding/binary"
++)
++
++// bindingValue is SHA-512 of the binding input of TACRA Section 4.5 (master 912bd50 and later) and of
++// draft-novak-lamps-tacra-est, Section 9.1.5 (pull request head 183bedd): the freshness element, the Target, the
++// identifier of the RATS Relying Party and the subject, each preceded by its length as a 32-bit big-endian integer.
++//
++//	binding_input = len32(handle) || handle || len32(target) || target
++//	             || len32(rrp_id) || rrp_id || len32(subject) || subject
++//
++// It is the nonce of the Verifier's session, which the Verifier finds in the Evidence and the RRP recomputes.
++// est.BindingDigest of this repository puts the server identity before the Target, the order before 30 September
++// 2026; it is not used here.
++func bindingValue(handle []byte, target, rrpID string, subject []byte) []byte {
++	var in []byte
++	for _, v := range [][]byte{handle, []byte(target), []byte(rrpID), subject} {
++		in = binary.BigEndian.AppendUint32(in, uint32(len(v)))
++		in = append(in, v...)
++	}
++	sum := sha512.Sum512(in)
++	return sum[:]
++}
+diff --git a/internal/tacra/binding_test.go b/internal/tacra/binding_test.go
+new file mode 100644
+index 0000000..475b0d1
+--- /dev/null
++++ b/internal/tacra/binding_test.go
+@@ -0,0 +1,25 @@
++package tacra
++
++import (
++	"bytes"
++	"encoding/hex"
++	"testing"
++
++	"github.com/globalsign/est"
++)
++
++// The test vector of draft-novak-lamps-tacra-est, Appendix A (pull request head 183bedd): the enrollment of the
++// SEV-SNP run 20260930T172002Z, whose SHA-512(binding_input) equals REPORT_DATA of the hardware report.
++func TestBindingValueTestVector(t *testing.T) {
++	handle, _ := hex.DecodeString("f8170e6438729e1e3ded60c7c8b220716b7138f9a7e6250c569f1548790ee25f")
++	subject, _ := hex.DecodeString("3081dc3081830201003021311f301d06035504030c16776f726b6c6f61642e74616372612e6578616d706c653059301306072a8648ce3d020106082a8648ce3d0301070342000458f74deb3089c1ba23a2a630a94812f503377fa33d252cd5b2a287fefa40bca353ff2671caa8565de5cc5d221d2a61e5610f9748224dd4a210c82bdfa329d7c2a000300a06082a8648ce3d0403020348003045022100a214dc7a98c6dd8c702a38cc2acabbf0fc7391491a546720f69bf29fdbe7056202205708ed7cf3fc25d8f2501639a589a69be2aa8468f97ff4008d3ea124147a0347")
++	want, _ := hex.DecodeString("c5d8f3e4a93130e864df61ef1bf940223d8d891fa668d21aceffb34f20473065c3cf80a64ccd0c8c5a60717a5d25cb8b2131bf2e51be88f7beadba6bb181d4ca")
++	const target, rrpID = "https://db.tacra.example", "https://ca1.tacra.example"
++	if got := bindingValue(handle, target, rrpID, subject); !bytes.Equal(got, want) {
++		t.Fatalf("binding value %x, want %x", got, want)
++	}
++	// the repository's own encoder has the earlier order, and so another value for the same four inputs
++	if bytes.Equal(est.BindingDigest(handle, rrpID, target, subject), want) {
++		t.Fatal("est.BindingDigest now gives the TACRA order: this backend can use it again")
++	}
++}

@@ -5,3 +5,7 @@ go.work.sum
 .env
 cai/cmd/sidecar/sidecar
 client/http-client
+
+# third-party sources fetched by third_party/fetch.sh (pinned upstream + our patches)
+/third_party/*/src/
+/third_party/*/src-*/

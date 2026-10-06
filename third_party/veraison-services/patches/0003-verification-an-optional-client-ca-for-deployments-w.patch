@@ -1,0 +1,92 @@
+From 675fe11156ffc25044f47ee20eda6c10fe6a265e Mon Sep 17 00:00:00 2001
+From: Serhii Nikolaichuk <nikolaichuk.s.f@gmail.com>
+Date: Thu, 1 Oct 2026 16:00:10 -0500
+Subject: [PATCH 3/4] verification: an optional client-ca, for deployments
+ whose callers are known
+
+With verification.client-ca set, the API takes only callers that present a certificate of that CA,
+over TLS 1.3, and logs the names of the caller's certificate for each new session. Without it the
+service runs as before. The TACRA EST bank profile asks the channels between the EST server, the
+Relying Parties and the Verifier to be mutually authenticated.
+---
+ verification/cmd/verification-service/main.go | 44 +++++++++++++++++--
+ 1 file changed, 40 insertions(+), 4 deletions(-)
+
+diff --git a/verification/cmd/verification-service/main.go b/verification/cmd/verification-service/main.go
+index 92c7572..74599fe 100644
+--- a/verification/cmd/verification-service/main.go
++++ b/verification/cmd/verification-service/main.go
+@@ -4,7 +4,12 @@ package main
+ 
+ import (
+ 	"context"
++	"crypto/tls"
++	"crypto/x509"
+ 	"errors"
++	"net/http"
++	"os"
++	"strings"
+ 
+ 	"github.com/veraison/services/config"
+ 	"github.com/veraison/services/log"
+@@ -26,6 +31,9 @@ type cfg struct {
+ 	Cert            string `mapstructure:"cert" config:"zerodefault"`
+ 	CertKey         string `mapstructure:"cert-key" config:"zerodefault"`
+ 	DiscoveryMaxAge string `mapstructure:"discovery-max-age" config:"zerodefault"`
++	// ClientCA, when set, makes the API take only callers that present a certificate of this CA (mutual TLS, TLS
++	// 1.3), for deployments whose Relying Parties and EST servers are known (TACRA EST bank profile).
++	ClientCA string `mapstructure:"client-ca" config:"zerodefault"`
+ }
+ 
+ func (o cfg) Validate() error {
+@@ -104,7 +112,7 @@ func main() {
+ 	apiHandler := api.NewHandler(sessionManager, verifier, cfg.DiscoveryMaxAge)
+ 
+ 	if cfg.Protocol == "https" {
+-		apiServerTLS(apiHandler, cfg.ListenAddr, cfg.Cert, cfg.CertKey)
++		apiServerTLS(apiHandler, cfg.ListenAddr, cfg.Cert, cfg.CertKey, cfg.ClientCA)
+ 	} else {
+ 		apiServer(apiHandler, cfg.ListenAddr)
+ 	}
+@@ -118,10 +126,38 @@ func apiServer(apiHandler api.IHandler, listenAddr string) {
+ 	}
+ }
+ 
+-func apiServerTLS(apiHandler api.IHandler, listenAddr, certFile, keyFile string) {
++func apiServerTLS(apiHandler api.IHandler, listenAddr, certFile, keyFile, clientCA string) {
+ 	log.Infow("initializing verification API HTTPS service", "address", listenAddr)
+ 
+-	if err := api.NewRouter(apiHandler).RunTLS(listenAddr, certFile, keyFile); err != nil {
+-		log.Fatalf("Gin engine failed: %v", err)
++	if clientCA == "" {
++		if err := api.NewRouter(apiHandler).RunTLS(listenAddr, certFile, keyFile); err != nil {
++			log.Fatalf("Gin engine failed: %v", err)
++		}
++		return
++	}
++	pem, err := os.ReadFile(clientCA)
++	if err != nil {
++		log.Fatalf("Could not read client-ca: %v", err)
++	}
++	pool := x509.NewCertPool()
++	if !pool.AppendCertsFromPEM(pem) {
++		log.Fatalf("No CA certificate in client-ca %s", clientCA)
+ 	}
++	srv := &http.Server{Addr: listenAddr, Handler: logCaller(api.NewRouter(apiHandler)),
++		TLSConfig: &tls.Config{MinVersion: tls.VersionTLS13, ClientAuth: tls.RequireAndVerifyClientCert, ClientCAs: pool}}
++	log.Infow("verification API takes only callers with a certificate of the client CA", "client-ca", clientCA)
++	if err := srv.ListenAndServeTLS(certFile, keyFile); err != nil {
++		log.Fatalf("HTTPS server failed: %v", err)
++	}
++}
++
++// logCaller logs who asked for each new session: the names of the caller's verified certificate.
++func logCaller(h http.Handler) http.Handler {
++	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/newSession") &&
++			r.TLS != nil && len(r.TLS.VerifiedChains) > 0 && len(r.TLS.VerifiedChains[0]) > 0 {
++			log.Infow("session requested", "caller", r.TLS.VerifiedChains[0][0].DNSNames)
++		}
++		h.ServeHTTP(w, r)
++	})
+ }

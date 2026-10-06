@@ -1,0 +1,217 @@
+From 516bf94ce32f0d9c6df4731ec61958a0391d71f9 Mon Sep 17 00:00:00 2001
+From: Serhii Nikolaichuk <nikolaichuk.s.f@gmail.com>
+Date: Mon, 28 Sep 2026 14:00:11 -0500
+Subject: [PATCH 1/4] sevsnp: accept DER certificates in the host certificate
+ table
+
+The SEV-SNP certificate table is filled by the host, and hosts differ:
+Google Cloud writes the VCEK, ASK and ARK as DER, while the sample
+evidence in test/evidence carries PEM. readCert accepted PEM only and
+the trust-anchor check compared the table entry with the PEM trust
+anchor byte for byte, so evidence from a DER host failed with
+ErrTAMismatch before its signature was checked.
+
+readCert now returns the DER of a certificate given in either
+encoding, and the trust-anchor check compares DER. The test rewrites
+the sample report's table as DER and checks that it validates, that a
+different nonce is still refused, and that a trust anchor other than
+the ARK still yields ErrTAMismatch.
+---
+ scheme/sevsnp/scheme.go          |  28 ++++++-
+ scheme/sevsnp/scheme_der_test.go | 134 +++++++++++++++++++++++++++++++
+ 2 files changed, 158 insertions(+), 4 deletions(-)
+ create mode 100644 scheme/sevsnp/scheme_der_test.go
+
+diff --git a/scheme/sevsnp/scheme.go b/scheme/sevsnp/scheme.go
+index 0680cc6..fa0c154 100644
+--- a/scheme/sevsnp/scheme.go
++++ b/scheme/sevsnp/scheme.go
+@@ -204,7 +204,19 @@ func (o *Implementation) ValidateEvidenceIntegrity(
+ 		return handler.BadEvidence(err)
+ 	}
+ 
+-	if !bytes.Equal(certChain.GetArkCert(), taCert) {
++	// The host fills the certificate table in either encoding (Google Cloud
++	// writes DER, other hosts PEM) and the trust anchor is PEM: compare DER.
++	evArk, err := readCert(certChain.GetArkCert())
++	if err != nil {
++		return handler.BadEvidence("can't read ARK: %w", err)
++	}
++
++	taArk, err := readCert(taCert)
++	if err != nil {
++		return fmt.Errorf("can't read trust anchor: %w", err)
++	}
++
++	if !bytes.Equal(evArk, taArk) {
+ 		return handler.BadEvidence(ErrTAMismatch)
+ 	}
+ 
+@@ -342,16 +354,24 @@ func parseEvidence(evidence *appraisal.Evidence) (*tokens.TSMReport, error) {
+ 	return tsm, nil
+ }
+ 
++// readCert returns the DER encoding of a certificate supplied PEM-encoded or
++// as DER; hosts differ in how they fill the SEV-SNP certificate table.
+ func readCert(cert []byte) ([]byte, error) {
+ 	if len(cert) == 0 {
+ 		return nil, errors.New("empty certificate")
+ 	}
+ 
+-	block, _ := pem.Decode(cert)
+-	if block == nil || block.Type != "CERTIFICATE" {
++	if block, _ := pem.Decode(cert); block != nil {
++		if block.Type != "CERTIFICATE" {
++			return nil, ErrCertificateReadFailure
++		}
++		return block.Bytes, nil
++	}
++
++	if _, err := x509.ParseCertificate(cert); err != nil {
+ 		return nil, ErrCertificateReadFailure
+ 	}
+-	return block.Bytes, nil
++	return cert, nil
+ }
+ 
+ func parseCertChainFromTSMReport(tsm *tokens.TSMReport) (*sevsnp.CertificateChain, error) {
+diff --git a/scheme/sevsnp/scheme_der_test.go b/scheme/sevsnp/scheme_der_test.go
+new file mode 100644
+index 0000000..b0a6fc4
+--- /dev/null
++++ b/scheme/sevsnp/scheme_der_test.go
+@@ -0,0 +1,134 @@
++// Copyright 2026 Contributors to the Veraison project.
++// SPDX-License-Identifier: Apache-2.0
++package sevsnp
++
++import (
++	_ "embed"
++	"encoding/binary"
++	"encoding/hex"
++	"encoding/pem"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++	"github.com/veraison/corim/comid"
++	"github.com/veraison/corim/corim"
++	"github.com/veraison/ratsd/tokens"
++	"github.com/veraison/services/vts/appraisal"
++)
++
++//go:embed test/evidence/sevsnp-tsm-report.cbor
++var sevsnpTSMReportCBOR []byte
++
++// derCertTable rewrites a certificate table whose entries are PEM into the
++// same table with DER entries, as Google Cloud hosts supply it.
++func derCertTable(t *testing.T, table []byte) []byte {
++	t.Helper()
++
++	type entry struct {
++		guid []byte
++		der  []byte
++	}
++
++	var entries []entry
++	for i := 0; i+24 <= len(table); i += 24 {
++		guid := table[i : i+16]
++		if string(guid) == string(make([]byte, 16)) {
++			break
++		}
++		off := binary.LittleEndian.Uint32(table[i+16:])
++		n := binary.LittleEndian.Uint32(table[i+20:])
++		block, _ := pem.Decode(table[off : off+n])
++		require.NotNil(t, block)
++		entries = append(entries, entry{guid: guid, der: block.Bytes})
++	}
++	require.NotEmpty(t, entries)
++
++	off := uint32(24 * (len(entries) + 1))
++	var head, body []byte
++	for _, e := range entries {
++		head = append(head, e.guid...)
++		head = binary.LittleEndian.AppendUint32(head, off+uint32(len(body)))
++		head = binary.LittleEndian.AppendUint32(head, uint32(len(e.der)))
++		body = append(body, e.der...)
++	}
++	head = append(head, make([]byte, 24)...)
++
++	return append(head, body...)
++}
++
++func Test_ValidateEvidenceIntegrity_DERCertTable(t *testing.T) {
++	var (
++		endCorim     corim.UnsignedCorim
++		endComid     comid.Comid
++		trustAnchors []*comid.KeyTriple
++		tsm          tokens.TSMReport
++	)
++
++	require.NoError(t, endCorim.FromCBOR(sevsnpCorimValidEndorsements))
++	require.NoError(t, endComid.FromCBOR(endCorim.Tags[1].Content))
++	keyTriples := *endComid.Triples.AttestVerifKeys
++	trustAnchors = append(trustAnchors, &keyTriples[0])
++
++	nonce, err := hex.DecodeString("4d4944424e48323869696f69736a5079787878787878787878787878787878784d4944424e48323869696f69736a507978787878787878787878787878787878")
++	require.NoError(t, err)
++
++	require.NoError(t, tsm.FromCBOR(sevsnpTSMReportCBOR))
++	pemToken, err := tsm.ToCBOR()
++	require.NoError(t, err)
++	tsm.AuxBlob = derCertTable(t, tsm.AuxBlob)
++	derToken, err := tsm.ToCBOR()
++	require.NoError(t, err)
++
++	Impl := NewImplementation()
++
++	for _, tc := range []struct {
++		name    string
++		token   []byte
++		nonce   []byte
++		wantErr string
++	}{
++		{name: "PEM certificate table", token: pemToken, nonce: nonce},
++		{name: "DER certificate table", token: derToken, nonce: nonce},
++		{
++			name:    "DER certificate table, other nonce",
++			token:   derToken,
++			nonce:   append([]byte{nonce[0] ^ 0xff}, nonce[1:]...),
++			wantErr: "nonce in the evidence doesn't match",
++		},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			evidence := appraisal.Evidence{
++				Data:      tc.token,
++				MediaType: EvidenceMediaTypeTSMCbor,
++				Nonce:     tc.nonce,
++			}
++			err := Impl.ValidateEvidenceIntegrity(&evidence, trustAnchors, nil)
++			if tc.wantErr != "" {
++				require.ErrorContains(t, err, tc.wantErr)
++				return
++			}
++			require.NoError(t, err)
++		})
++	}
++}
++
++func Test_ValidateEvidenceIntegrity_DERCertTable_TAMismatch(t *testing.T) {
++	var tsm tokens.TSMReport
++
++	require.NoError(t, tsm.FromCBOR(sevsnpTSMReportCBOR))
++	tsm.AuxBlob = derCertTable(t, tsm.AuxBlob)
++	derToken, err := tsm.ToCBOR()
++	require.NoError(t, err)
++
++	// the ASK from the same table stands in for a trust anchor that is not the ARK
++	certs, err := parseCertChainFromTSMReport(&tsm)
++	require.NoError(t, err)
++	askPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certs.GetAskCert()})
++	ta, err := comid.NewPKIXBase64Cert(string(askPEM))
++	require.NoError(t, err)
++	trustAnchors := []*comid.KeyTriple{{VerifKeys: comid.CryptoKeys{ta}}}
++
++	evidence := appraisal.Evidence{Data: derToken, MediaType: EvidenceMediaTypeTSMCbor}
++	err = NewImplementation().ValidateEvidenceIntegrity(&evidence, trustAnchors, nil)
++	require.ErrorIs(t, err, ErrTAMismatch)
++}
