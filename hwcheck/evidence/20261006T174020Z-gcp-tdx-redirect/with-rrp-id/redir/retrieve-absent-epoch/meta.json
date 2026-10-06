@@ -1,0 +1,14 @@
+{
+ "case": "retrieve-absent-epoch",
+ "mode": "retrieve",
+ "freshness_kind": "absent-epoch",
+ "target": "https://db-lepoch.tacra.example",
+ "relying_party": "https://vault1.tacra.example",
+ "freshness_element_b64": "94Wu5zifWmsW4jwbwn_Kdhrr9vzrUdta6Lb_VUy8li8",
+ "binding_value_hex": "69879f8e0d0677b266aad03e66c30bf8c480fcee4aa07aa11515e514febfdfbee07b196cb17f1baa402a7f5a985d652927650c738d21c913b9dafd62b269a1d0",
+ "evidence_ms": 39.2,
+ "token_bytes": 4966,
+ "report_sha256": "2661ce7ba8358ef4ef3154163db2cfa25e733c88198999c43b3b9805e81187fe",
+ "signing_key": "TDX quote",
+ "chip_id_prefix": "MRTD c1ee9c16e3afc506"
+}
