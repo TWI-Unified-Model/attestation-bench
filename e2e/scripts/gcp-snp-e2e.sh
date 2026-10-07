@@ -88,7 +88,7 @@ cleanup() {
   echo "== delete $NAME"
   gcloud compute instances delete "$NAME" --project="$PROJECT" --zone="$ZONE" --quiet >/dev/null 2>&1
   left="$(gcloud compute instances list --project="$PROJECT" --filter="name=$NAME" --format='value(name)' 2>/dev/null)"
-  if [ -n "$left" ]; then echo "!! $NAME still exists"; else echo "== $NAME is gone" | tee "$OUT/vm-deleted.txt"; fi
+  if [ -n "$left" ]; then echo "!! $NAME still exists"; else echo "== $NAME is gone at $(bench_now)" | tee "$OUT/vm-deleted.txt"; fi
   rm -rf "$BIN"
 }
 trap cleanup EXIT

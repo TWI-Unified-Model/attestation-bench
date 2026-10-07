@@ -42,6 +42,9 @@ bench_say() { printf '== %s\n' "$*"; }
 bench_die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
 # sha256 FILE: the hex digest, with whichever tool the system has
+# The time now, UTC, as the run records write it (vm-deleted.txt: when the VM was found gone).
+bench_now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+
 bench_sha256() {
   if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | cut -d' ' -f1; else shasum -a 256 "$1" | cut -d' ' -f1; fi
 }

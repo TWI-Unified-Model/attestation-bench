@@ -52,7 +52,7 @@ have no `verdict.txt`; the program judges them all the same.
 | `e2e-attester-stdout.txt`, `caapi-est.log` | what the workload and the CAS Client printed |
 | `bench-logs/` | each trust zone service's log lines for this run only |
 | `run-window.txt` | the run's start and end, in seconds since 1970 |
-| hardware only: `kernel.txt`, `machine-type.txt` (GCP) or `instance.txt` (AWS), `vm-deleted.txt` | the guest's kernel, the machine, and the record of its deletion |
+| hardware only: `kernel.txt`, `machine-type.txt` (GCP) or `instance.txt` (AWS), `vm-deleted.txt` | the guest's kernel, the machine, and the record of its deletion, with the time it was found gone |
 
 ## `make attacks`: `…-local-sim-attacks`, `…-gcp-sev-snp`, `…-gcp-tdx`, `…-aws-sev-snp`
 
@@ -62,7 +62,7 @@ have no `verdict.txt`; the program judges them all the same.
 | `enroll-<kind>/`, `retrieve-<kind>/` | per request: the Evidence (`evidence.tsm.cbor`), the CSR or CEKpub (`subject.der`), the claims, and `meta.json` (the Target, the RRP identifier, the freshness element, the binding value, and which key signed the report) |
 | `rrpverify-*.json`, `rrpverify-*.txt` | every check: the request (`case`), what was changed (`check`), what was expected (`want`), what happened (`got`), and whether that is as expected (`ok`); the `.txt` ends with the summary line |
 | `rrp-clock-window.txt` | the RRP's clock before and after the guest made its reports, in seconds since 1970: the window timestamps are checked against |
-| hardware: `amd-kds-*.pem` (SEV-SNP), `kernel.txt`, `dmesg-*.txt`, `vm-deleted.txt` | the vendor chain used, the guest's kernel and messages, the deletion record |
+| hardware: `amd-kds-*.pem` (SEV-SNP), `kernel.txt`, `dmesg-*.txt`, `vm-deleted.txt` | the vendor chain used, the guest's kernel and messages, the deletion record with its time |
 
 The variant names in `rrpverify-*`: `sim` and `service` locally; on SEV-SNP `veraison-v015` (the bench's Veraison
 build), `veraison-fixed`, `veraison-fork` and `service` (the deployed Veraison); `tdx` on TDX.

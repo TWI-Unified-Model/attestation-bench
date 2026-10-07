@@ -53,7 +53,7 @@ cleanup() {
     aws ec2 terminate-instances --region "$REGION" --instance-ids "$ID" >/dev/null
     aws ec2 wait instance-terminated --region "$REGION" --instance-ids "$ID"
     st="$(aws ec2 describe-instances --region "$REGION" --instance-ids "$ID" --query 'Reservations[0].Instances[0].State.Name' --output text)"
-    echo "instance $ID: $st" | tee "$OUT/vm-deleted.txt"
+    echo "instance $ID: $st at $(bench_now)" | tee "$OUT/vm-deleted.txt"
     ID=""
   fi
   if [ -n "$SG" ]; then

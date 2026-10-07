@@ -68,7 +68,7 @@ cleanup() {
     echo "== terminate $ID"
     aws ec2 terminate-instances --region "$REGION" --instance-ids "$ID" >/dev/null
     aws ec2 wait instance-terminated --region "$REGION" --instance-ids "$ID"
-    echo "instance $ID: $(aws ec2 describe-instances --region "$REGION" --instance-ids "$ID" --query 'Reservations[0].Instances[0].State.Name' --output text)" | tee "$OUT/vm-deleted.txt"
+    echo "instance $ID: $(aws ec2 describe-instances --region "$REGION" --instance-ids "$ID" --query 'Reservations[0].Instances[0].State.Name' --output text) at $(bench_now)" | tee "$OUT/vm-deleted.txt"
     ID=""
   fi
   if [ -n "$SG" ]; then aws ec2 delete-security-group --region "$REGION" --group-id "$SG" && echo "security group $SG deleted" | tee -a "$OUT/vm-deleted.txt"; SG=""; fi

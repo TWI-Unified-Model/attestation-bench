@@ -294,7 +294,7 @@ pay() {
   gcloud compute instances delete "$name" --project="$PROJECT" --zone="$ZONE" --quiet >/dev/null 2>&1 || true
   trap - EXIT
   [ -z "$(gcloud compute instances list --project="$PROJECT" --filter="name=$name" --format='value(name)')" ] \
-    && echo "$name is gone" > "$R/vm-deleted.txt"
+    && echo "$name is gone at $(bench_now)" > "$R/vm-deleted.txt"
   slice_logs "$R"
   finish_run "$R" "$EXPECT"
 }
@@ -308,7 +308,7 @@ pay_aws() { # run dir
     set +e
     [ -n "$ID" ] && { aws ec2 terminate-instances --region "$AWS_REGION" --instance-ids "$ID" >/dev/null
       aws ec2 wait instance-terminated --region "$AWS_REGION" --instance-ids "$ID"
-      echo "instance $ID: $(aws ec2 describe-instances --region "$AWS_REGION" --instance-ids "$ID" --query 'Reservations[0].Instances[0].State.Name' --output text)" >> "$R/vm-deleted.txt"; ID=""; }
+      echo "instance $ID: $(aws ec2 describe-instances --region "$AWS_REGION" --instance-ids "$ID" --query 'Reservations[0].Instances[0].State.Name' --output text) at $(bench_now)" >> "$R/vm-deleted.txt"; ID=""; }
     [ -n "$SG" ] && { aws ec2 delete-security-group --region "$AWS_REGION" --group-id "$SG" && echo "security group $SG deleted" >> "$R/vm-deleted.txt"; SG=""; }
     aws ec2 describe-key-pairs --region "$AWS_REGION" --key-names "$KEY" >/dev/null 2>&1 && aws ec2 delete-key-pair --region "$AWS_REGION" --key-name "$KEY" \
       && echo "key pair $KEY deleted" >> "$R/vm-deleted.txt"

@@ -81,7 +81,7 @@ elif [ "${CLOUD#gcp}" != "$CLOUD" ]; then
   vm_delete() {
     gcloud compute instances delete "$NAME" --project="$GCP_PROJECT" --zone="$ZONE" --quiet >/dev/null 2>&1 || true
     left="$(gcloud compute instances list --project="$GCP_PROJECT" --filter="name=$NAME" --format='value(name)' 2>/dev/null)"
-    [ -z "$left" ] && echo "$NAME is gone" | tee "$OUT/vm-deleted.txt" || echo "!! $NAME still exists"
+    [ -z "$left" ] && echo "$NAME is gone at $(bench_now)" | tee "$OUT/vm-deleted.txt" || echo "!! $NAME still exists"
   }
   guest_ssh() { "${GSSH[@]}" "$1" ; }
   guest_in()  { gcloud compute scp "$@" "$NAME:~/" --project="$GCP_PROJECT" --zone="$ZONE" >/dev/null ; }
@@ -110,7 +110,7 @@ else
   }
   vm_delete() {
     [ -n "${ID:-}" ] && { aws ec2 terminate-instances --region "$REGION" --instance-ids "$ID" >/dev/null; aws ec2 wait instance-terminated --region "$REGION" --instance-ids "$ID"; \
-      echo "instance $ID terminated" | tee "$OUT/vm-deleted.txt"; }
+      echo "instance $ID terminated at $(bench_now)" | tee "$OUT/vm-deleted.txt"; }
     [ -n "${SG:-}" ] && aws ec2 delete-security-group --region "$REGION" --group-id "$SG" >/dev/null 2>&1 && echo "security group deleted" | tee -a "$OUT/vm-deleted.txt" && SG=""
     aws ec2 delete-key-pair --region "$REGION" --key-name "$NAME" >/dev/null 2>&1 && echo "key pair deleted" | tee -a "$OUT/vm-deleted.txt"
   }

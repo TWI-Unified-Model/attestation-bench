@@ -50,8 +50,9 @@ directory's name holds its start, and `vm-deleted.txt` was written at the deleti
 
 ## Cleanup
 
-Every run deletes its VM, and on AWS its throwaway key pair and security group, and records that in `vm-deleted.txt`.
-If a run is interrupted (a closed terminal, a lost network), check both clouds by hand:
+Every run deletes its VM, and on AWS its throwaway key pair and security group, and records that in `vm-deleted.txt`,
+with the time the VM was found gone. If a run is interrupted (a closed terminal, a lost network), check both clouds
+by hand:
 
 ```bash
 make cloud-check
