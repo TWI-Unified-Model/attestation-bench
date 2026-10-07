@@ -38,7 +38,7 @@ dirs_and_python() {
   if [ ! -x "$B/venv/bin/python3" ]; then quiet python3 -m venv "$B/venv" || fail "python3 -m venv"; fi
   quiet "$B/venv/bin/python3" -m pip install --disable-pip-version-check -r "$BENCH_REPO/scripts/requirements.txt" \
     || fail "pip install -r scripts/requirements.txt"
-  echo "  venv: $("$B/venv/bin/python3" -c 'import cryptography, cbor2, sys; print("python %d.%d" % sys.version_info[:2])'), cryptography and cbor2 installed"
+  echo "  venv: $("$B/venv/bin/python3" -c 'import cryptography, cbor2, sevsnpmeasure, sys; print("python %d.%d" % sys.version_info[:2])'), cryptography, cbor2 and sev-snp-measure installed"
 }
 
 tools() {
