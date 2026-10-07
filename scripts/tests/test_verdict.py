@@ -30,6 +30,8 @@ DEMO_RUNS = [
     "20261006T224133Z-aws-sev-snp-e2e-background-check",
 ]
 ATTACK_RUNS = ["20261006T224346Z-gcp-sev-snp", "20261006T225040Z-gcp-tdx", "20261006T225323Z-aws-sev-snp"]
+# the attack runs of plan R3: the guest's clock recorded, and the pre-play check
+PREPLAY_RUNS = ["20261007T165412Z-gcp-sev-snp", "20261007T170259Z-aws-sev-snp", "20261007T170913Z-gcp-tdx"]
 REDIRECT_RUNS = [
     "20261006T225552Z-gcp-snp-redirect",
     "20261006T225943Z-gcp-tdx-redirect",
@@ -87,6 +89,17 @@ class CommittedRuns(unittest.TestCase):
                 code, last = verdict("attacks", HW / run)
                 self.assertEqual(code, 0, last)
                 self.assertRegex(last, r"^VERDICT PASS: \d+ checks: the honest Evidence passed")
+
+    def test_attacks_with_preplay(self):
+        for run in PREPLAY_RUNS:
+            with self.subTest(run=run):
+                code, last = verdict("attacks", HW / run)
+                self.assertEqual(code, 0, last)
+                self.assertRegex(
+                    last,
+                    r"; exposure, the guest's clock: https://db-time.tacra.example accepted Evidence 29\d s old or more "
+                    r"\(max_age 120 s\); https://ledger-time.tacra.example accepted Evidence 29\d s old or more",
+                )
 
     def test_redirect(self):
         for run in REDIRECT_RUNS:
@@ -182,6 +195,32 @@ class ChangedRuns(unittest.TestCase):
         self.edit_json("rrpverify-veraison-fork.json", lambda d: d["results"][0].update(ok=False))
         code, last = verdict("attacks", run)
         self.assertEqual(code, 0, last)
+
+    def preplay_run(self, change=None, presented=True):
+        """A copy of a real R3 attack run's judged files, its pre-play result changed by change."""
+        src = HW / PREPLAY_RUNS[0]
+        for f in src.glob("rrpverify-*.json"):
+            shutil.copy(f, self.tmp / f.name)
+        shutil.copytree(src / "preplay", self.tmp / "preplay")
+        if presented:
+            shutil.copy(src / "preplay.json", self.tmp / "preplay.json")
+            if change:
+                self.edit_json("preplay.json", change)
+        return self.tmp
+
+    def test_preplay_not_as_expected(self):
+        for name, change, presented, why in [
+            ("accepted at once", lambda d: d["results"][0]["at_once"].update(status=200), True,
+             "https://db-time.tacra.example"),
+            ("refused later", lambda d: d["results"][1]["later"].update(status=409), True,
+             "https://ledger-time.tacra.example"),
+            ("made, never presented", None, False, "the Evidence made with the guest's clock ahead was not presented"),
+        ]:  # fmt: skip
+            with self.subTest(name):
+                for f in self.tmp.iterdir():
+                    shutil.rmtree(f) if f.is_dir() else f.unlink()
+                code, last = verdict("attacks", self.preplay_run(change, presented))
+                self.assertEqual((code, last), (1, f"VERDICT FAIL: the pre-play check not as expected: {why}"))
 
     def test_no_attack_results(self):
         # an attack run with only the results of the builds the bench compares with

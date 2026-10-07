@@ -69,6 +69,7 @@ reference runs, six fail: each found a fault in its day, which its README or the
 | `run-window.txt` | the run's start and end, in seconds since 1970 |
 | `platform-rule.json` | the platform rule the RRPs applied: product lines, minimum TCB, required PLATFORM_INFO and mitigation bits, the mitigation bits waived by name, and SMT on SEV-SNP, refused TD attributes on TDX ([../trust/README.md](../trust/README.md)); runs before 7 October 2026 have none |
 | `kernel.txt`, `machine-type.txt` (GCP) or `instance.txt` (AWS), `vm-deleted.txt` | the guest's kernel, the machine, and the record of its deletion, with the time it was found gone |
+| `clock.txt`, `clock-offset.txt` | what the guest's clock rests on (clocksource, the boot lines on SEV, TDX and the TSC, the time service and its sources' authentication) and its offset from the RRP's clock; older runs have none |
 
 ## `make attacks`: `…-gcp-sev-snp`, `…-gcp-tdx`, `…-aws-sev-snp`
 
@@ -80,10 +81,13 @@ reference runs, six fail: each found a fault in its day, which its README or the
 | `rrpverify-*.stderr.log` | what the checker and the verifier it builds in logged; on SEV-SNP, Veraison's revocation check of each appraisal (`… is not on AMD's CRL …`) |
 | `ears/` (SEV-SNP) | the Attestation Results the deployed Veraison issued for the honest Evidence (`<request>.ear.jws`) and the binding value each answers (`<request>.bv.hex`): what an RRP's platform rule reads, kept to check it again later |
 | `rrp-clock-window.txt` | the RRP's clock before and after the guest made its reports, in seconds since 1970: the window timestamps are checked against |
+| `clock.txt`, `clock-offset.txt` | what the guest's clock rests on and its offset from the RRP's clock, as in a demo run |
+| `preplay/`, `preplay.json`, `preplay.txt` | the pre-play check: the absent-timestamp Evidence the guest made with its clock set ahead (`preplay/clock-ahead.txt` says by how much, and when it was put back), and each RRP's answer at once and when its clock reached the timestamp (`at_once`, `later`), with the RRP's log lines (`rrp_log`) in runs after 7 October 2026 |
 | hardware: `amd-kds-*.pem` (SEV-SNP), `kernel.txt`, `dmesg-*.txt`, `vm-deleted.txt` | the vendor chain used, the guest's kernel and messages, the deletion record with its time |
 
 The variant names in `rrpverify-*`: on SEV-SNP `veraison-v015` (the bench's Veraison build), `veraison-fixed`,
-`veraison-fork` and `service` (the deployed Veraison); `tdx` on TDX.
+`veraison-fork` and `service` (the deployed Veraison); `tdx` (in process) and `service` (the deployed TDX verifier) on
+TDX.
 
 ## `make redirect`: `…-<platform>-redirect`
 

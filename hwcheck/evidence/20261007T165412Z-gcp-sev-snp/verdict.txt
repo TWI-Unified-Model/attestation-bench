@@ -1,0 +1,8 @@
+rrpverify-service: 50 checks, 0 not as expected
+rrpverify-veraison-fixed: 162 checks, 0 not as expected (a build the bench compares with: reported, not judged)
+rrpverify-veraison-fork: 142 checks, 60 not as expected (a build the bench compares with: reported, not judged)
+rrpverify-veraison-v015: 162 checks, 0 not as expected
+pre-play https://db-time.tacra.example: at once 409 RRP ca: freshness: fresh: freshness element is not valid now: timestamp 2026-10-07T17:02:57Z outside [now-; 295 s or more after the Evidence was made: 200
+pre-play https://ledger-time.tacra.example: at once 409 RRP vault: freshness: fresh: freshness element is not valid now: timestamp 2026-10-07T17:03:01Z outside [n; 295 s or more after the Evidence was made: 200
+guest minus RRP: +1.183 s, within 1.331 s
+VERDICT PASS: 212 checks: the honest Evidence passed, every attack refused for its own reason; exposure, the guest's clock: https://db-time.tacra.example accepted Evidence 295 s old or more (max_age 120 s); https://ledger-time.tacra.example accepted Evidence 295 s old or more (max_age 120 s)

@@ -27,18 +27,19 @@ request with one input changed, as the attacker could change it:
 | Key substitution | swaps the CSR (Enrollment) or CEKpub (Retrieval) for their own | the CSR or CEKpub is in the binding | refused: the binding does not match |
 | Replay, stale freshness | uses another freshness element: an old or foreign Handle, another epoch | the freshness element is in the binding; the RRP knows its Handles and its epoch | refused |
 | Old timestamp | for `absent-timestamp`, a timestamp an hour outside the window | the RRP's window around its own clock | refused |
+| Clock set ahead (pre-play) | for `absent-timestamp`, sets the guest's clock 300 s ahead, makes Evidence, presents it at once and again when the RRP's clock reaches it | nothing: the window bounds the age by the guest's clock | at once refused; later accepted, older than `max_age`: an **exposure**, reported, not a pass ([limits.md](limits.md), "Time") |
 | Forged report | a report that does not chain to the vendor's root: AMD's ASK as the anchor instead of the ARK; a root that is not Intel's | the vendor's root, pinned | refused |
 | Unapproved launch | a launch whose measurement (SEV-SNP `MEASUREMENT`, TDX `MRTD`) differs by one byte | the approved launches (`trust/`) | refused |
 
 Each attack must be refused **for its own reason**. A refusal that also refuses the honest request proves nothing and
 is counted as "inconclusive", never as a pass. The run ends with its verdict, on SEV-SNP
-`VERDICT PASS: 212 checks: the honest Evidence passed, every attack refused for its own reason`, and keeps every
-check in `rrpverify-*.json` ([results.md](results.md)).
+`VERDICT PASS: 212 checks: the honest Evidence passed, every attack refused for its own reason; exposure, the guest's
+clock: …`, and keeps every check in `rrpverify-*.json` and the pre-play in `preplay.json` ([results.md](results.md)).
 
 | Platform | Checks in process | Checks through the verifier service |
 |---|---|---|
 | GCP SEV-SNP | 162 with the bench's Veraison build (each report as delivered and with its certificate table normalised) | 50 (the deployed Veraison) |
-| GCP TDX | 82 (the TDX verifier's checks) | |
+| GCP TDX | 82 (go-tdx-guest, Intel's collateral) | 50 (the deployed TDX verifier) |
 | AWS SEV-SNP | 162 with the bench's Veraison build | 50 |
 
 On SEV-SNP the run also appraises the reports with two older builds of Veraison's scheme, to record what each fix

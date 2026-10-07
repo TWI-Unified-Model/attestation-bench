@@ -1,0 +1,51 @@
+ok  enroll-present-nonce       honest                   want pass got pass         affirming       35.0 ms 
+ok  enroll-present-nonce       other Target             want fail got fail         contraindicated    28.3 ms EAR status contraindicated
+ok  enroll-present-nonce       other RRP identifier     want fail got fail         contraindicated    25.7 ms EAR status contraindicated
+ok  enroll-present-nonce       other CSR / CEKpub       want fail got fail         contraindicated    27.2 ms EAR status contraindicated
+ok  enroll-present-nonce       other freshness element  want fail got fail         contraindicated    27.3 ms EAR status contraindicated
+ok  retrieve-present-nonce     honest                   want pass got pass         affirming       27.6 ms 
+ok  retrieve-present-nonce     other Target             want fail got fail         contraindicated    24.8 ms EAR status contraindicated
+ok  retrieve-present-nonce     other RRP identifier     want fail got fail         contraindicated    24.7 ms EAR status contraindicated
+ok  retrieve-present-nonce     other CSR / CEKpub       want fail got fail         contraindicated    28.3 ms EAR status contraindicated
+ok  retrieve-present-nonce     other freshness element  want fail got fail         contraindicated    26.4 ms EAR status contraindicated
+ok  enroll-present-epoch       honest                   want pass got pass         affirming       28.1 ms 
+ok  enroll-present-epoch       other Target             want fail got fail         contraindicated    25.1 ms EAR status contraindicated
+ok  enroll-present-epoch       other RRP identifier     want fail got fail         contraindicated    25.1 ms EAR status contraindicated
+ok  enroll-present-epoch       other CSR / CEKpub       want fail got fail         contraindicated    25.7 ms EAR status contraindicated
+ok  enroll-present-epoch       other freshness element  want fail got fail         contraindicated    24.9 ms EAR status contraindicated
+ok  retrieve-present-epoch     honest                   want pass got pass         affirming       27.1 ms 
+ok  retrieve-present-epoch     other Target             want fail got fail         contraindicated    25.7 ms EAR status contraindicated
+ok  retrieve-present-epoch     other RRP identifier     want fail got fail         contraindicated    26.0 ms EAR status contraindicated
+ok  retrieve-present-epoch     other CSR / CEKpub       want fail got fail         contraindicated    25.6 ms EAR status contraindicated
+ok  retrieve-present-epoch     other freshness element  want fail got fail         contraindicated    26.0 ms EAR status contraindicated
+ok  enroll-absent-epoch        honest                   want pass got pass         affirming       28.3 ms 
+ok  enroll-absent-epoch        other Target             want fail got fail         contraindicated    25.8 ms EAR status contraindicated
+ok  enroll-absent-epoch        other RRP identifier     want fail got fail         contraindicated    24.8 ms EAR status contraindicated
+ok  enroll-absent-epoch        other CSR / CEKpub       want fail got fail         contraindicated    26.2 ms EAR status contraindicated
+ok  enroll-absent-epoch        other freshness element  want fail got fail         contraindicated    26.2 ms EAR status contraindicated
+ok  retrieve-absent-epoch      honest                   want pass got pass         affirming       26.5 ms 
+ok  retrieve-absent-epoch      other Target             want fail got fail         contraindicated    26.4 ms EAR status contraindicated
+ok  retrieve-absent-epoch      other RRP identifier     want fail got fail         contraindicated    26.5 ms EAR status contraindicated
+ok  retrieve-absent-epoch      other CSR / CEKpub       want fail got fail         contraindicated    26.5 ms EAR status contraindicated
+ok  retrieve-absent-epoch      other freshness element  want fail got fail         contraindicated    26.0 ms EAR status contraindicated
+ok  enroll-absent-timestamp    honest                   want pass got pass         affirming       26.8 ms 
+ok  enroll-absent-timestamp    other Target             want fail got fail         contraindicated    26.1 ms EAR status contraindicated
+ok  enroll-absent-timestamp    other RRP identifier     want fail got fail         contraindicated    26.0 ms EAR status contraindicated
+ok  enroll-absent-timestamp    other CSR / CEKpub       want fail got fail         contraindicated    27.3 ms EAR status contraindicated
+ok  enroll-absent-timestamp    other freshness element  want fail got fail         contraindicated    24.9 ms EAR status contraindicated
+ok  retrieve-absent-timestamp  honest                   want pass got pass         affirming       27.6 ms 
+ok  retrieve-absent-timestamp  other Target             want fail got fail         contraindicated    25.6 ms EAR status contraindicated
+ok  retrieve-absent-timestamp  other RRP identifier     want fail got fail         contraindicated    25.2 ms EAR status contraindicated
+ok  retrieve-absent-timestamp  other CSR / CEKpub       want fail got fail         contraindicated    26.5 ms EAR status contraindicated
+ok  retrieve-absent-timestamp  other freshness element  want fail got fail         contraindicated    26.8 ms EAR status contraindicated
+ok  enroll-absent-none         honest                   want pass got pass         affirming       28.0 ms 
+ok  enroll-absent-none         other Target             want fail got fail         contraindicated    31.6 ms EAR status contraindicated
+ok  enroll-absent-none         other RRP identifier     want fail got fail         contraindicated    26.8 ms EAR status contraindicated
+ok  enroll-absent-none         other CSR / CEKpub       want fail got fail         contraindicated    24.5 ms EAR status contraindicated
+ok  enroll-absent-none         other freshness element  want fail got fail         contraindicated    25.0 ms EAR status contraindicated
+ok  retrieve-absent-none       honest                   want pass got pass         affirming       27.4 ms 
+ok  retrieve-absent-none       other Target             want fail got fail         contraindicated    25.4 ms EAR status contraindicated
+ok  retrieve-absent-none       other RRP identifier     want fail got fail         contraindicated    25.1 ms EAR status contraindicated
+ok  retrieve-absent-none       other CSR / CEKpub       want fail got fail         contraindicated    24.4 ms EAR status contraindicated
+ok  retrieve-absent-none       other freshness element  want fail got fail         contraindicated    25.7 ms EAR status contraindicated
+50 checks, 0 not as expected; written /Users/serhiinikolaichuk/dev/attestation-bench/hwcheck/evidence/20261007T170259Z-aws-sev-snp/rrpverify-service.json

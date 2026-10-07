@@ -1,0 +1,55 @@
+{
+ "made": {
+  "not_before": 1791392275,
+  "not_after": 1791392283
+ },
+ "guest_clock": "the time service stopped: chrony; the clock set at 1791392277 (guest), to 1791392577, 300 s ahead\nthe clock set back at 1791392581 (guest), to 1791392281; the time service started again: chrony\n",
+ "results": [
+  {
+   "target": "https://db-time.tacra.example",
+   "rrp": "ca-gateway",
+   "mode": "enroll",
+   "case": "enroll-absent-timestamp",
+   "timestamp": 1791392577,
+   "max_age_s": 120,
+   "clock_skew_s": 5,
+   "initiate": {
+    "status": 200,
+    "answer": "{\"freshness_kind\":\"absent-timestamp\",\"rrp_id\":\"https://ca1.tacra.example\",\"max_age\":120,\"acceptable_evidence\":[\"application/vnd.veraison.tsm-report+cbor\"],\"required_bindings\":[\"binding-input\"],\"acceptable_csk\":[\"ecdsa-p256-sha256\"],\"mode\":\"enroll\"}"
+   },
+   "at_once": {
+    "at": 1791392373.474,
+    "status": 409,
+    "answer": "409 RRP ca: freshness: fresh: freshness element is not valid now: timestamp 2026-10-07T17:02:57Z outside [now-2m0s, now+5s]"
+   },
+   "later": {
+    "at": 1791392578.005,
+    "status": 200,
+    "answer": "MIICswYJKoZIhvcNAQcCoIICpDCCAqACAQExADALBgkqhkiG9w0BBwGgggKGMIICgjCCAiigAwIB\r\nAgIQP7qebuglz//0zi0SxBgQizAKBggqhkjOPQQDAjBCMRcwFQYDVQQKEw5UQUNSQSBiZW5jaCBD\r\nQTEnMCUGA1UEAxMeVEFDUkEgYmVuY2ggQ0EgSW50ZXJtZWRpYXRlIENBMB4XDTI2MTAwNzE3MDE1\r\nOFoXDTI2MTAwNzE4MDI1OFowKjEoMCYGA1UEAxMfcGF5bWVudHMud29ya2xvYWQudG"
+   }
+  },
+  {
+   "target": "https://ledger-time.tacra.example",
+   "rrp": "vault-gateway",
+   "mode": "retrieve",
+   "case": "retrieve-absent-timestamp",
+   "timestamp": 1791392581,
+   "max_age_s": 120,
+   "clock_skew_s": 5,
+   "initiate": {
+    "status": 200,
+    "answer": "{\"freshness_kind\":\"absent-timestamp\",\"rrp_id\":\"https://vault1.tacra.example\",\"max_age\":120,\"acceptable_evidence\":[\"application/vnd.veraison.tsm-report+cbor\"],\"required_bindings\":[\"binding-input\"],\"acceptable_cek\":[\"MLKEM768-P256+HKDF-SHA256+AES-256-GCM\"],\"mode\":\"retrieve\"}"
+   },
+   "at_once": {
+    "at": 1791392373.506,
+    "status": 409,
+    "answer": "409 RRP vault: freshness: fresh: freshness element is not valid now: timestamp 2026-10-07T17:03:01Z outside [now-2m0s, now+5s]"
+   },
+   "later": {
+    "at": 1791392578.071,
+    "status": 200,
+    "answer": "{\"container\":\"hpke-base-signed\",\"suite\":{\"kem\":\"MLKEM768-P256\",\"kdf\":\"HKDF-SHA256\",\"aead\":\"AES-256-GCM\",\"sig\":\"ECDSA-P256-SHA256\"},\"enc\":\"Y1QqZrktgelr1FhJFVcBHloXTihYsqvOJeNBluOsxFzm0Zrgk6YZXCR94hhDaj29vEV78nJMdxlo3I_0q_6ZImkumhOxQ2VdMErF1jMp-Md7TAMTJd_KxuupKfdJvLNgAt9_wvrMJiG6HRvzwouToeL7860u-HU8Ak"
+   }
+  }
+ ]
+}

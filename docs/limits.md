@@ -51,8 +51,30 @@ Read this page before you cite a result.
 
 ## Time
 
-The `absent-timestamp` kind takes the guest's own clock as the trusted clock the draft calls for. Whether a confidential
-VM's clock can be trusted depends on the platform and its configuration; the bench does not test it.
+- **`absent-timestamp` is only as fresh as the guest's clock, and nothing on these platforms makes that clock
+  trustworthy.** The kind takes the guest's own wall clock as the trusted clock the draft calls for. On SEV-SNP and
+  TDX the guest's date comes from outside it: from the host, through kvm-clock and the RTC, or from the cloud's time
+  service. AMD's Secure TSC and TDX keep the host from rescaling or rewinding the guest's TSC after launch, a counter,
+  not its date ([the Linux Secure TSC series](https://patchwork.kernel.org/project/kvm/cover/20250106124633.1418972-1-nikunj@amd.com/)).
+  Google Cloud and AWS serve time by plain NTP, from the metadata server and the Amazon Time Sync Service, with no NTS
+  ([RFC 8915](https://www.rfc-editor.org/rfc/rfc8915)) and no keys
+  ([Google Cloud](https://cloud.google.com/compute/docs/instances/configure-ntp),
+  [AWS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/set-time.html)).
+- **What the guests' clocks rested on**, in the attack runs of 7 October 2026 (`clock.txt`): on Google Cloud SEV-SNP
+  and on AWS the clocksource `tsc`, after `kvm-clock` early in boot, and `SEV: Status: SEV SEV-ES SEV-SNP` without
+  SecureTSC; on Google Cloud TDX `tsc`, with no `kvm-clock` offered. Every guest ran chrony from its cloud's service
+  (169.254.169.254 on Google Cloud, 169.254.169.123 on AWS), none of its sources authenticated (`chronyc authdata`).
+  Each guest's clock was within about a second and a half of the RRP's (`clock-offset.txt`, as precise as one SSH
+  round trip: `hwcheck/evidence/20261007T165412Z-gcp-sev-snp`, `…170259Z-aws-sev-snp`, `…170913Z-gcp-tdx`).
+- **The exposure, shown on each platform.** Every attack run pre-plays absent-timestamp Evidence: the guest's clock is
+  set 300 s ahead, here by the guest's root, as a host that serves the guest its time could also do; Evidence is made
+  for an Enrollment at db-time and a Retrieval at ledger-time; the clock is put back. Presented through the EST server
+  at once, both RRPs refused it (409: the timestamp outside their window of `max_age` 120 s and `clock_skew` 5 s).
+  Presented again when their clock reached the timestamp, both took it: a certificate issued and a secret released,
+  for Evidence 295, 293 and 291 s old on Google Cloud SEV-SNP, AWS and Google Cloud TDX
+  (`preplay.json` in the same three runs). The RRP's window bounds the Evidence's age by the guest's clock, not by
+  real time. The verdict reports it as an exposure, not a pass. Freshness from an RRP-supplied element
+  (`present-nonce`, `present-epoch`) does not rest on the guest's clock.
 
 ## Keys and secrets
 

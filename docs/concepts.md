@@ -77,9 +77,9 @@ How the RRP knows the Evidence is recent. Five kinds (draft section 2.1):
 "Present" kinds get their freshness element from the RRP in a first round trip (Initiate-Credential-Acquisition);
 "absent" kinds need no round trip. Each Target in a pack names its kind.
 
-`absent-timestamp` is only as fresh as the guest's clock, which the draft requires to be trusted. The bench takes the
-clock of the confidential VM as it is and does not test whether it can be trusted on that platform
-([limits.md](limits.md), "Time").
+`absent-timestamp` is only as fresh as the guest's clock, which the draft requires to be trusted. No platform the bench
+runs on makes it so, and every attack run shows what follows: Evidence made with the guest's clock set ahead is
+accepted later, older than the Target's `max_age` ([limits.md](limits.md), "Time").
 
 ## Passport and Background Check
 

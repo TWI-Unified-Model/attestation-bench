@@ -1,0 +1,14 @@
+{
+ "case": "retrieve-present-epoch",
+ "mode": "retrieve",
+ "freshness_kind": "present-epoch",
+ "target": "https://db.tacra.example",
+ "relying_party": "https://vault1.tacra.example",
+ "freshness_element_b64": "_OhQbyfl2NtkmIvlfZnxBqPjYzA0xKuxNdnvIwviiOg",
+ "binding_value_hex": "a1267ad60f3e2da098bb70b50e148b603f13a4043f8cec0d2ca9e37979a058d0f78fcbf5a2fea9a4856e1d0f96f2c4be464350e07833bdbb51d13938ef5dbb13",
+ "evidence_ms": 8.622,
+ "token_bytes": 5989,
+ "report_sha256": "9b005d85fcf14143b87778acfb58d19bd33adca1cb653b14fc1d4c01ddd07e3a",
+ "signing_key": "VCEK",
+ "chip_id_prefix": "72096f47f0c0900a"
+}
