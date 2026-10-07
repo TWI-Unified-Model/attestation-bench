@@ -59,6 +59,11 @@ wait_port() { for _ in $(seq 1 120); do nc -z 127.0.0.1 "$1" 2>/dev/null && retu
 case "${1:-status}" in
   config) config ;;
   start)
+    # every service stopped before: what they start with is recorded (make setup compares it later)
+    none_running=yes
+    for s in step-ca vault tdx-verifier sim-verifier ca-gateway ca-gateway-2 vault-gateway est-server rup; do
+      if running "$s"; then none_running=; fi
+    done
     "$HERE/e2e/scripts/veraison-local.sh" start
     start_one step-ca step-ca "$B/step/config/ca.json" --password-file "$B/secrets/step-ca-password"
     start_one vault vault server -config="$B/vault/config.hcl"
@@ -76,12 +81,14 @@ case "${1:-status}" in
     start_one est-server "$BIN/estserver" -config "$B/config/est-server.json"
     start_one rup "$BIN/rup" -listen 127.0.0.1:19443 -cert "$B/tls/rup.crt" -key "$B/tls/rup.key" \
       -client-ca "$B/workload-ca.pem" -allow payments.workload.tacra.example -api-key-file "$B/secrets/rup-api-key"
-    wait_port 18443; wait_port 19443 ;;
+    wait_port 18443; wait_port 19443
+    if [ -n "$none_running" ]; then bench_fingerprint >"$B/started.fingerprint"; fi ;;
   stop)
     for s in rup est-server vault-gateway ca-gateway-2 ca-gateway sim-verifier tdx-verifier vault step-ca; do
       if running "$s"; then pid="$(cat "$B/$s.pid")"; kill "$pid"; for _ in 1 2 3 4 5 6 7 8 9 10; do kill -0 "$pid" 2>/dev/null || break; sleep 0.5; done; echo "$s stopped"; fi
       rm -f "$B/$s.pid"
     done
+    rm -f "$B/started.fingerprint"
     "$HERE/e2e/scripts/veraison-local.sh" stop ;;
   status)
     "$HERE/e2e/scripts/veraison-local.sh" status

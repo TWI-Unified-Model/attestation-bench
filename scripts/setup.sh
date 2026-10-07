@@ -264,6 +264,14 @@ veraison_provision() {
 
 start_all() {
   bench_say "10/10 starting the bench"
+  # services that run older programs or configuration than $B/bin and $B/config hold now (bench.sh start records what
+  # it started them with) are restarted, all of them
+  local status
+  status="$("$BENCH" status)" # not piped into grep -q: with pipefail, grep's early exit would fail the pipe
+  if grep -q ' running ' <<<"$status" && [ "$(bench_fingerprint)" != "$(cat "$B/started.fingerprint" 2>/dev/null)" ]; then
+    echo "  programs or configuration changed since the services started: restarting them"
+    "$BENCH" stop >>"$LOG" 2>&1 || fail "e2e/scripts/bench.sh stop"
+  fi
   "$BENCH" start || fail "e2e/scripts/bench.sh start"
   "$BENCH" status
 }

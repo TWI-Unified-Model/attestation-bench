@@ -64,6 +64,24 @@ bench_sha256() {
   if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | cut -d' ' -f1; else shasum -a 256 "$1" | cut -d' ' -f1; fi
 }
 
+# bench_fingerprint: one SHA-256 over the bench's programs and configuration (BENCH_HOME/bin and /config), names and
+# contents. bench.sh start records it when it starts every service; make setup compares, and restarts services that
+# run older programs or configuration.
+bench_fingerprint() {
+  python3 - "$BENCH_HOME" <<'PY'
+import hashlib, os, sys
+h = hashlib.sha256()
+for top in ("bin", "config"):
+    for root, dirs, files in os.walk(os.path.join(sys.argv[1], top)):
+        dirs.sort()
+        for f in sorted(files):
+            p = os.path.join(root, f)
+            with open(p, "rb") as fh:
+                h.update(os.path.relpath(p, sys.argv[1]).encode() + b"\0" + fh.read())
+print(h.hexdigest())
+PY
+}
+
 # bench_seal DIR: writes DIR/sha256sums.txt, the SHA-256 of every other file under DIR in path order. It is a run
 # directory's last step: later, `shasum -a 256 -c sha256sums.txt` (or sha256sum -c) inside DIR shows that nothing in
 # it has changed.

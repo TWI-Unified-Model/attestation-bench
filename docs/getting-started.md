@@ -74,8 +74,9 @@ there and only check it. It ends with:
 The bench is up in /Users/you/.attestation-bench. Next: make status, make check-mtls.
 ```
 
-`make setup` is safe to run again at any time. If a step fails, it says which, and the details are in
-`~/.attestation-bench/logs/setup.log`.
+`make setup` is safe to run again at any time, and it is how you update the bench after `git pull`: it builds again
+what the new code changed, Veraison included, and restarts the services when their programs or configuration
+changed. If a step fails, it says which, and the details are in `~/.attestation-bench/logs/setup.log`.
 
 ## 5. See what runs
 

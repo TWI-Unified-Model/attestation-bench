@@ -61,19 +61,21 @@ VM's clock can be trusted depends on the platform and its configuration; the ben
 
 ## Third-party versions
 
-- **Known vulnerabilities in the pinned dependencies.** `govulncheck` (golang.org/x/vuln v1.8.0, 7 October 2026)
-  finds these in code the bench reaches, each fixed in a later release:
-  - Veraison, as pinned with our patches: `google.golang.org/grpc` v1.79.3 (GO-2026-6061, GO-2026-6348, GO-2026-6443;
-    fixed in v1.82.1, v1.83.1, v1.82.2), `go.opentelemetry.io/otel/sdk` v1.39.0 (GO-2026-4394, GO-2026-6505; fixed in
-    v1.40.0, v1.45.0), `golang.org/x/text` v0.37.0 (GO-2026-5970; fixed in v0.39.0). The bench's own modules, which
-    build Veraison's code in, use fixed releases (grpc v1.83.2, x/text v0.41.0).
-  - The EST server and the bench's `e2e` module: `github.com/go-chi/chi` v4.1.2 (GO-2026-4316, an open redirect in its
-    RedirectSlashes middleware, which the code does not use: only the package's initialisation is reached). No release
-    of chi v4 fixes it.
+- **No known vulnerability reached, two left unreached.** `govulncheck` (golang.org/x/vuln v1.8.0, 7 October 2026)
+  finds no vulnerability that the bench's code reaches: none in its eleven Go modules (the three builds of `hwcheck`
+  among them), none in the programs it deploys from Veraison and the EST server. Our patches moved them to fixed
+  releases:
+  - Veraison, patch 0007: `google.golang.org/grpc` v1.79.3 to v1.83.2 (GO-2026-6061, GO-2026-6348, GO-2026-6443),
+    `go.opentelemetry.io/otel` v1.39.0 to v1.45.0 (GO-2026-4394, GO-2026-6505), `golang.org/x/text` v0.37.0 to
+    v0.41.0 (GO-2026-5970), and, for findings not reached, `filippo.io/edwards25519` v1.1.1, `golang.org/x/crypto`
+    v0.56.0, `golang.org/x/mod` v0.40.0.
+  - The EST server, patch 0007: `github.com/go-chi/chi` v4.1.2, which no release fixes (GO-2026-4316), to
+    `github.com/go-chi/chi/v5` v5.3.2, and `golang.org/x/crypto` v0.56.0; the bench's `e2e` module follows.
 
-  The trust zone's services listen on 127.0.0.1; in the Demo Bank, the one port of the trust zone that workloads reach
-  is the EST server's. Updating a component changes the tree the hardware runs tested, so it waits for a release with
-  those runs repeated.
+  Left, and not reached: GO-2026-5932 in `golang.org/x/crypto` (no fixed release exists) and, in Veraison,
+  GO-2025-3660 in `github.com/open-policy-agent/opa` v0.68.0 (fixed in v1.4.0, a major version that changes how Rego
+  policies are read). The builds `hwcheck` compares with (Veraison as forked, and with the DER fixes only) keep their
+  upstream pins: they are compared, never deployed.
 
 ## Coverage
 

@@ -84,6 +84,11 @@ release's code; the hardware runs identical to gate 5's, check by check).
   AMD's CRL, fetched once per validity period; the check fails closed. Each check that passes is logged by the
   plugin at INFO; Veraison's trust service records its plugins' INFO lines at debug level, so at the bench's log
   level (info) they are not in `vts.log`, and a run shows the check by the plugin's build in `code-revs.txt`.
+- Veraison and the EST server ran releases with known vulnerabilities that their code reaches: grpc, otel and x/text
+  in Veraison, chi v4 in the EST server, which no chi v4 release fixes. Patches 0007 move them to fixed releases (chi
+  to v5); `govulncheck` now finds no vulnerability reached anywhere in the bench ([docs/limits.md](docs/limits.md)).
+- `make setup` left services running the programs and configuration they started with after it rebuilt them.
+  `make start` now records what it starts the services with, and `make setup` restarts them when that changed.
 - `make setup` kept a Veraison built from older sources after a patch changed them. The deployment now records the
   source trees it was built from, Veraison's and go-gen-ref's, and `make setup` builds it again when either
   changes, keeping its keys, certificates and stores.
