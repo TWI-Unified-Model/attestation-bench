@@ -709,7 +709,7 @@ the TWI components.
 ## See Also
 
 - [Installation Prerequisites](readme_install_prereq.md) - Install Go and protoc
-- [deploy/config/README.md](deploy/config/README.md) - Configuration directory structure
+- [deploy/config/README.md](../../deploy/config/README.md) - Configuration directory structure
 - [README.md](README.md) - Main project overview
-- [proto/cai/v1/cai.proto](proto/cai/v1/cai.proto) - Attester-facing CAI gRPC (`AcquireCredential`)
-- [docker-compose.yml](docker-compose.yml) - Client + CAI sidecar compose file
+- [proto/cai/v1/cai.proto](../../proto/cai/v1/cai.proto) - Attester-facing CAI gRPC (`AcquireCredential`)
+- [docker-compose.yml](../../docker-compose.yml) - Client + CAI sidecar compose file

@@ -1,0 +1,38 @@
+attestation-bench
+
+This repository holds the TACRA proof of concept of the TWI SIG (github.com/TWI-Unified-Model/tacra) and a test bench
+built on it. It is licensed under the Apache License, Version 2.0 (LICENSE). Who wrote each part is recorded in the
+git history.
+
+
+Third-party source code the bench fetches during setup and patches. It is never copied into this repository: each
+component's UPSTREAM file names the repository and commit, and patches/ holds only our changes.
+
+  GlobalSign EST, as forked by the TWI SIG          MIT License, Copyright (c) 2020 GMO GlobalSign, Inc.
+    https://github.com/TWI-Unified-Model/globalsign-est        third_party/globalsign-est/
+
+  Veraison services, as forked by the TWI SIG       Apache License 2.0
+    https://github.com/TWI-Unified-Model/veraison-services     third_party/veraison-services/
+
+  go-gen-ref                                        no licence file upstream; fetched from its author's
+    https://github.com/jraman567/go-gen-ref                    repository, of which this repository holds only
+                                                               our patch: third_party/go-gen-ref/
+
+
+Programs the bench installs at setup or for its checks, each from its origin, at the version scripts/versions.env or
+scripts/requirements-dev.txt pins, under its own licence; none is redistributed here.
+
+  Smallstep step and step-ca                        Apache License 2.0
+  HashiCorp Vault                                   Business Source License 1.1 (the official release)
+  protoc-gen-go                                     BSD 3-Clause, The Go Authors
+  protoc-gen-go-grpc                                Apache License 2.0
+  protoc-gen-go-json                                MIT License
+  golangci-lint                                     GNU General Public License 3.0
+  ShellCheck                                        GNU General Public License 3.0
+  actionlint                                        MIT License
+  ruff                                              MIT License
+
+
+Libraries: the Go modules each go.mod requires, and the Python packages of scripts/requirements.txt (cryptography:
+Apache License 2.0 or BSD 3-Clause; cbor2: MIT License), are fetched by their package managers under their own
+licences.

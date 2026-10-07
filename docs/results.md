@@ -1,0 +1,88 @@
+# Reading a run
+
+Every run writes one directory: under `~/.attestation-bench/runs/` by default, or under `RUNS_DIR`. Its name says when
+it started (UTC) and what it was, for example `20261006T222601Z-gcp-sev-snp-e2e-passport`. The reference runs behind
+the numbers in these docs are kept in the repository, under `e2e/evidence/` and `hwcheck/evidence/`.
+
+## Is it intact?
+
+The run's last step writes `sha256sums.txt`: the SHA-256 of every other file in the directory. Check it from inside
+the directory:
+
+```bash
+shasum -a 256 -c sha256sums.txt        # or: sha256sum -c sha256sums.txt
+```
+
+Every line must end in `OK`. A file changed or removed since the run shows `FAILED`. (A `README.md` or a
+`compare-with-*.txt` added after the run, as the reference runs have, is not in the list.)
+
+## Files every run has
+
+| File | Holds |
+|---|---|
+| `code-rev.txt` or `code-revs.txt` | the bench's commit (`-dirty` if the code had uncommitted changes), and for end-to-end runs each third-party component's upstream commit and patches, and the deployed Veraison's build |
+| `binaries.sha256` | the SHA-256 of the programs the run built and ran |
+| `rats-model.txt` | `passport` or `background-check` |
+| `platform.txt` | on the stand-in TEE only: a reminder that it gives no security |
+| `sha256sums.txt` | the seal (above) |
+
+## `make demo`: `…-e2e-<model>`
+
+| File | Holds |
+|---|---|
+| `results.json` | one entry per Target: `target`, credential `type`, `ok`, `attempts`, `acquire_ms`, the Relying Party's answer (`rup_status`, `rup_response`) and, for certificates, `cert_names`, `cert_issuer`, `cert_serial`, `not_after` |
+| `e2e-attester.json` | the workload's configuration: Targets, RRP identifiers and public keys only |
+| `e2e-attester-stdout.txt`, `caapi-est.log` | what the workload and the CAS Client printed |
+| `bench-logs/` | each trust zone service's log lines for this run only |
+| `run-window.txt` | the run's start and end, in seconds since 1970 |
+| hardware only: `kernel.txt`, `machine-type.txt` (GCP) or `instance.txt` (AWS), `vm-deleted.txt` | the guest's kernel, the machine, and the record of its deletion |
+
+## `make attacks`: `…-local-sim-attacks`, `…-gcp-sev-snp`, `…-gcp-tdx`, `…-aws-sev-snp`
+
+| File | Holds |
+|---|---|
+| `handles.json` | the Freshness Handles the RRP minted for the run |
+| `enroll-<kind>/`, `retrieve-<kind>/` | per request: the Evidence (`evidence.tsm.cbor`), the CSR or CEKpub (`subject.der`), the claims, and `meta.json` (the Target, the RRP identifier, the freshness element, the binding value, and which key signed the report) |
+| `rrpverify-*.json`, `rrpverify-*.txt` | every check: the request (`case`), what was changed (`check`), what was expected (`want`), what happened (`got`), and whether that is as expected (`ok`); the `.txt` ends with the summary line |
+| `rrp-clock-window.txt` | the RRP's clock before and after the guest made its reports, in seconds since 1970: the window timestamps are checked against |
+| hardware: `amd-kds-*.pem` (SEV-SNP), `kernel.txt`, `dmesg-*.txt`, `vm-deleted.txt` | the vendor chain used, the guest's kernel and messages, the deletion record |
+
+The variant names in `rrpverify-*`: `sim` and `service` locally; on SEV-SNP `veraison-v015` (the bench's Veraison
+build), `veraison-fixed`, `veraison-fork` and `service` (the deployed Veraison); `tdx` on TDX.
+
+## `make redirect`: `…-<platform>-redirect`
+
+| File | Holds |
+|---|---|
+| `results.jsonl` | one line per case: the pass (`with-rrp-id`, `no-rrp-id`), the Freshness Kind, the RRP offered the Evidence (`ca1`, `ca2`), and the `result` (issued or not, the HTTP status, the RRP's reason) |
+| `with-rrp-id/`, `no-rrp-id/` | per pass: the Handles, the Targets, and each case's Evidence and request |
+
+To check the binding of every Enrollment yourself, character by character, with no Go code involved:
+
+```bash
+python3 hwcheck/scripts/recompute-binding.py <run directory> sev-snp     # or tdx, sim
+```
+
+## `make check-mtls`: `…-bench-mtls-<model>`
+
+`mtls.json` has one entry per check: the channel, the caller, the TLS version, what was expected and what happened.
+`run.log` is the printed table.
+
+## `make bank-…`: `…-demo-bank`
+
+`README.md` is the bank's report, written by `make bank-down` from everything below it: the machines, the code, each
+payment's steps and verdict, the server log lines for it, the endorsements, the ledger audit and the teardown.
+`runs/<stamp>-<kind>/` holds each payment: `report.json` (the payment service's steps), `verdict.txt`,
+`trust-logs/` and `core-logs/` (the servers' lines for that payment) and `vm-deleted.txt`.
+
+## Comparing two runs
+
+| Tool | Compares |
+|---|---|
+| `e2e/scripts/compare-e2e.py A/results.json B/results.json` | two end-to-end runs, Target by Target |
+| `hwcheck/scripts/compare-rrpverify.py A.json B.json` | two attack runs, check by check |
+| `hwcheck/scripts/compare-redirect.py [--ignore-platform] A/results.jsonl B/results.jsonl` | two redirect runs, case by case (`--ignore-platform` compares the stand-in with hardware) |
+| `e2e/scripts/compare-mtls.py A/mtls.json B/mtls.json` | two mTLS checks |
+
+Each prints what differs and exits 0 only when nothing does. Serial numbers, timings, nonces and other values that
+change by nature are not compared.

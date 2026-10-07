@@ -1,0 +1,52 @@
+# Google Cloud, AMD SEV-SNP
+
+```bash
+make demo     PLATFORM=gcp-snp
+make attacks  PLATFORM=gcp-snp
+make redirect PLATFORM=gcp-snp
+```
+
+## What you need
+
+- A Google Cloud project with billing and the Compute Engine API enabled.
+- The `gcloud` CLI, signed in (`gcloud auth login`), with the project set (`gcloud config set project <id>`) or given
+  as `GCP_PROJECT`.
+- Quota for 2 N2D vCPUs in the zone's region (`us-central1` by default).
+- The right to log in to the VM with administrator rights through OS Login: the scripts run the workload with `sudo`.
+  A project owner has it.
+
+`make doctor` checks that `gcloud` and `ssh` are installed.
+
+## What a run creates
+
+One VM: `n2d-standard-2`, minimum CPU platform AMD Milan, confidential compute type `SEV_SNP`, maintenance policy
+`TERMINATE`, Ubuntu 24.04 LTS (image family `ubuntu-2404-lts-amd64`), a 20 GB disk, OS Login, labelled
+`purpose=tacra-e2e`, `tacra-hwcheck` or `tacra-redir`. Its reports are signed by the chip's VCEK. It is deleted at the
+end and the deletion is checked.
+
+## What each experiment checks, and what to expect
+
+| Command | Checks | Result in the reference runs |
+|---|---|---|
+| `make demo` | the ten Targets end to end, through the EST server, with Veraison appraising each report | 10 of 10, Veraison `affirming` ten times ([Passport](../../e2e/evidence/20261006T222601Z-gcp-sev-snp-e2e-passport), [Background Check](../../e2e/evidence/20261006T223452Z-gcp-sev-snp-e2e-background-check)) |
+| `make attacks` | the honest reports and one changed input at a time, with Veraison's SEV-SNP appraisal in three builds, then through the deployed Veraison | ([run](../../hwcheck/evidence/20261006T224346Z-gcp-sev-snp)) see below |
+| `make redirect` | one Evidence offered to two Credential Authorities, with and without the RRP identifier | 20 of 20 cases as in [getting-started.md](../getting-started.md), step 9 ([run](../../hwcheck/evidence/20261006T225552Z-gcp-snp-redirect)) |
+
+`make attacks` appraises the same reports with three builds of Veraison's SEV-SNP scheme, to show what each fix
+changes (`third_party/veraison-services`):
+
+| Build | Result |
+|---|---|
+| `v015`: our patches on go-sev-guest v0.15.0, with AMD's roots | 162 checks, 0 not as expected |
+| `fixed`: the DER and signer-info fixes on the group's fork | 162 checks, 0 not as expected |
+| `fork`: the group's fork as it is | 142 checks, 60 not as expected: it refuses the reports' DER certificate table, which `fixed` and `v015` read |
+| the deployed Veraison, as an RRP asks it | 50 checks, 0 not as expected |
+
+"Not as expected" on the fork is the finding these runs record, not a failure of the run.
+
+## Notes
+
+- Google Cloud signs a launch endorsement for its SEV-SNP firmware; the approved launch's endorsement was checked
+  against Google's pinned root ([../../trust/README.md](../../trust/README.md)).
+- `CAS_OUTSIDE=1 make demo PLATFORM=gcp-snp` runs the CAS Client on your machine instead of inside the VM, the
+  configuration where the conduit is entirely outside the guest.

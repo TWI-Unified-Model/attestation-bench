@@ -8,6 +8,7 @@
 #   gofmt, go vet  every Go module (hwcheck under each of its three module files)
 #   golangci-lint  every Go module (.golangci.yml)
 #   ruff           the Python scripts: check, and format --check (ruff.toml)
+#   check-links    every relative link in the Markdown resolves
 #   actionlint     the CI workflows, and that their Go is GO_VERSION
 #
 # Not linted, kept as upstream has them: the TACRA proof of concept's deploy/ scripts, and its est module, whose test
@@ -89,6 +90,7 @@ check "go vet (hwcheck: go.patched.mod, go.v015.mod)" hwcheck_vet
 check "golangci-lint" go_each "$T/golangci-lint" run --show-stats=false ./...
 check "ruff check (${#py_files[@]} scripts)" "$BENCH_HOME/venv/bin/ruff" check "${py_files[@]}"
 check "ruff format" "$BENCH_HOME/venv/bin/ruff" format --check "${py_files[@]}"
+check "Markdown links" python3 scripts/check-links.py
 if [ -d .github/workflows ]; then
   check "actionlint" "$T/actionlint"
   check "CI's Go is GO_VERSION" ci_go_pinned
