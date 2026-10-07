@@ -114,6 +114,41 @@ bench_guest_run() {
   return "$rc"
 }
 
+# bench_require_up: exits unless every service of the bench runs (e2e/scripts/bench.sh status). What needs the running
+# trust zone (make test-live, the attack runs' checks through the live verifiers and their pre-play) fails without
+# it; it never skips.
+bench_require_up() {
+  local status
+  status="$("$BENCH_REPO/e2e/scripts/bench.sh" status 2>&1)" || true
+  if [ -z "$status" ] || grep -qv ' running' <<<"$status"; then
+    printf '%s\n' "$status" | sed 's/^/  /' >&2
+    bench_die "the bench is not up: make setup, or make start, first"
+  fi
+}
+
+# bench_clock_offset FILE CMD...: the guest's clock against this machine's, the RRP's, over one call through CMD (an
+# SSH command that takes the remote command as its last argument): this machine's clock before the call, the guest's
+# during it, this machine's after. The offset is the guest's minus the middle of the call, within half its length.
+bench_clock_offset() {
+  local file=$1 t0 g t1
+  shift
+  t0="$(python3 -c 'import time; print(f"{time.time():.3f}")')"
+  g="$("$@" 'date -u +%s.%N' 2>/dev/null | tail -1)" || g=""
+  t1="$(python3 -c 'import time; print(f"{time.time():.3f}")')"
+  python3 - "$t0" "$g" "$t1" >"$file" <<'PY'
+import sys
+
+t0, g, t1 = float(sys.argv[1]), sys.argv[2].strip(), float(sys.argv[3])
+print(f"this machine (the RRP), before the call: {t0:.3f}")
+print(f"the guest, during it: {g or 'no answer'}")
+print(f"this machine, after it: {t1:.3f}")
+try:
+    print(f"guest minus RRP: {float(g) - (t0 + t1) / 2:+.3f} s, within {(t1 - t0) / 2:.3f} s")
+except ValueError:
+    print("guest minus RRP: not measured, the guest did not answer")
+PY
+}
+
 # bench_sha256 FILE: the hex digest, with whichever tool the system has
 bench_sha256() {
   if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | cut -d' ' -f1; else shasum -a 256 "$1" | cut -d' ' -f1; fi

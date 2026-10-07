@@ -3,21 +3,26 @@
 # wrote with rrpverify against the veraison-services fork as it is, with the DER and signer-info fixes, and with
 # those fixes on go-sev-guest v0.15.0 with AMD's roots for VCEK and VLEK (third_party/veraison-services). Creates
 # a throwaway key pair and a security group that admits SSH from this machine's address only, launches one
-# instance with AmdSevSnp=enabled, runs hwrun as root (configfs-tsm), copies the output back, terminates the
-# instance, deletes the key pair and the group, and checks that all three are gone.
+# instance with AmdSevSnp=enabled, runs hwrun as root (configfs-tsm), records what the guest's clock rests on and its
+# offset from this machine's, makes absent-timestamp Evidence with the guest's clock set ahead (the pre-play check),
+# copies the output back, terminates the instance, deletes the key pair and the group, and checks that all three are
+# gone. Then the RRP's checks, through the bench's live Veraison too, and the pre-play Evidence presented to the live
+# RRPs (hwcheck/scripts/preplay.py).
 #
 #   hwcheck/scripts/aws-snp-hwcheck.sh        (make attacks PLATFORM=aws-snp)
 #
 # AWS_REGION, AWS_AZ: where the instance goes (scripts/lib.sh). RUNS_DIR: where the run directory goes (default
 # BENCH_HOME/runs). Env: TYPE (default c6a.large), AMI_PARAM (SSM parameter of the image; default Ubuntu 24.04),
-# SSH_USER. Cost: one c6a.large for ~10 minutes.
+# SSH_USER. Needs the running bench (make setup). Cost: one c6a.large for ~15 minutes.
 # The run ends with its verdict (scripts/verdict.py) and exits 1 unless every check came out as expected.
 set -euo pipefail
 # shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
 [ $# -eq 0 ] || bench_die "no arguments: the region and zone come from AWS_REGION and AWS_AZ (scripts/lib.sh)"
 bench_aws
+bench_require_up # the checks through the live Veraison, and the pre-play, need the trust zone
 REGION="$AWS_REGION" AZ="$AWS_AZ"
+AHEAD=300 # how far ahead the guest's clock is set for the pre-play, in seconds
 TYPE="${TYPE:-c6a.large}"
 AMI_PARAM="${AMI_PARAM:-/aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id}"
 SSH_USER="${SSH_USER:-ubuntu}"
@@ -109,8 +114,9 @@ ls -ld /dev/sev-guest /sys/kernel/config/tsm/report
 uname -r
 ' | tee "$OUT/provision.txt"
 
-echo "== copy hwrun and the handles"
-bench_retry "$OUT/run-ssh.stderr" "${SCP[@]}" "$BIN/hwrun" "$OUT/handles.json" "$SSH_USER@$IP:~/" >/dev/null
+echo "== copy hwrun, the handles and the guest's scripts"
+bench_retry "$OUT/run-ssh.stderr" "${SCP[@]}" "$BIN/hwrun" "$OUT/handles.json" "$HW/scripts/guest-clock.sh" \
+  "$HW/scripts/preplay-guest.sh" "$SSH_USER@$IP:~/" >/dev/null
 
 echo "== run hwrun as root"
 NB="$(date -u +%s)"
@@ -119,13 +125,28 @@ bench_guest_run "$OUT/run-ssh.stderr" "
 set -e
 sudo ~/hwrun -handles ~/handles.json -out /root/hwrun-out -burst 100 2>&1
 sudo sh -c 'cd /root/hwrun-out && uname -a > kernel.txt && (dmesg 2>/dev/null | grep -i -E \"sev|snp|tsm\" > dmesg-sev.txt || true) && date -u +%s > guest-clock.txt'
+sudo bash ~/guest-clock.sh /root/hwrun-out
 rm -rf ~/hwrun-out; sudo cp -r /root/hwrun-out ~/hwrun-out; sudo chown -R \$(id -u):\$(id -g) ~/hwrun-out
 " "${SSH[@]}" | tee "$OUT/hwrun-stdout.txt"
 NA="$(date -u +%s)"
 echo "$NB $NA" > "$OUT/rrp-clock-window.txt"
+bench_clock_offset "$OUT/clock-offset.txt" "${SSH[@]}"
+cat "$OUT/clock-offset.txt"
+
+echo "== pre-play: absent-timestamp Evidence made with the guest's clock $AHEAD s ahead"
+PB="$(date -u +%s)"
+bench_guest_run "$OUT/run-ssh.stderr" "
+set -e
+sudo bash ~/preplay-guest.sh $AHEAD /root/preplay sev-snp https://db-time.tacra.example https://ledger-time.tacra.example 2>&1
+rm -rf ~/preplay; sudo cp -r /root/preplay ~/preplay; sudo chown -R \$(id -u):\$(id -g) ~/preplay
+" "${SSH[@]}" | tee "$OUT/preplay-stdout.txt"
+PA="$(date -u +%s)"
 
 echo "== copy the output back"
 bench_retry "$OUT/run-ssh.stderr" "${SCP[@]}" -r "$SSH_USER@$IP:~/hwrun-out/*" "$OUT/" >/dev/null
+mkdir -p "$OUT/preplay"
+bench_retry "$OUT/run-ssh.stderr" "${SCP[@]}" -r "$SSH_USER@$IP:~/preplay/*" "$OUT/preplay/" >/dev/null
+echo "$PB $PA" > "$OUT/preplay/rrp-clock-window.txt"
 trap 'rm -rf "$BIN"' EXIT
 cleanup
 
@@ -136,12 +157,11 @@ for v in fork fixed v015; do
     -not-before "$NB" -not-after "$NA" -out "$OUT/rrpverify-veraison-$v.json" 2>"$OUT/rrpverify-veraison-$v.stderr.log" \
     | tee "$OUT/rrpverify-veraison-$v.txt"
 done
-if curl -sf --cacert "$VERAISON_DEPLOYMENT/certs/rootCA.crt" --cert "$BENCH_HOME/tls/clients/ca-gateway.crt" \
-  --key "$BENCH_HOME/tls/clients/ca-gateway.key" https://localhost:8443/.well-known/veraison/verification >/dev/null 2>&1; then
-  echo "== RRP verification through the deployed Veraison service (https://localhost:8443)"
-  "$BIN/rrpverify-fixed" service -in "$OUT" -handles "$OUT/handles.json" -not-before "$NB" -not-after "$NA" \
-    -out "$OUT/rrpverify-service.json" -save-ears "$OUT/ears" | tee "$OUT/rrpverify-service.txt"
-fi
+echo "== RRP verification through the deployed Veraison service (https://localhost:8443)"
+"$BIN/rrpverify-fixed" service -in "$OUT" -handles "$OUT/handles.json" -not-before "$NB" -not-after "$NA" \
+  -out "$OUT/rrpverify-service.json" -save-ears "$OUT/ears" | tee "$OUT/rrpverify-service.txt"
+echo "== pre-play: the Evidence presented to the live RRPs, at once and when their clock reaches it"
+python3 "$HW/scripts/preplay.py" "$OUT" | tee "$OUT/preplay.txt" || true # verdict.py judges what it wrote
 rc=0
 python3 "$BENCH_REPO/scripts/verdict.py" attacks "$OUT" --out "$OUT/verdict.txt" || rc=$?
 bench_seal "$OUT"

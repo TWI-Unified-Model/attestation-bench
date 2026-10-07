@@ -2,20 +2,24 @@
 # Runs hwrun in a live AMD SEV-SNP guest on Google Cloud and verifies what it wrote with rrpverify against the
 # veraison-services fork as it is, with the DER and signer-info fixes, and with those fixes on go-sev-guest v0.15.0
 # with AMD's roots for VCEK and VLEK (third_party/veraison-services). Creates the VM, mints the Freshness
-# Handles (RRP side), copies hwrun and the handles in, runs it as root (configfs-tsm), copies the output back,
-# deletes the VM and checks that it is gone.
+# Handles (RRP side), copies hwrun and the handles in, runs it as root (configfs-tsm), records what the guest's clock
+# rests on and its offset from this machine's, makes absent-timestamp Evidence with the guest's clock set ahead (the
+# pre-play check), copies the output back, deletes the VM and checks that it is gone. Then the RRP's checks, through
+# the bench's live Veraison too, and the pre-play Evidence presented to the live RRPs (hwcheck/scripts/preplay.py).
 #
 #   hwcheck/scripts/gcp-snp-hwcheck.sh        (make attacks PLATFORM=gcp-snp)
 #
 # GCP_PROJECT, GCP_ZONE: where the VM goes (scripts/lib.sh). RUNS_DIR: where the run directory goes (default
-# BENCH_HOME/runs). Cost: one n2d-standard-2 confidential VM for ~10 minutes.
+# BENCH_HOME/runs). Needs the running bench (make setup). Cost: one n2d-standard-2 confidential VM for ~10 minutes.
 # The run ends with its verdict (scripts/verdict.py) and exits 1 unless every check came out as expected.
 set -euo pipefail
 # shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
 [ $# -eq 0 ] || bench_die "no arguments: the project and zone come from GCP_PROJECT and GCP_ZONE (scripts/lib.sh)"
 bench_gcp
+bench_require_up # the checks through the live Veraison, and the pre-play, need the trust zone
 PROJECT="$GCP_PROJECT" ZONE="$GCP_ZONE"
+AHEAD=300 # how far ahead the guest's clock is set for the pre-play, in seconds
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 NAME="tacra-hwcheck-$(echo "$STAMP" | tr -d 'TZ' | cut -c3-12)"
 HW="$(cd "$(dirname "$0")/.." && pwd)"
@@ -71,9 +75,9 @@ ls -ld /dev/sev-guest /sys/kernel/config/tsm/report
 uname -r
 '
 
-echo "== copy hwrun and the handles"
-bench_retry "$OUT/run-ssh.stderr" gcloud compute scp "$BIN/hwrun" "$OUT/handles.json" "$NAME:~/" --project="$PROJECT" \
-  --zone="$ZONE" >/dev/null
+echo "== copy hwrun, the handles and the guest's scripts"
+bench_retry "$OUT/run-ssh.stderr" gcloud compute scp "$BIN/hwrun" "$OUT/handles.json" "$HW/scripts/guest-clock.sh" \
+  "$HW/scripts/preplay-guest.sh" "$NAME:~/" --project="$PROJECT" --zone="$ZONE" >/dev/null
 
 echo "== run hwrun as root"
 NB="$(date -u +%s)"
@@ -82,14 +86,30 @@ bench_guest_run "$OUT/run-ssh.stderr" "
 set -e
 sudo ~/hwrun -handles ~/handles.json -out /root/hwrun-out -burst 100 2>&1
 sudo sh -c 'cd /root/hwrun-out && uname -a > kernel.txt && (dmesg 2>/dev/null | grep -i -E \"sev|snp|tsm\" > dmesg-sev.txt || true) && (curl -s -H Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/machine-type > machine-type.txt || true) && date -u +%s > guest-clock.txt'
+sudo bash ~/guest-clock.sh /root/hwrun-out
 sudo chmod -R a+rX /root/hwrun-out; rm -rf ~/hwrun-out; sudo cp -r /root/hwrun-out ~/hwrun-out; sudo chown -R \$(id -u):\$(id -g) ~/hwrun-out
 " gcloud compute ssh "$NAME" --project="$PROJECT" --zone="$ZONE" --command | tee "$OUT/hwrun-stdout.txt"
 NA="$(date -u +%s)"
 echo "$NB $NA" > "$OUT/rrp-clock-window.txt"
+bench_clock_offset "$OUT/clock-offset.txt" gcloud compute ssh "$NAME" --project="$PROJECT" --zone="$ZONE" --command
+cat "$OUT/clock-offset.txt"
+
+echo "== pre-play: absent-timestamp Evidence made with the guest's clock $AHEAD s ahead"
+PB="$(date -u +%s)"
+bench_guest_run "$OUT/run-ssh.stderr" "
+set -e
+sudo bash ~/preplay-guest.sh $AHEAD /root/preplay sev-snp https://db-time.tacra.example https://ledger-time.tacra.example 2>&1
+sudo chmod -R a+rX /root/preplay; rm -rf ~/preplay; sudo cp -r /root/preplay ~/preplay; sudo chown -R \$(id -u):\$(id -g) ~/preplay
+" gcloud compute ssh "$NAME" --project="$PROJECT" --zone="$ZONE" --command | tee "$OUT/preplay-stdout.txt"
+PA="$(date -u +%s)"
 
 echo "== copy the output back"
 bench_retry "$OUT/run-ssh.stderr" gcloud compute scp --recurse "$NAME:~/hwrun-out/*" "$OUT/" --project="$PROJECT" \
   --zone="$ZONE" >/dev/null
+mkdir -p "$OUT/preplay"
+bench_retry "$OUT/run-ssh.stderr" gcloud compute scp --recurse "$NAME:~/preplay/*" "$OUT/preplay/" --project="$PROJECT" \
+  --zone="$ZONE" >/dev/null
+echo "$PB $PA" > "$OUT/preplay/rrp-clock-window.txt"
 trap 'rm -rf "$BIN"' EXIT
 cleanup
 
@@ -101,12 +121,11 @@ for v in fork fixed v015; do
     -not-before "$NB" -not-after "$NA" -out "$OUT/rrpverify-veraison-$v.json" 2>"$OUT/rrpverify-veraison-$v.stderr.log" \
     | tee "$OUT/rrpverify-veraison-$v.txt"
 done
-if curl -sf --cacert "$VERAISON_DEPLOYMENT/certs/rootCA.crt" --cert "$BENCH_HOME/tls/clients/ca-gateway.crt" \
-  --key "$BENCH_HOME/tls/clients/ca-gateway.key" https://localhost:8443/.well-known/veraison/verification >/dev/null 2>&1; then
-  echo "== RRP verification through the deployed Veraison service (https://localhost:8443)"
-  "$BIN/rrpverify-fixed" service -in "$OUT" -handles "$OUT/handles.json" -not-before "$NB" -not-after "$NA" \
-    -out "$OUT/rrpverify-service.json" -save-ears "$OUT/ears" | tee "$OUT/rrpverify-service.txt"
-fi
+echo "== RRP verification through the deployed Veraison service (https://localhost:8443)"
+"$BIN/rrpverify-fixed" service -in "$OUT" -handles "$OUT/handles.json" -not-before "$NB" -not-after "$NA" \
+  -out "$OUT/rrpverify-service.json" -save-ears "$OUT/ears" | tee "$OUT/rrpverify-service.txt"
+echo "== pre-play: the Evidence presented to the live RRPs, at once and when their clock reaches it"
+python3 "$HW/scripts/preplay.py" "$OUT" | tee "$OUT/preplay.txt" || true # verdict.py judges what it wrote
 rc=0
 python3 "$BENCH_REPO/scripts/verdict.py" attacks "$OUT" --out "$OUT/verdict.txt" || rc=$?
 bench_seal "$OUT"

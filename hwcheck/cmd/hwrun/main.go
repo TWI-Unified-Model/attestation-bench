@@ -17,7 +17,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/TWI-Unified-Model/tacra/platform"
@@ -66,6 +68,13 @@ func main() {
 	csrCN := flag.String("csr-cn", "workload.tacra.example", "the CSR's common name (the identity to certify)")
 	handlesPath := flag.String("handles", "", "Freshness Handles minted by the RRP (rrpverify mint); random if empty")
 	burst := flag.Int("burst", 0, "after the cases, time this many present-nonce Enrollment reports")
+	// onlyKinds and onlyModes limit the cases: the pre-play check makes absent-timestamp Evidence alone, one mode per
+	// Target, while the guest's clock runs ahead (hwcheck/scripts/preplay.sh)
+	onlyKinds := flag.String("kinds", "", "comma-separated Freshness Kinds to make Evidence for (default: all five)")
+	onlyModes := flag.String("modes", "", "comma-separated modes, enroll and retrieve (default: both)")
+	// cekAlg is the CEK's algorithm for Retrieval: a Target that takes the hpke-base-signed container alone (the
+	// bench's ledger-time) needs an MLKEM768-P256 CEK
+	cekAlg := flag.String("cek", "ecdh-p256", "the CEK for Retrieval: ecdh-p256 or mlkem768-p256")
 	tee := flag.String("tee", "sev-snp", "sev-snp or tdx")
 	flag.Parse()
 	must(os.MkdirAll(*out, 0o755))
@@ -109,9 +118,35 @@ func main() {
 		{"absent-epoch", platform.FreshnessKindAbsentEpoch}, {"absent-timestamp", platform.FreshnessKindAbsentTimestamp},
 		{"absent-none", platform.FreshnessKindAbsentNone},
 	}
+	if *onlyKinds != "" {
+		want := strings.Split(*onlyKinds, ",")
+		kinds = slices.DeleteFunc(kinds, func(k struct {
+			name string
+			kind platform.FreshnessKind
+		}) bool {
+			return !slices.Contains(want, k.name)
+		})
+		if len(kinds) != len(want) {
+			must(fmt.Errorf("-kinds %q: each must be one of present-nonce, present-epoch, absent-epoch, "+
+				"absent-timestamp, absent-none, once", *onlyKinds))
+		}
+	}
+	cekAlgorithm := map[string]platform.EncryptionAlgorithm{"ecdh-p256": platform.EncryptionAlgorithmECDHP256,
+		"mlkem768-p256": platform.EncryptionAlgorithmMLKEM768P256}[*cekAlg]
+	if cekAlgorithm == platform.EncryptionAlgorithmUnspecified {
+		must(fmt.Errorf("-cek %q: ecdh-p256 or mlkem768-p256", *cekAlg))
+	}
+	modes := []string{"enroll", "retrieve"}
+	if *onlyModes != "" {
+		want := strings.Split(*onlyModes, ",")
+		modes = slices.DeleteFunc(modes, func(m string) bool { return !slices.Contains(want, m) })
+		if len(modes) != len(want) {
+			must(fmt.Errorf("-modes %q: each must be enroll or retrieve, once", *onlyModes))
+		}
+	}
 	var all []caseMeta
 	for _, k := range kinds {
-		for _, mode := range []string{"enroll", "retrieve"} {
+		for _, mode := range modes {
 			name := fmt.Sprintf("%s-%s", mode, k.name)
 			kindTarget := targetOf(k.name)
 			m := caseMeta{Case: name, Mode: mode, FreshnessKind: k.name, Target: kindTarget}
@@ -140,10 +175,10 @@ func main() {
 				req.BoundKey, req.CSR, req.BoundKeyUse, subject = csk.Public(), csr, platform.BoundKeyUseSign, csr
 			} else {
 				m.RelyingParty, req.RelyingParty = *rrpVault, *rrpVault
-				cek, err := p.GenerateCEK(platform.EncryptionAlgorithmECDHP256)
+				cek, err := p.GenerateCEK(cekAlgorithm)
 				must(err)
 				req.BoundKey, req.BoundKeyUse = cek.Public(), platform.BoundKeyUseEncrypt
-				subject, err = x509.MarshalPKIXPublicKey(cek.Public())
+				subject, err = platform.CEKPub(cek.Public()) // DER SubjectPublicKeyInfo, or an MLKEM768-P256 key itself
 				must(err)
 			}
 			elem, err := p.FreshnessElement(req)

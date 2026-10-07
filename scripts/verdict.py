@@ -17,7 +17,10 @@ hwcheck/evidence included.
             --reason TEXT.
   attacks   rrpverify-*.json. Every check as expected: the honest Evidence passed, each attack refused for its own
             reason. The builds of Veraison the bench compares with (rrpverify-veraison-fork and -fixed) are reported,
-            not judged: what they get wrong is the reason the bench runs its own build.
+            not judged: what they get wrong is the reason the bench runs its own build. And, in a run that made it,
+            the pre-play check (preplay.json, hwcheck/scripts/preplay.py): absent-timestamp Evidence made with the
+            guest's clock ahead, refused by each RRP at once (409, freshness) and accepted later, older than the
+            Target's max_age. That is reported as an exposure, not as a pass; any other outcome fails the run.
   redirect  results.jsonl. ca1 issues for every Freshness Kind in both passes. With the RRP identifier in the binding,
             ca2 refuses every kind; without it, ca2 refuses present-nonce alone.
   bank-pay  report.json, from the Demo Bank's payment service. pay: the payment went through. ordinary: no
@@ -60,6 +63,36 @@ def demo(run, expect, reason):
     return lines, True, f"{len(results)} of {len(results)} Targets refused, no credential issued{because}"
 
 
+def preplay(run):
+    """The pre-play check, if the run made one: returns its lines, the Targets not as expected, and the exposures."""
+    p = run / "preplay.json"
+    if not p.exists():
+        # Evidence made with the clock ahead and never presented is a check not done
+        return (
+            [],
+            (
+                ["the Evidence made with the guest's clock ahead was not presented"]
+                if (run / "preplay").is_dir()
+                else []
+            ),
+            [],
+        )
+    d = json.loads(p.read_text())
+    lines, bad, exposures = [], [], []
+    for r in d["results"]:
+        once, later = r["at_once"], r["later"]
+        age = later["at"] - d["made"]["not_after"]
+        lines.append(
+            f"pre-play {r['target']}: at once {once['answer'][:110]}; {age:.0f} s or more after the Evidence was made: "
+            f"{later['status']}"
+        )
+        if once["status"] == 409 and "freshness" in once["answer"] and later["status"] == 200 and age > r["max_age_s"]:
+            exposures.append(f"{r['target']} accepted Evidence {age:.0f} s old or more (max_age {r['max_age_s']} s)")
+        else:
+            bad.append(r["target"])
+    return lines, bad, exposures
+
+
 def attacks(run):
     lines, judged, failed = [], 0, 0
     files = sorted(run.glob("rrpverify-*.json"))
@@ -75,11 +108,21 @@ def attacks(run):
         failed += len(bad)
         for r in bad:
             lines.append(f"  {r['case']}: {r['check']}: want {r['want']}, got {r['got']} {r.get('error', '')}".rstrip())
+    pre_lines, pre_bad, exposures = preplay(run)
+    lines += pre_lines
+    offset = run / "clock-offset.txt"
+    if offset.exists():
+        lines += [x for x in offset.read_text().splitlines() if x.startswith("guest minus RRP")]
     if not judged:
         return lines, False, "no results of the bench's own checks (rrpverify-*.json)"
     if failed:
         return lines, False, f"{failed} of {judged} checks not as expected"
-    return lines, True, f"{judged} checks: the honest Evidence passed, every attack refused for its own reason"
+    if pre_bad:
+        return lines, False, f"the pre-play check not as expected: {', '.join(pre_bad)}"
+    summary = f"{judged} checks: the honest Evidence passed, every attack refused for its own reason"
+    if exposures:
+        summary += "; exposure, the guest's clock: " + "; ".join(exposures)
+    return lines, True, summary
 
 
 def redirect(run):

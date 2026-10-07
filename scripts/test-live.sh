@@ -15,12 +15,8 @@ set -euo pipefail
 cd "$BENCH_REPO"
 
 bench_say "the running bench ($BENCH_HOME)"
-status="$("$BENCH_REPO/e2e/scripts/bench.sh" status 2>&1)" || true
-if [ -z "$status" ] || grep -qv ' running' <<<"$status"; then
-  printf '%s\n' "$status" | sed 's/^/  /'
-  bench_die "the bench is not up: make setup, or make start, first"
-fi
-echo "  $(grep -c ' running' <<<"$status") services running"
+bench_require_up
+echo "  every service running"
 
 failed=""
 bench_say "the EST server's wire format, through the live server"
