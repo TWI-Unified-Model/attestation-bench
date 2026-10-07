@@ -70,7 +70,7 @@ build() {
   cp "$HERE/e2e/bank/remote/core.sh" "$S/core/"
   { echo "attestation-bench $(git -C "$HERE" rev-parse --short=12 HEAD)$(git -C "$HERE" diff --quiet HEAD -- platform cai bundle rrp e2e scripts packs trust || echo -dirty)"
     "$HERE/third_party/describe.sh" globalsign-est veraison-services go-gen-ref | grep -v -e '/src-fork ' -e '/src-der '
-    echo "step-ca $STEP_VERSION, step $STEP_VERSION (built from their release modules); vault $VAULT_VERSION, go $GO_VM_VERSION" \
+    echo "step-ca $STEP_VERSION, step $STEP_VERSION (built from their release modules); vault $VAULT_VERSION, go $GO_VERSION" \
       "(official releases, SHA-256 checked on the VM against scripts/versions.env)"; } > "$OUT/code-revs.txt"
   (cd "$S" && find . -type f | sort | xargs shasum -a 256) > "$OUT/staged-files.sha256"
 }

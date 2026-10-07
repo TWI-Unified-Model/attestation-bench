@@ -1,0 +1,70 @@
+# CI: on every push to main and every pull request, the checks (make check), then the bench set up from zero on Linux
+# and its local runs on the software stand-in TEE. No cloud, no secrets. Every step is a make target a contributor
+# runs the same way (docs/getting-started.md).
+#
+# Actions are pinned to the commit of their release, named in the comment beside each.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: lint and unit tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.27.0" # GO_VERSION in scripts/versions.env
+          cache-dependency-path: "**/go.sum"
+      - name: make check
+        run: make check
+
+  local-bench:
+    name: the bench from zero, local runs
+    needs: check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: run directories outside the checkout
+        run: echo "RUNS_DIR=$RUNNER_TEMP/runs" >> "$GITHUB_ENV"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.27.0" # GO_VERSION in scripts/versions.env
+          cache-dependency-path: "**/go.sum"
+      - name: system packages (make doctor names them)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq protobuf-compiler sqlite3 jq gettext-base netcat-openbsd unzip python3-venv
+      - name: make doctor
+        run: make doctor
+      - name: make setup
+        run: make setup
+      - name: make check-mtls
+        run: make check-mtls
+      - name: make demo
+        run: make demo
+      - name: make attacks
+        run: make attacks
+      - name: make redirect
+        run: make redirect
+      - name: keep the run directories
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: runs
+          path: ${{ runner.temp }}/runs
+          if-no-files-found: warn

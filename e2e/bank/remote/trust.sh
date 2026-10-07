@@ -26,9 +26,9 @@ install() {
   apt-get update -qq
   DEBIAN_FRONTEND=noninteractive apt-get install -y -qq jq sqlite3 protobuf-compiler make gcc libc6-dev gettext-base \
     openssl git jose netcat-openbsd unzip python3 python3-venv >/dev/null   # gcc: Veraison's sqlite stores use cgo
-  if [ "$(/usr/local/go/bin/go env GOVERSION 2>/dev/null || true)" != "go$GO_VM_VERSION" ]; then
-    curl -sfL -o /tmp/go.tgz "https://go.dev/dl/go${GO_VM_VERSION}.linux-amd64.tar.gz"
-    echo "$GO_VM_SHA256_linux_amd64  /tmp/go.tgz" | sha256sum -c - >/dev/null
+  if [ "$(/usr/local/go/bin/go env GOVERSION 2>/dev/null || true)" != "go$GO_VERSION" ]; then
+    curl -sfL -o /tmp/go.tgz "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz"
+    echo "$GO_SHA256_linux_amd64  /tmp/go.tgz" | sha256sum -c - >/dev/null
     rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go.tgz && rm /tmp/go.tgz
   fi
   if [ ! -x "$D/bin/vault" ]; then

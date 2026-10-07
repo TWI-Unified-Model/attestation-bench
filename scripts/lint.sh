@@ -8,7 +8,7 @@
 #   gofmt, go vet  every Go module (hwcheck under each of its three module files)
 #   golangci-lint  every Go module (.golangci.yml)
 #   ruff           the Python scripts: check, and format --check (ruff.toml)
-#   actionlint     the CI workflows
+#   actionlint     the CI workflows, and that their Go is GO_VERSION
 #
 # Not linted, kept as upstream has them: the TACRA proof of concept's deploy/ scripts, and its est module, whose test
 # does not build against the current est code (reported to the group).
@@ -61,6 +61,13 @@ go_each() { # COMMAND...: in every Go module
   for m in $BENCH_GO_MODULES; do (cd "$m" && "$@") || return 1; done
 }
 gofmt_clean() { [ -z "$(gofmt -l "$@")" ] || { gofmt -l "$@"; return 1; }; }
+ci_go_pinned() { # every go-version in the workflows is the bench's GO_VERSION
+  local v bad=0
+  while IFS= read -r v; do
+    if [ "$v" != "$GO_VERSION" ]; then echo "a workflow uses Go $v; scripts/versions.env says $GO_VERSION"; bad=1; fi
+  done < <(sed -nE 's/.*go-version: *"?([0-9][0-9.]*)"?.*/\1/p' .github/workflows/*.yml)
+  return "$bad"
+}
 hwcheck_vet() {
   local mf
   for mf in go.mod go.patched.mod go.v015.mod; do (cd hwcheck && go vet -modfile="$mf" ./...) || return 1; done
@@ -79,7 +86,10 @@ check "go vet (hwcheck: go.patched.mod, go.v015.mod)" hwcheck_vet
 check "golangci-lint" go_each "$T/golangci-lint" run --show-stats=false ./...
 check "ruff check (${#py_files[@]} scripts)" "$BENCH_HOME/venv/bin/ruff" check "${py_files[@]}"
 check "ruff format" "$BENCH_HOME/venv/bin/ruff" format --check "${py_files[@]}"
-if [ -d .github/workflows ]; then check "actionlint" "$T/actionlint"; fi
+if [ -d .github/workflows ]; then
+  check "actionlint" "$T/actionlint"
+  check "CI's Go is GO_VERSION" ci_go_pinned
+fi
 
 if [ -n "$failed" ]; then bench_die "lint failed:$failed"; fi
 echo "lint: every linter clean"
