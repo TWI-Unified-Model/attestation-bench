@@ -1,0 +1,39 @@
+{
+ "tee": "sev-snp",
+ "caapi": "127.0.0.1:50061",
+ "hint": "payments.workload.acme-bank.example",
+ "ledger": {
+  "target": "https://ledger-db.acme-bank.example",
+  "host": "core.demobank.internal",
+  "port": 5432,
+  "database": "bank",
+  "user": "payments",
+  "server_ca_pem": "-----BEGIN CERTIFICATE-----\nMIIBhzCCAS6gAwIBAgIRAOryuXM56D9EXZq+Nv0QbtAwCgYIKoZIzj0EAwIwIjEg\nMB4GA1UEAxMXRGVtbyBCYW5rIGNvcmUgVExTIHJvb3QwHhcNMjYxMDA3MDIyNjQz\nWhcNMjYxMTA2MDIyNjQzWjAiMSAwHgYDVQQDExdEZW1vIEJhbmsgY29yZSBUTFMg\ncm9vdDBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABHwV55LY+ugE054jn4JkoGYh\nn1ZXvhrrVUaQLRbx3dfVzJE4AcYJzbsMfHIgdyN5SX6MpvTScqA+46zIbWajP42j\nRTBDMA4GA1UdDwEB/wQEAwIBBjASBgNVHRMBAf8ECDAGAQH/AgEBMB0GA1UdDgQW\nBBTXAYl6DqWd2D6FZq3PusAMJy/aVTAKBggqhkjOPQQDAgNHADBEAiAnq0ELs89x\nMUxtvzbxmDexuDLTNjz3FGDCFx3Jj04kZQIge1vLbJ4ndRvXyKMOELcghaW+8ZzT\nCMB5C9CEJY7OgTw=\n-----END CERTIFICATE-----\n"
+ },
+ "fraud": {
+  "target": "https://fraud-api.acme-bank.example",
+  "url": "https://core.demobank.internal:8444",
+  "server_ca_pem": "-----BEGIN CERTIFICATE-----\nMIIBhzCCAS6gAwIBAgIRAOryuXM56D9EXZq+Nv0QbtAwCgYIKoZIzj0EAwIwIjEg\nMB4GA1UEAxMXRGVtbyBCYW5rIGNvcmUgVExTIHJvb3QwHhcNMjYxMDA3MDIyNjQz\nWhcNMjYxMTA2MDIyNjQzWjAiMSAwHgYDVQQDExdEZW1vIEJhbmsgY29yZSBUTFMg\ncm9vdDBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABHwV55LY+ugE054jn4JkoGYh\nn1ZXvhrrVUaQLRbx3dfVzJE4AcYJzbsMfHIgdyN5SX6MpvTScqA+46zIbWajP42j\nRTBDMA4GA1UdDwEB/wQEAwIBBjASBgNVHRMBAf8ECDAGAQH/AgEBMB0GA1UdDgQW\nBBTXAYl6DqWd2D6FZq3PusAMJy/aVTAKBggqhkjOPQQDAgNHADBEAiAnq0ELs89x\nMUxtvzbxmDexuDLTNjz3FGDCFx3Jj04kZQIge1vLbJ4ndRvXyKMOELcghaW+8ZzT\nCMB5C9CEJY7OgTw=\n-----END CERTIFICATE-----\n"
+ },
+ "relying_parties": {
+  "https://ledger-db.acme-bank.example": {
+   "enroll": "https://ca.acme-bank.example"
+  },
+  "https://fraud-api.acme-bank.example": {
+   "retrieve": "https://vault.acme-bank.example"
+  }
+ },
+ "vault_origins": {
+  "https://vault.acme-bank.example": {
+   "DHKEM(P-256, HKDF-SHA256)": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE40pGu1QInWU42jrCuBkIG_FhOFHYpBrW8oTqepYFaG67dBhFbz7NaKmrpje75JHslJmtFH6EOiO115rsA97-sw",
+   "DHKEM(X25519, HKDF-SHA256)": "MCowBQYDK2VuAyEAsVdGy5uWXwJOC6YxeYeEy4Z4Ub2oyIMHen0j6j8FoTs"
+  }
+ },
+ "vault_signers": {
+  "https://vault.acme-bank.example": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEbPDJQnFjD3Kd4yB5k1JFnBr5zUVyunNMRPHtlkLUN0rzVKq6xWl4tCD1ElqCLfUjCnxbkVsudq_wbo7uqsFOZw"
+ },
+ "ca_anchors": {
+  "https://ca.acme-bank.example": "-----BEGIN CERTIFICATE-----\nMIIB/TCCAaOgAwIBAgIRAIFPbn3VwwdX5LbJnmdG7vYwCgYIKoZIzj0EAwIwSDEe\nMBwGA1UEChMVRGVtbyBCYW5rIHdvcmtsb2FkIENBMSYwJAYDVQQDEx1EZW1vIEJh\nbmsgd29ya2xvYWQgQ0EgUm9vdCBDQTAeFw0yNjEwMDcwMjI2MjdaFw0zNjEwMDQw\nMjI2MjdaMFAxHjAcBgNVBAoTFURlbW8gQmFuayB3b3JrbG9hZCBDQTEuMCwGA1UE\nAxMlRGVtbyBCYW5rIHdvcmtsb2FkIENBIEludGVybWVkaWF0ZSBDQTBZMBMGByqG\nSM49AgEGCCqGSM49AwEHA0IABKRy5e3Tu2gH06aDBb2ktspGH2JvflXOWOodDwJg\nTJRIQMZkqA6DNFVkIwz3x6kqcSXTKziH0cLf9RsYa06znACjZjBkMA4GA1UdDwEB\n/wQEAwIBBjASBgNVHRMBAf8ECDAGAQH/AgEAMB0GA1UdDgQWBBT5aL0YZE//vRoG\nWBltQ37P8eh+XTAfBgNVHSMEGDAWgBQB0NJ4F6+WgRuxO3qI9X8G04VTRjAKBggq\nhkjOPQQDAgNIADBFAiAMzJW1VYn6TC02wL0I7mLipRJANUxAXQbp4ape+kslcgIh\nAIn96WkvJmBsoaPghlGoNjb6ftpgL5oitnc8IFc3XxrI\n-----END CERTIFICATE-----\n"
+ },
+ "local_epoch_hex": "e65c0a62416a841786530f31b87982f37c133f4620daf6069eecaaae129014ea"
+}

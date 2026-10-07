@@ -94,6 +94,7 @@ network, the cloud. The ideas in plain words: [docs/concepts.md](docs/concepts.m
 | Hardware, `make attacks` | every attack refused for its own reason: 162 checks in process and 50 through Veraison on each SEV-SNP platform, 82 on TDX | [GCP SEV-SNP](hwcheck/evidence/20261006T224346Z-gcp-sev-snp), [GCP TDX](hwcheck/evidence/20261006T225040Z-gcp-tdx), [AWS SEV-SNP](hwcheck/evidence/20261006T225323Z-aws-sev-snp) |
 | Hardware, `make redirect` | 20 of 20 cases on each platform, as in the table above | [GCP SEV-SNP](hwcheck/evidence/20261006T225552Z-gcp-snp-redirect), [GCP TDX](hwcheck/evidence/20261006T225943Z-gcp-tdx-redirect), [AWS SEV-SNP](hwcheck/evidence/20261006T230316Z-aws-snp-redirect) |
 | The Demo Bank in the cloud | three payments from confidential VMs went through; an ordinary VM and an unapproved launch were refused; in Passport and in Background Check | [Passport](e2e/evidence/20261006T230714Z-demo-bank), [Background Check](e2e/evidence/20261007T015626Z-demo-bank) |
+| A bank of your own, `make bank-new NAME=acme-bank` | its own Targets, RRP identifiers and names: the ledger admitted `payments.workload.acme-bank.example`, and the payment from GCP SEV-SNP went through | [run](e2e/evidence/20261007T021953Z-acme-bank) |
 
 Every hardware result above was compared check by check with the previous runs and found identical. On 7 October
 2026 every command in the docs was run again as written, on the release's code: the hardware runs were identical

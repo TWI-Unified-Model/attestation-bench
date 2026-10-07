@@ -88,7 +88,8 @@ certificate validity, the EAR policy ([../packs/README.md](../packs/README.md)).
 Credential Authority Target for the ledger and its Secret Vault Target for the fraud service's key. What stays the
 Demo Bank's is the machinery: the VMs are named `demobank-*` whatever the bank (so `make bank-down` and
 `make cloud-check` find them), and the trust zone's CAs keep their names, so the ledger's certificate for
-`payments.workload.acme-bank.example` is issued by "Demo Bank workload CA". One bank is up at a time.
+`payments.workload.acme-bank.example` is issued by "Demo Bank workload CA". One bank is up at a time. The commands
+above, as written, on 7 October 2026: [e2e/evidence/20261007T021953Z-acme-bank](../e2e/evidence/20261007T021953Z-acme-bank).
 
 To run a bank in Background Check: `RATS_MODEL=background-check make bank-up`.
 
