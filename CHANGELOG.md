@@ -49,7 +49,7 @@ release's code; the hardware runs identical to gate 5's, check by check).
 - **CI** on every push and pull request: `make check`, then the bench from zero on Ubuntu 24.04 and its local runs,
   the refusal scenarios included, in Passport and in Background Check.
 - **A secrets scan in `make lint`**: gitleaks over the git history, with `.gitleaks.toml` allowing, by narrow
-  patterns and with the reason for each, the three things that look like secrets and are not.
+  patterns and with the reason for each, the things that look like secrets and are not.
 - **Documentation**: [README.md](README.md) and [docs/](docs/getting-started.md), with how the release was checked:
   [docs/verification.md](docs/verification.md).
 
@@ -92,6 +92,10 @@ release's code; the hardware runs identical to gate 5's, check by check).
 - `make setup` kept a Veraison built from older sources after a patch changed them. The deployment now records the
   source trees it was built from, Veraison's and go-gen-ref's, and `make setup` builds it again when either
   changes, keeping its keys, certificates and stores.
+- The secrets scan saw only what was committed: a dependency patch of 7 October carried `go.sum` lines that gitleaks
+  takes for API keys (a module named `oauth2`), found only after the commit, before it was pushed. `make lint` now
+  also scans the changes not yet committed, staged or not, and `.gitleaks.toml` allows `go.sum` lines in our patches
+  by their form (a module, its version and a hash), and nothing else in them.
 
 ## Before: the TACRA proof of concept and the bench's first stages
 

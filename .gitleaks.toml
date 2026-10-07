@@ -1,6 +1,6 @@
-# gitleaks: its default rules, and the three things in this repository that match them without being secrets, each
-# allowed by the narrowest pattern that covers it. make lint runs gitleaks over the git history (scripts/lint.sh), at
-# the version scripts/versions.env pins.
+# gitleaks: its default rules, and the things in this repository that match them without being secrets, each
+# allowed by the narrowest pattern that covers it. make lint runs gitleaks over the git history and over the changes
+# not yet committed (scripts/lint.sh), at the version scripts/versions.env pins.
 [extend]
 useDefault = true
 
@@ -21,3 +21,10 @@ paths = ['''(^|/)bundle/testdata/(ref|go)-hpke-base-signed\.json$''']
 [[allowlists]]
 description = "test fixtures: attestation results (EARs) from GCP and AWS SEV-SNP runs, signed tokens, not credentials"
 paths = ['''(^|/)rrp/internal/ear/testdata/ear-(gcp|aws)-sevsnp(-v5)?\.jws$''']
+
+[[allowlists]]
+description = "go.sum lines in our dependency patches: a module, its version and the hash of its contents, not a credential"
+condition = "AND"
+regexTarget = "match"
+regexes = ['''^[A-Za-z0-9._~/-]+ v[0-9A-Za-z.+-]+(/go\.mod)? h1:[A-Za-z0-9+/]{43}=$''']
+paths = ['''(^|/)third_party/[^/]+/patches/[^/]+\.patch$''']

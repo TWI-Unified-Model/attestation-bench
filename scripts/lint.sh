@@ -11,7 +11,8 @@
 #   check-links    every relative link in the Markdown resolves
 #   actionlint     the CI workflows, and that their Go is GO_VERSION
 #   gitleaks       no secret in the git history: the whole history on a full clone, the tracked files on CI's
-#                  one-commit clone (.gitleaks.toml: what it allows, and why)
+#                  one-commit clone; and none in the changes not yet committed, staged or not, so that a secret is
+#                  found before it is committed (.gitleaks.toml: what it allows, and why)
 #
 # Not linted, kept as upstream has them: the TACRA proof of concept's deploy/ scripts, and its est module, whose go.mod
 # takes the EST server from a checkout beside the repository and whose test does not build against the current EST
@@ -77,6 +78,10 @@ hwcheck_vet() {
   local mf
   for mf in go.mod go.patched.mod go.v015.mod; do (cd hwcheck && go vet -modfile="$mf" ./...) || return 1; done
 }
+gitleaks_uncommitted() { # the changes git diff shows (not yet staged), then those git diff --staged shows
+  "$T/gitleaks" git . --pre-commit --config .gitleaks.toml --redact --verbose --no-banner --log-level warn &&
+    "$T/gitleaks" git . --pre-commit --staged --config .gitleaks.toml --redact --verbose --no-banner --log-level warn
+}
 
 bench_say "third-party sources: the Go modules build against them (third_party/fetch.sh)"
 "$BENCH_REPO/third_party/fetch.sh"
@@ -101,6 +106,7 @@ if [ -d .github/workflows ]; then
 fi
 check "gitleaks ($(git rev-list --count HEAD) commits)" \
   "$T/gitleaks" git . --config .gitleaks.toml --redact --verbose --no-banner --log-level warn
+check "gitleaks (changes not yet committed)" gitleaks_uncommitted
 
 if [ -n "$failed" ]; then bench_die "lint failed:$failed"; fi
 echo "lint: every linter clean"
