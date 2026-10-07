@@ -12,7 +12,7 @@ With this repository you can:
 - **replay the redirection experiment** ([TACRA issue #20](https://github.com/TheBankster/rats-tacra/issues/20)): one
   Evidence offered to two Credential Authorities;
 - **bring up a fictional bank** in the cloud, whose payment service gets its database certificate and partner API key
-  only by attestation;
+  only by attestation, and **make banks of your own** from it (`make bank-new`);
 - **keep every run as evidence**: each run writes a directory with what it did, its results and their SHA-256.
 
 > **Private.** Built for the TWI SIG's TACRA work: the architecture draft

@@ -10,6 +10,9 @@ the same program, so a pack behaves the same in both.
 | `tacra-bench/pack.json` | the local bench (`make setup`, `make config`) | 12 Targets: one per Freshness Kind for each RRP, plus two Targets that take one platform's verifier only; a second Credential Authority for the #20 experiment |
 | `demo-bank/pack.json` | the cloud Demo Bank (`make bank-up`) | 2 Targets: the ledger database's client certificate, and the fraud service's API key in the signed container |
 
+`make bank-new NAME=…` makes another bank's pack from the Demo Bank's, under its own names; `BANK=… make bank-up`
+brings it up ([../docs/demo-bank.md](../docs/demo-bank.md)).
+
 ## Fields
 
 ```jsonc

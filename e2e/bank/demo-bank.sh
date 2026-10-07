@@ -12,13 +12,15 @@
 #   e2e/bank/demo-bank.sh approve tdx MRTD  (only on Google's signed endorsement)
 #   e2e/bank/demo-bank.sh audit
 #   e2e/bank/demo-bank.sh down
+#   BANK=acme-bank e2e/bank/demo-bank.sh up     (a bank of your own: scripts/bank-new.sh)
 #
-# The trust zone is configured by the bench's own program (scripts/trustzone.py) from packs/demo-bank and the launches
+# The trust zone is configured by the bench's own program (scripts/trustzone.py) from the bank's pack and the launches
 # the bank approves: trust/approved-launches.json when the bank comes up, plus what it approves while it runs.
 #
 # GCP_PROJECT, GCP_ZONE: where the bank's VMs go; AWS_REGION, AWS_AZ: where "pay aws-snp" goes (scripts/lib.sh).
-# RATS_MODEL: passport (default) or background-check, set when the bank comes up. RUNS_DIR: where the bank's run
-# directory goes (default BENCH_HOME/runs).
+# BANK: which bank, packs/BANK/pack.json (default demo-bank; make bank-new makes another). RATS_MODEL: passport
+# (default) or background-check. Both are set when the bank comes up and kept until it goes down. RUNS_DIR: where
+# the bank's run directory goes (default BENCH_HOME/runs).
 set -euo pipefail
 # shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
@@ -26,20 +28,23 @@ bench_gcp
 PROJECT="$GCP_PROJECT" ZONE="$GCP_ZONE"
 RUNS_DIR="${RUNS_DIR:-$BENCH_HOME/runs}"
 RATS_MODEL="${RATS_MODEL:-passport}"
+BANK="${BANK:-demo-bank}"
 HERE="$(cd "$(dirname "$0")/../.." && pwd)"
 ST="${DEMO_BANK_STATE:-$BENCH_HOME/demo-bank}"   # state and staging, outside git
 APPROVED="$ST/approved-launches.json"            # the launches this bank approves
-PACK="$HERE/packs/demo-bank/pack.json"
 D=/opt/demobank
 TRUST_LOGS="est-server ca-gateway vault-gateway tdx-verifier veraison-vts veraison-verification step-ca"
 export AWS_PAGER=""
 mkdir -p "$ST"
 # shellcheck source=/dev/null  # the bank's state, written by save()
 [ -f "$ST/state" ] && . "$ST/state"
+PACK="$HERE/packs/$BANK/pack.json"                # the bank that is up, or the one BANK names
 
-save() { printf '%s\n' "STAMP=$STAMP" "TRUST=$TRUST" "CORE=$CORE" "OUT=$OUT" "RATS_MODEL=$RATS_MODEL" "TRUST_INT=${TRUST_INT:-}" \
+save() { printf '%s\n' "STAMP=$STAMP" "BANK=$BANK" "TRUST=$TRUST" "CORE=$CORE" "OUT=$OUT" "RATS_MODEL=$RATS_MODEL" "TRUST_INT=${TRUST_INT:-}" \
   "TRUST_EXT=${TRUST_EXT:-}" "CORE_INT=${CORE_INT:-}" "CORE_EXT=${CORE_EXT:-}" > "$ST/state"; }
 log() { echo "== $*" | tee -a "$OUT/console.log"; }
+pack_hint() { python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["workload"]["hint"])' "$PACK"; }
+need_pack() { [ -f "$PACK" ] || bench_die "no bank $BANK: packs/$BANK/pack.json does not exist (make bank-new NAME=$BANK)"; }
 need_bank() { [ -n "${OUT:-}" ] && [ -n "${TRUST:-}" ] || bench_die "no Demo Bank is up (no state in $ST): make bank-up"; }
 gssh() { local vm="$1"; shift; gcloud compute ssh "$vm" --project="$PROJECT" --zone="$ZONE" --command="$*" 2>>"$OUT/ssh.stderr"; }
 gscp() { gcloud compute scp --project="$PROJECT" --zone="$ZONE" "$@" >/dev/null 2>>"$OUT/ssh.stderr"; }
@@ -78,10 +83,10 @@ build() {
 # The trust VM's text files, staged by build and copied again by provision: the trust zone's script, the bench's
 # configuration program, the bank's pack, the launches it approves, Veraison's CoRIM, the pinned versions.
 stage_text() { # dir
-  mkdir -p "$1/scripts" "$1/packs/demo-bank" "$1/trust"
+  mkdir -p "$1/scripts" "$1/trust"
   cp "$HERE/e2e/bank/remote/trust.sh" "$HERE/scripts/versions.env" "$HERE/scripts/requirements.txt" "$1/"
   cp "$HERE/scripts/trustzone.py" "$1/scripts/"
-  cp "$PACK" "$1/packs/demo-bank/"
+  cp "$PACK" "$1/pack.json"
   cp "$APPROVED" "$1/trust/approved-launches.json"
   cp "$HERE/trust/veraison-corim-milan.cbor" "$1/trust/"
 }
@@ -112,10 +117,12 @@ create_gcp() { # name machine-args...
 }
 
 up() {
+  need_pack
   STAMP="$(date -u +%Y%m%dT%H%M%SZ)"; local id; id="$(echo "$STAMP" | tr -d 'TZ' | cut -c3-12)"
-  TRUST="demobank-trust-$id" CORE="demobank-core-$id" OUT="$RUNS_DIR/${STAMP}-demo-bank"
+  TRUST="demobank-trust-$id" CORE="demobank-core-$id" OUT="$RUNS_DIR/${STAMP}-$BANK"
   mkdir -p "$OUT/up" "$OUT/public" "$OUT/runs" "$OUT/refvals"; save
   echo "$RATS_MODEL" > "$OUT/rats-model.txt"
+  echo "$BANK packs/$BANK/pack.json $(bench_sha256 "$PACK")" > "$OUT/bank.txt"
   cp "$HERE/trust/approved-launches.json" "$APPROVED"   # the bank starts from the bench's approved launches
   log "build (linux/amd64)"; build
   initial_endorsements
@@ -139,6 +146,7 @@ up() {
 # install, configure and start both machines; every step is safe to repeat
 provision() {
   need_bank
+  need_pack
   local T; T="$(mktemp -d)"
   stage_text "$T/trust"
   gscp --recurse "$T/trust" "$TRUST:~/"
@@ -158,7 +166,7 @@ provision() {
     "$TRUST:$D/public/epoch.hex" "$TRUST:$D/public/policy.json" "$OUT/public/"
   log "core: the ledger trusts the bank's workload CA for client logins"
   gscp "$OUT/public/workload-ca.pem" "$CORE:~/"
-  gssh "$CORE" "sudo cp ~/workload-ca.pem $D/public/ && sudo INTERNAL_IP=$CORE_INT EXTERNAL_IP=$CORE_EXT bash $D/core.sh setup && sudo bash $D/core.sh start" | tee "$OUT/up/core-setup.txt"
+  gssh "$CORE" "sudo cp ~/workload-ca.pem $D/public/ && sudo INTERNAL_IP=$CORE_INT EXTERNAL_IP=$CORE_EXT HINT=$(pack_hint) bash $D/core.sh setup && sudo bash $D/core.sh start" | tee "$OUT/up/core-setup.txt"
   gscp "$CORE:$D/public/core-tls-root.crt" "$OUT/public/"
   log "the fraud service's API key goes to the bank's Vault (piped machine to machine, never written here)"
   gssh "$CORE" "sudo cat $D/secrets/fraud-api-key" | gssh "$TRUST" "sudo bash -c 'umask 077; cat > $D/secrets/fraud-api-key'"
@@ -173,7 +181,7 @@ provision() {
 }
 
 # payment-service configuration: public material only (trust anchors, the Vault's public keys, the epoch marker); the
-# Targets and RRP identifiers come from packs/demo-bank
+# Targets and RRP identifiers come from the bank's pack
 workload_config() { # tee out
   TEE="$1" P="$OUT/public" PACK="$PACK" python3 - > "$2" <<'PY'
 import json, os
@@ -274,6 +282,7 @@ pay() {
     *) echo "pay: gcp-snp, gcp-tdx or aws-snp (a confidential VM), or the controls ordinary or unapproved" >&2; exit 2 ;;
   esac
   need_bank
+  need_pack
   if [ "$kind" = aws-snp ]; then bench_aws; fi
   rs="$(date -u +%Y%m%dT%H%M%SZ)"; name="demobank-pay-$(echo "$rs" | tr -d 'TZ' | cut -c7-12)-$kind"
   R="$OUT/runs/${rs}-$kind"; mkdir -p "$R"

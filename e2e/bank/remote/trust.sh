@@ -2,7 +2,7 @@
 # Demo Bank's trust zone, run as root on its own VM: Veraison (built here from the bench's pinned sources with our
 # patches, keys generated here), step-ca (the bank's workload CA), HashiCorp Vault, the Credential Authority and Secret
 # Vault gateways (the RRPs), the TDX verifier and the EST server, the one port workloads reach. Its configuration is
-# written by the bench's own program (scripts/trustzone.py, with packs/demo-bank and trust/), so mutual TLS between
+# written by the bench's own program (scripts/trustzone.py, with the bank's pack and trust/), so mutual TLS between
 # the components (N23), the verifiers' EAR keys as files (N24) and the signed container are as on the bench, in the
 # same layout under /opt/demobank. Secrets are generated on this machine and stay here; /opt/demobank/public holds
 # what may leave it. Demo Bank is fictional.
@@ -76,7 +76,7 @@ setup() {
         --san 127.0.0.1 --no-password --insecure --not-after 240h >/dev/null
     done
   fi
-  # step-ca: the bank's workload CA; its policy admits the workload names of packs/demo-bank only
+  # step-ca: the bank's workload CA; its policy admits the workload's names in the bank's pack, and nothing else
   export STEPPATH="$D/step"
   if [ ! -f "$STEPPATH/config/ca.json" ]; then
     openssl rand -hex 32 > "$D/secrets/step-ca-password"; openssl rand -hex 32 > "$D/secrets/provisioner-password"
@@ -84,13 +84,21 @@ setup() {
       --address 127.0.0.1:9000 --provisioner tacra-ca-gateway --password-file "$D/secrets/step-ca-password" \
       --provisioner-password-file "$D/secrets/provisioner-password" > "$D/logs/step-ca-init.log" 2>&1
     step ca provisioner update tacra-ca-gateway --x509-default-dur=1h --x509-max-dur=24h --x509-min-dur=5m >> "$D/logs/step-ca-init.log" 2>&1
-    python3 - "$STEPPATH/config/ca.json" "$D/secrets/provisioner.jwe" <<'PY'
+    python3 - "$STEPPATH/config/ca.json" "$D/secrets/provisioner.jwe" "$D/pack.json" <<'PY'
 import json, sys
-c = json.load(open(sys.argv[1]))
-c["authority"]["policy"] = {"x509": {"allow": {"dns": ["*.workload.demobank.example"], "uri": ["demobank.example"]}}}
-json.dump(c, open(sys.argv[1], "w"), indent=1)
+from urllib.parse import urlparse
+with open(sys.argv[1]) as f:
+    c = json.load(f)
+with open(sys.argv[3]) as f:
+    sans = json.load(f)["workload"]["sans"]
+dns = [s for s in sans if "://" not in s]
+uri = sorted({urlparse(s).netloc for s in sans if s.startswith("spiffe://")})
+c["authority"]["policy"] = {"x509": {"allow": {"dns": dns, "uri": uri}}}
+with open(sys.argv[1], "w") as f:
+    json.dump(c, f, indent=1)
 p = [x for x in c["authority"]["provisioners"] if x["name"] == "tacra-ca-gateway"][0]
-open(sys.argv[2], "w").write(p["encryptedKey"])
+with open(sys.argv[2], "w") as f:
+    f.write(p["encryptedKey"])
 PY
     step crypto jwe decrypt --password-file "$D/secrets/provisioner-password" < "$D/secrets/provisioner.jwe" > "$D/gateways/ca-provisioner.jwk"
     rm "$D/secrets/provisioner.jwe"
@@ -100,10 +108,10 @@ PY
   echo "setup done"
 }
 
-# The configuration of every service, written as on the bench (scripts/trustzone.py: packs/demo-bank and the approved
+# The configuration of every service, written as on the bench (scripts/trustzone.py: the bank's pack and the approved
 # launches), then the TDX verifier's EAR key as a file for the gateways (N24; its signing key is made if absent).
 config() {
-  "$D/venv/bin/python3" "$D/scripts/trustzone.py" --home "$D" --veraison "$V" --pack "$D/packs/demo-bank/pack.json" \
+  "$D/venv/bin/python3" "$D/scripts/trustzone.py" --home "$D" --veraison "$V" --pack "$D/pack.json" \
     --approved "$D/trust/approved-launches.json" --corim "$D/trust/veraison-corim-milan.cbor" --logs "$D/logs" \
     --est-listen 0.0.0.0:18443 --rats-model "${RATS_MODEL:-passport}"
   "$D/bin/tdx-verifier" -config "$D/config/tdx-verifier.json" -public-jwk >"$D/gateways/tdx-verifier.ear.jwk" 2>>"$D/logs/tdx-verifier.log"
@@ -140,10 +148,10 @@ start_one() {
 }
 wait_port() { for _ in $(seq 1 240); do nc -z 127.0.0.1 "$1" 2>/dev/null && return 0; sleep 0.25; done; echo "!! port $1 not up"; return 1; }
 
-# the secret the Vault releases: the path of packs/demo-bank's one Secret Vault Target
+# the secret the Vault releases: the path of the pack's one Secret Vault Target
 secret_path() {
   python3 -c 'import json,sys; print([t["secret"]["path"] for t in json.load(open(sys.argv[1]))["targets"] if "secret" in t][0])' \
-    "$D/packs/demo-bank/pack.json"
+    "$D/pack.json"
 }
 
 vault_init() {

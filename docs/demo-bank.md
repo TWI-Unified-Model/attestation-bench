@@ -70,13 +70,23 @@ The command checks the endorsement against Google's pinned root, adds the build 
 has the trust zone apply them. A new SEV-SNP launch needs a reference value for Veraison as well, so it is approved in
 `trust/` instead ([../trust/README.md](../trust/README.md)).
 
-## Making it your own bank
+## Making a bank of your own
 
-The bank's Targets, names, RRP identifiers and policy are data: edit `packs/demo-bank/pack.json`
-([../packs/README.md](../packs/README.md)), then `make bank-up`. The payment service uses the pack's Credential
-Authority Target for the ledger and its Secret Vault Target for the fraud service's key.
+```bash
+make bank-new NAME=acme-bank           # packs/acme-bank/pack.json: the Demo Bank's, under acme-bank.example
+BANK=acme-bank make bank-up            # bring it up; the next bank commands act on it until bank-down
+make bank-pay PLATFORM=gcp-snp
+make bank-down
+```
 
-To run the bank in Background Check: `RATS_MODEL=background-check make bank-up`.
+`make bank-new` copies the Demo Bank's pack with every name changed: the Targets, the RRP identifiers, the workload's
+names (which its workload CA and its ledger then admit), the components' certificates, the secret's path in Vault.
+Edit the new pack before `bank-up` to change what the bank issues and how: the Freshness Kinds, the algorithms, the
+certificate validity, the EAR policy ([../packs/README.md](../packs/README.md)). The payment service uses the pack's
+Credential Authority Target for the ledger and its Secret Vault Target for the fraud service's key. One bank is up at
+a time.
+
+To run a bank in Background Check: `RATS_MODEL=background-check make bank-up`.
 
 ## If something fails
 

@@ -28,6 +28,9 @@ w(
     "Demo Bank is fictional: its names, accounts and amounts are made up. Every server of the bank ran in the cloud; the "
     "operator's machine only built the programs, created the VMs and collected this evidence.\n"
 )
+bank = read("bank.txt").split()
+if bank:
+    w(f"The bank: `{bank[0]}`, from its pack `{bank[1]}` (SHA-256 `{bank[2][:16]}…`).\n")
 w("## Machines\n")
 w("```\n" + read("up", "machines.txt").strip() + "\n```\n")
 w(

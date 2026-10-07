@@ -5,13 +5,13 @@
 # for these two servers is made here and never leaves. Accounts, names and amounts are fictional.
 #
 #   core.sh install
-#   core.sh setup      env: INTERNAL_IP EXTERNAL_IP; /opt/demobank/public/workload-ca.pem from the trust zone
+#   core.sh setup      env: INTERNAL_IP EXTERNAL_IP HINT (the workload's name in the bank's pack, which the ledger maps
+#                      to its payments role); /opt/demobank/public/workload-ca.pem from the trust zone
 #   core.sh start | stop | status | audit
 set -euo pipefail
 D=/opt/demobank
 PG=/etc/postgresql/16/main
 export PATH="$D/bin:$PATH"
-HINT=payments.workload.demobank.example
 
 running() { [ -f "$D/logs/$1.pid" ] && kill -0 "$(cat "$D/logs/$1.pid")" 2>/dev/null; }
 pg_up() {   # the umbrella unit reports success even when the cluster fails to start; ask the server itself
@@ -29,7 +29,7 @@ install() {
 }
 
 setup() {
-  : "${INTERNAL_IP:?}" "${EXTERNAL_IP:?}"
+  : "${INTERNAL_IP:?}" "${EXTERNAL_IP:?}" "${HINT:?the name of the workload, from the pack of the bank}"
   [ -s "$D/public/workload-ca.pem" ] || { echo "!! workload CA missing"; exit 1; }
   mkdir -p "$D"/{tls,secrets,public,logs}
   chmod 700 "$D/tls" "$D/secrets"
