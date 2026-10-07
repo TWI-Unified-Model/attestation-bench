@@ -229,7 +229,10 @@ make report RUNS="e2e/evidence/20261007T17* e2e/evidence/20261007T18* hwcheck/ev
 ```
 
 Each run was compared, check by check, with the run of its kind before it, and keeps the comparison
-(`compare-with-<run>.txt`): 20 runs, no difference. The platform rule's checks of attack runs are new, with nothing
+(`compare-with-<run>.txt`): 20 runs, no difference. The demos and the redirect runs were compared with runs made
+before the platform rule required AMD's mitigation bits (`98a0ed3`): the outcomes are the same, but the SEV-SNP hosts
+were admitted then without the waiver, which the rule did not need yet; in the release's runs they are admitted
+under it, and each verdict names it. The platform rule's checks of attack runs are new, with nothing
 before them to compare; [platform-check's test](../rrp/cmd/platform-check/main_test.go) gives them again from each
 run's own files, field by field. The Demo Bank's SEV-SNP payments, which went through before R1 (on 6 October and on the morning of
 7 October), are refused now, as R1 intends. Every run deleted its VMs and recorded when; `make cloud-check` found both clouds empty at the end.
@@ -240,3 +243,24 @@ the tests judge them again). Once, CI's job that sets the trust zone up from zer
 packages, before any of the bench's steps; run again, the step took 23 s.
 
 The tag `v0.1.0` is set on the release's commit once CI has passed on it.
+
+### v0.1.1: the first page from the release's runs
+
+A review of v0.1.0 found its first page older than its mechanism: README's Status table showed the runs before the
+platform rule required AMD's mitigation bits, with SEV-SNP demos "under the platform rule" and no waiver, the Demo
+Bank's three payments and acme-bank's SEV-SNP payment going through; the Quick start, the guide's outputs, the
+example verdict of [attacks.md](attacks.md) and the platform pages were as old. They now quote the release check's
+runs. Two rows had no run under the rule, and were run again at v0.1.0 (`6e77624`):
+
+| Run | Result |
+|---|---|
+| the Demo Bank in Background Check, `RATS_MODEL=background-check make bank-up`, the five `bank-pay`, `bank-audit`, `bank-down` | the same five verdicts as in Passport: the TDX payment went through; GCP and AWS SEV-SNP refused for bit 4 (LAUNCH_MIT_VECTOR 0xb and 0xfef); the ordinary VM and the unapproved launch got no credential ([run](../e2e/evidence/20261007T193224Z-demo-bank)) |
+| a bank of one's own, `make bank-new NAME=acme-bank`, then `bank-up`, `bank-pay` gcp-tdx and gcp-snp, `bank-audit`, `bank-down` | the ledger admitted `payments.workload.acme-bank.example` from TDX; GCP SEV-SNP refused for bit 4; `make bank-new` made the same pack, byte for byte, as before the rule ([run](../e2e/evidence/20261007T195519Z-acme-bank)) |
+
+```bash
+make report RUNS="e2e/evidence/20261007T17* e2e/evidence/20261007T18* e2e/evidence/20261007T19* hwcheck/evidence/20261007T18*"   # 32 runs, 32 PASS
+```
+
+The verdict tests judge these payments too. `make test-live` at v0.1.0: the EST wire format as expected, and the 29
+committed attack runs appraised again by the live verifiers, 1450 checks. Both clouds were empty after each bank. The
+tag `v0.1.1` is set once CI has passed on its commit.

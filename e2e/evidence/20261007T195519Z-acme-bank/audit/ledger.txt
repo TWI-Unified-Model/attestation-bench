@@ -1,0 +1,51 @@
+    id    |          holder           | currency | balance 
+----------+---------------------------+----------+---------
+ ACC-1001 | Demo customer (fictional) | USD      | 4874.50
+ ACC-2002 | Demo merchant (fictional) | USD      | 1125.50
+(2 rows)
+
+ id | from_account | to_account | amount |    fraud_ref     | tee |              client_cn              |           client_cert_serial            |          client_cert_issuer           | db_user  |          created_at           
+----+--------------+------------+--------+------------------+-----+-------------------------------------+-----------------------------------------+---------------------------------------+----------+-------------------------------
+  1 | ACC-1001     | ACC-2002   | 125.50 | FRD-E84CB479D6F4 | tdx | payments.workload.acme-bank.example | 234592987848445132689020763837732163196 | Demo Bank workload CA Intermediate CA | payments | 2026-10-07 20:05:12.632272+00
+(1 row)
+
+--- ledger log: connections
+2026-10-07 20:03:40.929 UTC [4528] [unknown]@[unknown] [local] LOG:  connection received: host=[local]
+2026-10-07 20:03:41.437 UTC [4531] [unknown]@[unknown] [local] LOG:  connection received: host=[local]
+2026-10-07 20:03:41.438 UTC [4531] postgres@template1 [local] LOG:  connection authenticated: identity="postgres" method=peer (/etc/postgresql/16/main/pg_hba.conf:1)
+2026-10-07 20:03:41.438 UTC [4531] postgres@template1 [local] LOG:  connection authorized: user=postgres database=template1 application_name=psql
+2026-10-07 20:03:41.954 UTC [4534] [unknown]@[unknown] [local] LOG:  connection received: host=[local]
+2026-10-07 20:03:41.955 UTC [4534] postgres@template1 [local] LOG:  connection authenticated: identity="postgres" method=peer (/etc/postgresql/16/main/pg_hba.conf:1)
+2026-10-07 20:03:41.955 UTC [4534] postgres@template1 [local] LOG:  connection authorized: user=postgres database=template1 application_name=psql
+2026-10-07 20:03:42.468 UTC [4537] [unknown]@[unknown] [local] LOG:  connection received: host=[local]
+2026-10-07 20:03:42.469 UTC [4537] postgres@template1 [local] LOG:  connection authenticated: identity="postgres" method=peer (/etc/postgresql/16/main/pg_hba.conf:1)
+2026-10-07 20:03:42.469 UTC [4537] postgres@template1 [local] LOG:  connection authorized: user=postgres database=template1 application_name=psql
+2026-10-07 20:03:42.550 UTC [4543] [unknown]@[unknown] [local] LOG:  connection received: host=[local]
+2026-10-07 20:03:42.551 UTC [4543] postgres@postgres [local] LOG:  connection authenticated: identity="postgres" method=peer (/etc/postgresql/16/main/pg_hba.conf:1)
+2026-10-07 20:03:42.551 UTC [4543] postgres@postgres [local] LOG:  connection authorized: user=postgres database=postgres application_name=pg_isready
+2026-10-07 20:03:42.622 UTC [4547] [unknown]@[unknown] [local] LOG:  connection received: host=[local]
+2026-10-07 20:03:42.623 UTC [4547] postgres@postgres [local] LOG:  connection authenticated: identity="postgres" method=peer (/etc/postgresql/16/main/pg_hba.conf:1)
+2026-10-07 20:03:42.623 UTC [4547] postgres@postgres [local] LOG:  connection authorized: user=postgres database=postgres application_name=psql
+2026-10-07 20:03:42.691 UTC [4550] [unknown]@[unknown] [local] LOG:  connection received: host=[local]
+2026-10-07 20:03:42.692 UTC [4550] postgres@postgres [local] LOG:  connection authenticated: identity="postgres" method=peer (/etc/postgresql/16/main/pg_hba.conf:1)
+2026-10-07 20:03:42.692 UTC [4550] postgres@postgres [local] LOG:  connection authorized: user=postgres database=postgres application_name=psql
+2026-10-07 20:03:42.756 UTC [4551] [unknown]@[unknown] [local] LOG:  connection received: host=[local]
+2026-10-07 20:03:42.757 UTC [4551] postgres@bank [local] LOG:  connection authenticated: identity="postgres" method=peer (/etc/postgresql/16/main/pg_hba.conf:1)
+2026-10-07 20:03:42.757 UTC [4551] postgres@bank [local] LOG:  connection authorized: user=postgres database=bank application_name=psql
+2026-10-07 20:03:42.904 UTC [4557] [unknown]@[unknown] [local] LOG:  connection received: host=[local]
+2026-10-07 20:03:42.905 UTC [4557] postgres@postgres [local] LOG:  connection authenticated: identity="postgres" method=peer (/etc/postgresql/16/main/pg_hba.conf:1)
+2026-10-07 20:03:42.905 UTC [4557] postgres@postgres [local] LOG:  connection authorized: user=postgres database=postgres application_name=pg_isready
+2026-10-07 20:03:42.918 UTC [4564] [unknown]@[unknown] 127.0.0.1(38822) LOG:  connection received: host=127.0.0.1 port=38822
+2026-10-07 20:03:42.987 UTC [4570] [unknown]@[unknown] [local] LOG:  connection received: host=[local]
+2026-10-07 20:03:42.988 UTC [4570] postgres@postgres [local] LOG:  connection authenticated: identity="postgres" method=peer (/etc/postgresql/16/main/pg_hba.conf:1)
+2026-10-07 20:03:42.988 UTC [4570] postgres@postgres [local] LOG:  connection authorized: user=postgres database=postgres application_name=pg_isready
+2026-10-07 20:05:12.625 UTC [4742] [unknown]@[unknown] 10.128.0.26(57604) LOG:  connection received: host=10.128.0.26 port=57604
+2026-10-07 20:05:12.630 UTC [4742] payments@bank 10.128.0.26(57604) LOG:  connection authenticated: identity="CN=payments.workload.acme-bank.example" method=cert (/etc/postgresql/16/main/pg_hba.conf:2)
+2026-10-07 20:05:12.630 UTC [4742] payments@bank 10.128.0.26(57604) LOG:  connection authorized: user=payments database=bank SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)
+2026-10-07 20:09:28.001 UTC [5001] [unknown]@[unknown] [local] LOG:  connection received: host=[local]
+2026-10-07 20:09:28.003 UTC [5001] postgres@bank [local] LOG:  connection authenticated: identity="postgres" method=peer (/etc/postgresql/16/main/pg_hba.conf:1)
+2026-10-07 20:09:28.003 UTC [5001] postgres@bank [local] LOG:  connection authorized: user=postgres database=bank application_name=psql
+--- fraud service log
+2026/10/07 20:03:42 fraud-api listening on :8444
+2026/10/07 20:03:42 http: TLS handshake error from 127.0.0.1:35932: EOF
+2026/10/07 20:05:12 score FRD-E84CB479D6F4: ACC-1001 -> ACC-2002 12550 cents: approve (0)

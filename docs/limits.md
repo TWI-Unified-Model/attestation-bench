@@ -73,7 +73,8 @@ Read this page before you cite a result.
   at once, both RRPs refused it (409: the timestamp outside their window of `max_age` 120 s and `clock_skew` 5 s).
   Presented again when their clock reached the timestamp, both took it: a certificate issued and a secret released,
   for Evidence 295, 293 and 291 s old on Google Cloud SEV-SNP, AWS and Google Cloud TDX
-  (`preplay.json` in the same three runs). The RRP's window bounds the Evidence's age by the guest's clock, not by
+  (`preplay.json` in the same three runs), and 296, 293 and 291 s old in the release check's attack runs
+  (`hwcheck/evidence/20261007T180531Z-gcp-sev-snp`, `…181406Z-aws-sev-snp`, `…182023Z-gcp-tdx`). The RRP's window bounds the Evidence's age by the guest's clock, not by
   real time. The verdict reports it as an exposure, not a pass. Freshness from an RRP-supplied element
   (`present-nonce`, `present-epoch`) does not rest on the guest's clock.
 

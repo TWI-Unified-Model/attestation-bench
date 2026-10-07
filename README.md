@@ -34,16 +34,21 @@ make doctor                     # checks this machine; ends with "Ready for make
 make setup                      # builds and starts the trust zone in ~/.attestation-bench
 make check-mtls                 # VERDICT PASS: 40 of 40 checks as expected: only the allowed components, over TLS 1.3
 make test-live                  # the EST wire format, and the committed runs appraised again by the live verifiers
-make demo     PLATFORM=gcp-snp  # VERDICT PASS: all 10 Targets: credential acquired and admitted by the relying party
-make attacks  PLATFORM=gcp-snp  # VERDICT PASS: 212 checks: the honest Evidence passed, every attack refused ...
+make demo     PLATFORM=gcp-snp  # VERDICT PASS: all 10 Targets: …; admitted under the bench's waiver: Milan bit 4: …
+make attacks  PLATFORM=gcp-snp  # VERDICT PASS: 262 checks: …; … the bench's waiver …; exposure, the guest's clock: …
 make redirect PLATFORM=gcp-snp  # the #20 table: which Credential Authority issued, with and without the RRP identifier
 ```
 
-The trust zone (the EST server, the RRP gateways, the verifiers, step-ca, Vault) runs on your machine. Each run of the
-protocol creates one small confidential VM in the project or account your `gcloud` or `aws` CLI is signed in to, runs
-the workload in it, copies the results back, deletes the VM and checks that it is gone. Every run judges itself
-against what its experiment expects and ends with `VERDICT PASS` or `VERDICT FAIL`; on FAIL, `make` fails. Step by
-step, with what each step prints: [docs/getting-started.md](docs/getting-started.md).
+On SEV-SNP every verdict names the bench's waiver: the platform rule requires the mitigation bit AMD-SB-3034
+names for Milan, no Google Cloud or AWS host sets it, and a bank's rule refuses those hosts
+([docs/limits.md](docs/limits.md)).
+
+The trust zone (the EST server, the RRP gateways, the verifiers, step-ca, Vault) runs on your machine. There is no
+run without the cloud: nothing stands in for the hardware. Each run of the protocol creates one small confidential VM
+in the project or account your `gcloud` or `aws` CLI is signed in to, runs the workload in it, copies the results
+back, deletes the VM and checks that it is gone. Every run judges itself against what its experiment expects and ends
+with `VERDICT PASS` or `VERDICT FAIL`; on FAIL, `make` fails. Step by step, with what each step prints:
+[docs/getting-started.md](docs/getting-started.md).
 
 | `PLATFORM` | Hardware | Machine | Report signed by |
 |---|---|---|---|
@@ -81,22 +86,25 @@ network, the cloud. The ideas in plain words: [docs/concepts.md](docs/concepts.m
 
 | What | Result | Evidence |
 |---|---|---|
-| The trust zone, `make check-mtls`: mutual TLS between all components | 40 of 40, in Passport and in Background Check | [Passport](e2e/evidence/20261007T142034Z-bench-mtls-passport), [Background Check](e2e/evidence/20261007T142050Z-bench-mtls-background-check) |
-| Hardware, `make demo`, three platforms × two RATS models | 10 of 10 Targets in each of the six runs, under the platform rule and with Veraison's patch 0005 | e.g. [GCP SEV-SNP, Passport](e2e/evidence/20261007T054201Z-gcp-sev-snp-e2e-passport), [AWS SEV-SNP, Background Check](e2e/evidence/20261007T055226Z-aws-sev-snp-e2e-background-check) |
-| Hardware, `OTHER_PLATFORM=1 make demo` (tacra-est N24) | each platform's genuine Evidence refused at the Target of the other platform's verifier: in Passport after appraisal, in Background Check before it | [GCP SEV-SNP](e2e/evidence/20261007T012220Z-gcp-sev-snp-e2e-passport-other-platform), [AWS SEV-SNP](e2e/evidence/20261007T012516Z-aws-sev-snp-e2e-passport-other-platform), [GCP TDX](e2e/evidence/20261007T012715Z-gcp-tdx-e2e-passport-other-platform), [GCP TDX, Background Check](e2e/evidence/20261007T015243Z-gcp-tdx-e2e-background-check-other-platform) |
-| Hardware, `UNAPPROVED=1 make demo`: an SEV-SNP launch the bench does not approve (four vCPUs) | 10 of 10 Targets refused, Veraison `contraindicated` | [GCP SEV-SNP](e2e/evidence/20261007T140959Z-gcp-sev-snp-e2e-passport-unapproved), [AWS SEV-SNP](e2e/evidence/20261007T141302Z-aws-sev-snp-e2e-passport-unapproved) |
-| Hardware, `make attacks` | every attack refused for its own reason: 162 checks in process and 50 through Veraison on each SEV-SNP platform, 82 on TDX | [GCP SEV-SNP](hwcheck/evidence/20261007T055700Z-gcp-sev-snp), [GCP TDX](hwcheck/evidence/20261007T060345Z-gcp-tdx), [AWS SEV-SNP](hwcheck/evidence/20261007T060138Z-aws-sev-snp) |
-| Hardware, `make redirect` | 20 of 20 cases on each platform, as in the table above | [GCP SEV-SNP](hwcheck/evidence/20261007T060630Z-gcp-snp-redirect), [GCP TDX](hwcheck/evidence/20261007T061254Z-gcp-tdx-redirect), [AWS SEV-SNP](hwcheck/evidence/20261007T061008Z-aws-snp-redirect) |
-| The Demo Bank in the cloud | three payments from confidential VMs went through; an ordinary VM and an unapproved launch were refused; in Passport and in Background Check | [Passport](e2e/evidence/20261007T061608Z-demo-bank), [Background Check](e2e/evidence/20261007T015626Z-demo-bank) |
-| A bank of your own, `make bank-new NAME=acme-bank` | its own Targets, RRP identifiers and names: the ledger admitted `payments.workload.acme-bank.example`, and the payment from GCP SEV-SNP went through | [run](e2e/evidence/20261007T021953Z-acme-bank) |
+| The trust zone, `make check-mtls`: mutual TLS between all components | 40 of 40, in Passport and in Background Check | [Passport](e2e/evidence/20261007T172815Z-bench-mtls-passport), [Background Check](e2e/evidence/20261007T172900Z-bench-mtls-background-check) |
+| Hardware, `make demo`, three platforms × two RATS models | 10 of 10 Targets in each of the six runs. On TDX under the platform rule; on SEV-SNP only under the bench's named waiver `admitted without bit 4, AMD-SB-3034`, which each verdict names: no Google Cloud or AWS host attests that fix ([docs/limits.md](docs/limits.md)) | e.g. [GCP SEV-SNP, Passport](e2e/evidence/20261007T174229Z-gcp-sev-snp-e2e-passport), [AWS SEV-SNP, Background Check](e2e/evidence/20261007T173657Z-aws-sev-snp-e2e-background-check), [GCP TDX, Passport](e2e/evidence/20261007T174534Z-gcp-tdx-e2e-passport) |
+| Hardware, `OTHER_PLATFORM=1 make demo` (tacra-est N24) | each platform's genuine Evidence refused at the Target of the other platform's verifier: in Passport after appraisal, in Background Check before it | [GCP SEV-SNP](e2e/evidence/20261007T175538Z-gcp-sev-snp-e2e-passport-other-platform), [AWS SEV-SNP](e2e/evidence/20261007T175845Z-aws-sev-snp-e2e-passport-other-platform), [GCP TDX](e2e/evidence/20261007T180040Z-gcp-tdx-e2e-passport-other-platform), [GCP TDX, Background Check](e2e/evidence/20261007T173902Z-gcp-tdx-e2e-background-check-other-platform) |
+| Hardware, `UNAPPROVED=1 make demo`: an SEV-SNP launch the bench does not approve (four vCPUs) | 10 of 10 Targets refused, Veraison `contraindicated` | [GCP SEV-SNP](e2e/evidence/20261007T175016Z-gcp-sev-snp-e2e-passport-unapproved), [AWS SEV-SNP](e2e/evidence/20261007T175320Z-aws-sev-snp-e2e-passport-unapproved) |
+| Hardware, `make attacks` | every attack refused for its own reason: 262 checks on each SEV-SNP platform and 162 on TDX, the platform rule's among them (the bench's admits the honest results, on SEV-SNP under its waiver; a bank's refuses SEV-SNP for bit 4; a rule one step stricter refuses them all). And an exposure, reported as one: absent-timestamp Evidence made with the guest's clock 300 s ahead was accepted 291 to 296 s old with `max_age` 120 s | [GCP SEV-SNP](hwcheck/evidence/20261007T180531Z-gcp-sev-snp), [GCP TDX](hwcheck/evidence/20261007T182023Z-gcp-tdx), [AWS SEV-SNP](hwcheck/evidence/20261007T181406Z-aws-sev-snp) |
+| Hardware, `make redirect` | 20 of 20 cases on each platform: with the RRP identifier the second Credential Authority refused all five Freshness Kinds; without it, all but present-nonce | [GCP SEV-SNP](hwcheck/evidence/20261007T182724Z-gcp-snp-redirect), [GCP TDX](hwcheck/evidence/20261007T183127Z-gcp-tdx-redirect), [AWS SEV-SNP](hwcheck/evidence/20261007T183448Z-aws-snp-redirect) |
+| The Demo Bank in the cloud | its rule waives nothing: the payment from TDX went through; the payments from Google Cloud and AWS SEV-SNP were refused for bit 4; an ordinary VM and an unapproved launch got no credential; in Passport and in Background Check | [Passport](e2e/evidence/20261007T183914Z-demo-bank), [Background Check](e2e/evidence/20261007T193224Z-demo-bank) |
+| A bank of your own, `make bank-new NAME=acme-bank` | its own Targets, RRP identifiers and names: the ledger admitted `payments.workload.acme-bank.example` from TDX; the payment from GCP SEV-SNP was refused for bit 4, as the Demo Bank's | [run](e2e/evidence/20261007T195519Z-acme-bank) |
 
-The `make demo`, `attacks` and `redirect` runs and the Demo Bank in Passport above are the release's last: made on
-7 October 2026 from a fresh clone of the GitHub repository at `43b4505`, with Veraison's patch 0005 and the platform
-rule, and compared check by check with the runs of 6 and 7 October before them: identical. The other rows are the
-runs of [the release's verification](docs/verification.md). The last runs are listed with
+The runs above are the release check of v0.1.0, made on 7 October 2026 from a fresh clone of the GitHub repository,
+and two runs made at v0.1.0 after it: the Demo Bank in Background Check and a bank of your own. The demos, attacks and
+redirect runs were each compared check by check with the run of its kind before it: the same outcomes. The demos and
+redirect runs before them were made before the platform rule required AMD's mitigation bits, so their SEV-SNP hosts
+were admitted without a waiver; the banks' SEV-SNP payments, which went through then, are refused now. How the
+release was checked: [docs/verification.md](docs/verification.md). The runs are listed with
 
 ```bash
-make report RUNS="e2e/evidence/20261007T05[4-9]* e2e/evidence/20261007T06* hwcheck/evidence/20261007T05[5-9]* hwcheck/evidence/20261007T06*"
+make report RUNS="e2e/evidence/20261007T17* e2e/evidence/20261007T18* e2e/evidence/20261007T19* hwcheck/evidence/20261007T18*"
+# 32 runs: 32 PASS, 0 FAIL, 0 not judged
 ```
 
 What a run does **not** prove: [docs/limits.md](docs/limits.md).

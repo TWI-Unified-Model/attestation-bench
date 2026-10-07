@@ -33,14 +33,16 @@ request with one input changed, as the attacker could change it:
 
 Each attack must be refused **for its own reason**. A refusal that also refuses the honest request proves nothing and
 is counted as "inconclusive", never as a pass. The run ends with its verdict, on SEV-SNP
-`VERDICT PASS: 212 checks: the honest Evidence passed, every attack refused for its own reason; exposure, the guest's
-clock: …`, and keeps every check in `rrpverify-*.json` and the pre-play in `preplay.json` ([results.md](results.md)).
+`VERDICT PASS: 262 checks: the honest Evidence passed, every attack refused for its own reason; the honest Evidence
+admitted under the bench's waiver: Milan bit 4: admitted without bit 4, AMD-SB-3034; exposure, the guest's clock: …`
+([GCP SEV-SNP](../hwcheck/evidence/20261007T180531Z-gcp-sev-snp), the release check), and keeps every check in
+`rrpverify-*.json` and the pre-play in `preplay.json` ([results.md](results.md)).
 
-| Platform | Checks in process | Checks through the verifier service |
-|---|---|---|
-| GCP SEV-SNP | 162 with the bench's Veraison build (each report as delivered and with its certificate table normalised) | 50 (the deployed Veraison) |
-| GCP TDX | 82 (go-tdx-guest, Intel's collateral) | 50 (the deployed TDX verifier) |
-| AWS SEV-SNP | 162 with the bench's Veraison build | 50 |
+| Platform | Checks in process | Checks through the verifier service | The platform rule (below) |
+|---|---|---|---|
+| GCP SEV-SNP | 162 with the bench's Veraison build (each report as delivered and with its certificate table normalised) | 50 (the deployed Veraison) | 50 |
+| GCP TDX | 82 (go-tdx-guest, Intel's collateral) | 50 (the deployed TDX verifier) | 30 |
+| AWS SEV-SNP | 162 with the bench's Veraison build | 50 | 50 |
 
 The run then applies the RRPs' platform rule to the honest Attestation Results it kept (`rrpverify-platform.json`,
 `rrp/cmd/platform-check`): the bench's own rule admits them, on SEV-SNP Milan under its named waiver of AMD-SB-3034's

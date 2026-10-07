@@ -1,0 +1,4 @@
+NO attestation plug-in and CAI                 0.3 ms  sev-snp no attestation from this machine: platform: configfs-tsm report: could not create report entry in configfs: mkdir /sys/kernel/config/tsm/report/entry4142376720: no such device or address
+ok ledger: login without a certificate        10.5 ms  refused as expected: failed to connect to `user=payments database=bank`: 10.128.0.19:5432 (core.demobank.internal): server error: FATAL: connection requires a valid client certificate (SQLSTATE 28000)
+ok fraud service: call without the key         5.2 ms  refused as expected: HTTP 403: not admitted
+VERDICT PASS: no attestation, no credential; the ledger and the fraud service refused it

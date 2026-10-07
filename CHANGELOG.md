@@ -2,6 +2,24 @@
 
 What changed, newest first. Dates are UTC.
 
+## 0.1.1 (7 October 2026): the first page from the release's runs
+
+### Changed
+
+- README's Status table and Quick start, the guide's outputs (steps 5 to 9), the example verdict of
+  [docs/attacks.md](docs/attacks.md) and the platform pages now quote the release check's runs. On SEV-SNP the hosts
+  are admitted only under the bench's waiver of AMD-SB-3034's bit 4, and every verdict says so; attack runs carry the
+  platform rule's checks and the guest's-clock exposure; the Demo Bank pays from TDX and refuses SEV-SNP. They showed
+  runs made before the rule required the bit, found by a review of v0.1.0.
+- [docs/verification.md](docs/verification.md) says that the release's demos and redirect runs were compared with runs
+  made before that rule: the same outcomes, admitted then without the waiver. [docs/limits.md](docs/limits.md) gives
+  the release's pre-play ages beside the earlier runs'.
+
+### Added
+
+- The Demo Bank in Background Check and a bank of one's own (`make bank-new NAME=acme-bank`), run again under the
+  rule: in both, TDX pays and SEV-SNP is refused for bit 4. The verdict tests judge their payments.
+
 ## 0.1.0 (7 October 2026): the release for the group
 
 The bench as a repository of its own, with the TACRA proof of concept's history. Everything below was added on

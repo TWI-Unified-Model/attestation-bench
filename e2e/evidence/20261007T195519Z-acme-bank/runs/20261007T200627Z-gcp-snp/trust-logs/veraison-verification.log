@@ -1,0 +1,7 @@
+INFO	session requested	{"caller": ["est-server.trust.acme-bank.example"]}
+INFO	gin	[GIN] 2026/10/07 - 20:08:08 | 201 |     6.85892ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=lOnE2UVbWrf5EnttJ7wPxjG9lEYFR8vaKan6QsR9StNOdyaPRVp1pgCdoybeQg5oPn3q1aXscqRXZerq939Rdw%3D%3D"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/07 - 20:08:08 | 200 |  220.102466ms |       127.0.0.1 | POST     "/challenge-response/v1/session/d06d6a25-c28a-11f1-8ae1-306234393661"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/07 - 20:08:08 | 204 |        7.43µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/d06d6a25-c28a-11f1-8ae1-306234393661"
+INFO	gin	

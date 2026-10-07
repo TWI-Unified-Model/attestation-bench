@@ -1,0 +1,7 @@
+INFO	session requested	{"caller": ["ca-gateway.trust.demobank.example"]}
+INFO	gin	[GIN] 2026/10/07 - 19:46:23 | 201 |     5.32233ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=azKQnUVR7pQUsKrflIDFWjji0TbtrSGYKb_LM5GHsK_kp8uDsPG8BXd2LLjak4aOFVEZ3iWCBQaA2pfHxCPQbA%3D%3D"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/07 - 19:46:23 | 200 |  165.643757ms |       127.0.0.1 | POST     "/challenge-response/v1/session/c6d3b4a4-c287-11f1-88aa-333230666434"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/07 - 19:46:23 | 204 |       8.931µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/c6d3b4a4-c287-11f1-88aa-333230666434"
+INFO	gin	

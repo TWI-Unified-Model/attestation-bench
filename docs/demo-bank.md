@@ -86,7 +86,8 @@ has the trust zone apply them. A new SEV-SNP launch needs a reference value for 
 ```bash
 make bank-new NAME=acme-bank           # packs/acme-bank/pack.json: the Demo Bank's, under acme-bank.example
 BANK=acme-bank make bank-up            # bring it up; the next bank commands act on it until bank-down
-make bank-pay PLATFORM=gcp-snp
+make bank-pay PLATFORM=gcp-tdx         # the transfer goes through
+make bank-pay PLATFORM=gcp-snp         # refused for AMD-SB-3034's bit 4, as at the Demo Bank
 make bank-down
 ```
 
@@ -98,9 +99,14 @@ Credential Authority Target for the ledger and its Secret Vault Target for the f
 Demo Bank's is the machinery: the VMs are named `demobank-*` whatever the bank (so `make bank-down` and
 `make cloud-check` find them), and the trust zone's CAs keep their names, so the ledger's certificate for
 `payments.workload.acme-bank.example` is issued by "Demo Bank workload CA". One bank is up at a time. The commands
-above, as written, on 7 October 2026: [e2e/evidence/20261007T021953Z-acme-bank](../e2e/evidence/20261007T021953Z-acme-bank).
+above, on 7 October 2026 under the bit-4 rule: the TDX payment went through, the GCP SEV-SNP payment was refused
+([e2e/evidence/20261007T195519Z-acme-bank](../e2e/evidence/20261007T195519Z-acme-bank)); `make bank-new` made the same
+pack, byte for byte, as in the run before the rule, whose SEV-SNP payment went through
+([e2e/evidence/20261007T021953Z-acme-bank](../e2e/evidence/20261007T021953Z-acme-bank)).
 
-To run a bank in Background Check: `RATS_MODEL=background-check make bank-up`.
+To run a bank in Background Check: `RATS_MODEL=background-check make bank-up`. The Demo Bank so, on 7 October 2026:
+[e2e/evidence/20261007T193224Z-demo-bank](../e2e/evidence/20261007T193224Z-demo-bank), with the same five verdicts as
+in Passport.
 
 ## If something fails
 

@@ -1,0 +1,4 @@
+2026-10-07 20:05:12.625 UTC [4742] [unknown]@[unknown] 10.128.0.26(57604) LOG:  connection received: host=10.128.0.26 port=57604
+2026-10-07 20:05:12.630 UTC [4742] payments@bank 10.128.0.26(57604) LOG:  connection authenticated: identity="CN=payments.workload.acme-bank.example" method=cert (/etc/postgresql/16/main/pg_hba.conf:2)
+2026-10-07 20:05:12.630 UTC [4742] payments@bank 10.128.0.26(57604) LOG:  connection authorized: user=payments database=bank SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)
+2026-10-07 20:05:12.640 UTC [4742] payments@bank 10.128.0.26(57604) LOG:  disconnection: session time: 0:00:00.015 user=payments database=bank host=10.128.0.26 port=57604

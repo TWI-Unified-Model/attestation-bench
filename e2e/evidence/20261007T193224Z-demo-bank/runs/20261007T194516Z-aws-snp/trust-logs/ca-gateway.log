@@ -1,0 +1,2 @@
+2026/10/07 19:46:23 background-check: this RRP asks https://localhost:8443 (veraison), 5963 octets of Evidence (application/vnd.veraison.tsm-report+cbor)
+2026/10/07 19:46:23 enroll refused: target=https://ledger-db.demobank.example kind=present-nonce caller=[est-server.trust.demobank.example]: platform-policy: the platform is not one this RRP accepts: mitigation bit 4 (AMD-SB-3034 (CVE-2025-54510)) is not set in LAUNCH_MIT_VECTOR 0xfef

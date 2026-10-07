@@ -1,0 +1,3 @@
+ok attestation plug-in and CAI                10.6 ms  sev-snp
+NO TACRA: ledger certificate                 354.3 ms   cai: EnrollCredential: 403 RRP ca: platform-policy: the platform is not one this RRP accepts: mitigation bit 4 (AMD-SB-3034 (CVE-2025-54510)) is not set in LAUNCH_MIT_VECTOR 0xfef
+VERDICT PASS: genuine hardware evidence, refused by the bank's platform rule: mitigation bit 4 (AMD-SB-3034 (CVE-2025-54510)) is not set in LAUNCH_MIT_VECTOR 0xfef

@@ -121,7 +121,7 @@ through.
 
 ```
 VERDICT PASS: 40 of 40 checks as expected: only the allowed components, over TLS 1.3
-== run directory: /Users/you/.attestation-bench/runs/20261007T140853Z-bench-mtls-passport
+== run directory: /Users/you/.attestation-bench/runs/20261007T172815Z-bench-mtls-passport
 ```
 
 Then the tests that need the running bench, still without hardware:
@@ -141,9 +141,11 @@ made. Veraison fetches AMD's revocation list and the TDX verifier Intel's collat
   ok  attest-initiate https://db-nonce.tacra.example: 200, mode enroll, Handle 43 characters of unpadded base64url, 32 octets
   ok  /attest-enroll as text/plain: 415 Content-Type must be application/json
   ...
-  ok    20261007T134801Z-gcp-sev-snp   50 checks, 0 not as expected
-test-live: the EST wire format as expected; 23 committed runs appraised again, 1150 checks as expected
+  ok    20261007T182023Z-gcp-tdx       50 checks, 0 not as expected
+test-live: the EST wire format as expected; 29 committed runs appraised again, 1450 checks as expected
 ```
+
+That is at v0.1.0; every attack run committed after it adds one run and 50 checks.
 
 ## 7. Run TACRA end to end, on real hardware
 
@@ -159,13 +161,20 @@ the deletion checked.
 
 ```
 10 of 10 Targets: credential acquired and admitted by the relying party
-ok  https://db-nonce.tacra.example         x509        755.8 ms 200
-ok  https://db-epoch.tacra.example         x509        645.9 ms 200
+ok  https://db-nonce.tacra.example         x509        933.2 ms 200
+ok  https://db-epoch.tacra.example         x509        515.1 ms 200
 ...
-ok  https://ledger-none.tacra.example      api-key     491.9 ms 200
-VERDICT PASS: all 10 Targets: credential acquired and admitted by the relying party
-== run directory: /Users/you/.attestation-bench/runs/20261007T135611Z-gcp-sev-snp-e2e-passport
+ok  https://ledger-none.tacra.example      api-key     440.2 ms 200
+the platform rule's waiver: Milan bit 4: admitted without bit 4, AMD-SB-3034
+guest minus RRP: +1.127 s, within 1.308 s
+VERDICT PASS: all 10 Targets: credential acquired and admitted by the relying party; admitted under the bench's waiver: Milan bit 4: admitted without bit 4, AMD-SB-3034
+== run directory: /Users/you/.attestation-bench/runs/20261007T174229Z-gcp-sev-snp-e2e-passport
 ```
+
+On SEV-SNP the verdict names the bench's waiver: the platform rule requires the mitigation bit AMD-SB-3034 names for
+Milan, no Google Cloud or AWS host sets it, and the bench admits them under that named waiver so that the protocol
+can be shown; a bank's rule, with no waiver, refuses them ([limits.md](limits.md)). On TDX the verdict ends at "by
+the relying party". `guest minus RRP` is the guest's clock against the RRP's.
 
 Every run ends this way: its verdict, then the directory that holds everything it recorded. A run whose verdict is
 `FAIL` makes `make` fail too. The same command can play an attacker: `UNAPPROVED=1` (a launch the bench does not
@@ -182,15 +191,23 @@ For each of the ten requests it first checks the honest Evidence, then changes o
 intermediary could: another Target, another RRP, another key, a replayed or stale freshness value, a key that is not
 the platform's, an unapproved launch, a timestamp an hour off. Each must be refused for its own reason. It runs the
 checks twice: inside one program, with the bench's build of Veraison, and through the deployed Veraison as an RRP
-would ask it; two other builds of Veraison are run beside them, for comparison only.
+would ask it; two other builds of Veraison are run beside them, for comparison only. Then it applies the RRPs'
+platform rule to the honest results (`rrpverify-platform`), and pre-plays absent-timestamp Evidence made with the
+guest's clock 300 s ahead: refused at once, accepted when the RRP's clock reaches it, older than `max_age`. That is
+reported as an exposure, not a pass ([limits.md](limits.md), "Time").
 
 ```
+rrpverify-platform: 50 checks, 0 not as expected
 rrpverify-service: 50 checks, 0 not as expected
 rrpverify-veraison-fixed: 162 checks, 0 not as expected (a build the bench compares with: reported, not judged)
 rrpverify-veraison-fork: 142 checks, 60 not as expected (a build the bench compares with: reported, not judged)
 rrpverify-veraison-v015: 162 checks, 0 not as expected
-VERDICT PASS: 212 checks: the honest Evidence passed, every attack refused for its own reason
-== run directory: /Users/you/.attestation-bench/runs/20261007T134801Z-gcp-sev-snp
+pre-play https://db-time.tacra.example: at once 409 RRP ca: freshness: …; 296 s or more after the Evidence was made: 200
+pre-play https://ledger-time.tacra.example: at once 409 RRP vault: freshness: …; 296 s or more after the Evidence was made: 200
+the platform rule's waiver: Milan bit 4: admitted without bit 4, AMD-SB-3034
+guest minus RRP: +1.226 s, within 1.386 s
+VERDICT PASS: 262 checks: the honest Evidence passed, every attack refused for its own reason; the honest Evidence admitted under the bench's waiver: Milan bit 4: admitted without bit 4, AMD-SB-3034; exposure, the guest's clock: https://db-time.tacra.example accepted Evidence 296 s old or more (max_age 120 s); https://ledger-time.tacra.example accepted Evidence 296 s old or more (max_age 120 s)
+== run directory: /Users/you/.attestation-bench/runs/20261007T180531Z-gcp-sev-snp
 ```
 
 The catalogue of attacks and what stops each: [attacks.md](attacks.md).
@@ -217,8 +234,9 @@ no-rrp-id    present-epoch      ISSUED   ISSUED
 no-rrp-id    absent-epoch       ISSUED   ISSUED
 no-rrp-id    absent-timestamp   ISSUED   ISSUED
 no-rrp-id    absent-none        ISSUED   ISSUED
+guest minus RRP: +1.328 s, within 1.486 s
 VERDICT PASS: with the RRP identifier, ca2 refused all 5 Freshness Kinds; without it, all but present-nonce
-== run directory: /Users/you/.attestation-bench/runs/20261007T060630Z-gcp-snp-redirect
+== run directory: /Users/you/.attestation-bench/runs/20261007T182724Z-gcp-snp-redirect
 ```
 
 With the RRP identifier in the binding, `ca2` refuses every Freshness Kind. Without it, only a nonce `ca2` never

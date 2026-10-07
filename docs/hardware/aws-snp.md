@@ -31,11 +31,11 @@ roots for both VCEK and VLEK (`third_party/veraison-services`).
 
 ## What each experiment checks, and what to expect
 
-| Command | Result in the reference runs |
+| Command | Result in the release check (7 October 2026) |
 |---|---|
-| `make demo` | 10 of 10, Veraison `affirming` ten times ([Passport](../../e2e/evidence/20261006T223210Z-aws-sev-snp-e2e-passport), [Background Check](../../e2e/evidence/20261006T224133Z-aws-sev-snp-e2e-background-check)) |
-| `make attacks` | all ten reports VLEK-signed; `v015` 162 checks, the deployed Veraison 50, 0 not as expected; `fork` and `fixed` 122 checks, 120 not as expected, because without AMD's VLEK roots they cannot check the reports at all ([run](../../hwcheck/evidence/20261006T225323Z-aws-sev-snp)) |
-| `make redirect` | 20 of 20 cases as in [getting-started.md](../getting-started.md), step 9 ([run](../../hwcheck/evidence/20261006T230316Z-aws-snp-redirect)) |
+| `make demo` | 10 of 10, Veraison `affirming` ten times; the RRPs admit the host only under the bench's named waiver of AMD-SB-3034's bit 4, which the verdict names, and a bank's rule refuses it ([../limits.md](../limits.md)) ([Passport](../../e2e/evidence/20261007T174809Z-aws-sev-snp-e2e-passport), [Background Check](../../e2e/evidence/20261007T173657Z-aws-sev-snp-e2e-background-check)) |
+| `make attacks` | all ten reports VLEK-signed; `v015` 162 checks, the deployed Veraison 50, the platform rule 50, 0 not as expected; `fork` and `fixed` 122 checks, 120 not as expected, because without AMD's VLEK roots they cannot check the reports at all; the pre-play exposure, Evidence accepted 293 s old with `max_age` 120 s ([run](../../hwcheck/evidence/20261007T181406Z-aws-sev-snp)) |
+| `make redirect` | 20 of 20 cases as in [getting-started.md](../getting-started.md), step 9 ([run](../../hwcheck/evidence/20261007T183448Z-aws-snp-redirect)) |
 
 ## Note
 

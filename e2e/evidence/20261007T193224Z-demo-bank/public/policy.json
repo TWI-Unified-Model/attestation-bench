@@ -1,0 +1,140 @@
+{
+ "ca-gateway": {
+  "rrp_id": "https://ca.demobank.example",
+  "rats_model": "background-check",
+  "targets": {
+   "https://ledger-db.demobank.example": {
+    "credential_types": [
+     "x509"
+    ],
+    "freshness_kind": "present-nonce",
+    "expires_in": 300,
+    "verifiers": [
+     "veraison",
+     "tdx"
+    ],
+    "acceptable": [
+     "ecdsa-p256-sha256"
+    ],
+    "identities": {
+     "payments.workload.demobank.example": {
+      "sans": [
+       "payments.workload.demobank.example",
+       "spiffe://demobank.example/payments"
+      ],
+      "measurements": [
+       "ccdc5cf01ba25526bd65503d95931b787b4385a3277cfe4448addf9c3e894948ae8cf7b099620e3e22717de2fb5d26fa",
+       "7a89cceaaba0bbdddc4f775acca3ef15d1f9bf8abccdc6115cfad7fb8eae113df3ee0bb50efa34db9c53ae065b1dc766",
+       "c1ee9c16e3afc506cfe042c5b846a368528f3b37618eafb27469bc114cf914e9222c91618470e7f2b28ac360968270a5",
+       "f21e6b48743fe14c2d090078ca1197f09ae4c99438677f2c79901ef80e2aeefe2f9a7eb6e3eb3b5047c4f1511731e5d3"
+      ],
+      "validity": "1h"
+     }
+    }
+   }
+  },
+  "ear": {
+   "max_age": 120,
+   "skew": 5
+  },
+  "verifiers": [
+   {
+    "url": "https://localhost:8443",
+    "ca": "/root/veraison-deployment/certs/rootCA.crt",
+    "name": "veraison",
+    "ear_key": "/opt/demobank/gateways/veraison.ear.jwk",
+    "submods": [
+     "SEVSNP"
+    ],
+    "provider": "sev_guest"
+   },
+   {
+    "url": "https://localhost:8453",
+    "ca": "/opt/demobank/tls/root.crt",
+    "name": "tdx",
+    "ear_key": "/opt/demobank/gateways/tdx-verifier.ear.jwk",
+    "submods": [
+     "TDX"
+    ],
+    "provider": "tdx_guest"
+   }
+  ],
+  "client_ca": "/opt/demobank/tls/root.crt",
+  "clients": [
+   "est-server.trust.demobank.example"
+  ]
+ },
+ "vault-gateway": {
+  "rrp_id": "https://vault.demobank.example",
+  "rats_model": "background-check",
+  "targets": {
+   "https://fraud-api.demobank.example": {
+    "credential_types": [
+     "api-key"
+    ],
+    "freshness_kind": "present-nonce",
+    "expires_in": 300,
+    "verifiers": [
+     "veraison",
+     "tdx"
+    ],
+    "acceptable": [
+     "MLKEM768-P256+HKDF-SHA256+AES-256-GCM"
+    ],
+    "groups": {
+     "payments.workload.demobank.example": {
+      "secret_path": "demobank/fraud-api",
+      "measurements": [
+       "ccdc5cf01ba25526bd65503d95931b787b4385a3277cfe4448addf9c3e894948ae8cf7b099620e3e22717de2fb5d26fa",
+       "7a89cceaaba0bbdddc4f775acca3ef15d1f9bf8abccdc6115cfad7fb8eae113df3ee0bb50efa34db9c53ae065b1dc766",
+       "c1ee9c16e3afc506cfe042c5b846a368528f3b37618eafb27469bc114cf914e9222c91618470e7f2b28ac360968270a5",
+       "f21e6b48743fe14c2d090078ca1197f09ae4c99438677f2c79901ef80e2aeefe2f9a7eb6e3eb3b5047c4f1511731e5d3"
+      ],
+      "policy_version": "1",
+      "purpose": [
+       "authenticate"
+      ],
+      "algorithm": "opaque-bearer",
+      "validity_seconds": 3600
+     }
+    }
+   }
+  },
+  "ear": {
+   "max_age": 120,
+   "skew": 5
+  },
+  "verifiers": [
+   {
+    "url": "https://localhost:8443",
+    "ca": "/root/veraison-deployment/certs/rootCA.crt",
+    "name": "veraison",
+    "ear_key": "/opt/demobank/gateways/veraison.ear.jwk",
+    "submods": [
+     "SEVSNP"
+    ],
+    "provider": "sev_guest"
+   },
+   {
+    "url": "https://localhost:8453",
+    "ca": "/opt/demobank/tls/root.crt",
+    "name": "tdx",
+    "ear_key": "/opt/demobank/gateways/tdx-verifier.ear.jwk",
+    "submods": [
+     "TDX"
+    ],
+    "provider": "tdx_guest"
+   }
+  ],
+  "client_ca": "/opt/demobank/tls/root.crt",
+  "clients": [
+   "est-server.trust.demobank.example"
+  ]
+ },
+ "tdx-verifier": {
+  "reference_mrtd": [
+   "c1ee9c16e3afc506cfe042c5b846a368528f3b37618eafb27469bc114cf914e9222c91618470e7f2b28ac360968270a5",
+   "f21e6b48743fe14c2d090078ca1197f09ae4c99438677f2c79901ef80e2aeefe2f9a7eb6e3eb3b5047c4f1511731e5d3"
+  ]
+ }
+}

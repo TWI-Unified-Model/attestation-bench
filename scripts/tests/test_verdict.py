@@ -64,6 +64,21 @@ BANK_R6_RUNS = {
     "20261007T185428Z-ordinary": "ordinary",
     "20261007T185700Z-unapproved": "unapproved",
 }
+# the same rule after the release check, at v0.1.0: the Demo Bank in Background Check, and a bank of one's own
+# (make bank-new NAME=acme-bank)
+BANKS_AFTER_R6 = {
+    E2E / "20261007T193224Z-demo-bank" / "runs": {
+        "20261007T194000Z-gcp-tdx": "pay",
+        "20261007T194222Z-gcp-snp": "platform",
+        "20261007T194516Z-aws-snp": "platform",
+        "20261007T194721Z-ordinary": "ordinary",
+        "20261007T194951Z-unapproved": "unapproved",
+    },
+    E2E / "20261007T195519Z-acme-bank" / "runs": {
+        "20261007T200406Z-gcp-tdx": "pay",
+        "20261007T200627Z-gcp-snp": "platform",
+    },
+}
 BANK_RUNS = {
     "20261006T231902Z-gcp-snp": "pay",
     "20261006T232202Z-gcp-tdx": "pay",
@@ -147,16 +162,17 @@ class CommittedRuns(unittest.TestCase):
                 self.assertTrue(last.startswith("VERDICT PASS: "), last)
 
     def test_bank_pay_release(self):
-        for run, expect in BANK_R6_RUNS.items():
-            with self.subTest(run=run):
-                code, last = verdict("bank-pay", BANK_R6 / run, "--expect", expect)
-                self.assertEqual(code, 0, last)
-                if expect == "platform":  # the bank's rule names the bit and its bulletin, and the line ends there
-                    self.assertRegex(
-                        last,
-                        r"refused by the bank's platform rule: mitigation bit 4 \(AMD-SB-3034 \(CVE-2025-54510\)\) "
-                        r"is not set in LAUNCH_MIT_VECTOR 0x[0-9a-f]+$",
-                    )
+        for bank, runs in [(BANK_R6, BANK_R6_RUNS), *BANKS_AFTER_R6.items()]:
+            for run, expect in runs.items():
+                with self.subTest(bank=bank.parent.name, run=run):
+                    code, last = verdict("bank-pay", bank / run, "--expect", expect)
+                    self.assertEqual(code, 0, last)
+                    if expect == "platform":  # the bank's rule names the bit and its bulletin, and the line ends there
+                        self.assertRegex(
+                            last,
+                            r"refused by the bank's platform rule: mitigation bit 4 \(AMD-SB-3034 \(CVE-2025-54510\)\) "
+                            r"is not set in LAUNCH_MIT_VECTOR 0x[0-9a-f]+$",
+                        )
 
 
 class ChangedRuns(unittest.TestCase):
