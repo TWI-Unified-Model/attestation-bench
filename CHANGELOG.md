@@ -2,6 +2,37 @@
 
 What changed, newest first. Dates are UTC.
 
+## Unreleased: the data the group's open questions need
+
+### Added
+
+- **The conduit's rewrites** in `make redirect` (TACRA #19): on Evidence made for `ca1`, the conduit sends, one at a
+  time, a made-up Handle, the Freshness Kind `absent-none`, a credential type the Target does not offer, another
+  workload's Credential Hint, and the other credential type the Target offers. Each is refused for its own reason but
+  the last, which is issued for every kind but present-nonce: the credential type is neither in the binding nor used by
+  the Credential Authority, and only a present-nonce Handle, minted for one Target and type, catches it
+  ([docs/attacks.md](docs/attacks.md), section 2). Run on the three platforms in both RATS models: 20 of 20 each time.
+- **Redirection in Passport**: `PASSPORT=1 make redirect`. The conduit gets the Attestation Results for each Evidence
+  from the verifier, as an honest CAS does for `ca1` (`rrpverify ears`), and offers them to `ca2`: the same outcomes as
+  in Background Check, `ca2` refusing for `eat_nonce is not the binding value` when the RRP identifier is bound.
+- **The pre-play moves the guest's clock both ways** and measures the absent-timestamp window at its edges; the other
+  four Freshness Kinds' Evidence, made with the clock ahead, is offered at once. On the three platforms: the four other
+  kinds taken at once; absent-timestamp made 300 s ahead taken from 295 s to 420 s after it was made, the same
+  Evidence each time; made 300 s behind, refused ([docs/limits.md](docs/limits.md), "Time").
+- **The demo times Initiate**: each Target's `initiate_ms` and `second_leg_ms` in `results.json`. Of 60 acquisitions
+  on the three platforms in both models, the median Initiate took 259 ms from the guest, through the bench's SSH
+  tunnel, of a 564 ms acquisition; the EST server and the RRP spent 1.35 ms of it (their log).
+
+### Fixed
+
+- The EST server kept one attest-initiate session per Handle, so an attest-initiate for a second Target's
+  present-epoch, whose Handle is the epoch every Target shares, replaced the first Target's session and refused its
+  second leg (403). Found by the new pre-play on GCP SEV-SNP
+  (`hwcheck/evidence/20261007T211305Z-gcp-sev-snp`, its README); EST patch 0012 keeps a session per Target, Credential
+  Type and kind under each Handle, with a test that fails on the old behaviour.
+- A pre-play refusal whose answer spanned lines broke the run's `VERDICT` line (`scripts/verdict.py`); found by its
+  test.
+
 ## 0.1.1 (7 October 2026): the first page from the release's runs
 
 ### Changed

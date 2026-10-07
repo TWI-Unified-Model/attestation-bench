@@ -153,7 +153,7 @@ def preplay_moved(d):
             if once["status"] == 200:
                 taken.append(r["case"])
             else:  # a kind that does not rest on the guest's clock must not care where the clock was
-                bad.append(f"{name}: not taken at once ({once['answer'][:80]})")
+                bad.append(f"{name}: not taken at once ({' '.join(once['answer'].split())[:80]})")
         else:
             o, b, c = r.get("opened", {}), r.get("before_close", {}), r.get("after_close", {})
             ages = [x.get("at", made) - made for x in (o, b, c)]

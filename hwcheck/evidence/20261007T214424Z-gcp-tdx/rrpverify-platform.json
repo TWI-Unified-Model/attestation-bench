@@ -1,0 +1,226 @@
+{
+ "results": [
+  {
+   "case": "enroll-absent-epoch",
+   "check": "the bench's rule",
+   "want": "pass",
+   "got": "pass",
+   "ok": true
+  },
+  {
+   "case": "enroll-absent-epoch",
+   "check": "a bank's rule, no waiver",
+   "want": "pass",
+   "got": "pass",
+   "ok": true
+  },
+  {
+   "case": "enroll-absent-epoch",
+   "check": "the TD's ATTRIBUTES refused",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "the platform is not one this RRP accepts: TD ATTRIBUTES bits 10000000 are refused"
+  },
+  {
+   "case": "enroll-absent-none",
+   "check": "the bench's rule",
+   "want": "pass",
+   "got": "pass",
+   "ok": true
+  },
+  {
+   "case": "enroll-absent-none",
+   "check": "a bank's rule, no waiver",
+   "want": "pass",
+   "got": "pass",
+   "ok": true
+  },
+  {
+   "case": "enroll-absent-none",
+   "check": "the TD's ATTRIBUTES refused",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "the platform is not one this RRP accepts: TD ATTRIBUTES bits 10000000 are refused"
+  },
+  {
+   "case": "enroll-absent-timestamp",
+   "check": "the bench's rule",
+   "want": "pass",
+   "got": "pass",
+   "ok": true
+  },
+  {
+   "case": "enroll-absent-timestamp",
+   "check": "a bank's rule, no waiver",
+   "want": "pass",
+   "got": "pass",
+   "ok": true
+  },
+  {
+   "case": "enroll-absent-timestamp",
+   "check": "the TD's ATTRIBUTES refused",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "the platform is not one this RRP accepts: TD ATTRIBUTES bits 10000000 are refused"
+  },
+  {
+   "case": "enroll-present-epoch",
+   "check": "the bench's rule",
+   "want": "pass",
+   "got": "pass",
+   "ok": true
+  },
+  {
+   "case": "enroll-present-epoch",
+   "check": "a bank's rule, no waiver",
+   "want": "pass",
+   "got": "pass",
+   "ok": true
+  },
+  {
+   "case": "enroll-present-epoch",
+   "check": "the TD's ATTRIBUTES refused",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "the platform is not one this RRP accepts: TD ATTRIBUTES bits 10000000 are refused"
+  },
+  {
+   "case": "enroll-present-nonce",
+   "check": "the bench's rule",
+   "want": "pass",
+   "got": "pass",
+   "ok": true
+  },
+  {
+   "case": "enroll-present-nonce",
+   "check": "a bank's rule, no waiver",
+   "want": "pass",
+   "got": "pass",
+   "ok": true
+  },
+  {
+   "case": "enroll-present-nonce",
+   "check": "the TD's ATTRIBUTES refused",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "the platform is not one this RRP accepts: TD ATTRIBUTES bits 10000000 are refused"
+  },
+  {
+   "case": "retrieve-absent-epoch",
+   "check": "the bench's rule",
+   "want": "pass",
+   "got": "pass",
+   "ok": true
+  },
+  {
+   "case": "retrieve-absent-epoch",
+   "check": "a bank's rule, no waiver",
+   "want": "pass",
+   "got": "pass",
+   "ok": true
+  },
+  {
+   "case": "retrieve-absent-epoch",
+   "check": "the TD's ATTRIBUTES refused",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "the platform is not one this RRP accepts: TD ATTRIBUTES bits 10000000 are refused"
+  },
+  {
+   "case": "retrieve-absent-none",
+   "check": "the bench's rule",
+   "want": "pass",
+   "got": "pass",
+   "ok": true
+  },
+  {
+   "case": "retrieve-absent-none",
+   "check": "a bank's rule, no waiver",
+   "want": "pass",
+   "got": "pass",
+   "ok": true
+  },
+  {
+   "case": "retrieve-absent-none",
+   "check": "the TD's ATTRIBUTES refused",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "the platform is not one this RRP accepts: TD ATTRIBUTES bits 10000000 are refused"
+  },
+  {
+   "case": "retrieve-absent-timestamp",
+   "check": "the bench's rule",
+   "want": "pass",
+   "got": "pass",
+   "ok": true
+  },
+  {
+   "case": "retrieve-absent-timestamp",
+   "check": "a bank's rule, no waiver",
+   "want": "pass",
+   "got": "pass",
+   "ok": true
+  },
+  {
+   "case": "retrieve-absent-timestamp",
+   "check": "the TD's ATTRIBUTES refused",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "the platform is not one this RRP accepts: TD ATTRIBUTES bits 10000000 are refused"
+  },
+  {
+   "case": "retrieve-present-epoch",
+   "check": "the bench's rule",
+   "want": "pass",
+   "got": "pass",
+   "ok": true
+  },
+  {
+   "case": "retrieve-present-epoch",
+   "check": "a bank's rule, no waiver",
+   "want": "pass",
+   "got": "pass",
+   "ok": true
+  },
+  {
+   "case": "retrieve-present-epoch",
+   "check": "the TD's ATTRIBUTES refused",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "the platform is not one this RRP accepts: TD ATTRIBUTES bits 10000000 are refused"
+  },
+  {
+   "case": "retrieve-present-nonce",
+   "check": "the bench's rule",
+   "want": "pass",
+   "got": "pass",
+   "ok": true
+  },
+  {
+   "case": "retrieve-present-nonce",
+   "check": "a bank's rule, no waiver",
+   "want": "pass",
+   "got": "pass",
+   "ok": true
+  },
+  {
+   "case": "retrieve-present-nonce",
+   "check": "the TD's ATTRIBUTES refused",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "the platform is not one this RRP accepts: TD ATTRIBUTES bits 10000000 are refused"
+  }
+ ],
+ "rule": "platform-rule.json",
+ "submod": "TDX"
+}

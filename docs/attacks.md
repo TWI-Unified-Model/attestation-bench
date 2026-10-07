@@ -27,7 +27,7 @@ request with one input changed, as the attacker could change it:
 | Key substitution | swaps the CSR (Enrollment) or CEKpub (Retrieval) for their own | the CSR or CEKpub is in the binding | refused: the binding does not match |
 | Replay, stale freshness | uses another freshness element: an old or foreign Handle, another epoch | the freshness element is in the binding; the RRP knows its Handles and its epoch | refused |
 | Old timestamp | for `absent-timestamp`, a timestamp an hour outside the window | the RRP's window around its own clock | refused |
-| Clock set ahead (pre-play) | for `absent-timestamp`, sets the guest's clock 300 s ahead, makes Evidence, presents it at once and again when the RRP's clock reaches it | nothing: the window bounds the age by the guest's clock | at once refused; later accepted, older than `max_age`: an **exposure**, reported, not a pass ([limits.md](limits.md), "Time") |
+| Clock moved (pre-play) | sets the guest's clock 300 s ahead and makes Evidence of every Freshness Kind, then 300 s behind and makes absent-timestamp Evidence; offers each at once, absent-timestamp's also at its window's edges | for `absent-timestamp`, nothing: the window bounds the age by the guest's clock | the four other kinds taken at once; `absent-timestamp` ahead refused at once, taken from 295 s to 420 s after it was made (300 s − `clock_skew` to 300 s + `max_age`) and refused after; behind, refused: an **exposure**, reported, not a pass ([limits.md](limits.md), "Time") |
 | Forged report | a report that does not chain to the vendor's root: AMD's ASK as the anchor instead of the ARK; a root that is not Intel's | the vendor's root, pinned | refused |
 | Unapproved launch | a launch whose measurement (SEV-SNP `MEASUREMENT`, TDX `MRTD`) differs by one byte | the approved launches (`trust/`) | refused |
 
@@ -55,17 +55,34 @@ On SEV-SNP the run also appraises the reports with two older builds of Veraison'
 changes; their results are findings, not failures ([hardware/gcp-snp.md](hardware/gcp-snp.md),
 [hardware/aws-snp.md](hardware/aws-snp.md)).
 
-## 2. Redirecting Evidence to another bank
+## 2. The conduit: Evidence redirected to another bank, and what it relays rewritten
 
 ```bash
-make redirect                   # also PLATFORM=gcp-snp, gcp-tdx, aws-snp
+make redirect                   # also PLATFORM=gcp-snp, gcp-tdx, aws-snp; PASSPORT=1 in Passport
 ```
 
 The workload produces Evidence for a Target of the Credential Authority `ca1`; the attacker offers the same Evidence
 to a second one, `ca2`, "another bank". With the RRP identifier in the binding, `ca2` refuses every Freshness Kind.
-Without it, only a nonce `ca2` never issued stops it: the other four kinds are issued twice. The table and how to read
-it: [getting-started.md](getting-started.md), step 9. The open question it informs:
-[TACRA issue #20](https://github.com/TheBankster/rats-tacra/issues/20).
+Without it, only a nonce `ca2` never issued stops it: the other four kinds are issued twice. In Passport
+(`PASSPORT=1`) the conduit gets the Attestation Results for each Evidence from the verifier, as an honest CAS does for
+`ca1`, and offers those. The table and how to read it: [getting-started.md](getting-started.md), step 9. The open
+question it informs: [TACRA issue #20](https://github.com/TheBankster/rats-tacra/issues/20).
+
+Then the conduit rewrites, one at a time, what it relays to `ca1` on Evidence made for `ca1`
+([TACRA issue #19](https://github.com/TheBankster/rats-tacra/issues/19): which fields of attest-initiate travel, and
+through whom):
+
+| The conduit sends | What stops it | Outcome |
+|---|---|---|
+| a made-up Handle (present-nonce) | the RRP knows the Handles it minted | refused, `freshness` |
+| the Freshness Kind `absent-none`, for a Target of another kind | the kind is the Target's, by the RRP's policy | refused, `freshness-kind-mismatch` |
+| a credential type the Target does not offer | the Target's credential types | refused, `unsupported-credential-type` |
+| another workload's Credential Hint | the Credential Authority names the attested workload itself | refused, `credential-hint` |
+| the other credential type the Target offers | the present-nonce Handle, which the RRP minted for one Target and credential type; nothing else | present-nonce: refused, `freshness`; every other kind: issued, the CA's X.509, as without the rewrite |
+
+The credential type is neither in the binding nor used by the Credential Authority, which issues its X.509 whatever
+the field says; only a Handle the RRP minted for one credential type catches a rewritten one. Each rewrite's outcome
+is a check of the run, which `scripts/verdict.py` judges against this table.
 
 ## 3. A component without the right identity
 

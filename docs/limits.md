@@ -67,16 +67,27 @@ Read this page before you cite a result.
   (169.254.169.254 on Google Cloud, 169.254.169.123 on AWS), none of its sources authenticated (`chronyc authdata`).
   Each guest's clock was within about a second and a half of the RRP's (`clock-offset.txt`, as precise as one SSH
   round trip: `hwcheck/evidence/20261007T165412Z-gcp-sev-snp`, `…170259Z-aws-sev-snp`, `…170913Z-gcp-tdx`).
-- **The exposure, shown on each platform.** Every attack run pre-plays absent-timestamp Evidence: the guest's clock is
-  set 300 s ahead, here by the guest's root, as a host that serves the guest its time could also do; Evidence is made
-  for an Enrollment at db-time and a Retrieval at ledger-time; the clock is put back. Presented through the EST server
-  at once, both RRPs refused it (409: the timestamp outside their window of `max_age` 120 s and `clock_skew` 5 s).
-  Presented again when their clock reached the timestamp, both took it: a certificate issued and a secret released,
-  for Evidence 295, 293 and 291 s old on Google Cloud SEV-SNP, AWS and Google Cloud TDX
-  (`preplay.json` in the same three runs), and 296, 293 and 291 s old in the release check's attack runs
-  (`hwcheck/evidence/20261007T180531Z-gcp-sev-snp`, `…181406Z-aws-sev-snp`, `…182023Z-gcp-tdx`). The RRP's window bounds the Evidence's age by the guest's clock, not by
-  real time. The verdict reports it as an exposure, not a pass. Freshness from an RRP-supplied element
-  (`present-nonce`, `present-epoch`) does not rest on the guest's clock.
+- **The exposure, shown on each platform.** Every attack run pre-plays Evidence made with the guest's clock moved, here
+  by the guest's root, as a host that serves the guest its time could also do: 300 s ahead, Evidence of all five
+  Freshness Kinds for an Enrollment and a Retrieval, with the Handles the live RRPs minted for it; 300 s behind,
+  absent-timestamp Evidence; the clock put back each time. Presented through the EST server, on Google Cloud SEV-SNP,
+  AWS and Google Cloud TDX (`hwcheck/evidence/20261007T212531Z-gcp-sev-snp`, `…213607Z-aws-sev-snp`,
+  `…214424Z-gcp-tdx`, `preplay.json`):
+  - present-nonce, present-epoch, absent-epoch and absent-none Evidence made with the clock ahead was taken at once,
+    in both modes: those kinds do not rest on the guest's clock (absent-none rests on nothing);
+  - absent-timestamp Evidence made with it ahead was refused at once (409: the timestamp outside the window of
+    `max_age` 120 s and `clock_skew` 5 s), taken two seconds after the RRPs' clock reached the timestamp less
+    `clock_skew` and again two seconds before it reached the timestamp plus `max_age`, the same Evidence each time, and
+    refused two seconds after that: by the RRPs' clock, from 295 s to 420 s after the guest's clock was moved and the
+    Evidence made (by this machine's clock, 286 to 407 s, 294 to 415 s and 291 to 412 s after the guest's step ended,
+    the least the Evidence's age can have been);
+  - absent-timestamp Evidence made with it behind was refused at once and 411 s or more later.
+
+  The RRP's window bounds the Evidence's age by the guest's clock, not by real time: Evidence made Δ ahead is taken
+  from Δ − `clock_skew` to Δ + `max_age` after it was made, as often as it is offered. The verdict reports it as an
+  exposure, not a pass. Earlier runs pre-played absent-timestamp alone, with the clock ahead, and presented it once in
+  the window: 295, 293 and 291 s old (`hwcheck/evidence/20261007T165412Z-gcp-sev-snp`, `…170259Z-aws-sev-snp`,
+  `…170913Z-gcp-tdx`) and 296, 293 and 291 s old in the release check's attack runs.
 
 ## Keys and secrets
 

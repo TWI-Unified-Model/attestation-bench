@@ -1,0 +1,13 @@
+{
+ "case": "enroll-absent-none",
+ "mode": "enroll",
+ "freshness_kind": "absent-none",
+ "target": "https://db-none.tacra.example",
+ "relying_party": "https://ca1.tacra.example",
+ "binding_value_hex": "4067b00a29863253f71e50595bdd77f10cb5c39739eba984fe9edcee441c1cbb5074a6f72da22a9ee8fc62d1eb55989cb421dd97efd29ac747df6454bd7789b8",
+ "evidence_ms": 39.606,
+ "token_bytes": 4966,
+ "report_sha256": "ba4474d56758ebf58360bd6072200cea7ac78ee11d36de275a7b4e6517cd854e",
+ "signing_key": "TDX quote",
+ "chip_id_prefix": "MRTD f21e6b48743fe14c"
+}

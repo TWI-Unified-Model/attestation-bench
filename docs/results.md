@@ -62,7 +62,7 @@ reference runs, six fail: each found a fault in its day, which its README or the
 
 | File | Holds |
 |---|---|
-| `results.json` | one entry per Target: `target`, credential `type`, `ok`, `attempts`, `acquire_ms`, the Relying Party's answer (`rup_status`, `rup_response`) and, for certificates, `cert_names`, `cert_issuer`, `cert_serial`, `not_after` |
+| `results.json` | one entry per Target: `target`, credential `type`, `ok`, `attempts`, `acquire_ms` and, from 7 October 2026, 21:53Z, the parts of it spent in the CAAPI calls, `initiate_ms` (Initiate, through the EST server to the RRP and back) and `second_leg_ms` (Enroll or Retrieve); the Relying Party's answer (`rup_status`, `rup_response`) and, for certificates, `cert_names`, `cert_issuer`, `cert_serial`, `not_after` |
 | `e2e-attester.json` | the workload's configuration: Targets, RRP identifiers and public keys only |
 | `e2e-attester-stdout.txt`, `caapi-est.log` | what the workload and the CAS Client printed |
 | `bench-logs/` | each trust zone service's log lines for this run only |
@@ -83,19 +83,20 @@ reference runs, six fail: each found a fault in its day, which its README or the
 | `rrp-clock-window.txt` | the RRP's clock before and after the guest made its reports, in seconds since 1970: the window timestamps are checked against |
 | `clock.txt`, `clock-offset.txt` | what the guest's clock rests on and its offset from the RRP's clock, as in a demo run |
 | `platform-rule.json`, `rrpverify-platform.json`, `rrpverify-platform.txt` | the platform rule the RRPs applied, as in a demo run, and that rule on the honest Attestation Results kept in `ears/` (with `ears/verifier-key.jwk`, the key that signed them): the bench's rule, a bank's without waivers, and the rule one step stricter than the host, each with what it was expected to do. `rrp/cmd/platform-check` gives the same checks again from these files alone |
-| `preplay/`, `preplay.json`, `preplay.txt` | the pre-play check: the absent-timestamp Evidence the guest made with its clock set ahead (`preplay/clock-ahead.txt` says by how much, and when it was put back), and each RRP's answer at once and when its clock reached the timestamp (`at_once`, `later`), with the RRP's log lines (`rrp_log`) in runs after 7 October 2026 |
+| `preplay/`, `preplay.json`, `preplay.txt` | the pre-play check. From 7 October 2026, 21:13Z: the Handles the live RRPs minted for it and their answers (`preplay/handles.json`, `initiate.json`), the Targets of each kind (`ca-targets.json`, `vault-targets.json`), the Evidence the guest made with its clock 300 s ahead (`preplay/ahead/`, every kind, both modes) and 300 s behind (`preplay/behind/`, absent-timestamp), each with `clock-offset-set.txt` (when the clock was moved and put back); `preplay.json` holds each Evidence's answers: `at_once`, for absent-timestamp made ahead `opened`, `before_close` and `after_close` (two seconds inside and outside its window's edges), for the behind set `again`, and the RRPs' log lines (`rrp_log`). Earlier runs: absent-timestamp made ahead only (`preplay/clock-ahead.txt`), answered `at_once` and `later` |
 | hardware: `amd-kds-*.pem` (SEV-SNP), `kernel.txt`, `dmesg-*.txt`, `vm-deleted.txt` | the vendor chain used, the guest's kernel and messages, the deletion record with its time |
 
 The variant names in `rrpverify-*`: on SEV-SNP `veraison-v015` (the bench's Veraison build), `veraison-fixed`,
 `veraison-fork` and `service` (the deployed Veraison); `tdx` (in process) and `service` (the deployed TDX verifier) on
 TDX; `platform` (the RRPs' platform rule) on both.
 
-## `make redirect`: `…-<platform>-redirect`
+## `make redirect`: `…-<platform>-redirect`, `…-<platform>-redirect-passport`
 
 | File | Holds |
 |---|---|
-| `results.jsonl` | one line per case: the pass (`with-rrp-id`, `no-rrp-id`), the Freshness Kind, the RRP offered the Evidence (`ca1`, `ca2`), and the `result` (issued or not, the HTTP status, the RRP's reason) |
-| `with-rrp-id/`, `no-rrp-id/` | per pass: the Handles, the Targets, and each case's Evidence and request |
+| `results.jsonl` | one line per case: the pass (`with-rrp-id`, `no-rrp-id`, `rewrites`, `type-offered`), the Freshness Kind, the RRP offered the Evidence (`ca1`, `ca2`), for a rewrite its name (`rewrite`), and the `result` (issued or not, the HTTP status, the RRP's reason; for a certificate its serial, issuer and subject) |
+| `with-rrp-id/`, `no-rrp-id/`, `rewrites/`, `type-offered/` | per pass: the Handles, the Targets, and each case's Evidence and request (`redir/`); in Passport also the Attestation Results the verifier issued for each Evidence (`ears/`, with the key that signed them, and `ears.txt`). Runs before 7 October 2026, 20:44Z, have the first two passes only |
+| `rats-model.txt` | `background-check` or `passport` (runs before 7 October 2026, 20:44Z, have none: Background Check) |
 
 To check the binding of every Enrollment yourself, character by character, with no Go code involved:
 

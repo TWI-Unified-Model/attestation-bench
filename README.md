@@ -10,7 +10,8 @@ With this repository you can:
   nothing stands in for the hardware;
 - **attack it**: change one input at a time and see each refused for its own reason;
 - **replay the redirection experiment** ([TACRA issue #20](https://github.com/TheBankster/rats-tacra/issues/20)): one
-  Evidence offered to two Credential Authorities;
+  Evidence offered to two Credential Authorities, and what the intermediary relays rewritten
+  ([#19](https://github.com/TheBankster/rats-tacra/issues/19)), in Background Check and in Passport;
 - **bring up a fictional bank** in the cloud, whose payment service gets its database certificate and partner API key
   only by attestation, and **make banks of your own** from it (`make bank-new`);
 - **keep every run as evidence**: each run writes a directory with what it did, its results, its verdict (`PASS` or
@@ -36,7 +37,7 @@ make check-mtls                 # VERDICT PASS: 40 of 40 checks as expected: onl
 make test-live                  # the EST wire format, and the committed runs appraised again by the live verifiers
 make demo     PLATFORM=gcp-snp  # VERDICT PASS: all 10 Targets: …; admitted under the bench's waiver: Milan bit 4: …
 make attacks  PLATFORM=gcp-snp  # VERDICT PASS: 262 checks: …; … the bench's waiver …; exposure, the guest's clock: …
-make redirect PLATFORM=gcp-snp  # the #20 table: which Credential Authority issued, with and without the RRP identifier
+make redirect PLATFORM=gcp-snp  # the #20 table, then the conduit's #19 rewrites (PASSPORT=1: in Passport)
 ```
 
 On SEV-SNP every verdict names the bench's waiver: the platform rule requires the mitigation bit AMD-SB-3034
@@ -90,21 +91,24 @@ network, the cloud. The ideas in plain words: [docs/concepts.md](docs/concepts.m
 | Hardware, `make demo`, three platforms × two RATS models | 10 of 10 Targets in each of the six runs. On TDX under the platform rule; on SEV-SNP only under the bench's named waiver `admitted without bit 4, AMD-SB-3034`, which each verdict names: no Google Cloud or AWS host attests that fix ([docs/limits.md](docs/limits.md)) | e.g. [GCP SEV-SNP, Passport](e2e/evidence/20261007T174229Z-gcp-sev-snp-e2e-passport), [AWS SEV-SNP, Background Check](e2e/evidence/20261007T173657Z-aws-sev-snp-e2e-background-check), [GCP TDX, Passport](e2e/evidence/20261007T174534Z-gcp-tdx-e2e-passport) |
 | Hardware, `OTHER_PLATFORM=1 make demo` (tacra-est N24) | each platform's genuine Evidence refused at the Target of the other platform's verifier: in Passport after appraisal, in Background Check before it | [GCP SEV-SNP](e2e/evidence/20261007T175538Z-gcp-sev-snp-e2e-passport-other-platform), [AWS SEV-SNP](e2e/evidence/20261007T175845Z-aws-sev-snp-e2e-passport-other-platform), [GCP TDX](e2e/evidence/20261007T180040Z-gcp-tdx-e2e-passport-other-platform), [GCP TDX, Background Check](e2e/evidence/20261007T173902Z-gcp-tdx-e2e-background-check-other-platform) |
 | Hardware, `UNAPPROVED=1 make demo`: an SEV-SNP launch the bench does not approve (four vCPUs) | 10 of 10 Targets refused, Veraison `contraindicated` | [GCP SEV-SNP](e2e/evidence/20261007T175016Z-gcp-sev-snp-e2e-passport-unapproved), [AWS SEV-SNP](e2e/evidence/20261007T175320Z-aws-sev-snp-e2e-passport-unapproved) |
-| Hardware, `make attacks` | every attack refused for its own reason: 262 checks on each SEV-SNP platform and 162 on TDX, the platform rule's among them (the bench's admits the honest results, on SEV-SNP under its waiver; a bank's refuses SEV-SNP for bit 4; a rule one step stricter refuses them all). And an exposure, reported as one: absent-timestamp Evidence made with the guest's clock 300 s ahead was accepted 291 to 296 s old with `max_age` 120 s | [GCP SEV-SNP](hwcheck/evidence/20261007T180531Z-gcp-sev-snp), [GCP TDX](hwcheck/evidence/20261007T182023Z-gcp-tdx), [AWS SEV-SNP](hwcheck/evidence/20261007T181406Z-aws-sev-snp) |
+| Hardware, `make attacks` | every attack refused for its own reason: 262 checks on each SEV-SNP platform and 162 on TDX, the platform rule's among them (the bench's admits the honest results, on SEV-SNP under its waiver; a bank's refuses SEV-SNP for bit 4; a rule one step stricter refuses them all). And an exposure, reported as one: Evidence made with the guest's clock 300 s ahead, absent-timestamp, was taken from 295 s to 420 s after it was made (`max_age` 120 s), the same Evidence each time; the four other Freshness Kinds were taken at once, not resting on the guest's clock; made with it behind, refused | [GCP SEV-SNP](hwcheck/evidence/20261007T212531Z-gcp-sev-snp), [GCP TDX](hwcheck/evidence/20261007T214424Z-gcp-tdx), [AWS SEV-SNP](hwcheck/evidence/20261007T213607Z-aws-sev-snp) |
 | Hardware, `make redirect` | 20 of 20 cases on each platform: with the RRP identifier the second Credential Authority refused all five Freshness Kinds; without it, all but present-nonce | [GCP SEV-SNP](hwcheck/evidence/20261007T182724Z-gcp-snp-redirect), [GCP TDX](hwcheck/evidence/20261007T183127Z-gcp-tdx-redirect), [AWS SEV-SNP](hwcheck/evidence/20261007T183448Z-aws-snp-redirect) |
+| The conduit, `make redirect` (#19), `PASSPORT=1` | on Evidence made for the first Credential Authority, the conduit's 20 rewrites as [docs/attacks.md](docs/attacks.md), section 2, says: a made-up Handle, the Freshness Kind, a credential type not offered and another workload's Credential Hint refused; the other offered credential type issued for every kind but present-nonce, as nothing binds it. In Passport, with Attestation Results instead of Evidence, the same 40 outcomes, the redirection included | Background Check: [GCP SEV-SNP](hwcheck/evidence/20261007T204444Z-gcp-snp-redirect), [GCP TDX](hwcheck/evidence/20261007T204937Z-gcp-tdx-redirect), [AWS SEV-SNP](hwcheck/evidence/20261007T205428Z-aws-snp-redirect); Passport: [GCP SEV-SNP](hwcheck/evidence/20261007T205826Z-gcp-snp-redirect-passport), [GCP TDX](hwcheck/evidence/20261007T210314Z-gcp-tdx-redirect-passport), [AWS SEV-SNP](hwcheck/evidence/20261007T210728Z-aws-snp-redirect-passport) |
+| What attest-initiate costs (#19), `make demo` | of 60 acquisitions on the three platforms in both models, the median Initiate took 259 ms from the guest, through the bench's SSH tunnel to the EST server, of a 564 ms acquisition; 1.35 ms of it in the EST server and the RRP. A CAS client that completed Initiate locally would save that round trip | e.g. [GCP SEV-SNP, Passport](e2e/evidence/20261007T215301Z-gcp-sev-snp-e2e-passport), [AWS SEV-SNP, Background Check](e2e/evidence/20261007T220649Z-aws-sev-snp-e2e-background-check) |
 | The Demo Bank in the cloud | its rule waives nothing: the payment from TDX went through; the payments from Google Cloud and AWS SEV-SNP were refused for bit 4; an ordinary VM and an unapproved launch got no credential; in Passport and in Background Check | [Passport](e2e/evidence/20261007T183914Z-demo-bank), [Background Check](e2e/evidence/20261007T193224Z-demo-bank) |
 | A bank of your own, `make bank-new NAME=acme-bank` | its own Targets, RRP identifiers and names: the ledger admitted `payments.workload.acme-bank.example` from TDX; the payment from GCP SEV-SNP was refused for bit 4, as the Demo Bank's | [run](e2e/evidence/20261007T195519Z-acme-bank) |
 
-The runs above are the release check of v0.1.0, made on 7 October 2026 from a fresh clone of the GitHub repository,
-and two runs made at v0.1.0 after it: the Demo Bank in Background Check and a bank of your own. The demos, attacks and
+The runs above are the release check of v0.1.0, made on 7 October 2026 from a fresh clone of the GitHub repository;
+two runs made at v0.1.0 after it, the Demo Bank in Background Check and a bank of your own; and that evening the
+attacks with the guest's clock moved both ways, the conduit and the timed demos (`0505d29`, `758b0ff`, `21f79e1`). The demos, attacks and
 redirect runs were each compared check by check with the run of its kind before it: the same outcomes. The demos and
 redirect runs before them were made before the platform rule required AMD's mitigation bits, so their SEV-SNP hosts
 were admitted without a waiver; the banks' SEV-SNP payments, which went through then, are refused now. How the
 release was checked: [docs/verification.md](docs/verification.md). The runs are listed with
 
 ```bash
-make report RUNS="e2e/evidence/20261007T17* e2e/evidence/20261007T18* e2e/evidence/20261007T19* hwcheck/evidence/20261007T18*"
-# 32 runs: 32 PASS, 0 FAIL, 0 not judged
+make report RUNS="e2e/evidence/20261007T1[789]* e2e/evidence/20261007T2* hwcheck/evidence/20261007T18* hwcheck/evidence/20261007T2*"
+# 48 runs: 47 PASS, 1 FAIL: 20261007T211305Z-gcp-sev-snp, which found an EST server fault, fixed in its patch 0012
 ```
 
 What a run does **not** prove: [docs/limits.md](docs/limits.md).

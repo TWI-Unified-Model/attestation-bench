@@ -36,6 +36,19 @@ PREPLAY_RUNS = ["20261007T165412Z-gcp-sev-snp", "20261007T170259Z-aws-sev-snp", 
 # (rrpverify-platform.json), under the rule the run kept (platform-rule.json)
 PLATFORM_RULE_RUNS = ["20261007T180531Z-gcp-sev-snp", "20261007T181406Z-aws-sev-snp", "20261007T182023Z-gcp-tdx"]
 WAIVER = "the honest Evidence admitted under the bench's waiver: Milan bit 4: admitted without bit 4, AMD-SB-3034"
+# the attack runs whose pre-play moves the guest's clock both ways (7 October 2026, EST patch 0012), and the one
+# before that patch, which found the EST server's fault (its README)
+CLOCK_RUNS = ["20261007T212531Z-gcp-sev-snp", "20261007T213607Z-aws-sev-snp", "20261007T214424Z-gcp-tdx"]
+EST_FAULT_RUN = "20261007T211305Z-gcp-sev-snp"
+# the conduit experiment (7 October 2026): #20 in Background Check and in Passport, and the conduit's #19 rewrites
+CONDUIT_RUNS = [
+    "20261007T204444Z-gcp-snp-redirect",
+    "20261007T204937Z-gcp-tdx-redirect",
+    "20261007T205428Z-aws-snp-redirect",
+    "20261007T205826Z-gcp-snp-redirect-passport",
+    "20261007T210314Z-gcp-tdx-redirect-passport",
+    "20261007T210728Z-aws-snp-redirect-passport",
+]
 REDIRECT_RUNS = [
     "20261006T225552Z-gcp-snp-redirect",
     "20261006T225943Z-gcp-tdx-redirect",
@@ -147,6 +160,36 @@ class CommittedRuns(unittest.TestCase):
                     self.assertIn(WAIVER, lines[-1])
                 else:
                     self.assertNotIn("waiver", lines[-1])
+
+    def test_attacks_with_the_clock_moved(self):
+        for run in CLOCK_RUNS:
+            with self.subTest(run=run):
+                code, last = verdict("attacks", HW / run)
+                self.assertEqual(code, 0, last)
+                self.assertRegex(
+                    last,
+                    r"https://db-time.tacra.example accepted Evidence \d+ s old or more, and again \d+ s old or more "
+                    r"\(max_age 120 s\)",
+                )
+                self.assertIn(
+                    "absent-timestamp Evidence made with the clock behind refused; the other four kinds' Evidence made "
+                    "with it ahead taken at once",
+                    last,
+                )
+
+    def test_the_run_that_found_the_est_fault(self):
+        why = (
+            "VERDICT FAIL: the pre-play check not as expected: ahead enroll-present-epoch: not taken at once "
+            "(403 Target, Credential Type or Freshness Kind differ from the attest-initiate)"
+        )
+        self.assertEqual(verdict("attacks", HW / EST_FAULT_RUN), (1, why))
+
+    def test_conduit(self):
+        for run in CONDUIT_RUNS:
+            with self.subTest(run=run):
+                code, last = verdict("redirect", HW / run)
+                self.assertEqual(code, 0, last)
+                self.assertIn("of the conduit's 20 rewrites at ca1", last)
 
     def test_redirect(self):
         for run in REDIRECT_RUNS:
@@ -296,6 +339,39 @@ class ChangedRuns(unittest.TestCase):
                 code, last = verdict("attacks", self.preplay_run(change, presented))
                 self.assertEqual((code, last), (1, f"VERDICT FAIL: the pre-play check not as expected: {why}"))
 
+    def clock_run(self, change):
+        """A copy of a clock run's judged files, its pre-play changed by change."""
+        src = HW / CLOCK_RUNS[0]
+        for f in src.glob("rrpverify-*.json"):
+            shutil.copy(f, self.tmp / f.name)
+        shutil.copytree(src / "preplay", self.tmp / "preplay")
+        shutil.copy(src / "preplay.json", self.tmp / "preplay.json")
+        self.edit_json("preplay.json", change)
+        return self.tmp
+
+    def test_clock_preplay_not_as_expected(self):
+        def at(set_, case, edge, status):
+            def change(d):
+                r = next(r for r in d["results"] if r["set"] == set_ and r["case"] == case)
+                r[edge] = {**r[edge], "status": status}
+
+            return change
+
+        for name, change, why in [
+            ("the window did not close", at("ahead", "enroll-absent-timestamp", "after_close", 200),
+             "ahead enroll-absent-timestamp: not refused at once, taken in its window and refused after it"),
+            ("made with the clock behind, taken", at("behind", "retrieve-absent-timestamp", "again", 200),
+             "behind retrieve-absent-timestamp: made with the clock behind, not refused for freshness each time"),
+            ("another kind not taken at once", at("ahead", "enroll-absent-epoch", "at_once", 409),
+             "ahead enroll-absent-epoch: not taken at once"),
+        ]:  # fmt: skip
+            with self.subTest(name):
+                for f in self.tmp.iterdir():
+                    shutil.rmtree(f) if f.is_dir() else f.unlink()
+                code, last = verdict("attacks", self.clock_run(change))
+                self.assertEqual(code, 1, last)
+                self.assertTrue(last.startswith(f"VERDICT FAIL: the pre-play check not as expected: {why}"), last)
+
     def test_no_attack_results(self):
         # an attack run with only the results of the builds the bench compares with
         run = self.copy(HW / ATTACK_RUNS[0], "rrpverify-veraison-fork.json", "rrpverify-veraison-fixed.json")
@@ -311,6 +387,27 @@ class ChangedRuns(unittest.TestCase):
                 r["result"] = {"issued": False, "status": 403}
         (run / "results.jsonl").write_text("\n".join(json.dumps(r) for r in rows) + "\n")
         self.assertEqual(verdict("redirect", run), (1, "VERDICT FAIL: 1 of 20 outcomes not as expected"))
+
+    def test_conduit_rewrite_not_as_expected(self):
+        # the Credential Hint of another workload, issued: the CA would have named a workload the Evidence is not
+        run = self.copy(HW / CONDUIT_RUNS[3], "results.jsonl")
+        rows = [json.loads(x) for x in (run / "results.jsonl").read_text().splitlines()]
+        for r in rows:
+            if r.get("rewrite") == "Credential Hint of another workload" and r["kind"] == "present-nonce":
+                r["result"] = {"issued": True, "status": 200, "cert_subject": "CN=other.workload.tacra.example"}
+        (run / "results.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+        code, lines = verdict_lines("redirect", run)
+        self.assertEqual((code, lines[-1]), (1, "VERDICT FAIL: 1 of 40 outcomes not as expected"))
+        self.assertIn(
+            "rewrite Credential Hint of another workload, present-nonce: issued (), expected refused credential-hint",
+            lines,
+        )
+
+    def test_conduit_rewrite_missing(self):
+        run = self.copy(HW / CONDUIT_RUNS[0], "results.jsonl")
+        rows = (run / "results.jsonl").read_text().splitlines()
+        (run / "results.jsonl").write_text("\n".join(x for x in rows if '"made-up Handle"' not in x) + "\n")
+        self.assertEqual(verdict("redirect", run), (1, "VERDICT FAIL: 1 of 40 outcomes not as expected"))
 
     def test_redirect_missing_outcome(self):
         run = self.copy(HW / REDIRECT_RUNS[0], "results.jsonl")

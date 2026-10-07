@@ -31,8 +31,8 @@ its endorsement checks out.
 
 ## What each experiment checks, and what to expect
 
-| Command | Result in the release check (7 October 2026) |
+| Command | Result (7 October 2026) |
 |---|---|
 | `make demo` | 10 of 10, the TDX verifier `affirming` ten times, firmware build `f21e6b48…` ([Passport](../../e2e/evidence/20261007T174534Z-gcp-tdx-e2e-passport), [Background Check](../../e2e/evidence/20261007T173412Z-gcp-tdx-e2e-background-check)) |
-| `make attacks` | 162 checks, 0 not as expected: 82 in process, 50 through the deployed TDX verifier, 30 of the platform rule; the pre-play exposure, Evidence accepted 291 s old with `max_age` 120 s ([run](../../hwcheck/evidence/20261007T182023Z-gcp-tdx)) |
-| `make redirect` | 20 of 20 cases as in [getting-started.md](../getting-started.md), step 9: `ca1` issued in every case, so the binding it recomputed matched the TD quote each time ([run](../../hwcheck/evidence/20261007T183127Z-gcp-tdx-redirect)) |
+| `make attacks` | 162 checks, 0 not as expected: 82 in process, 50 through the deployed TDX verifier, 30 of the platform rule; the pre-play: with the guest's clock 300 s ahead, the four other kinds taken at once and absent-timestamp from 295 s to 420 s after it was made; with it behind, refused ([run](../../hwcheck/evidence/20261007T214424Z-gcp-tdx)) |
+| `make redirect` | 20 of 20 cases as in [getting-started.md](../getting-started.md), step 9: `ca1` issued in every case, so the binding it recomputed matched the TD quote each time ([run](../../hwcheck/evidence/20261007T183127Z-gcp-tdx-redirect)); with the conduit's 20 rewrites as [attacks.md](../attacks.md), section 2, says, in Background Check ([run](../../hwcheck/evidence/20261007T204937Z-gcp-tdx-redirect)) and in Passport ([run](../../hwcheck/evidence/20261007T210314Z-gcp-tdx-redirect-passport)) |
