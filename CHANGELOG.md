@@ -126,6 +126,13 @@ release's code; the hardware runs identical to gate 5's, check by check).
   test built on it: the bench runs nothing that stands in for the hardware. `UNAPPROVED=1 make demo` shows on
   hardware what `SIM_LABEL` showed on the stand-in; no cloud launches a debuggable guest, so no run shows that refusal
   ([docs/limits.md](docs/limits.md)).
+- **Tests on stand-ins**, and `gateway.SignTestEAR`, which forged EARs and was compiled into the gateways: the
+  gateways' tests on a fake Veraison or a fake Vault, the mutual TLS test on a CA of its own, the plug-ins' tests on a
+  fake TSM device and made-up AMD certificates, the TDX verifier's on a fake Intel service. In their place, tests on
+  real data and live services: the plug-in reads the reports and certificate tables of real Google Cloud and AWS runs,
+  and checks their signatures; the certificate chain is completed on AWS's real table; the identity and group rules
+  run on the approved launches; the TDX verifier fetches Intel's real revocation list; `make check-mtls` checks the
+  live trust zone. The rule is in [CONTRIBUTING.md](CONTRIBUTING.md), "Tests".
 
 ## Before: the TACRA proof of concept and the bench's first stages
 

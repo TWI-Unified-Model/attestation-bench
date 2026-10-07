@@ -82,6 +82,10 @@ VM's clock can be trusted depends on the platform and its configuration; the ben
 - **One Credential Acquisition System**: EST, through the GlobalSign EST server with TACRA's resources.
 - **The channel between the CAI and the CAS Client inside the guest** is plain gRPC: the CAS is untrusted by design,
   so the bench does not protect it.
+- **The plug-in's own refusals of a wrong device answer are not tested.** The SEV-SNP and TDX plug-ins refuse a
+  report from another provider and one whose report data is not the binding value they asked for. No confidential
+  VM answers that way, and the bench runs nothing that stands in for the device, so no test reaches those branches.
+  An RRP refuses such Evidence anyway (`make attacks`).
 
 ## Open questions this bench informs but does not settle
 

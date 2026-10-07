@@ -1,14 +1,18 @@
 package main
 
 import (
+	"bytes"
+	"crypto/x509"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/pem"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/fxamacker/cbor/v2"
+	"github.com/google/go-tdx-guest/verify/trust"
 )
 
 // recordedBody returns the TD Quote Body of a quote recorded on Google Cloud TDX on 29 September 2026 (hwcheck
@@ -86,24 +90,48 @@ func TestRefusals(t *testing.T) {
 	}
 }
 
-type countingGetter struct{ n int }
-
-func (g *countingGetter) Get(string) (map[string][]string, []byte, error) {
-	g.n++
-	return nil, []byte{byte(g.n)}, nil
+// countingGetter counts the fetches of the real Intel PCS getter it wraps; what Intel serves passes through unchanged.
+type countingGetter struct {
+	real trust.HTTPSGetter
+	n    int
 }
 
-// A PCS document is reused for maxAge and fetched again after it, so that a revocation reaches the Verifier.
+func (g *countingGetter) Get(url string) (map[string][]string, []byte, error) {
+	g.n++
+	return g.real.Get(url)
+}
+
+// A PCS document is reused for maxAge and fetched again after it, so that a revocation reaches the Verifier. Live:
+// the revocation list of Intel's platform CA, from Intel's PCS, as the Verifier fetches it.
 func TestCollateralIsRefetched(t *testing.T) {
-	clock := time.Date(2026, 9, 30, 12, 0, 0, 0, time.UTC)
-	inner := &countingGetter{}
+	clock := time.Now()
+	inner := &countingGetter{real: trust.DefaultHTTPSGetter()}
 	g := &cachingGetter{inner: inner, maxAge: time.Hour, now: func() time.Time { return clock }, m: map[string]cachedDoc{}}
-	_, b1, _ := g.Get("https://api.trustedservices.intel.com/sgx/certification/v4/pckcrl?ca=platform")
+	const crl = "https://api.trustedservices.intel.com/sgx/certification/v4/pckcrl?ca=platform"
+	_, b1, err := g.Get(crl)
+	if err != nil {
+		t.Fatalf("Intel PCS: %v", err)
+	}
 	clock = clock.Add(59 * time.Minute)
-	_, b2, _ := g.Get("https://api.trustedservices.intel.com/sgx/certification/v4/pckcrl?ca=platform")
+	_, b2, err := g.Get(crl)
+	if err != nil || !bytes.Equal(b1, b2) {
+		t.Fatalf("within maxAge the document is not the one kept: %v", err)
+	}
 	clock = clock.Add(2 * time.Minute)
-	_, b3, _ := g.Get("https://api.trustedservices.intel.com/sgx/certification/v4/pckcrl?ca=platform")
-	if inner.n != 2 || b1[0] != 1 || b2[0] != 1 || b3[0] != 2 {
-		t.Fatalf("fetches %d, bodies %v %v %v", inner.n, b1, b2, b3)
+	_, b3, err := g.Get(crl)
+	if err != nil {
+		t.Fatalf("Intel PCS, after maxAge: %v", err)
+	}
+	if inner.n != 2 {
+		t.Fatalf("%d fetches from Intel's PCS, want 2: one at first, one after maxAge", inner.n)
+	}
+	for _, b := range [][]byte{b1, b3} {
+		der := b
+		if blk, _ := pem.Decode(b); blk != nil {
+			der = blk.Bytes
+		}
+		if _, err := x509.ParseRevocationList(der); err != nil {
+			t.Fatalf("Intel's PCS served no revocation list: %v", err)
+		}
 	}
 }

@@ -25,6 +25,15 @@ Then run what your change touches, and say in the commit message what you ran an
   attacks PLATFORM=gcp-snp 212/212").
 - Author commits with your real name and e-mail address.
 
+## Tests
+
+Nothing in a test stands in for a part of the system: no fake verifier, Vault, CA, EST server or TSM device, and no
+made-up report, EAR, certificate or log. A test runs on real data (the reports, EARs and certificate tables that
+hardware runs kept under `*/evidence/`, the draft's test vector, the reference implementation's vectors), on the live
+trust zone that `make setup` brings up, or on the live services of AMD, Intel and Google. A test of a refusal changes
+one input of real data, as an attacker would. What only a confidential VM can do, such as making Evidence, is tested
+by the hardware runs.
+
 ## Evidence
 
 A number in the documentation names the run it comes from. When a hardware run changes a documented result, keep it
