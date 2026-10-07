@@ -43,7 +43,7 @@ trust-check:
 lint:
 	@scripts/lint.sh
 
-## test: the unit tests of every Go module
+## test: the unit tests: every Go module, and the Python scripts' (scripts/tests)
 test:
 	@scripts/test.sh
 
@@ -60,6 +60,7 @@ third-party:
 PLATFORM ?= local
 
 ## demo: end to end, 10 Targets acquire their credentials and use them   [PLATFORM=local|gcp-snp|gcp-tdx|aws-snp]
+##       refusal scenarios, every Target refused: SIM_DEBUG=1, SIM_LABEL=..., OTHER_PLATFORM=1 (docs/attacks.md)
 demo:
 	@scripts/run.sh demo $(PLATFORM)
 
@@ -67,7 +68,7 @@ demo:
 attacks:
 	@scripts/run.sh attacks $(PLATFORM)
 
-## redirect: the #20 redirection experiment; leaves the bench in Background Check   [PLATFORM=local|gcp-snp|...]
+## redirect: the #20 redirection experiment, in Background Check; puts the bench back as it was   [PLATFORM=...]
 redirect:
 	@scripts/run.sh redirect $(PLATFORM)
 
@@ -82,7 +83,7 @@ cloud-check:
 bank-new:
 	@scripts/bank-new.sh $(NAME)
 
-## bank-up: the bank's trust zone and core VMs in your Google Cloud project (about 15 minutes)   [BANK=demo-bank]
+## bank-up: the bank's trust zone and core VMs in your Google Cloud project   [BANK=demo-bank]
 bank-up:
 	@e2e/bank/demo-bank.sh up
 
