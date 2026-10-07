@@ -186,8 +186,8 @@ VERDICT PASS: with the RRP identifier, ca2 refused all 5 Freshness Kinds; withou
 
 With the RRP identifier in the binding, `ca2` refuses every Freshness Kind. Without it, only a nonce `ca2` never
 issued stops the redirection. This is the question of
-[TACRA issue #20](https://github.com/TheBankster/rats-tacra/issues/20). `make redirect` leaves the bench in Background
-Check (step 11).
+[TACRA issue #20](https://github.com/TheBankster/rats-tacra/issues/20). The experiment runs in Background Check and
+puts the bench back as it was when it ends, also when it fails or is interrupted.
 
 ## 10. Read what a run left
 

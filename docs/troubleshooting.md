@@ -33,8 +33,9 @@ expects. The lines above the verdict say which Target, check or outcome differs,
 `verdict.txt` next to everything the run recorded ([results.md](results.md)). Judge a run again at any time:
 `python3 scripts/verdict.py demo|attacks|redirect <run directory>`.
 
-**The run directory is named `…-background-check` and you expected Passport.** `make redirect` leaves the bench in
-Background Check. Switch back: `RATS_MODEL=passport make config`, then `make stop start`.
+**The run directory is named `…-background-check` and you expected Passport.** The bench was configured for
+Background Check (`RATS_MODEL=background-check make config`). Switch back: `RATS_MODEL=passport make config`, then
+`make stop start`. (`make redirect` runs in Background Check, then puts the bench back as it was, also when it fails.)
 
 **A run's `sha256sums.txt` check shows `FAILED`.** A file changed after the run sealed it. If you did not change it,
 treat the directory as not trustworthy and run again.

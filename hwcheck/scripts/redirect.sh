@@ -8,8 +8,9 @@
 #   hwcheck/scripts/redirect.sh gcp-snp|gcp-tdx|aws-snp|local      (make redirect PLATFORM=...)
 #
 # The guest only runs hwrun (offline); all gateway interaction is on this machine, where the bench runs. "local" runs
-# hwrun here with the bench's software stand-in TEE (no VM, no cost, no security). The bench is
-# reconfigured between passes (OMIT_RRP_ID) and left in background-check mode, no omit, at the end.
+# hwrun here with the bench's software stand-in TEE (no VM, no cost, no security). The bench runs both passes in
+# Background Check, reconfigured between them (OMIT_RRP_ID), and is put back as it was however the run ends: its RATS
+# model, the RRP identifier in the binding.
 #
 # GCP_PROJECT, GCP_ZONE, AWS_REGION, AWS_AZ: where the VM goes (scripts/lib.sh). RUNS_DIR: where the run directory
 # goes (default BENCH_HOME/runs). The run ends with its verdict (scripts/verdict.py) and exits 1 unless every outcome
@@ -39,6 +40,16 @@ CA1_ID=https://ca1.tacra.example   # the RRP identifier the honest EST server's 
 B="$BENCH_HOME"; CERT="$B/tls/clients/est-server.crt"; KEY_C="$B/tls/clients/est-server.key"; ROOT="$B/tls/root.crt"
 mkdir -p "$OUT"
 git -C "$REPO" rev-parse --short=12 HEAD > "$OUT/code-rev.txt"
+MODEL_BEFORE="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("rats_model") or "passport")' \
+  "$B/config/vault-gateway.json")"
+RECONFIGURED=""
+restore_bench() { # the bench as it was before the experiment; nothing to do until reconfigure has run
+  [ -n "$RECONFIGURED" ] || return 0
+  bash "$REPO/e2e/scripts/bench.sh" stop >/dev/null 2>&1 || true
+  RATS_MODEL="$MODEL_BEFORE" OMIT_RRP_ID="" bash "$REPO/e2e/scripts/bench.sh" config >/dev/null 2>&1
+  bash "$REPO/e2e/scripts/bench.sh" start >/dev/null 2>&1
+  RECONFIGURED=""
+}
 "$REPO/e2e/scripts/veraison-build-info.sh" > "$OUT/veraison-build.txt"  # the Verifier the gateways ask (SEV-SNP)
 ORDER=(nonce epoch lepoch time none)  # short name of each Target; fresh_of maps it to the Freshness Kind (bash 3.2: no associative arrays)
 fresh_of() { case "$1" in nonce) echo present-nonce;; epoch) echo present-epoch;; lepoch) echo absent-epoch;; time) echo absent-timestamp;; none) echo absent-none;; esac; }
@@ -108,7 +119,7 @@ else
   guest_out() { "${SCPC[@]}" -r "ubuntu@$IP:~/$1" "$2" >/dev/null ; }
   wait_ssh()  { for _ in $(seq 1 40); do guest_ssh true >/dev/null 2>&1 && return 0; sleep 10; done; return 1; }
 fi
-trap 'vm_delete; rm -rf "$BIN"' EXIT
+trap 'vm_delete; restore_bench; rm -rf "$BIN"' EXIT
 
 # shellcheck disable=SC2016  # the $ in the single-quoted script expands in the guest, not here
 PROVISION='set -e
@@ -168,6 +179,7 @@ sudo chmod -R a+rX /root/redir; rm -rf ~/redir; sudo cp -r /root/redir ~/redir; 
 
 reconfigure() { # $1 = "omit" or "normal"
   local omit=""; [ "$1" = omit ] && omit=1
+  RECONFIGURED=1
   bash "$REPO/e2e/scripts/bench.sh" stop >/dev/null 2>&1 || true
   RATS_MODEL=background-check OMIT_RRP_ID="$omit" bash "$REPO/e2e/scripts/bench.sh" config >/dev/null 2>&1
   bash "$REPO/e2e/scripts/bench.sh" start >/dev/null 2>&1
@@ -184,9 +196,9 @@ echo "== bench: background-check, NO RRP identifier in the binding"
 reconfigure omit
 run_pass no-rrp-id ""
 
-vm_delete; trap 'rm -rf "$BIN"' EXIT
-echo "== bench: back to background-check, no omit"
-reconfigure normal
+vm_delete; trap 'restore_bench; rm -rf "$BIN"' EXIT
+echo "== bench: back as it was ($MODEL_BEFORE, the RRP identifier in the binding)"
+restore_bench
 
 cat "$OUT"/*/results.jsonl > "$OUT/results.jsonl"
 rc=0
