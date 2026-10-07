@@ -68,7 +68,7 @@ release's code; the hardware runs identical to gate 5's, check by check).
 - Veraison affirmed a debuggable SEV-SNP guest and never checked AMD's intermediate for revocation. Patch 0005 (our
   earlier Veraison commit `6bbeaf9`, ported onto the chain check up to AMD's roots) refuses a guest whose policy
   allows debugging or a migration agent, and checks the intermediate that signed the report's certificate against
-  AMD's CRL, fetched once per validity period; the check fails closed.
+  AMD's CRL, fetched once per validity period; the check fails closed, and Veraison's log shows each one.
 - `make setup` kept a Veraison built from older sources after a patch changed them. The deployment now records the
   source tree it was built from, and `make setup` builds it again when the tree changes, keeping its keys,
   certificates and stores.

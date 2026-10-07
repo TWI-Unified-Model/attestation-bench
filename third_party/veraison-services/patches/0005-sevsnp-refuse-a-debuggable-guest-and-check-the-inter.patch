@@ -1,4 +1,4 @@
-From 22e5fcd491e2a0501a0d63a4a3de610726743043 Mon Sep 17 00:00:00 2001
+From 8ed8399f042b3b3265ad941e0a971da492c8667c Mon Sep 17 00:00:00 2001
 From: Serhii Nikolaichuk <nikolaichuk.s.f@gmail.com>
 Date: Wed, 30 Sep 2026 15:52:02 -0500
 Subject: [PATCH] sevsnp: refuse a debuggable guest, and check the intermediate
@@ -14,8 +14,10 @@ or the ASVK for a VLEK) is checked against the CRL at its distribution
 point on AMD's KDS: signed by the ARK already compared with the trust
 anchor, current, and the intermediate not listed. Each CRL is fetched once
 per validity period, so the KDS is not asked per report; the check fails
-closed. Tests use AMD's CRLs of 30 September (test/crl/) and never reach
-the network.
+closed. Each check that passes is logged at INFO with the intermediate
+and the dates of the CRL it was checked against, so the log of every
+appraisal shows it. Tests use AMD's CRLs of 30 September (test/crl/)
+and never reach the network.
 
 Ported onto the chain check up to AMD's roots (go-sev-guest v0.15.0):
 the intermediate checked against the CRL is the one among those roots
@@ -24,7 +26,7 @@ not the ASK and ARK the evidence carries. The KDS serves the ARK's one
 CRL at the VLEK's distribution point as well, byte for byte, so the
 tests serve the same snapshot for both.
 ---
- scheme/sevsnp/p0.go                           | 112 +++++++++
+ scheme/sevsnp/p0.go                           | 117 +++++++++
  scheme/sevsnp/p0_test.go                      | 232 ++++++++++++++++++
  scheme/sevsnp/scheme.go                       |  46 +++-
  scheme/sevsnp/test/crl/SOURCES.md             |  19 ++
@@ -33,7 +35,7 @@ tests serve the same snapshot for both.
  .../test/crl/kds-vcek-crl-genoa-20260930.der  | Bin 0 -> 890 bytes
  .../test/crl/kds-vcek-crl-milan-20260930.der  | Bin 0 -> 866 bytes
  .../test/crl/kds-vcek-crl-turin-20260930.der  | Bin 0 -> 866 bytes
- 9 files changed, 553 insertions(+), 4 deletions(-)
+ 9 files changed, 558 insertions(+), 4 deletions(-)
  create mode 100644 scheme/sevsnp/p0.go
  create mode 100644 scheme/sevsnp/p0_test.go
  create mode 100644 scheme/sevsnp/test/crl/SOURCES.md
@@ -45,10 +47,10 @@ tests serve the same snapshot for both.
 
 diff --git a/scheme/sevsnp/p0.go b/scheme/sevsnp/p0.go
 new file mode 100644
-index 0000000..d0ea0cc
+index 0000000..37b736f
 --- /dev/null
 +++ b/scheme/sevsnp/p0.go
-@@ -0,0 +1,112 @@
+@@ -0,0 +1,117 @@
 +// Copyright 2026 Contributors to the Veraison project.
 +// SPDX-License-Identifier: Apache-2.0
 +
@@ -64,6 +66,7 @@ index 0000000..d0ea0cc
 +
 +	"github.com/google/go-sev-guest/verify/trust"
 +	"github.com/veraison/corim/comid"
++	"github.com/veraison/services/log"
 +)
 +
 +// guestPolicyViolation returns why the guest policy of the report (MKey 2, the POLICY field as a big-endian raw
@@ -159,6 +162,10 @@ index 0000000..d0ea0cc
 +				r.RevocationTime.UTC().Format(time.RFC3339))
 +		}
 +	}
++	// one line per appraisal, so that the log of each one shows the check and the CRL it used
++	log.Named(Descriptor.Name).Infof("%s (serial %x) is not on AMD's CRL %s of %s (next update %s)",
++		inter.Subject.CommonName, inter.SerialNumber, url, crl.ThisUpdate.UTC().Format(time.RFC3339),
++		crl.NextUpdate.UTC().Format(time.RFC3339))
 +	return nil
 +}
 diff --git a/scheme/sevsnp/p0_test.go b/scheme/sevsnp/p0_test.go
