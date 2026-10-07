@@ -50,6 +50,8 @@ release's code; the hardware runs identical to gate 5's, check by check).
 - The TACRA proof of concept's own guides moved from the repository root to [docs/tacra-poc/](docs/tacra-poc/README.md).
 - `make redirect` puts the bench back as it was (its RATS model, the RRP identifier in the binding) when it ends,
   fails or is interrupted; it used to leave the bench in Background Check.
+- `make test` (and so `make check` and CI) also runs, in each third-party component, the tests of the Go packages
+  our patches change.
 
 ### Fixed
 
@@ -63,6 +65,13 @@ release's code; the hardware runs identical to gate 5's, check by check).
   the scripts (now 50.0.2).
 - A copy to or from a VM that failed once, for a reason of the cloud's, ended the whole run, and its error went
   nowhere. Copies are now tried up to three times, and each failure is written to the run directory.
+- Veraison affirmed a debuggable SEV-SNP guest and never checked AMD's intermediate for revocation. Patch 0005 (our
+  earlier Veraison commit `6bbeaf9`, ported onto the chain check up to AMD's roots) refuses a guest whose policy
+  allows debugging or a migration agent, and checks the intermediate that signed the report's certificate against
+  AMD's CRL, fetched once per validity period; the check fails closed.
+- `make setup` kept a Veraison built from older sources after a patch changed them. The deployment now records the
+  source tree it was built from, and `make setup` builds it again when the tree changes, keeping its keys,
+  certificates and stores.
 
 ## Before: the TACRA proof of concept and the bench's first stages
 

@@ -14,6 +14,7 @@ Then run what your change touches, and say in the commit message what you ran an
 |---|---|
 | a script, the trust zone, a gateway, a verifier, the generator, a pack | `make setup`, `make check-mtls`, `make demo`, `make attacks`, `make redirect` |
 | a platform plug-in, the CAI, the binding | the above, and the hardware runs of the platforms it touches (`PLATFORM=…`) |
+| a third-party patch (`third_party/`) | the above, and the hardware runs of the platforms it touches; `make check` runs the tests of the packages the patches change |
 | the Demo Bank | `make bank-up`, `bank-pay` on the platforms and both controls, `bank-audit`, `bank-down` |
 | documentation | every command you added or changed, exactly as written |
 
@@ -68,12 +69,16 @@ cd - && git status --short third_party/veraison-services/patches
 
 `git am` makes new commits, so `git format-patch` writes a new commit id on the first line of every patch file. The
 evidence cites the ids the patches have now; put back each patch you did not change, then fetch the sources again,
-which checks the recorded tree:
+which checks the recorded tree, and run Veraison's tests on it:
 
 ```bash
 git checkout -- third_party/veraison-services/patches/<a patch you did not change>
 third_party/fetch.sh veraison-services
+(cd third_party/veraison-services/src && GOWORK=off go test ./scheme/sevsnp/...)   # outside the bench's go.work
 ```
+
+`make setup` then builds the bench's Veraison again from the new tree, keeping its keys, certificates and stores
+(the deployment records the tree it was built from); a Demo Bank builds its own from the tree at each `make bank-up`.
 
 ## The TACRA proof of concept's code
 

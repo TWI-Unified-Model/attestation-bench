@@ -43,7 +43,7 @@ trust-check:
 lint:
 	@scripts/lint.sh
 
-## test: the unit tests: every Go module, and the Python scripts' (scripts/tests)
+## test: the unit tests: every Go module, our third-party patches', the Python scripts' (scripts/tests)
 test:
 	@scripts/test.sh
 

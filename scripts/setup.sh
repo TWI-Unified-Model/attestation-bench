@@ -121,19 +121,32 @@ PY
   cat "$STEPPATH/certs/root_ca.crt" "$STEPPATH/certs/intermediate_ca.crt" >"$B/workload-ca.pem"
 }
 
+# one command of Veraison's own deployment script (deployments/native) for the deployment in $V, logged
+vdeploy() {
+  (cd "$BENCH_REPO/third_party/veraison-services/src/deployments/native" && VERAISON_ROOT="$V" ./deployment.sh "$@") \
+    >>"$LOG" 2>&1
+}
+
 veraison() {
   bench_say "6/10 Veraison ($V)"
-  local nat="$BENCH_REPO/third_party/veraison-services/src/deployments/native"
+  # The tree of the sources, the pinned upstream with our patches (third_party/fetch.sh checks it). The deployment
+  # records the tree it was built from: when a patch changes it, the programs and plugins are built again.
+  local tree built="$V/built-from-tree"
+  tree="$(git -C "$BENCH_REPO/third_party/veraison-services/src" write-tree)" || fail "Veraison sources"
   if [ ! -x "$V/bin/vts-service" ]; then
     echo "  building and deploying (a few minutes; log: $LOG)"
-    (
-      cd "$nat"
-      export VERAISON_ROOT="$V"
-      quiet ./deployment.sh build && quiet ./deployment.sh deploy && quiet ./deployment.sh init-certs localhost \
-        && quiet ./deployment.sh init-clients && quiet ./deployment.sh init-stores
-    ) || fail "Veraison deployment"
+    { vdeploy build && vdeploy deploy && vdeploy init-certs localhost && vdeploy init-clients && vdeploy init-stores; } \
+      || fail "Veraison deployment"
+    echo "$tree" >"$built"
+  elif [ "$(cat "$built" 2>/dev/null)" != "$tree" ]; then
+    # deploy replaces the programs, the plugins and the services' configuration (edited again below); the
+    # certificates, keys, clients and stores stay. Veraison is stopped first and started again at step 9.
+    echo "  built from other sources: building again from tree ${tree:0:12} (a few minutes); keys and stores kept"
+    "$BENCH_REPO/e2e/scripts/veraison-local.sh" stop >>"$LOG" 2>&1 || true
+    { vdeploy build && vdeploy deploy; } || fail "Veraison build"
+    echo "$tree" >"$built"
   else
-    echo "  deployment present"
+    echo "  deployment present, built from tree ${tree:0:12}"
   fi
   # the EAR signing key (and CoSERV's), generated here in the shape Veraison's own tool writes
   mkdir -p "$V/signing"

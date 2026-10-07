@@ -14,10 +14,12 @@ shows nothing about isolation, since anyone with the file can make the stand-in'
 - **No platform policy on SEV-SNP and TDX.** The gateways accept a result when the verifier affirms it and the launch
   is approved. They set no minimum TCB (firmware and microcode versions), and no rule on the machine or the product.
   A platform with known-vulnerable firmware passes if its verifier affirms it.
-- **A debuggable SEV-SNP guest is not refused, and AMD's intermediate is not checked for revocation.** The fix exists
-  in an earlier branch of our Veraison work (commit `6bbeaf9`: refuse a debuggable guest; check the intermediate
-  against AMD's CRL), but is not among the patches the bench applies (`third_party/veraison-services/patches/`). The
-  stand-in's verifier does refuse a debuggable instance (`SIM_DEBUG=1 make demo`).
+- **No hardware run shows a debuggable SEV-SNP guest refused.** Veraison, with our patch 0005, does not affirm a
+  guest whose policy lets the hypervisor debug it or binds it to a migration agent, and it checks the AMD intermediate
+  that signed the report's certificate (the ASK, or the ASVK for a VLEK) against AMD's revocation list. The clouds
+  launch no debuggable guest, so the first is shown by Veraison's tests (`make test`), not on hardware; the stand-in's
+  verifier refuses a debuggable instance in a run (`SIM_DEBUG=1 make demo`). The revocation list comes from AMD's key
+  server (kdsintf.amd.com), once per validity period; while it cannot be fetched, SEV-SNP Evidence is refused.
 - **Veraison and step-ca keep no list of callers.** Veraison's verification API takes any client certificate of the
   bench's root; step-ca authenticates the Credential Authority gateway by its provisioner's token alone.
 
