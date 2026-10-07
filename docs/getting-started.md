@@ -213,7 +213,8 @@ make stop start
 make demo
 ```
 
-`make demo` names its run directory after the model it ran in. `RATS_MODEL=passport make config` switches back.
+`make demo` names its run directory after the model it ran in. To switch back: `RATS_MODEL=passport make config`,
+then `make stop start`.
 
 ## 12. Stop, start, start over
 
@@ -222,7 +223,8 @@ make stop     # stops every service; nothing is lost
 make start    # starts them again
 ```
 
-To remove the bench entirely, its keys, stores and your run directories with it, stop it and delete its directory:
+To remove the bench entirely, its keys, stores and your run directories with it, stop it and delete its directory
+(`$BENCH_HOME` instead, if you set it):
 
 ```bash
 make stop
