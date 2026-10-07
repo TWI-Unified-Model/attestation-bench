@@ -5,7 +5,7 @@
 # directories. See scripts/lib.sh.
 
 .PHONY: doctor setup start stop status config check-mtls trust-check third-party demo attacks redirect \
-	bank-up bank-pay bank-audit bank-down
+	bank-up bank-pay bank-audit bank-down lint test check
 
 ## doctor: checks this machine for what the bench needs: tools and versions, ports, disk
 doctor:
@@ -38,6 +38,17 @@ check-mtls:
 ## trust-check: compares trust/ with its online sources; checks the approved launches against Veraison's CoRIM
 trust-check:
 	@trust/check.sh
+
+## lint: every linter at its pinned version: ShellCheck, gofmt, go vet, golangci-lint, ruff, actionlint
+lint:
+	@scripts/lint.sh
+
+## test: the unit tests of every Go module
+test:
+	@scripts/test.sh
+
+## check: lint, then test (what CI runs first)
+check: lint test
 
 ## third-party: fetches the EST server, Veraison and go-gen-ref (pinned upstream + our patches)
 third-party:

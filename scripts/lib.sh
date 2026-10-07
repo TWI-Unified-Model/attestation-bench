@@ -33,6 +33,11 @@ export BENCH_OS BENCH_ARCH
 BENCH_PORTS="8200 8443 8453 8463 9000 9101 9102 9103 9443 10443 18443 19443 50051"
 export BENCH_PORTS
 
+# The Go modules that make lint and make test cover: all but the proof of concept's est module, whose test does not
+# build against the current est code (reported to the group).
+BENCH_GO_MODULES="bundle cai client e2e gen/go hwcheck hwcheck/vlekcheck platform rrp server"
+export BENCH_GO_MODULES
+
 bench_say() { printf '== %s\n' "$*"; }
 bench_die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
@@ -57,6 +62,21 @@ bench_seal() {
     rm -f "$tmp"
     return 1
   fi
+}
+
+# bench_go_tool NAME MODULE@VERSION DIR: installs that version of a Go program into DIR with go install, unless it is
+# there already; says which
+bench_go_tool() {
+  local name=$1 spec=$2 dir=$3 ver="${2##*@}" out
+  if [ -x "$dir/$name" ] && go version -m "$dir/$name" 2>/dev/null | awk '$1 == "mod" {print $3}' | grep -qx "$ver"; then
+    echo "  $name $ver: present"
+    return 0
+  fi
+  if ! out="$(env GOBIN="$dir" CGO_ENABLED=0 go install "$spec" 2>&1)"; then
+    printf '%s\n' "$out" >&2
+    return 1
+  fi
+  echo "  $name $ver: installed"
 }
 
 # wait for a TCP port on 127.0.0.1 (30 s)

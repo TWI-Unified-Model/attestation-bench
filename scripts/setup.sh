@@ -41,24 +41,13 @@ dirs_and_python() {
   echo "  venv: $("$B/venv/bin/python3" -c 'import cryptography, cbor2, sys; print("python %d.%d" % sys.version_info[:2])'), cryptography and cbor2 installed"
 }
 
-go_tool() { # NAME MODULE@VERSION DIR: installed with go install unless the same version is already there
-  local name=$1 spec=$2 dir=$3 ver
-  ver="${spec##*@}"
-  if [ -x "$dir/$name" ] && go version -m "$dir/$name" 2>/dev/null | awk '$1 == "mod" {print $3}' | grep -qx "$ver"; then
-    echo "  $name $ver: present"
-    return
-  fi
-  quiet env GOBIN="$dir" CGO_ENABLED=0 go install "$spec" || fail "go install $spec"
-  echo "  $name $ver: installed"
-}
-
 tools() {
   bench_say "2/10 pinned tools in $B/bin and $B/tools/bin"
-  go_tool step "$STEP_CLI_MODULE@$STEP_VERSION" "$B/bin"
-  go_tool step-ca "$STEP_CA_MODULE@$STEP_VERSION" "$B/bin"
-  go_tool protoc-gen-go "$PROTOC_GEN_GO" "$B/tools/bin"
-  go_tool protoc-gen-go-grpc "$PROTOC_GEN_GO_GRPC" "$B/tools/bin"
-  go_tool protoc-gen-go-json "$PROTOC_GEN_GO_JSON" "$B/tools/bin"
+  bench_go_tool step "$STEP_CLI_MODULE@$STEP_VERSION" "$B/bin" 2>>"$LOG" || fail "go install step"
+  bench_go_tool step-ca "$STEP_CA_MODULE@$STEP_VERSION" "$B/bin" 2>>"$LOG" || fail "go install step-ca"
+  bench_go_tool protoc-gen-go "$PROTOC_GEN_GO" "$B/tools/bin" 2>>"$LOG" || fail "go install protoc-gen-go"
+  bench_go_tool protoc-gen-go-grpc "$PROTOC_GEN_GO_GRPC" "$B/tools/bin" 2>>"$LOG" || fail "go install protoc-gen-go-grpc"
+  bench_go_tool protoc-gen-go-json "$PROTOC_GEN_GO_JSON" "$B/tools/bin" 2>>"$LOG" || fail "go install protoc-gen-go-json"
   if [ -x "$B/bin/vault" ] && "$B/bin/vault" version | grep -q "^Vault v$VAULT_VERSION "; then
     echo "  vault $VAULT_VERSION: present"
   else
