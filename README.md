@@ -13,13 +13,15 @@ With this repository you can:
   Evidence offered to two Credential Authorities;
 - **bring up a fictional bank** in the cloud, whose payment service gets its database certificate and partner API key
   only by attestation, and **make banks of your own** from it (`make bank-new`);
-- **keep every run as evidence**: each run writes a directory with what it did, its results and their SHA-256.
+- **keep every run as evidence**: each run writes a directory with what it did, its results, its verdict (`PASS` or
+  `FAIL`) and the SHA-256 of every file; `make report` lists them all.
 
 > **Private.** Built for the TWI SIG's TACRA work: the architecture draft
 > [draft-novak-rats-tacra](https://datatracker.ietf.org/doc/draft-novak-rats-tacra/) and its EST profile,
 > [draft-novak-lamps-tacra-est](https://github.com/TheBankster/lamps-tacra-est), whose reference implementation is
-> [tacra-est](https://github.com/nikolaichuk7/tacra-est). The TACRA
-> proof of concept this bench builds on is the SIG's: [docs/tacra-poc/](docs/tacra-poc/README.md).
+> [tacra-est](https://github.com/nikolaichuk7/tacra-est). The TACRA proof of concept this bench builds on is the
+> SIG's: [docs/tacra-poc/](docs/tacra-poc/README.md). How this release was checked:
+> [docs/verification.md](docs/verification.md).
 
 ## Quick start: on your laptop, no cloud, no cost
 
@@ -35,7 +37,9 @@ make redirect   # the #20 table: which Credential Authority issued, with and wit
 ```
 
 Every run judges itself against what its experiment expects and ends with `VERDICT PASS` or `VERDICT FAIL`; on FAIL,
-`make` fails. Locally, the workload's "hardware" is a software stand-in TEE: it signs its reports with a key in a file and gives
+`make` fails.
+
+Locally, the workload's "hardware" is a software stand-in TEE: it signs its reports with a key in a file and gives
 **no security at all**. It exists so that every flow and every check can run anywhere. The gateways accept it only
 because the bench's own configuration allows it; a real deployment never does. Step by step, with what each step
 prints: [docs/getting-started.md](docs/getting-started.md).
