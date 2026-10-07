@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Write README.md for a Demo Bank evidence directory from what the run left there: the machines, the code revisions,
-each run's steps, verdict and receipt, the servers' own log lines for that run, the ledger audit and the teardown.
+"""Write README.md for a bank's evidence directory (the Demo Bank's, or one made with make bank-new) from what the run
+left there: the machines, the code revisions, each run's steps, verdict and receipt, the servers' own log lines for
+that run, the ledger audit and the teardown.
 
-    python3 e2e/bank/report.py e2e/evidence/<stamp>-demo-bank
+    python3 e2e/bank/report.py e2e/evidence/<stamp>-<bank>
 """
 
 import json
@@ -18,19 +19,28 @@ w = out.append
 
 def read(*p, default=""):
     try:
-        return open(os.path.join(E, *p)).read()
+        return Path(E, *p).read_text()
     except OSError:
         return default
 
 
-w("# Demo Bank: TACRA end to end on real hardware\n")
-w(
-    "Demo Bank is fictional: its names, accounts and amounts are made up. Every server of the bank ran in the cloud; the "
-    "operator's machine only built the programs, created the VMs and collected this evidence.\n"
+bank = read("bank.txt").split()  # name, pack, the pack's SHA-256; not recorded before 7 October 2026 (the Demo Bank)
+name, pack = (bank[0], bank[1]) if bank else ("demo-bank", "packs/demo-bank/pack.json")
+if name == "demo-bank":
+    w("# Demo Bank: TACRA end to end on real hardware\n")
+    w("Demo Bank is fictional: its names, accounts and amounts are made up. ")
+else:
+    w(f"# {name}: TACRA end to end on real hardware\n")
+    w(
+        f"{name} is a fictional bank made with `make bank-new`: its own Targets, RRP identifiers and names, on the Demo "
+        "Bank's machinery. Its names, accounts and amounts are made up. "
+    )
+out[-1] += (
+    "Every server of the bank ran in the cloud; the operator's machine only built the programs, created the VMs and "
+    "collected this evidence.\n"
 )
-bank = read("bank.txt").split()
 if bank:
-    w(f"The bank: `{bank[0]}`, from its pack `{bank[1]}` (SHA-256 `{bank[2][:16]}…`).\n")
+    w(f"The bank: `{name}`, from its pack `{pack}` (SHA-256 `{bank[2][:16]}…`).\n")
 w("## Machines\n")
 w("```\n" + read("up", "machines.txt").strip() + "\n```\n")
 w(
@@ -40,7 +50,7 @@ w(
     "and the fraud-scoring service (pre-shared API key). The payment service holds no credential of its own.\n"
 )
 w(
-    "Configuration: written by the bench's own program, `scripts/trustzone.py`, from `packs/demo-bank` and the approved "
+    f"Configuration: written by the bench's own program, `scripts/trustzone.py`, from `{pack}` and the approved "
     "launches, as on the bench: mutual TLS between the components (tacra-est N23), the verifiers' EAR keys given to the "
     "gateways as files (N24), the API key released in the signed container (MLKEM768-P256, signed by the Vault). "
     f"RATS model: {read('rats-model.txt').strip() or '(not recorded)'}.\n"

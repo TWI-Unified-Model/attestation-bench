@@ -83,8 +83,10 @@ make bank-down
 names (which its workload CA and its ledger then admit), the components' certificates, the secret's path in Vault.
 Edit the new pack before `bank-up` to change what the bank issues and how: the Freshness Kinds, the algorithms, the
 certificate validity, the EAR policy ([../packs/README.md](../packs/README.md)). The payment service uses the pack's
-Credential Authority Target for the ledger and its Secret Vault Target for the fraud service's key. One bank is up at
-a time.
+Credential Authority Target for the ledger and its Secret Vault Target for the fraud service's key. What stays the
+Demo Bank's is the machinery: the VMs are named `demobank-*` whatever the bank (so `make bank-down` and
+`make cloud-check` find them), and the trust zone's CAs keep their names, so the ledger's certificate for
+`payments.workload.acme-bank.example` is issued by "Demo Bank workload CA". One bank is up at a time.
 
 To run a bank in Background Check: `RATS_MODEL=background-check make bank-up`.
 
