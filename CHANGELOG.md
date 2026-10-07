@@ -106,10 +106,10 @@ release's code; the hardware runs identical to gate 5's, check by check).
 - A hardware run whose SSH session to the VM broke ended without a verdict
   (`e2e/evidence/20261007T045819Z-gcp-sev-snp-e2e-background-check`). The workload now runs in the VM detached from
   any session (`bench_guest_run`, `scripts/lib.sh`): the bench reads its output and its end with short calls, each
-  made again when it fails, and starts it once, even when the call that started it broke after the VM ran it. Its
-  tests break the calls on purpose (`scripts/tests/test_guest_run.py`), and `BENCH_CHAOS_SSH=1` makes a real VM
-  break them ([docs/troubleshooting.md](docs/troubleshooting.md)). The SEV-SNP hardware checks also keep what the
-  checker logged (`rrpverify-*.stderr.log`) and the EAR of each honest check (`ears/`).
+  made again when it fails, and starts it once, even when the call that started it broke after the VM ran it. It is
+  tested live: with `BENCH_CHAOS_SSH=1` a real VM breaks the bench's SSH sessions on purpose
+  ([docs/troubleshooting.md](docs/troubleshooting.md)). The SEV-SNP hardware checks also keep what the checker
+  logged (`rrpverify-*.stderr.log`) and the EAR of each honest check (`ears/`).
 
 ## Before: the TACRA proof of concept and the bench's first stages
 
