@@ -77,6 +77,21 @@ for up in third_party/*/UPSTREAM; do
     printf '  ok    %-18s our tests: %2s, in %s file(s)\n' "$c" "$ran" "${#ours[@]}"
   fi
 done
+bench_say "no program the bench builds links a mock"
+# every main package of the bench's modules and of the third-party sources it builds (third_party/<c>/src), and every
+# package they link: none may have mock, fake or stub in its path. go list -e passes over Veraison's scheme template
+# (scheme/example), which is not Go until someone fills it in.
+for d in $BENCH_GO_MODULES third_party/*/src; do
+  mains="$(cd "$d" && GOWORK=off go list -e -f '{{if and (eq .Name "main") (not .Error)}}{{.ImportPath}}{{end}}' ./... |
+    sed '/^$/d')"
+  [ -n "$mains" ] || continue
+  if hits="$(cd "$d" && xargs env GOWORK=off go list -e -deps <<<"$mains" | grep -i -E 'mock|fake|stub')"; then
+    printf '  FAIL  %-34s its programs link %s\n' "$d" "$(sort -u <<<"$hits" | tr '\n' ' ')"
+    failed="$failed $d"
+  else
+    printf '  ok    %-34s programs: %2s, none links a mock\n' "$d" "$(grep -c . <<<"$mains")"
+  fi
+done
 bench_say "Python, scripts/tests"
 if out="$(python3 -m unittest discover -s scripts/tests 2>&1)"; then
   printf '  ok    %-18s %s\n' scripts/tests "$(grep -E '^Ran [0-9]+ tests?' <<<"$out")"
@@ -86,4 +101,4 @@ else
   failed="$failed scripts/tests"
 fi
 if [ -n "$failed" ]; then bench_die "tests failed in:$failed"; fi
-echo "test: every Go module, our tests in the third-party sources and the Python tests pass"
+echo "test: every Go module, our tests in the third-party sources and the Python tests pass; no program links a mock"

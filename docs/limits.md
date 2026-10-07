@@ -73,6 +73,14 @@ VM's clock can be trusted depends on the platform and its configuration; the ben
   GO-2025-3660 in `github.com/open-policy-agent/opa` v0.68.0 (fixed in v1.4.0, a major version that changes how Rego
   policies are read). The builds `hwcheck` compares with (Veraison as forked, and with the DER fixes only) keep their
   upstream pins: they are compared, never deployed.
+- **The third-party sources still hold upstream's mocks; the bench builds and runs none of them.** What the bench
+  fetches is upstream's code plus our patches. Some of upstream's own tests use mocks: GlobalSign's mock CA
+  (`internal/mockca`) in the EST fork, and Veraison's generated mocks (`gomock`, in four `mocks` directories). The
+  bench does not run those tests, and `make test` checks that no program it builds links a package named mock, fake
+  or stub. Our EST patches took the proof of concept's mock CA, mock TEE and mock attested CA out of the server and
+  its library (patches 0009 and 0011). The EST library keeps the proof of concept's container encryption (ECDH-P256,
+  HKDF, AES-GCM; its own comment calls it a stand-in for HPKE) as the container type of its interface. The bench never
+  uses it: its Secret Vault seals with hpke-auth, and the EST server forwards that container unchanged.
 
 ## Coverage
 

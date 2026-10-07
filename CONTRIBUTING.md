@@ -37,7 +37,8 @@ tested by the hardware runs.
 
 In a third-party component, `make test` runs the tests our patches add (the test files the pinned upstream commit
 does not have) and no others. It checks that each of them ran, and refuses a test binary that links a mock. Upstream's
-own tests are not run: some of them use mocks, as the EST fork's tests use its mock CA.
+own tests are not run: some of them use mocks, as the EST fork's tests use its mock CA. And no program the bench
+builds, its own or a third-party one, may link a package named mock, fake or stub: `make test` checks every one.
 
 ## Evidence
 

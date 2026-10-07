@@ -137,7 +137,10 @@ release's code; the hardware runs identical to gate 5's, check by check).
 - **The EST server's mock CA** (EST patch 0009). The fork's server made a mock CA at every start, issued its own TLS
   certificate from it when its configuration had no `tls` section, and used it as its CA unless a `tacra` or `attest`
   section replaced it. The bench's server runs only with the TACRA backend: it needs its `tls` and `tacra` sections,
-  and refuses `mock_ca`, `attest` and any field it does not know.
+  and refuses `mock_ca`, `attest` and any field it does not know. Patch 0011 takes the proof of concept's mock TEE
+  (its Evidence format, the code that made it and the code that appraised it) and its mock attested CA out of the EST
+  library, with the dependencies only they needed (`veraison/eat`, `go-cose`). `make test` now checks that no program
+  the bench builds, its own or a third-party one, links a package named mock, fake or stub.
 - **The tests of our third-party patches on stand-ins.** The EST backend's tests ran on a verifier, RRPs and a CA of
   their own (EST patch 0008). Veraison's revocation tests ran on a snapshot of AMD's CRLs at a stopped clock, its DER
   certificate table was made by re-encoding a PEM one, and its mitigation vectors were made up (Veraison patch 0008).
