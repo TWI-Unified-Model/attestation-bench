@@ -1,0 +1,14 @@
+{
+ "case": "enroll-present-nonce",
+ "mode": "enroll",
+ "freshness_kind": "present-nonce",
+ "target": "https://db-nonce.tacra.example",
+ "relying_party": "",
+ "freshness_element_b64": "rhl3eBNARcH2JZMs6ggoc3ioMIuc-CPmHSvDkx7woFc",
+ "binding_value_hex": "d0b0a5b8344eb88ce4a0cef7c98a4c4d6b2401e9e6c85d81f2b8027bd409655d0f345c72c21325bc308a6e6133e2bc3a386765cd13665037256e749c09a46bc8",
+ "evidence_ms": 10.555,
+ "token_bytes": 5989,
+ "report_sha256": "733147acffaa238a9b55f8ba6531075bec13e9d6916d514e423aa2aa2e870336",
+ "signing_key": "VCEK",
+ "chip_id_prefix": "75bbd2bb8dfeeb00"
+}

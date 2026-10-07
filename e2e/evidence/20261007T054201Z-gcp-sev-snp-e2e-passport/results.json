@@ -1,0 +1,117 @@
+[
+ {
+  "target": "https://db-nonce.tacra.example",
+  "type": "x509",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 735.512,
+  "cert_serial": "41fe122aeb605418421d788fbba9ca08",
+  "cert_names": "[payments.workload.tacra.example] [spiffe://tacra.example/payments]",
+  "cert_issuer": "TACRA bench CA Intermediate CA",
+  "not_after": "2026-10-07T06:43:54Z",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"payments.workload.tacra.example\",\"not_after\":\"2026-10-07T06:43:54Z\",\"serial\":\"41fe122aeb605418421d788fbba9ca08\"}"
+ },
+ {
+  "target": "https://db-epoch.tacra.example",
+  "type": "x509",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 559.251,
+  "cert_serial": "b79d3f6950ea4cab69a3ba5a1a93e2b0",
+  "cert_names": "[payments.workload.tacra.example] [spiffe://tacra.example/payments]",
+  "cert_issuer": "TACRA bench CA Intermediate CA",
+  "not_after": "2026-10-07T06:43:55Z",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"payments.workload.tacra.example\",\"not_after\":\"2026-10-07T06:43:55Z\",\"serial\":\"b79d3f6950ea4cab69a3ba5a1a93e2b0\"}"
+ },
+ {
+  "target": "https://db-lepoch.tacra.example",
+  "type": "x509",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 577.242,
+  "cert_serial": "9d50361bea500f495c6aa4572819cf3b",
+  "cert_names": "[payments.workload.tacra.example] [spiffe://tacra.example/payments]",
+  "cert_issuer": "TACRA bench CA Intermediate CA",
+  "not_after": "2026-10-07T06:43:56Z",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"payments.workload.tacra.example\",\"not_after\":\"2026-10-07T06:43:56Z\",\"serial\":\"9d50361bea500f495c6aa4572819cf3b\"}"
+ },
+ {
+  "target": "https://db-time.tacra.example",
+  "type": "x509",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 565.72,
+  "cert_serial": "e407c1a8c773151b5c80f40c1f04d333",
+  "cert_names": "[payments.workload.tacra.example] [spiffe://tacra.example/payments]",
+  "cert_issuer": "TACRA bench CA Intermediate CA",
+  "not_after": "2026-10-07T06:43:56Z",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"payments.workload.tacra.example\",\"not_after\":\"2026-10-07T06:43:56Z\",\"serial\":\"e407c1a8c773151b5c80f40c1f04d333\"}"
+ },
+ {
+  "target": "https://db-none.tacra.example",
+  "type": "x509",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 519.539,
+  "cert_serial": "7ae5361e9df52dbd0e49ab75049f5c54",
+  "cert_names": "[payments.workload.tacra.example] [spiffe://tacra.example/payments]",
+  "cert_issuer": "TACRA bench CA Intermediate CA",
+  "not_after": "2026-10-07T06:43:57Z",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"payments.workload.tacra.example\",\"not_after\":\"2026-10-07T06:43:57Z\",\"serial\":\"7ae5361e9df52dbd0e49ab75049f5c54\"}"
+ },
+ {
+  "target": "https://ledger-nonce.tacra.example",
+  "type": "api-key",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 580.466,
+  "secret_sha256": "332e6832d1a35ebe5a1e3361d2306469c966868bffeb6dc25ed4a2cc7892ee10",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"api-key\"}"
+ },
+ {
+  "target": "https://ledger-epoch.tacra.example",
+  "type": "api-key",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 566.62,
+  "secret_sha256": "332e6832d1a35ebe5a1e3361d2306469c966868bffeb6dc25ed4a2cc7892ee10",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"api-key\"}"
+ },
+ {
+  "target": "https://ledger-lepoch.tacra.example",
+  "type": "api-key",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 522.808,
+  "secret_sha256": "332e6832d1a35ebe5a1e3361d2306469c966868bffeb6dc25ed4a2cc7892ee10",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"api-key\"}"
+ },
+ {
+  "target": "https://ledger-time.tacra.example",
+  "type": "api-key",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 543.492,
+  "secret_sha256": "332e6832d1a35ebe5a1e3361d2306469c966868bffeb6dc25ed4a2cc7892ee10",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"api-key\"}"
+ },
+ {
+  "target": "https://ledger-none.tacra.example",
+  "type": "api-key",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 495.924,
+  "secret_sha256": "332e6832d1a35ebe5a1e3361d2306469c966868bffeb6dc25ed4a2cc7892ee10",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"api-key\"}"
+ }
+]

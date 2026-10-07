@@ -1,0 +1,63 @@
+{
+ "mode": "payment",
+ "tee": "tdx",
+ "steps": [
+  {
+   "step": "attestation plug-in and CAI",
+   "ok": true,
+   "ms": 42.071,
+   "note": "tdx"
+  },
+  {
+   "step": "TACRA: ledger certificate",
+   "ok": true,
+   "ms": 808.672,
+   "note": "[payments.workload.demobank.example] serial 4b88619791b601b36df961531ceeb6d8 until 2026-10-07T07:27:25Z"
+  },
+  {
+   "step": "TACRA: fraud-service API key",
+   "ok": true,
+   "ms": 57.064,
+   "note": "sealed to this VM's CEK, opened in the guest"
+  },
+  {
+   "step": "fraud service: score",
+   "ok": true,
+   "ms": 4.648,
+   "note": "approve FRD-2C4CE0C415E2"
+  },
+  {
+   "step": "ledger: transfer",
+   "ok": true,
+   "ms": 18.887,
+   "note": "one transaction, client-certificate login"
+  }
+ ],
+ "receipt": {
+  "amount": "125.50",
+  "at": "2026-10-07T06:27:26Z",
+  "balance_after": {
+   "ACC-1001": "4749.00",
+   "ACC-2002": "1251.00"
+  },
+  "balance_before": {
+   "ACC-1001": "4874.50",
+   "ACC-2002": "1125.50"
+  },
+  "certificate": {
+   "not_after": "2026-10-07T07:27:25Z",
+   "serial_hex": "4b88619791b601b36df961531ceeb6d8"
+  },
+  "db_user": "payments",
+  "fraud_ref": "FRD-2C4CE0C415E2",
+  "from": "ACC-1001",
+  "recorded_by_ledger": {
+   "client_cert_issuer": "Demo Bank workload CA Intermediate CA",
+   "client_cert_serial": "100400231458908879846734818097786435288",
+   "client_cn": "payments.workload.demobank.example",
+   "tls": "TLSv1.3"
+  },
+  "to": "ACC-2002",
+  "transfer_id": 2
+ }
+}

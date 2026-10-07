@@ -1,0 +1,6 @@
+ok attestation plug-in and CAI                 8.8 ms  sev-snp
+ok TACRA: ledger certificate                 261.2 ms  [payments.workload.demobank.example] serial c569efd4f625329d35a8210ca37d2698 until 2026-10-07T07:25:10Z
+ok TACRA: fraud-service API key               59.5 ms  sealed to this VM's CEK, opened in the guest
+ok fraud service: score                        6.6 ms  approve FRD-FA95E1F7FBEE
+ok ledger: transfer                           20.7 ms  one transaction, client-certificate login
+VERDICT PASS: the payment went through, with credentials acquired by attestation

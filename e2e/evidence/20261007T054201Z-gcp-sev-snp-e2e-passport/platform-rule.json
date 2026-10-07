@@ -1,0 +1,31 @@
+{
+ "sevsnp": {
+  "require_machine_identity": false,
+  "allowed_chip_ids": [],
+  "allowed_products": [
+   "Milan",
+   "Genoa",
+   "Turin"
+  ],
+  "tcb_floors": {
+   "Milan": {
+    "bl": 4,
+    "snp": 29,
+    "ucode": 222
+   },
+   "Genoa": {
+    "snp": 28,
+    "ucode": 86
+   },
+   "Turin": {
+    "snp": 5,
+    "ucode": 81
+   }
+  },
+  "check_committed_tcb": true,
+  "smt": "allow-with-microcode-floor"
+ },
+ "tdx": {
+  "td_attributes_refused": "0x2000fff0"
+ }
+}

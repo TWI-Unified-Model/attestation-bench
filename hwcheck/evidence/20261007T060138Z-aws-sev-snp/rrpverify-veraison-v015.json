@@ -1,0 +1,1652 @@
+{
+ "golden_from": "enroll-present-nonce / as-delivered",
+ "not_after": 1791352970,
+ "not_before": 1791352968,
+ "results": [
+  {
+   "case": "enroll-present-nonce",
+   "certificate_table": "as-delivered",
+   "check": "honest",
+   "want": "pass",
+   "got": "pass",
+   "ok": true,
+   "ms": 160.054
+  },
+  {
+   "case": "enroll-present-nonce",
+   "certificate_table": "as-delivered",
+   "check": "other Target",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9ec16732fc226f09c3c8608c2fb104158999ae530d0c9e8951c94144e8380b8497202948781445f7fefa9bcebfdf887a088ab89159c82c30cc07319d9494ccbf vs session: 0xf6eca3dc52636d8d009acf0b419ba8f455f6adef36e575355832f82f7637488ded34172ed9cad47938a03c66d72d16ff1db1f53f3b64a4f8fcddd46de32ec3c2\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.18
+  },
+  {
+   "case": "enroll-present-nonce",
+   "certificate_table": "as-delivered",
+   "check": "other RRP identifier",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9ec16732fc226f09c3c8608c2fb104158999ae530d0c9e8951c94144e8380b8497202948781445f7fefa9bcebfdf887a088ab89159c82c30cc07319d9494ccbf vs session: 0xa2a212a863c39ce6700f532b79e5d693ae171f2c0d7bc13de3429b20cc8554e681c9ea760b880a9ca546beb6276de158950ad78cdf0ca3b77c2d04c727e2bf86\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.047
+  },
+  {
+   "case": "enroll-present-nonce",
+   "certificate_table": "as-delivered",
+   "check": "other CSR / CEKpub",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9ec16732fc226f09c3c8608c2fb104158999ae530d0c9e8951c94144e8380b8497202948781445f7fefa9bcebfdf887a088ab89159c82c30cc07319d9494ccbf vs session: 0x4e4f2d1c104b1c063bd5ce3e8d39e07db35b5c0ccb4ce8f2a68bf1a10cf6b2cc346b33e816902fcdd31a318e97262f23a189b421efe2759044dbe97d7e44b42f\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.035
+  },
+  {
+   "case": "enroll-present-nonce",
+   "certificate_table": "as-delivered",
+   "check": "other freshness element",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9ec16732fc226f09c3c8608c2fb104158999ae530d0c9e8951c94144e8380b8497202948781445f7fefa9bcebfdf887a088ab89159c82c30cc07319d9494ccbf vs session: 0x4a524420fc2e442a6e3b87bbaf6023cc56d20c7ba448ce182a7e83e69953c3bff6941aa3a3c854ae6c80d54420a031c63e1a5adb928f819704e8ab76294a5eae\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.048
+  },
+  {
+   "case": "enroll-present-nonce",
+   "certificate_table": "as-delivered",
+   "check": "trust anchor = ASK, not ARK",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"evidence Trust Anchor (ARK) doesn't match the provisioned one\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.048
+  },
+  {
+   "case": "enroll-present-nonce",
+   "certificate_table": "pem-normalised",
+   "check": "honest",
+   "want": "pass",
+   "got": "pass",
+   "ok": true,
+   "ms": 4.887
+  },
+  {
+   "case": "enroll-present-nonce",
+   "certificate_table": "pem-normalised",
+   "check": "other Target",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9ec16732fc226f09c3c8608c2fb104158999ae530d0c9e8951c94144e8380b8497202948781445f7fefa9bcebfdf887a088ab89159c82c30cc07319d9494ccbf vs session: 0xf6eca3dc52636d8d009acf0b419ba8f455f6adef36e575355832f82f7637488ded34172ed9cad47938a03c66d72d16ff1db1f53f3b64a4f8fcddd46de32ec3c2\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.049
+  },
+  {
+   "case": "enroll-present-nonce",
+   "certificate_table": "pem-normalised",
+   "check": "other RRP identifier",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9ec16732fc226f09c3c8608c2fb104158999ae530d0c9e8951c94144e8380b8497202948781445f7fefa9bcebfdf887a088ab89159c82c30cc07319d9494ccbf vs session: 0xa2a212a863c39ce6700f532b79e5d693ae171f2c0d7bc13de3429b20cc8554e681c9ea760b880a9ca546beb6276de158950ad78cdf0ca3b77c2d04c727e2bf86\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.038
+  },
+  {
+   "case": "enroll-present-nonce",
+   "certificate_table": "pem-normalised",
+   "check": "other CSR / CEKpub",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9ec16732fc226f09c3c8608c2fb104158999ae530d0c9e8951c94144e8380b8497202948781445f7fefa9bcebfdf887a088ab89159c82c30cc07319d9494ccbf vs session: 0x4e4f2d1c104b1c063bd5ce3e8d39e07db35b5c0ccb4ce8f2a68bf1a10cf6b2cc346b33e816902fcdd31a318e97262f23a189b421efe2759044dbe97d7e44b42f\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.058
+  },
+  {
+   "case": "enroll-present-nonce",
+   "certificate_table": "pem-normalised",
+   "check": "other freshness element",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9ec16732fc226f09c3c8608c2fb104158999ae530d0c9e8951c94144e8380b8497202948781445f7fefa9bcebfdf887a088ab89159c82c30cc07319d9494ccbf vs session: 0x4a524420fc2e442a6e3b87bbaf6023cc56d20c7ba448ce182a7e83e69953c3bff6941aa3a3c854ae6c80d54420a031c63e1a5adb928f819704e8ab76294a5eae\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.039
+  },
+  {
+   "case": "enroll-present-nonce",
+   "certificate_table": "pem-normalised",
+   "check": "trust anchor = ASK, not ARK",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"evidence Trust Anchor (ARK) doesn't match the provisioned one\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.033
+  },
+  {
+   "case": "retrieve-present-nonce",
+   "certificate_table": "as-delivered",
+   "check": "honest",
+   "want": "pass",
+   "got": "pass",
+   "ok": true,
+   "ms": 2.892
+  },
+  {
+   "case": "retrieve-present-nonce",
+   "certificate_table": "as-delivered",
+   "check": "other Target",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9678761919805d46a08bc967f300e6b72c0008ec96a216e139f820cf5aea5a0c508f53abe7f062c7c84e518ceeaf694a88462346c8816c276bfc86f5d5552413 vs session: 0xa1e7c005b3dbab3193fb43e2ae48c7783006a0db4a99c45a7dcf2913edea0c7e7799c880745e1b836816f9f6024d586dddd781bdec70d47f15abf1d3136e6764\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.045
+  },
+  {
+   "case": "retrieve-present-nonce",
+   "certificate_table": "as-delivered",
+   "check": "other RRP identifier",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9678761919805d46a08bc967f300e6b72c0008ec96a216e139f820cf5aea5a0c508f53abe7f062c7c84e518ceeaf694a88462346c8816c276bfc86f5d5552413 vs session: 0x94ba599fd832740568a2e7f3fde2d4f532c29629f6a37a4e423aeacd76f98a9e3737bb93577fb0853096c19d836c74ec3e8ae3eb7a3ca02e6514a7198065c0e1\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.032
+  },
+  {
+   "case": "retrieve-present-nonce",
+   "certificate_table": "as-delivered",
+   "check": "other CSR / CEKpub",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9678761919805d46a08bc967f300e6b72c0008ec96a216e139f820cf5aea5a0c508f53abe7f062c7c84e518ceeaf694a88462346c8816c276bfc86f5d5552413 vs session: 0xa5fb426812f6fc0de5e4f380eef044f1875b79e8744d63423b62f2e28f75f23f21fd0b3f2b2737cc70f41fe28e94037c23e2c556ba50ef911256785deca9db7a\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.032
+  },
+  {
+   "case": "retrieve-present-nonce",
+   "certificate_table": "as-delivered",
+   "check": "other freshness element",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9678761919805d46a08bc967f300e6b72c0008ec96a216e139f820cf5aea5a0c508f53abe7f062c7c84e518ceeaf694a88462346c8816c276bfc86f5d5552413 vs session: 0x91431ac7102bd225a3fab1c19c99f792ee82678077dc57acc2e87c6277ab83417441bbe2a3a1dab1ad76a5ac77fdfa9a0f8d5e22884d1c8808b29a694ca74d4a\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.034
+  },
+  {
+   "case": "retrieve-present-nonce",
+   "certificate_table": "as-delivered",
+   "check": "trust anchor = ASK, not ARK",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"evidence Trust Anchor (ARK) doesn't match the provisioned one\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.035
+  },
+  {
+   "case": "retrieve-present-nonce",
+   "certificate_table": "pem-normalised",
+   "check": "honest",
+   "want": "pass",
+   "got": "pass",
+   "ok": true,
+   "ms": 2.596
+  },
+  {
+   "case": "retrieve-present-nonce",
+   "certificate_table": "pem-normalised",
+   "check": "other Target",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9678761919805d46a08bc967f300e6b72c0008ec96a216e139f820cf5aea5a0c508f53abe7f062c7c84e518ceeaf694a88462346c8816c276bfc86f5d5552413 vs session: 0xa1e7c005b3dbab3193fb43e2ae48c7783006a0db4a99c45a7dcf2913edea0c7e7799c880745e1b836816f9f6024d586dddd781bdec70d47f15abf1d3136e6764\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.045
+  },
+  {
+   "case": "retrieve-present-nonce",
+   "certificate_table": "pem-normalised",
+   "check": "other RRP identifier",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9678761919805d46a08bc967f300e6b72c0008ec96a216e139f820cf5aea5a0c508f53abe7f062c7c84e518ceeaf694a88462346c8816c276bfc86f5d5552413 vs session: 0x94ba599fd832740568a2e7f3fde2d4f532c29629f6a37a4e423aeacd76f98a9e3737bb93577fb0853096c19d836c74ec3e8ae3eb7a3ca02e6514a7198065c0e1\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.038
+  },
+  {
+   "case": "retrieve-present-nonce",
+   "certificate_table": "pem-normalised",
+   "check": "other CSR / CEKpub",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9678761919805d46a08bc967f300e6b72c0008ec96a216e139f820cf5aea5a0c508f53abe7f062c7c84e518ceeaf694a88462346c8816c276bfc86f5d5552413 vs session: 0xa5fb426812f6fc0de5e4f380eef044f1875b79e8744d63423b62f2e28f75f23f21fd0b3f2b2737cc70f41fe28e94037c23e2c556ba50ef911256785deca9db7a\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.036
+  },
+  {
+   "case": "retrieve-present-nonce",
+   "certificate_table": "pem-normalised",
+   "check": "other freshness element",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9678761919805d46a08bc967f300e6b72c0008ec96a216e139f820cf5aea5a0c508f53abe7f062c7c84e518ceeaf694a88462346c8816c276bfc86f5d5552413 vs session: 0x91431ac7102bd225a3fab1c19c99f792ee82678077dc57acc2e87c6277ab83417441bbe2a3a1dab1ad76a5ac77fdfa9a0f8d5e22884d1c8808b29a694ca74d4a\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.032
+  },
+  {
+   "case": "retrieve-present-nonce",
+   "certificate_table": "pem-normalised",
+   "check": "trust anchor = ASK, not ARK",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"evidence Trust Anchor (ARK) doesn't match the provisioned one\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.033
+  },
+  {
+   "case": "enroll-present-epoch",
+   "certificate_table": "as-delivered",
+   "check": "honest",
+   "want": "pass",
+   "got": "pass",
+   "ok": true,
+   "ms": 4.11
+  },
+  {
+   "case": "enroll-present-epoch",
+   "certificate_table": "as-delivered",
+   "check": "other Target",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xa4f21484da54bd491049432af16e51a79971463ddbe8d17ceadfc5a6a64e758524b668811bbb4447d6cae6e308f2e1542dce879ed9fc7a4a7da45f6b725455b2 vs session: 0xc5a6b4aa5856368e85815559f4dd653255ddb1241a1cdbe5318e6defd1808a41cc8780a787306deda2d13a6b35dcc8ba0898aa593ca58a3f223e6acd7e0b59fe\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.035
+  },
+  {
+   "case": "enroll-present-epoch",
+   "certificate_table": "as-delivered",
+   "check": "other RRP identifier",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xa4f21484da54bd491049432af16e51a79971463ddbe8d17ceadfc5a6a64e758524b668811bbb4447d6cae6e308f2e1542dce879ed9fc7a4a7da45f6b725455b2 vs session: 0x7bb49e7f3801c973ee0c43c2cd13095c1add48760cf821c50474cf8a74eb4773661a8618a5609995fbfb157970b515e1eff413a75ba80aeeae425cd5e764ee07\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.025
+  },
+  {
+   "case": "enroll-present-epoch",
+   "certificate_table": "as-delivered",
+   "check": "other CSR / CEKpub",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xa4f21484da54bd491049432af16e51a79971463ddbe8d17ceadfc5a6a64e758524b668811bbb4447d6cae6e308f2e1542dce879ed9fc7a4a7da45f6b725455b2 vs session: 0x7c9e24840813e512fd6417681432a118537e5d541bf4c9b40feb04103928c4ab2ff18e7f67493f25fac177662cd2ab3a74a34e82f26b903eae65127263507d43\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.027
+  },
+  {
+   "case": "enroll-present-epoch",
+   "certificate_table": "as-delivered",
+   "check": "other freshness element",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xa4f21484da54bd491049432af16e51a79971463ddbe8d17ceadfc5a6a64e758524b668811bbb4447d6cae6e308f2e1542dce879ed9fc7a4a7da45f6b725455b2 vs session: 0xe00e7a0b2e1240ee1281fb5713a82a0379db7fcd90ae66bdfd286554cd9951645d008a5f15d04b96298f2831ee0556b549c5a6082c8e5e46a0f9167f7daad5ca\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.025
+  },
+  {
+   "case": "enroll-present-epoch",
+   "certificate_table": "as-delivered",
+   "check": "trust anchor = ASK, not ARK",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"evidence Trust Anchor (ARK) doesn't match the provisioned one\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.026
+  },
+  {
+   "case": "enroll-present-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "honest",
+   "want": "pass",
+   "got": "pass",
+   "ok": true,
+   "ms": 2.249
+  },
+  {
+   "case": "enroll-present-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "other Target",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xa4f21484da54bd491049432af16e51a79971463ddbe8d17ceadfc5a6a64e758524b668811bbb4447d6cae6e308f2e1542dce879ed9fc7a4a7da45f6b725455b2 vs session: 0xc5a6b4aa5856368e85815559f4dd653255ddb1241a1cdbe5318e6defd1808a41cc8780a787306deda2d13a6b35dcc8ba0898aa593ca58a3f223e6acd7e0b59fe\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.036
+  },
+  {
+   "case": "enroll-present-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "other RRP identifier",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xa4f21484da54bd491049432af16e51a79971463ddbe8d17ceadfc5a6a64e758524b668811bbb4447d6cae6e308f2e1542dce879ed9fc7a4a7da45f6b725455b2 vs session: 0x7bb49e7f3801c973ee0c43c2cd13095c1add48760cf821c50474cf8a74eb4773661a8618a5609995fbfb157970b515e1eff413a75ba80aeeae425cd5e764ee07\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.026
+  },
+  {
+   "case": "enroll-present-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "other CSR / CEKpub",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xa4f21484da54bd491049432af16e51a79971463ddbe8d17ceadfc5a6a64e758524b668811bbb4447d6cae6e308f2e1542dce879ed9fc7a4a7da45f6b725455b2 vs session: 0x7c9e24840813e512fd6417681432a118537e5d541bf4c9b40feb04103928c4ab2ff18e7f67493f25fac177662cd2ab3a74a34e82f26b903eae65127263507d43\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.031
+  },
+  {
+   "case": "enroll-present-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "other freshness element",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xa4f21484da54bd491049432af16e51a79971463ddbe8d17ceadfc5a6a64e758524b668811bbb4447d6cae6e308f2e1542dce879ed9fc7a4a7da45f6b725455b2 vs session: 0xe00e7a0b2e1240ee1281fb5713a82a0379db7fcd90ae66bdfd286554cd9951645d008a5f15d04b96298f2831ee0556b549c5a6082c8e5e46a0f9167f7daad5ca\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.025
+  },
+  {
+   "case": "enroll-present-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "trust anchor = ASK, not ARK",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"evidence Trust Anchor (ARK) doesn't match the provisioned one\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.024
+  },
+  {
+   "case": "retrieve-present-epoch",
+   "certificate_table": "as-delivered",
+   "check": "honest",
+   "want": "pass",
+   "got": "pass",
+   "ok": true,
+   "ms": 3.415
+  },
+  {
+   "case": "retrieve-present-epoch",
+   "certificate_table": "as-delivered",
+   "check": "other Target",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xfa961f39ea7b7e328963e8cc33ba8b59bf999c30d7e71a3e2cf9f95d6cfb6ddba23a3369a9b7132768aee15c264bc8d045aef4fad20d69897bd093d1c66d0aeb vs session: 0x288d94c657ce97de846f0aa083ef2453c7a43ee9a4f5f6479518aa32424c69d061b1fc03d1191cb0346aeb0402c4a3589a37f1a32f12a5a0e4b9703b0ca50d3d\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.039
+  },
+  {
+   "case": "retrieve-present-epoch",
+   "certificate_table": "as-delivered",
+   "check": "other RRP identifier",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xfa961f39ea7b7e328963e8cc33ba8b59bf999c30d7e71a3e2cf9f95d6cfb6ddba23a3369a9b7132768aee15c264bc8d045aef4fad20d69897bd093d1c66d0aeb vs session: 0x2b44dd37985828019e78a47cab0320d72952ca7eb7d47822e2ccc84a64d5a050e9cbd4be2ffd26f99804aa0fc39caba937d28274a881c2200981f8f13ee498a3\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.024
+  },
+  {
+   "case": "retrieve-present-epoch",
+   "certificate_table": "as-delivered",
+   "check": "other CSR / CEKpub",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xfa961f39ea7b7e328963e8cc33ba8b59bf999c30d7e71a3e2cf9f95d6cfb6ddba23a3369a9b7132768aee15c264bc8d045aef4fad20d69897bd093d1c66d0aeb vs session: 0x8fc81171f47b97201dc8eb2fbea8a4a32c32b946ae20955eaf447e80e0496c5cb7233f80f39ba27ac0b7657a697545000fe6cf8e18e16b1e122eecefc5ac592b\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.026
+  },
+  {
+   "case": "retrieve-present-epoch",
+   "certificate_table": "as-delivered",
+   "check": "other freshness element",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xfa961f39ea7b7e328963e8cc33ba8b59bf999c30d7e71a3e2cf9f95d6cfb6ddba23a3369a9b7132768aee15c264bc8d045aef4fad20d69897bd093d1c66d0aeb vs session: 0x85cccb93785aa00bd9a0c022279dec2ebfa8ac8574cfc0e77383097ed67d97bdd2d29b32e3576e851f44864be7075dd3375dbc5dc8cc98a5b384afb6e4b6122d\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.025
+  },
+  {
+   "case": "retrieve-present-epoch",
+   "certificate_table": "as-delivered",
+   "check": "trust anchor = ASK, not ARK",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"evidence Trust Anchor (ARK) doesn't match the provisioned one\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.021
+  },
+  {
+   "case": "retrieve-present-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "honest",
+   "want": "pass",
+   "got": "pass",
+   "ok": true,
+   "ms": 1.937
+  },
+  {
+   "case": "retrieve-present-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "other Target",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xfa961f39ea7b7e328963e8cc33ba8b59bf999c30d7e71a3e2cf9f95d6cfb6ddba23a3369a9b7132768aee15c264bc8d045aef4fad20d69897bd093d1c66d0aeb vs session: 0x288d94c657ce97de846f0aa083ef2453c7a43ee9a4f5f6479518aa32424c69d061b1fc03d1191cb0346aeb0402c4a3589a37f1a32f12a5a0e4b9703b0ca50d3d\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.023
+  },
+  {
+   "case": "retrieve-present-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "other RRP identifier",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xfa961f39ea7b7e328963e8cc33ba8b59bf999c30d7e71a3e2cf9f95d6cfb6ddba23a3369a9b7132768aee15c264bc8d045aef4fad20d69897bd093d1c66d0aeb vs session: 0x2b44dd37985828019e78a47cab0320d72952ca7eb7d47822e2ccc84a64d5a050e9cbd4be2ffd26f99804aa0fc39caba937d28274a881c2200981f8f13ee498a3\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.024
+  },
+  {
+   "case": "retrieve-present-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "other CSR / CEKpub",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xfa961f39ea7b7e328963e8cc33ba8b59bf999c30d7e71a3e2cf9f95d6cfb6ddba23a3369a9b7132768aee15c264bc8d045aef4fad20d69897bd093d1c66d0aeb vs session: 0x8fc81171f47b97201dc8eb2fbea8a4a32c32b946ae20955eaf447e80e0496c5cb7233f80f39ba27ac0b7657a697545000fe6cf8e18e16b1e122eecefc5ac592b\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.034
+  },
+  {
+   "case": "retrieve-present-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "other freshness element",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xfa961f39ea7b7e328963e8cc33ba8b59bf999c30d7e71a3e2cf9f95d6cfb6ddba23a3369a9b7132768aee15c264bc8d045aef4fad20d69897bd093d1c66d0aeb vs session: 0x85cccb93785aa00bd9a0c022279dec2ebfa8ac8574cfc0e77383097ed67d97bdd2d29b32e3576e851f44864be7075dd3375dbc5dc8cc98a5b384afb6e4b6122d\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.027
+  },
+  {
+   "case": "retrieve-present-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "trust anchor = ASK, not ARK",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"evidence Trust Anchor (ARK) doesn't match the provisioned one\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.023
+  },
+  {
+   "case": "enroll-absent-epoch",
+   "certificate_table": "as-delivered",
+   "check": "honest",
+   "want": "pass",
+   "got": "pass",
+   "ok": true,
+   "ms": 2.934
+  },
+  {
+   "case": "enroll-absent-epoch",
+   "certificate_table": "as-delivered",
+   "check": "other Target",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xe49c77d861332050385f7f5f54eaf71c9515af698f46ba66221661a4700f5285eba43bfd40cb29f9138378c737a3fba60a21cf1df295f170aa16488a0f186b8d vs session: 0x9532da8a5df7014cc7285f3a433fc0e400255f88fd112d9fafac668469358e53052512fe2db282cee149b0b99832e223a1a9299e3f30dfa614d654490176e6d7\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.033
+  },
+  {
+   "case": "enroll-absent-epoch",
+   "certificate_table": "as-delivered",
+   "check": "other RRP identifier",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xe49c77d861332050385f7f5f54eaf71c9515af698f46ba66221661a4700f5285eba43bfd40cb29f9138378c737a3fba60a21cf1df295f170aa16488a0f186b8d vs session: 0xd95faf7e680326d3624df7bf2052c34eaa1bcce6f328ea4123902420d8ae2d1ba13ed856dfbb38eeaeb6a45c9d3465afc59049147a97e1f7c9c779ef9e410f4b\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.025
+  },
+  {
+   "case": "enroll-absent-epoch",
+   "certificate_table": "as-delivered",
+   "check": "other CSR / CEKpub",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xe49c77d861332050385f7f5f54eaf71c9515af698f46ba66221661a4700f5285eba43bfd40cb29f9138378c737a3fba60a21cf1df295f170aa16488a0f186b8d vs session: 0xb1cbc66d2e9358c3a7bfa6a445558d99b16fb05bf393262476179fec1838122193717d0e42e94213f49df40e2b24fcf1c062b0006562232158c2cb797a647927\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.021
+  },
+  {
+   "case": "enroll-absent-epoch",
+   "certificate_table": "as-delivered",
+   "check": "other freshness element",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xe49c77d861332050385f7f5f54eaf71c9515af698f46ba66221661a4700f5285eba43bfd40cb29f9138378c737a3fba60a21cf1df295f170aa16488a0f186b8d vs session: 0x86cb2ccf2cb8c0a87857b3c1522aa773e5c5af3c17322920c2b0868d6f7981ab27e25d46a6950da64957ea495d20eae890e229856d9c1ab99bb82ef1931de831\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.024
+  },
+  {
+   "case": "enroll-absent-epoch",
+   "certificate_table": "as-delivered",
+   "check": "trust anchor = ASK, not ARK",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"evidence Trust Anchor (ARK) doesn't match the provisioned one\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.02
+  },
+  {
+   "case": "enroll-absent-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "honest",
+   "want": "pass",
+   "got": "pass",
+   "ok": true,
+   "ms": 2.294
+  },
+  {
+   "case": "enroll-absent-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "other Target",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xe49c77d861332050385f7f5f54eaf71c9515af698f46ba66221661a4700f5285eba43bfd40cb29f9138378c737a3fba60a21cf1df295f170aa16488a0f186b8d vs session: 0x9532da8a5df7014cc7285f3a433fc0e400255f88fd112d9fafac668469358e53052512fe2db282cee149b0b99832e223a1a9299e3f30dfa614d654490176e6d7\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.026
+  },
+  {
+   "case": "enroll-absent-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "other RRP identifier",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xe49c77d861332050385f7f5f54eaf71c9515af698f46ba66221661a4700f5285eba43bfd40cb29f9138378c737a3fba60a21cf1df295f170aa16488a0f186b8d vs session: 0xd95faf7e680326d3624df7bf2052c34eaa1bcce6f328ea4123902420d8ae2d1ba13ed856dfbb38eeaeb6a45c9d3465afc59049147a97e1f7c9c779ef9e410f4b\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.022
+  },
+  {
+   "case": "enroll-absent-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "other CSR / CEKpub",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xe49c77d861332050385f7f5f54eaf71c9515af698f46ba66221661a4700f5285eba43bfd40cb29f9138378c737a3fba60a21cf1df295f170aa16488a0f186b8d vs session: 0xb1cbc66d2e9358c3a7bfa6a445558d99b16fb05bf393262476179fec1838122193717d0e42e94213f49df40e2b24fcf1c062b0006562232158c2cb797a647927\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.021
+  },
+  {
+   "case": "enroll-absent-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "other freshness element",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0xe49c77d861332050385f7f5f54eaf71c9515af698f46ba66221661a4700f5285eba43bfd40cb29f9138378c737a3fba60a21cf1df295f170aa16488a0f186b8d vs session: 0x86cb2ccf2cb8c0a87857b3c1522aa773e5c5af3c17322920c2b0868d6f7981ab27e25d46a6950da64957ea495d20eae890e229856d9c1ab99bb82ef1931de831\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.02
+  },
+  {
+   "case": "enroll-absent-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "trust anchor = ASK, not ARK",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"evidence Trust Anchor (ARK) doesn't match the provisioned one\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.028
+  },
+  {
+   "case": "retrieve-absent-epoch",
+   "certificate_table": "as-delivered",
+   "check": "honest",
+   "want": "pass",
+   "got": "pass",
+   "ok": true,
+   "ms": 1.805
+  },
+  {
+   "case": "retrieve-absent-epoch",
+   "certificate_table": "as-delivered",
+   "check": "other Target",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x48d44756116ed2d1f3f74874c88594be3b97f5efcbe7a53c39745cda020c9a197a823e002a59888b436dd5e03bc0571d15d600a3729af1968a6264d789721ecf vs session: 0x49059a9e3e23fe4b8e3e0aaee64105106e097a166aaa97b32de86cb2890bbe5924c17cefcafe9e105b3d3a84fede7fe09fe8fa11a372595dbf2174d6210569e4\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.024
+  },
+  {
+   "case": "retrieve-absent-epoch",
+   "certificate_table": "as-delivered",
+   "check": "other RRP identifier",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x48d44756116ed2d1f3f74874c88594be3b97f5efcbe7a53c39745cda020c9a197a823e002a59888b436dd5e03bc0571d15d600a3729af1968a6264d789721ecf vs session: 0x68f97751e148a213a2abfc25340fa53f0fec2d7f5fda9a96b7efa62bc0c1dacb07733c3ba8a57d7ad6a45f3171ac827f4689f7549d7a24a5a643b39dd3ec4d1b\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.021
+  },
+  {
+   "case": "retrieve-absent-epoch",
+   "certificate_table": "as-delivered",
+   "check": "other CSR / CEKpub",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x48d44756116ed2d1f3f74874c88594be3b97f5efcbe7a53c39745cda020c9a197a823e002a59888b436dd5e03bc0571d15d600a3729af1968a6264d789721ecf vs session: 0x5ce49f5d232b4352f9dc789517ae42ee04e75c2253b49093981a6e974f458810dfafec7ef32c6f1d2925b47718b7be0293364e651756e9af0c5a651a9fcc4ef9\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.021
+  },
+  {
+   "case": "retrieve-absent-epoch",
+   "certificate_table": "as-delivered",
+   "check": "other freshness element",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x48d44756116ed2d1f3f74874c88594be3b97f5efcbe7a53c39745cda020c9a197a823e002a59888b436dd5e03bc0571d15d600a3729af1968a6264d789721ecf vs session: 0x42b9ab99c06b6653260a6c877cd82f39e50538b0ad5a13b7d5051c4b00568c2ef8f0ad8cb0cffca1fae7bb4c9c0217e0774b8f11fe28340888b8ca1e6aa9ad81\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.02
+  },
+  {
+   "case": "retrieve-absent-epoch",
+   "certificate_table": "as-delivered",
+   "check": "trust anchor = ASK, not ARK",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"evidence Trust Anchor (ARK) doesn't match the provisioned one\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.019
+  },
+  {
+   "case": "retrieve-absent-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "honest",
+   "want": "pass",
+   "got": "pass",
+   "ok": true,
+   "ms": 1.67
+  },
+  {
+   "case": "retrieve-absent-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "other Target",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x48d44756116ed2d1f3f74874c88594be3b97f5efcbe7a53c39745cda020c9a197a823e002a59888b436dd5e03bc0571d15d600a3729af1968a6264d789721ecf vs session: 0x49059a9e3e23fe4b8e3e0aaee64105106e097a166aaa97b32de86cb2890bbe5924c17cefcafe9e105b3d3a84fede7fe09fe8fa11a372595dbf2174d6210569e4\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.02
+  },
+  {
+   "case": "retrieve-absent-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "other RRP identifier",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x48d44756116ed2d1f3f74874c88594be3b97f5efcbe7a53c39745cda020c9a197a823e002a59888b436dd5e03bc0571d15d600a3729af1968a6264d789721ecf vs session: 0x68f97751e148a213a2abfc25340fa53f0fec2d7f5fda9a96b7efa62bc0c1dacb07733c3ba8a57d7ad6a45f3171ac827f4689f7549d7a24a5a643b39dd3ec4d1b\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.02
+  },
+  {
+   "case": "retrieve-absent-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "other CSR / CEKpub",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x48d44756116ed2d1f3f74874c88594be3b97f5efcbe7a53c39745cda020c9a197a823e002a59888b436dd5e03bc0571d15d600a3729af1968a6264d789721ecf vs session: 0x5ce49f5d232b4352f9dc789517ae42ee04e75c2253b49093981a6e974f458810dfafec7ef32c6f1d2925b47718b7be0293364e651756e9af0c5a651a9fcc4ef9\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.02
+  },
+  {
+   "case": "retrieve-absent-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "other freshness element",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x48d44756116ed2d1f3f74874c88594be3b97f5efcbe7a53c39745cda020c9a197a823e002a59888b436dd5e03bc0571d15d600a3729af1968a6264d789721ecf vs session: 0x42b9ab99c06b6653260a6c877cd82f39e50538b0ad5a13b7d5051c4b00568c2ef8f0ad8cb0cffca1fae7bb4c9c0217e0774b8f11fe28340888b8ca1e6aa9ad81\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.019
+  },
+  {
+   "case": "retrieve-absent-epoch",
+   "certificate_table": "pem-normalised",
+   "check": "trust anchor = ASK, not ARK",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"evidence Trust Anchor (ARK) doesn't match the provisioned one\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.021
+  },
+  {
+   "case": "enroll-absent-timestamp",
+   "certificate_table": "-",
+   "check": "timestamp an hour outside the window",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "timestamp 1791349068 outside [1791352668, 1791353270]",
+   "ms": 0
+  },
+  {
+   "case": "enroll-absent-timestamp",
+   "certificate_table": "as-delivered",
+   "check": "honest",
+   "want": "pass",
+   "got": "pass",
+   "ok": true,
+   "ms": 2.138
+  },
+  {
+   "case": "enroll-absent-timestamp",
+   "certificate_table": "as-delivered",
+   "check": "other Target",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9b60a270f8d24541db9cbd55ca975bbf8d1ae74ed3e05dc35494822f509e6d72e635ae6a55e63f784f9336cfebfb1eff01214b55fc8787b73979d24d13eccec8 vs session: 0x722c2e916987b5853db3bb44a87e87207afd024324a2f0e167023b290128e67d5b34081e056a439e3d978a299bb5bef50fc77ec207d8362962d3ff41af40c81e\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.028
+  },
+  {
+   "case": "enroll-absent-timestamp",
+   "certificate_table": "as-delivered",
+   "check": "other RRP identifier",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9b60a270f8d24541db9cbd55ca975bbf8d1ae74ed3e05dc35494822f509e6d72e635ae6a55e63f784f9336cfebfb1eff01214b55fc8787b73979d24d13eccec8 vs session: 0x3a5f550f3173d82b4e37492237c696f045e783ce8cc5b91fe39e7b83ba709fd4faf6396ddb360d7dd579402ab1ba4914d9c6969d966fe3dc9ee55549d0d9ba07\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.021
+  },
+  {
+   "case": "enroll-absent-timestamp",
+   "certificate_table": "as-delivered",
+   "check": "other CSR / CEKpub",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9b60a270f8d24541db9cbd55ca975bbf8d1ae74ed3e05dc35494822f509e6d72e635ae6a55e63f784f9336cfebfb1eff01214b55fc8787b73979d24d13eccec8 vs session: 0x8531df5b60315b9f0b9f4b3585a24b95bfa098b9f7666faa83dc7f9e151a0ce89d97eda6c69961e235429e8322589174dc179fd24f28f56df38fd6d44251b8ba\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.018
+  },
+  {
+   "case": "enroll-absent-timestamp",
+   "certificate_table": "as-delivered",
+   "check": "other freshness element",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9b60a270f8d24541db9cbd55ca975bbf8d1ae74ed3e05dc35494822f509e6d72e635ae6a55e63f784f9336cfebfb1eff01214b55fc8787b73979d24d13eccec8 vs session: 0x6fd78c1029b41c0295e29bd3bb3ae35c79495f5143fbc110c95e0abbcc0f9f907098e78a8127b52d77cea10a17c951b3ad4a97adea9a98699a6301c518a0f5fd\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.018
+  },
+  {
+   "case": "enroll-absent-timestamp",
+   "certificate_table": "as-delivered",
+   "check": "trust anchor = ASK, not ARK",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"evidence Trust Anchor (ARK) doesn't match the provisioned one\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.016
+  },
+  {
+   "case": "enroll-absent-timestamp",
+   "certificate_table": "pem-normalised",
+   "check": "honest",
+   "want": "pass",
+   "got": "pass",
+   "ok": true,
+   "ms": 1.519
+  },
+  {
+   "case": "enroll-absent-timestamp",
+   "certificate_table": "pem-normalised",
+   "check": "other Target",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9b60a270f8d24541db9cbd55ca975bbf8d1ae74ed3e05dc35494822f509e6d72e635ae6a55e63f784f9336cfebfb1eff01214b55fc8787b73979d24d13eccec8 vs session: 0x722c2e916987b5853db3bb44a87e87207afd024324a2f0e167023b290128e67d5b34081e056a439e3d978a299bb5bef50fc77ec207d8362962d3ff41af40c81e\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.019
+  },
+  {
+   "case": "enroll-absent-timestamp",
+   "certificate_table": "pem-normalised",
+   "check": "other RRP identifier",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9b60a270f8d24541db9cbd55ca975bbf8d1ae74ed3e05dc35494822f509e6d72e635ae6a55e63f784f9336cfebfb1eff01214b55fc8787b73979d24d13eccec8 vs session: 0x3a5f550f3173d82b4e37492237c696f045e783ce8cc5b91fe39e7b83ba709fd4faf6396ddb360d7dd579402ab1ba4914d9c6969d966fe3dc9ee55549d0d9ba07\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.018
+  },
+  {
+   "case": "enroll-absent-timestamp",
+   "certificate_table": "pem-normalised",
+   "check": "other CSR / CEKpub",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9b60a270f8d24541db9cbd55ca975bbf8d1ae74ed3e05dc35494822f509e6d72e635ae6a55e63f784f9336cfebfb1eff01214b55fc8787b73979d24d13eccec8 vs session: 0x8531df5b60315b9f0b9f4b3585a24b95bfa098b9f7666faa83dc7f9e151a0ce89d97eda6c69961e235429e8322589174dc179fd24f28f56df38fd6d44251b8ba\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.018
+  },
+  {
+   "case": "enroll-absent-timestamp",
+   "certificate_table": "pem-normalised",
+   "check": "other freshness element",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x9b60a270f8d24541db9cbd55ca975bbf8d1ae74ed3e05dc35494822f509e6d72e635ae6a55e63f784f9336cfebfb1eff01214b55fc8787b73979d24d13eccec8 vs session: 0x6fd78c1029b41c0295e29bd3bb3ae35c79495f5143fbc110c95e0abbcc0f9f907098e78a8127b52d77cea10a17c951b3ad4a97adea9a98699a6301c518a0f5fd\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.018
+  },
+  {
+   "case": "enroll-absent-timestamp",
+   "certificate_table": "pem-normalised",
+   "check": "trust anchor = ASK, not ARK",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"evidence Trust Anchor (ARK) doesn't match the provisioned one\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.018
+  },
+  {
+   "case": "retrieve-absent-timestamp",
+   "certificate_table": "-",
+   "check": "timestamp an hour outside the window",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "timestamp 1791349068 outside [1791352668, 1791353270]",
+   "ms": 0
+  },
+  {
+   "case": "retrieve-absent-timestamp",
+   "certificate_table": "as-delivered",
+   "check": "honest",
+   "want": "pass",
+   "got": "pass",
+   "ok": true,
+   "ms": 1.5
+  },
+  {
+   "case": "retrieve-absent-timestamp",
+   "certificate_table": "as-delivered",
+   "check": "other Target",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x5e4caff40e8d78cf5301b24d378b2d95e4b4104d88b07d7968852f7c3fe3a607aa8d6e3424de9b3952053cd0bef4898bd12c5017902c955698c43b44d1e13870 vs session: 0xe78a0c50739780b3279217ecbc582d54230d170bad64605fa59c78753aafe364e8a9ca09cc6bd6e145f8b1b7f738095665d925df15e877f9d5b6b7fc8d06be83\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.019
+  },
+  {
+   "case": "retrieve-absent-timestamp",
+   "certificate_table": "as-delivered",
+   "check": "other RRP identifier",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x5e4caff40e8d78cf5301b24d378b2d95e4b4104d88b07d7968852f7c3fe3a607aa8d6e3424de9b3952053cd0bef4898bd12c5017902c955698c43b44d1e13870 vs session: 0x1493375b8353c2e5abf38bb0cae4896d8382ba24f1107edc6d70bbdf96adbe2804ae5f3a3d19abb37b803ea6b00d270f1568587d9281a1125c58b90231e797be\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.017
+  },
+  {
+   "case": "retrieve-absent-timestamp",
+   "certificate_table": "as-delivered",
+   "check": "other CSR / CEKpub",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x5e4caff40e8d78cf5301b24d378b2d95e4b4104d88b07d7968852f7c3fe3a607aa8d6e3424de9b3952053cd0bef4898bd12c5017902c955698c43b44d1e13870 vs session: 0x0f219d5f8a211addb953780467be6d6f2c6c5088923648e23ed2f6d762dc9c079a73d343d636da5daaddabdab3fec1a869e784aee27a407a78b04a8885115a61\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.017
+  },
+  {
+   "case": "retrieve-absent-timestamp",
+   "certificate_table": "as-delivered",
+   "check": "other freshness element",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x5e4caff40e8d78cf5301b24d378b2d95e4b4104d88b07d7968852f7c3fe3a607aa8d6e3424de9b3952053cd0bef4898bd12c5017902c955698c43b44d1e13870 vs session: 0x1681bdb213afc255dddc79fe0b92803947c61206484e19c1adc0952509575b6b59f17fd069f84a2cb3e21e29a12eb1b5e44eea1baa44d88f691fa32415701a49\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.019
+  },
+  {
+   "case": "retrieve-absent-timestamp",
+   "certificate_table": "as-delivered",
+   "check": "trust anchor = ASK, not ARK",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"evidence Trust Anchor (ARK) doesn't match the provisioned one\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.015
+  },
+  {
+   "case": "retrieve-absent-timestamp",
+   "certificate_table": "pem-normalised",
+   "check": "honest",
+   "want": "pass",
+   "got": "pass",
+   "ok": true,
+   "ms": 1.593
+  },
+  {
+   "case": "retrieve-absent-timestamp",
+   "certificate_table": "pem-normalised",
+   "check": "other Target",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x5e4caff40e8d78cf5301b24d378b2d95e4b4104d88b07d7968852f7c3fe3a607aa8d6e3424de9b3952053cd0bef4898bd12c5017902c955698c43b44d1e13870 vs session: 0xe78a0c50739780b3279217ecbc582d54230d170bad64605fa59c78753aafe364e8a9ca09cc6bd6e145f8b1b7f738095665d925df15e877f9d5b6b7fc8d06be83\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.126
+  },
+  {
+   "case": "retrieve-absent-timestamp",
+   "certificate_table": "pem-normalised",
+   "check": "other RRP identifier",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x5e4caff40e8d78cf5301b24d378b2d95e4b4104d88b07d7968852f7c3fe3a607aa8d6e3424de9b3952053cd0bef4898bd12c5017902c955698c43b44d1e13870 vs session: 0x1493375b8353c2e5abf38bb0cae4896d8382ba24f1107edc6d70bbdf96adbe2804ae5f3a3d19abb37b803ea6b00d270f1568587d9281a1125c58b90231e797be\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.029
+  },
+  {
+   "case": "retrieve-absent-timestamp",
+   "certificate_table": "pem-normalised",
+   "check": "other CSR / CEKpub",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x5e4caff40e8d78cf5301b24d378b2d95e4b4104d88b07d7968852f7c3fe3a607aa8d6e3424de9b3952053cd0bef4898bd12c5017902c955698c43b44d1e13870 vs session: 0x0f219d5f8a211addb953780467be6d6f2c6c5088923648e23ed2f6d762dc9c079a73d343d636da5daaddabdab3fec1a869e784aee27a407a78b04a8885115a61\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.021
+  },
+  {
+   "case": "retrieve-absent-timestamp",
+   "certificate_table": "pem-normalised",
+   "check": "other freshness element",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x5e4caff40e8d78cf5301b24d378b2d95e4b4104d88b07d7968852f7c3fe3a607aa8d6e3424de9b3952053cd0bef4898bd12c5017902c955698c43b44d1e13870 vs session: 0x1681bdb213afc255dddc79fe0b92803947c61206484e19c1adc0952509575b6b59f17fd069f84a2cb3e21e29a12eb1b5e44eea1baa44d88f691fa32415701a49\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.021
+  },
+  {
+   "case": "retrieve-absent-timestamp",
+   "certificate_table": "pem-normalised",
+   "check": "trust anchor = ASK, not ARK",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"evidence Trust Anchor (ARK) doesn't match the provisioned one\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.027
+  },
+  {
+   "case": "enroll-absent-none",
+   "certificate_table": "as-delivered",
+   "check": "honest",
+   "want": "pass",
+   "got": "pass",
+   "ok": true,
+   "ms": 1.704
+  },
+  {
+   "case": "enroll-absent-none",
+   "certificate_table": "as-delivered",
+   "check": "other Target",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x12ba254be91c784c22dda1f71f7666a54ab57b044cecb9f24efa6b7de6ff9d2963eee0fab783bc877d084f0756bcb949b66c2684f8b94ab00873bd72b6e1b143 vs session: 0x2c5dfd94d13a96aa974592e8c134d574f54e74cc8f8ad8dbe4205c9f31aeeb50f202ddd44c6ec7b9b108275a65472507446b2bba0811ef44c1d34f9bd5cdd309\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.023
+  },
+  {
+   "case": "enroll-absent-none",
+   "certificate_table": "as-delivered",
+   "check": "other RRP identifier",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x12ba254be91c784c22dda1f71f7666a54ab57b044cecb9f24efa6b7de6ff9d2963eee0fab783bc877d084f0756bcb949b66c2684f8b94ab00873bd72b6e1b143 vs session: 0x020a743665ed7941d174f773b150a685e0b3415f361fa4de54d5f2895a4d318b1384c853cf8e15d12f877f827798492140f89f67694782de301d278830debdd1\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.019
+  },
+  {
+   "case": "enroll-absent-none",
+   "certificate_table": "as-delivered",
+   "check": "other CSR / CEKpub",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x12ba254be91c784c22dda1f71f7666a54ab57b044cecb9f24efa6b7de6ff9d2963eee0fab783bc877d084f0756bcb949b66c2684f8b94ab00873bd72b6e1b143 vs session: 0xc2ca7bdf6b02164d5cbe0b6c5ff5ee2ab70909c7128092b800392a03d4313163efc3eee9d98166ff307c7d9ed3d401fb754e94b749ab14752088ca497a440e04\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.017
+  },
+  {
+   "case": "enroll-absent-none",
+   "certificate_table": "as-delivered",
+   "check": "other freshness element",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x12ba254be91c784c22dda1f71f7666a54ab57b044cecb9f24efa6b7de6ff9d2963eee0fab783bc877d084f0756bcb949b66c2684f8b94ab00873bd72b6e1b143 vs session: 0x6269976fb7d51cbf77d591f7a27f1945bbc61e6970653d043f39ea7f2b8dd4ff44425b1bf79e7b2f5da9c1dc28894a64788cc7ab12883a798495d0ed7e0b4ba9\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.017
+  },
+  {
+   "case": "enroll-absent-none",
+   "certificate_table": "as-delivered",
+   "check": "trust anchor = ASK, not ARK",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"evidence Trust Anchor (ARK) doesn't match the provisioned one\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.016
+  },
+  {
+   "case": "enroll-absent-none",
+   "certificate_table": "pem-normalised",
+   "check": "honest",
+   "want": "pass",
+   "got": "pass",
+   "ok": true,
+   "ms": 1.511
+  },
+  {
+   "case": "enroll-absent-none",
+   "certificate_table": "pem-normalised",
+   "check": "other Target",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x12ba254be91c784c22dda1f71f7666a54ab57b044cecb9f24efa6b7de6ff9d2963eee0fab783bc877d084f0756bcb949b66c2684f8b94ab00873bd72b6e1b143 vs session: 0x2c5dfd94d13a96aa974592e8c134d574f54e74cc8f8ad8dbe4205c9f31aeeb50f202ddd44c6ec7b9b108275a65472507446b2bba0811ef44c1d34f9bd5cdd309\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.023
+  },
+  {
+   "case": "enroll-absent-none",
+   "certificate_table": "pem-normalised",
+   "check": "other RRP identifier",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x12ba254be91c784c22dda1f71f7666a54ab57b044cecb9f24efa6b7de6ff9d2963eee0fab783bc877d084f0756bcb949b66c2684f8b94ab00873bd72b6e1b143 vs session: 0x020a743665ed7941d174f773b150a685e0b3415f361fa4de54d5f2895a4d318b1384c853cf8e15d12f877f827798492140f89f67694782de301d278830debdd1\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.018
+  },
+  {
+   "case": "enroll-absent-none",
+   "certificate_table": "pem-normalised",
+   "check": "other CSR / CEKpub",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x12ba254be91c784c22dda1f71f7666a54ab57b044cecb9f24efa6b7de6ff9d2963eee0fab783bc877d084f0756bcb949b66c2684f8b94ab00873bd72b6e1b143 vs session: 0xc2ca7bdf6b02164d5cbe0b6c5ff5ee2ab70909c7128092b800392a03d4313163efc3eee9d98166ff307c7d9ed3d401fb754e94b749ab14752088ca497a440e04\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.018
+  },
+  {
+   "case": "enroll-absent-none",
+   "certificate_table": "pem-normalised",
+   "check": "other freshness element",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x12ba254be91c784c22dda1f71f7666a54ab57b044cecb9f24efa6b7de6ff9d2963eee0fab783bc877d084f0756bcb949b66c2684f8b94ab00873bd72b6e1b143 vs session: 0x6269976fb7d51cbf77d591f7a27f1945bbc61e6970653d043f39ea7f2b8dd4ff44425b1bf79e7b2f5da9c1dc28894a64788cc7ab12883a798495d0ed7e0b4ba9\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.018
+  },
+  {
+   "case": "enroll-absent-none",
+   "certificate_table": "pem-normalised",
+   "check": "trust anchor = ASK, not ARK",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"evidence Trust Anchor (ARK) doesn't match the provisioned one\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.017
+  },
+  {
+   "case": "retrieve-absent-none",
+   "certificate_table": "as-delivered",
+   "check": "honest",
+   "want": "pass",
+   "got": "pass",
+   "ok": true,
+   "ms": 1.518
+  },
+  {
+   "case": "retrieve-absent-none",
+   "certificate_table": "as-delivered",
+   "check": "other Target",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x1741d329ac2983294c4768f149e32fcc4cb8fc7703c369a3fa3f95acd475bae96c33552e69632bc691759ffab9bfd3f80205a807be7e3634cb432d43e741838a vs session: 0xd8943986c29a4c326a1e115aca83dfba40bb294c382fb2713040f26954c5d597d76177e774f615eaf829206999c0fa06a9ce37b39664ea64ed298298252e9df7\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.017
+  },
+  {
+   "case": "retrieve-absent-none",
+   "certificate_table": "as-delivered",
+   "check": "other RRP identifier",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x1741d329ac2983294c4768f149e32fcc4cb8fc7703c369a3fa3f95acd475bae96c33552e69632bc691759ffab9bfd3f80205a807be7e3634cb432d43e741838a vs session: 0xb9731dd6414049d0a340d3bbc3540581a67c06567c5ce4bfe398fefd5d6688603c398f89c4968f61d002c484b310c19336dc8bd442d6ff2af5afe56eb57b73a2\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.016
+  },
+  {
+   "case": "retrieve-absent-none",
+   "certificate_table": "as-delivered",
+   "check": "other CSR / CEKpub",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x1741d329ac2983294c4768f149e32fcc4cb8fc7703c369a3fa3f95acd475bae96c33552e69632bc691759ffab9bfd3f80205a807be7e3634cb432d43e741838a vs session: 0x01ec748e9f4ec7c5d0b894997e5376fda185e7a1b39d90e7d67a388f65d8c78178207c2fdb8a48d4efd85e8c70414d0613f20bc022824bc3b9178e3d11ce28c0\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.015
+  },
+  {
+   "case": "retrieve-absent-none",
+   "certificate_table": "as-delivered",
+   "check": "other freshness element",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x1741d329ac2983294c4768f149e32fcc4cb8fc7703c369a3fa3f95acd475bae96c33552e69632bc691759ffab9bfd3f80205a807be7e3634cb432d43e741838a vs session: 0x5e0419d679d4a12b17d9d692efa4b3a73fb5dad370058aa356d62c2dfed188509041ceb627a4386d7264967b4ade752906ff62c2f68c7b09ef2b247c2a1acd8c\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.022
+  },
+  {
+   "case": "retrieve-absent-none",
+   "certificate_table": "as-delivered",
+   "check": "trust anchor = ASK, not ARK",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"evidence Trust Anchor (ARK) doesn't match the provisioned one\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.015
+  },
+  {
+   "case": "retrieve-absent-none",
+   "certificate_table": "pem-normalised",
+   "check": "honest",
+   "want": "pass",
+   "got": "pass",
+   "ok": true,
+   "ms": 1.424
+  },
+  {
+   "case": "retrieve-absent-none",
+   "certificate_table": "pem-normalised",
+   "check": "other Target",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x1741d329ac2983294c4768f149e32fcc4cb8fc7703c369a3fa3f95acd475bae96c33552e69632bc691759ffab9bfd3f80205a807be7e3634cb432d43e741838a vs session: 0xd8943986c29a4c326a1e115aca83dfba40bb294c382fb2713040f26954c5d597d76177e774f615eaf829206999c0fa06a9ce37b39664ea64ed298298252e9df7\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.123
+  },
+  {
+   "case": "retrieve-absent-none",
+   "certificate_table": "pem-normalised",
+   "check": "other RRP identifier",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x1741d329ac2983294c4768f149e32fcc4cb8fc7703c369a3fa3f95acd475bae96c33552e69632bc691759ffab9bfd3f80205a807be7e3634cb432d43e741838a vs session: 0xb9731dd6414049d0a340d3bbc3540581a67c06567c5ce4bfe398fefd5d6688603c398f89c4968f61d002c484b310c19336dc8bd442d6ff2af5afe56eb57b73a2\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.114
+  },
+  {
+   "case": "retrieve-absent-none",
+   "certificate_table": "pem-normalised",
+   "check": "other CSR / CEKpub",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x1741d329ac2983294c4768f149e32fcc4cb8fc7703c369a3fa3f95acd475bae96c33552e69632bc691759ffab9bfd3f80205a807be7e3634cb432d43e741838a vs session: 0x01ec748e9f4ec7c5d0b894997e5376fda185e7a1b39d90e7d67a388f65d8c78178207c2fdb8a48d4efd85e8c70414d0613f20bc022824bc3b9178e3d11ce28c0\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.026
+  },
+  {
+   "case": "retrieve-absent-none",
+   "certificate_table": "pem-normalised",
+   "check": "other freshness element",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"nonce in the evidence doesn't match the session nonce. evidence: 0x1741d329ac2983294c4768f149e32fcc4cb8fc7703c369a3fa3f95acd475bae96c33552e69632bc691759ffab9bfd3f80205a807be7e3634cb432d43e741838a vs session: 0x5e0419d679d4a12b17d9d692efa4b3a73fb5dad370058aa356d62c2dfed188509041ceb627a4386d7264967b4ade752906ff62c2f68c7b09ef2b247c2a1acd8c\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.016
+  },
+  {
+   "case": "retrieve-absent-none",
+   "certificate_table": "pem-normalised",
+   "check": "trust anchor = ASK, not ARK",
+   "want": "fail",
+   "got": "fail",
+   "ok": true,
+   "error": "{\"detail\":[\"evidence Trust Anchor (ARK) doesn't match the provisioned one\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}",
+   "ms": 0.016
+  },
+  {
+   "case": "enroll-present-nonce / as-delivered",
+   "certificate_table": "",
+   "check": "appraise: reference values of this launch",
+   "want": "affirming",
+   "got": "affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "affirming",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "enroll-present-nonce / as-delivered",
+   "certificate_table": "",
+   "check": "appraise: MEASUREMENT one byte different",
+   "want": "not affirming",
+   "got": "not affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "contraindicated",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "enroll-present-nonce / pem-normalised",
+   "certificate_table": "",
+   "check": "appraise: reference values of this launch",
+   "want": "affirming",
+   "got": "affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "affirming",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "enroll-present-nonce / pem-normalised",
+   "certificate_table": "",
+   "check": "appraise: MEASUREMENT one byte different",
+   "want": "not affirming",
+   "got": "not affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "contraindicated",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "retrieve-present-nonce / as-delivered",
+   "certificate_table": "",
+   "check": "appraise: reference values of this launch",
+   "want": "affirming",
+   "got": "affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "affirming",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "retrieve-present-nonce / as-delivered",
+   "certificate_table": "",
+   "check": "appraise: MEASUREMENT one byte different",
+   "want": "not affirming",
+   "got": "not affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "contraindicated",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "retrieve-present-nonce / pem-normalised",
+   "certificate_table": "",
+   "check": "appraise: reference values of this launch",
+   "want": "affirming",
+   "got": "affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "affirming",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "retrieve-present-nonce / pem-normalised",
+   "certificate_table": "",
+   "check": "appraise: MEASUREMENT one byte different",
+   "want": "not affirming",
+   "got": "not affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "contraindicated",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "enroll-present-epoch / as-delivered",
+   "certificate_table": "",
+   "check": "appraise: reference values of this launch",
+   "want": "affirming",
+   "got": "affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "affirming",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "enroll-present-epoch / as-delivered",
+   "certificate_table": "",
+   "check": "appraise: MEASUREMENT one byte different",
+   "want": "not affirming",
+   "got": "not affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "contraindicated",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "enroll-present-epoch / pem-normalised",
+   "certificate_table": "",
+   "check": "appraise: reference values of this launch",
+   "want": "affirming",
+   "got": "affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "affirming",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "enroll-present-epoch / pem-normalised",
+   "certificate_table": "",
+   "check": "appraise: MEASUREMENT one byte different",
+   "want": "not affirming",
+   "got": "not affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "contraindicated",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "retrieve-present-epoch / as-delivered",
+   "certificate_table": "",
+   "check": "appraise: reference values of this launch",
+   "want": "affirming",
+   "got": "affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "affirming",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "retrieve-present-epoch / as-delivered",
+   "certificate_table": "",
+   "check": "appraise: MEASUREMENT one byte different",
+   "want": "not affirming",
+   "got": "not affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "contraindicated",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "retrieve-present-epoch / pem-normalised",
+   "certificate_table": "",
+   "check": "appraise: reference values of this launch",
+   "want": "affirming",
+   "got": "affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "affirming",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "retrieve-present-epoch / pem-normalised",
+   "certificate_table": "",
+   "check": "appraise: MEASUREMENT one byte different",
+   "want": "not affirming",
+   "got": "not affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "contraindicated",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "enroll-absent-epoch / as-delivered",
+   "certificate_table": "",
+   "check": "appraise: reference values of this launch",
+   "want": "affirming",
+   "got": "affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "affirming",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "enroll-absent-epoch / as-delivered",
+   "certificate_table": "",
+   "check": "appraise: MEASUREMENT one byte different",
+   "want": "not affirming",
+   "got": "not affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "contraindicated",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "enroll-absent-epoch / pem-normalised",
+   "certificate_table": "",
+   "check": "appraise: reference values of this launch",
+   "want": "affirming",
+   "got": "affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "affirming",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "enroll-absent-epoch / pem-normalised",
+   "certificate_table": "",
+   "check": "appraise: MEASUREMENT one byte different",
+   "want": "not affirming",
+   "got": "not affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "contraindicated",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "retrieve-absent-epoch / as-delivered",
+   "certificate_table": "",
+   "check": "appraise: reference values of this launch",
+   "want": "affirming",
+   "got": "affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "affirming",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "retrieve-absent-epoch / as-delivered",
+   "certificate_table": "",
+   "check": "appraise: MEASUREMENT one byte different",
+   "want": "not affirming",
+   "got": "not affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "contraindicated",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "retrieve-absent-epoch / pem-normalised",
+   "certificate_table": "",
+   "check": "appraise: reference values of this launch",
+   "want": "affirming",
+   "got": "affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "affirming",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "retrieve-absent-epoch / pem-normalised",
+   "certificate_table": "",
+   "check": "appraise: MEASUREMENT one byte different",
+   "want": "not affirming",
+   "got": "not affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "contraindicated",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "enroll-absent-timestamp / as-delivered",
+   "certificate_table": "",
+   "check": "appraise: reference values of this launch",
+   "want": "affirming",
+   "got": "affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "affirming",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "enroll-absent-timestamp / as-delivered",
+   "certificate_table": "",
+   "check": "appraise: MEASUREMENT one byte different",
+   "want": "not affirming",
+   "got": "not affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "contraindicated",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "enroll-absent-timestamp / pem-normalised",
+   "certificate_table": "",
+   "check": "appraise: reference values of this launch",
+   "want": "affirming",
+   "got": "affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "affirming",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "enroll-absent-timestamp / pem-normalised",
+   "certificate_table": "",
+   "check": "appraise: MEASUREMENT one byte different",
+   "want": "not affirming",
+   "got": "not affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "contraindicated",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "retrieve-absent-timestamp / as-delivered",
+   "certificate_table": "",
+   "check": "appraise: reference values of this launch",
+   "want": "affirming",
+   "got": "affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "affirming",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "retrieve-absent-timestamp / as-delivered",
+   "certificate_table": "",
+   "check": "appraise: MEASUREMENT one byte different",
+   "want": "not affirming",
+   "got": "not affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "contraindicated",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "retrieve-absent-timestamp / pem-normalised",
+   "certificate_table": "",
+   "check": "appraise: reference values of this launch",
+   "want": "affirming",
+   "got": "affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "affirming",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "retrieve-absent-timestamp / pem-normalised",
+   "certificate_table": "",
+   "check": "appraise: MEASUREMENT one byte different",
+   "want": "not affirming",
+   "got": "not affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "contraindicated",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "enroll-absent-none / as-delivered",
+   "certificate_table": "",
+   "check": "appraise: reference values of this launch",
+   "want": "affirming",
+   "got": "affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "affirming",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "enroll-absent-none / as-delivered",
+   "certificate_table": "",
+   "check": "appraise: MEASUREMENT one byte different",
+   "want": "not affirming",
+   "got": "not affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "contraindicated",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "enroll-absent-none / pem-normalised",
+   "certificate_table": "",
+   "check": "appraise: reference values of this launch",
+   "want": "affirming",
+   "got": "affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "affirming",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "enroll-absent-none / pem-normalised",
+   "certificate_table": "",
+   "check": "appraise: MEASUREMENT one byte different",
+   "want": "not affirming",
+   "got": "not affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "contraindicated",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "retrieve-absent-none / as-delivered",
+   "certificate_table": "",
+   "check": "appraise: reference values of this launch",
+   "want": "affirming",
+   "got": "affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "affirming",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "retrieve-absent-none / as-delivered",
+   "certificate_table": "",
+   "check": "appraise: MEASUREMENT one byte different",
+   "want": "not affirming",
+   "got": "not affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "contraindicated",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "retrieve-absent-none / pem-normalised",
+   "certificate_table": "",
+   "check": "appraise: reference values of this launch",
+   "want": "affirming",
+   "got": "affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "affirming",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  },
+  {
+   "case": "retrieve-absent-none / pem-normalised",
+   "certificate_table": "",
+   "check": "appraise: MEASUREMENT one byte different",
+   "want": "not affirming",
+   "got": "not affirming",
+   "ok": true,
+   "ms": 0,
+   "ear_status": "contraindicated",
+   "comment": "reference values from enroll-present-nonce / as-delivered"
+  }
+ ],
+ "rrp_ca": "https://ca1.tacra.example",
+ "rrp_vault": "https://vault1.tacra.example",
+ "target": "https://db.tacra.example",
+ "veraison": "../third_party/veraison-services/src (devel)",
+ "window_s": 300
+}

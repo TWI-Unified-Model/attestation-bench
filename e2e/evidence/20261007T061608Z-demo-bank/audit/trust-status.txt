@@ -1,0 +1,11 @@
+veraison-vts running
+veraison-provisioning running
+veraison-verification running
+veraison-management running
+step-ca running
+vault running
+tdx-verifier running
+ca-gateway running
+vault-gateway running
+est-server running
+*:18443 0.0.0.0:22 127.0.0.1:10443 127.0.0.1:50051 127.0.0.1:8200 127.0.0.1:8201 127.0.0.1:8443 127.0.0.1:8453 127.0.0.1:9000 127.0.0.1:9101 127.0.0.1:9102 127.0.0.1:9443 127.0.0.53%lo:53 127.0.0.54:53 [::]:22 
