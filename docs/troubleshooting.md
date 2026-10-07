@@ -57,11 +57,12 @@ exists ([hardware/](hardware/README.md)).
 Login with administrator rights; on AWS, that your public address did not change during the run. The VM is deleted
 anyway; run again.
 
-**A hardware run stops after `== run in the guest`, without a verdict, and `ssh.stderr` (or `run-ssh.stderr`) says
-the read from the VM timed out.** The SSH session that ran the workload in the guest broke. The run stops before it
-copies the guest's results, and deletes the VM; `make report` lists it as not judged. The trust zone's own logs on
-this machine (`~/.attestation-bench/ca-gateway.log`, `vault-gateway.log`) show whether the guest was served before
-the break. Run it again. An example, with what the logs showed:
+**`ssh.stderr` (or `run-ssh.stderr`) has lines `a call to the VM failed; asking again`.** An SSH session to the guest
+broke. The run is not lost: the workload runs in the guest detached from any session, and the bench asks for its
+output and its end with short calls, each tried again when it fails (`bench_guest_run`, `scripts/lib.sh`). A run
+ends without a verdict only if the guest stays out of reach for the whole run (30 minutes); then the trust zone's
+own logs on this machine (`~/.attestation-bench/ca-gateway.log`, `vault-gateway.log`) show what the guest was
+served, and `make report` lists the run as not judged. Before this was fixed, one run lost its session this way:
 [e2e/evidence/20261007T045819Z-gcp-sev-snp-e2e-background-check](../e2e/evidence/20261007T045819Z-gcp-sev-snp-e2e-background-check/README.md).
 
 **GCP TDX: every Target refused, `contraindicated`, and the TDX verifier logs an MRTD that matches no reference

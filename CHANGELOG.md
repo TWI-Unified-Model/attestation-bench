@@ -96,6 +96,12 @@ release's code; the hardware runs identical to gate 5's, check by check).
   takes for API keys (a module named `oauth2`), found only after the commit, before it was pushed. `make lint` now
   also scans the changes not yet committed, staged or not, and `.gitleaks.toml` allows `go.sum` lines in our patches
   by their form (a module, its version and a hash), and nothing else in them.
+- A hardware run whose SSH session to the VM broke ended without a verdict
+  (`e2e/evidence/20261007T045819Z-gcp-sev-snp-e2e-background-check`). The workload now runs in the VM detached from
+  any session (`bench_guest_run`, `scripts/lib.sh`): the bench reads its output and its end with short calls, each
+  made again when it fails, and starts it once, even when the call that started it broke after the VM ran it. Its
+  tests break the calls on purpose (`scripts/tests/test_guest_run.py`). The SEV-SNP hardware checks also keep what
+  the checker logged (`rrpverify-*.stderr.log`) and the EAR of each honest check (`ears/`).
 
 ## Before: the TACRA proof of concept and the bench's first stages
 

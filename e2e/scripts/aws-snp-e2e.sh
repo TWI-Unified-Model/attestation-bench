@@ -123,15 +123,16 @@ for _ in $(seq 1 20); do "${SSH[@]}" 'nc -z 127.0.0.1 18443 && nc -z 127.0.0.1 1
 
 echo "== run in the guest"
 NB="$(date -u +%s)"
+# detached from the SSH session: one that breaks costs a call, not the run (scripts/lib.sh)
 # shellcheck disable=SC2016  # the $ in the single-quoted script expands in the guest, not here
-"${SSH[@]}" '
+bench_guest_run "$OUT/ssh.stderr" '
 set -e
 nohup ~/caapi-est -listen 127.0.0.1:50061 -est localhost:18443 -anchor ~/bench-tls-root.crt > ~/caapi-est.log 2>&1 &
 echo $! > ~/caapi-est.pid
 sleep 1
 sudo ~/e2e-attester -config ~/e2e-attester.json -out ~/results.json 2>&1
 sudo chown $(id -u):$(id -g) ~/results.json; uname -a > ~/kernel.txt
-kill "$(cat ~/caapi-est.pid)" || true' 2>>"$OUT/ssh.stderr" | tee "$OUT/e2e-attester-stdout.txt"
+kill "$(cat ~/caapi-est.pid)" || true' "${SSH[@]}" | tee "$OUT/e2e-attester-stdout.txt"
 NA="$(date -u +%s)"
 echo "$NB $NA" > "$OUT/run-window.txt"
 bench_retry "$OUT/ssh.stderr" scp "${SSHO[@]}" "ubuntu@$IP:~/results.json" "ubuntu@$IP:~/caapi-est.log" \

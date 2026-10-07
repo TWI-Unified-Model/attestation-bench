@@ -78,6 +78,8 @@ reference runs, six fail: each found a fault in its day, which its README or the
 | `handles.json` | the Freshness Handles the RRP minted for the run |
 | `enroll-<kind>/`, `retrieve-<kind>/` | per request: the Evidence (`evidence.tsm.cbor`), the CSR or CEKpub (`subject.der`), the claims, and `meta.json` (the Target, the RRP identifier, the freshness element, the binding value, and which key signed the report) |
 | `rrpverify-*.json`, `rrpverify-*.txt` | every check: the request (`case`), what was changed (`check`), what was expected (`want`), what happened (`got`), and whether that is as expected (`ok`); the `.txt` ends with the summary line |
+| `rrpverify-*.stderr.log` | what the checker and the verifier it builds in logged; on SEV-SNP, Veraison's revocation check of each appraisal (`… is not on AMD's CRL …`) |
+| `ears/` (SEV-SNP) | the Attestation Results the deployed Veraison issued for the honest Evidence (`<request>.ear.jws`) and the binding value each answers (`<request>.bv.hex`): what an RRP's platform rule reads, kept to check it again later |
 | `rrp-clock-window.txt` | the RRP's clock before and after the guest made its reports, in seconds since 1970: the window timestamps are checked against |
 | hardware: `amd-kds-*.pem` (SEV-SNP), `kernel.txt`, `dmesg-*.txt`, `vm-deleted.txt` | the vendor chain used, the guest's kernel and messages, the deletion record with its time |
 

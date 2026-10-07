@@ -134,14 +134,15 @@ else
 echo $! > ~/caapi-est.pid
 sleep 1'
 fi
+# detached from the SSH session: one that breaks costs a call, not the run (scripts/lib.sh)
 # shellcheck disable=SC2016  # the $ in the single-quoted script expands in the guest, not here
-"${SSH[@]}" --command="
+bench_guest_run "$OUT/ssh.stderr" "
 set -e
 $START_CAS"'
 sudo ~/e2e-attester -config ~/e2e-attester.json -out ~/results.json 2>&1
 sudo chown $(id -u):$(id -g) ~/results.json; uname -a > ~/kernel.txt
 (curl -s -H Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/machine-type > ~/machine-type.txt || true)
-[ "$(cat ~/caapi-est.pid)" = 0 ] || kill "$(cat ~/caapi-est.pid)" || true' 2>>"$OUT/ssh.stderr" | tee "$OUT/e2e-attester-stdout.txt"
+[ "$(cat ~/caapi-est.pid)" = 0 ] || kill "$(cat ~/caapi-est.pid)" || true' "${SSH[@]}" --command | tee "$OUT/e2e-attester-stdout.txt"
 NA="$(date -u +%s)"
 echo "$NB $NA" > "$OUT/run-window.txt"
 bench_retry "$OUT/ssh.stderr" gcloud compute scp "$NAME:~/results.json" "$NAME:~/caapi-est.log" "$NAME:~/kernel.txt" \

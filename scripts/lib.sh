@@ -42,7 +42,6 @@ export BENCH_GO_MODULES
 bench_say() { printf '== %s\n' "$*"; }
 bench_die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
-# sha256 FILE: the hex digest, with whichever tool the system has
 # bench_retry LOG COMMAND...: a copy to or from a VM, tried up to three times, 10 s apart. Such a copy fails now and
 # then for a reason of the cloud's (a dropped connection, an SSH key the VM has not taken yet); each failure goes to
 # LOG with its time, so the run directory shows it. Returns the last try's status.
@@ -60,6 +59,50 @@ bench_retry() {
 # The time now, UTC, as the run records write it (vm-deleted.txt: when the VM was found gone).
 bench_now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 
+# bench_guest_run LOG SCRIPT CMD...: runs SCRIPT (bash) in a VM through CMD, an SSH command that takes the remote
+# command as its last argument (`gcloud compute ssh VM ... --command`, `ssh ... user@host`), so that a broken SSH
+# session does not end the run. The script is written to a directory of its own in the VM (~/bench-run-<id>) and
+# started there detached from the session (setsid, nohup), its output and exit status kept beside it (out, rc); short
+# calls, retried, print the output as it grows and read the status when it ends. It is started once: when the call
+# that starts it breaks after the VM ran it, the call made again finds the directory and starts nothing. Each failed
+# call goes to LOG. Returns the script's status, or 255 if it was not started, or not over within BENCH_GUEST_TIMEOUT
+# seconds (default 1800).
+bench_guest_run() {
+  local log=$1 script=$2 b64 d off=0 rc="" deadline chunk out last="" LC_ALL=C # C: lengths in octets, as tail -c counts
+  shift 2
+  b64="$(printf '%s\n' "$script" | base64 | tr -d '\n')"
+  # a call takes at least one 3 s turn, so the second of two calls never starts in the same second as the first
+  d="bench-run-$(date -u +%Y%m%dT%H%M%SZ)-$RANDOM"
+  # setsid where there is one (every Linux VM): a session of its own, which the SSH session's end does not reach
+  bench_retry "$log" "$@" "mkdir ~/$d 2>/dev/null || exit 0; echo $b64 | base64 -d > ~/$d/run.sh && { s=; command -v setsid >/dev/null 2>&1 && s=setsid; \$s nohup bash -c 'bash ~/$d/run.sh > ~/$d/out 2>&1; echo \$? > ~/$d/rc' > /dev/null 2>&1 < /dev/null & }" ||
+    return 255
+  deadline=$(($(date +%s) + ${BENCH_GUEST_TIMEOUT:-1800}))
+  while [ -z "$rc" ] && [ "$(date +%s)" -lt "$deadline" ]; do
+    sleep 3
+    # the status, read first (empty while the script runs; once it is there, the output is whole), then the output
+    # since the last call, a marker and the status; a call that fails (the session broke) is written to LOG and made
+    # again at the next turn
+    if ! chunk="$("$@" "r=\$(cat ~/$d/rc 2>/dev/null); tail -c +$((off + 1)) ~/$d/out 2>/dev/null; printf '\n@@bench-rc@@%s' \"\$r\"" 2>>"$log")"; then
+      echo "$(bench_now) a call to the VM failed; asking again" >>"$log"
+      continue
+    fi
+    case "$chunk" in *@@bench-rc@@*) ;; *) continue ;; esac
+    out="${chunk%$'\n'@@bench-rc@@*}"
+    rc="${chunk##*@@bench-rc@@}"
+    printf '%s' "$out"
+    off=$((off + ${#out}))
+    [ -z "$out" ] || last="${out: -1}"
+  done
+  if [ -z "$rc" ]; then
+    echo "$(bench_now) the script in the VM did not end within ${BENCH_GUEST_TIMEOUT:-1800} s" >>"$log"
+    return 255
+  fi
+  # a newline, if the output does not end with one
+  if [ -n "$last" ] && [ "$last" != $'\n' ]; then echo; fi
+  return "$rc"
+}
+
+# bench_sha256 FILE: the hex digest, with whichever tool the system has
 bench_sha256() {
   if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | cut -d' ' -f1; else shasum -a 256 "$1" | cut -d' ' -f1; fi
 }

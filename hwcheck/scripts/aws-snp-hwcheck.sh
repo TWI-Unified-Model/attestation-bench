@@ -114,12 +114,13 @@ bench_retry "$OUT/run-ssh.stderr" "${SCP[@]}" "$BIN/hwrun" "$OUT/handles.json" "
 
 echo "== run hwrun as root"
 NB="$(date -u +%s)"
-"${SSH[@]}" "
+# detached from the SSH session: one that breaks costs a call, not the run (scripts/lib.sh)
+bench_guest_run "$OUT/run-ssh.stderr" "
 set -e
 sudo ~/hwrun -handles ~/handles.json -out /root/hwrun-out -burst 100 2>&1
 sudo sh -c 'cd /root/hwrun-out && uname -a > kernel.txt && (dmesg 2>/dev/null | grep -i -E \"sev|snp|tsm\" > dmesg-sev.txt || true) && date -u +%s > guest-clock.txt'
 rm -rf ~/hwrun-out; sudo cp -r /root/hwrun-out ~/hwrun-out; sudo chown -R \$(id -u):\$(id -g) ~/hwrun-out
-" | tee "$OUT/hwrun-stdout.txt"
+" "${SSH[@]}" | tee "$OUT/hwrun-stdout.txt"
 NA="$(date -u +%s)"
 echo "$NB $NA" > "$OUT/rrp-clock-window.txt"
 
@@ -130,14 +131,16 @@ cleanup
 
 echo "== RRP verification: Veraison fork as it is, with the DER and signer-info fixes, and on v0.15.0 with AMD roots"
 for v in fork fixed v015; do
+  # its log (standard error) holds Veraison's own lines, the revocation check of each appraisal among them
   "$BIN/rrpverify-$v" verify -in "$OUT" -handles "$OUT/handles.json" -ark "$OUT/amd-kds-milan-vlek-cert_chain.pem" \
-    -not-before "$NB" -not-after "$NA" -out "$OUT/rrpverify-veraison-$v.json" | tee "$OUT/rrpverify-veraison-$v.txt"
+    -not-before "$NB" -not-after "$NA" -out "$OUT/rrpverify-veraison-$v.json" 2>"$OUT/rrpverify-veraison-$v.stderr.log" \
+    | tee "$OUT/rrpverify-veraison-$v.txt"
 done
 if curl -sf --cacert "$VERAISON_DEPLOYMENT/certs/rootCA.crt" --cert "$BENCH_HOME/tls/clients/ca-gateway.crt" \
   --key "$BENCH_HOME/tls/clients/ca-gateway.key" https://localhost:8443/.well-known/veraison/verification >/dev/null 2>&1; then
   echo "== RRP verification through the deployed Veraison service (https://localhost:8443)"
   "$BIN/rrpverify-fixed" service -in "$OUT" -handles "$OUT/handles.json" -not-before "$NB" -not-after "$NA" \
-    -out "$OUT/rrpverify-service.json" | tee "$OUT/rrpverify-service.txt"
+    -out "$OUT/rrpverify-service.json" -save-ears "$OUT/ears" | tee "$OUT/rrpverify-service.txt"
 fi
 rc=0
 python3 "$BENCH_REPO/scripts/verdict.py" attacks "$OUT" --out "$OUT/verdict.txt" || rc=$?

@@ -23,6 +23,10 @@ description = "test fixtures: attestation results (EARs) from GCP and AWS SEV-SN
 paths = ['''(^|/)rrp/internal/ear/testdata/ear-(gcp|aws)-sevsnp(-v5)?\.jws$''']
 
 [[allowlists]]
+description = "the attestation results (EARs) a hardware run received for its honest Evidence: signed tokens, not credentials"
+paths = ['''(^|/)hwcheck/evidence/[^/]+/ears/[^/]+\.ear\.jws$''']
+
+[[allowlists]]
 description = "go.sum lines in our dependency patches: a module, its version and the hash of its contents, not a credential"
 condition = "AND"
 regexTarget = "match"

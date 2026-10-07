@@ -77,12 +77,13 @@ bench_retry "$OUT/run-ssh.stderr" gcloud compute scp "$BIN/hwrun" "$OUT/handles.
 
 echo "== run hwrun as root"
 NB="$(date -u +%s)"
-gcloud compute ssh "$NAME" --project="$PROJECT" --zone="$ZONE" --command="
+# detached from the SSH session: one that breaks costs a call, not the run (scripts/lib.sh)
+bench_guest_run "$OUT/run-ssh.stderr" "
 set -e
 sudo ~/hwrun -handles ~/handles.json -out /root/hwrun-out -burst 100 2>&1
 sudo sh -c 'cd /root/hwrun-out && uname -a > kernel.txt && (dmesg 2>/dev/null | grep -i -E \"sev|snp|tsm\" > dmesg-sev.txt || true) && (curl -s -H Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/machine-type > machine-type.txt || true) && date -u +%s > guest-clock.txt'
 sudo chmod -R a+rX /root/hwrun-out; rm -rf ~/hwrun-out; sudo cp -r /root/hwrun-out ~/hwrun-out; sudo chown -R \$(id -u):\$(id -g) ~/hwrun-out
-" 2>>"$OUT/run-ssh.stderr" | tee "$OUT/hwrun-stdout.txt"
+" gcloud compute ssh "$NAME" --project="$PROJECT" --zone="$ZONE" --command | tee "$OUT/hwrun-stdout.txt"
 NA="$(date -u +%s)"
 echo "$NB $NA" > "$OUT/rrp-clock-window.txt"
 
@@ -95,14 +96,16 @@ cleanup
 echo "== RRP verification: Veraison fork as it is, with the DER and signer-info fixes, and on v0.15.0 with AMD roots"
 cp "$REPO/trust/amd-kds-milan-cert_chain.pem" "$OUT/amd-kds-milan-cert_chain.pem"
 for v in fork fixed v015; do
+  # its log (standard error) holds Veraison's own lines, the revocation check of each appraisal among them
   "$BIN/rrpverify-$v" verify -in "$OUT" -handles "$OUT/handles.json" -ark "$OUT/amd-kds-milan-cert_chain.pem" \
-    -not-before "$NB" -not-after "$NA" -out "$OUT/rrpverify-veraison-$v.json" | tee "$OUT/rrpverify-veraison-$v.txt"
+    -not-before "$NB" -not-after "$NA" -out "$OUT/rrpverify-veraison-$v.json" 2>"$OUT/rrpverify-veraison-$v.stderr.log" \
+    | tee "$OUT/rrpverify-veraison-$v.txt"
 done
 if curl -sf --cacert "$VERAISON_DEPLOYMENT/certs/rootCA.crt" --cert "$BENCH_HOME/tls/clients/ca-gateway.crt" \
   --key "$BENCH_HOME/tls/clients/ca-gateway.key" https://localhost:8443/.well-known/veraison/verification >/dev/null 2>&1; then
   echo "== RRP verification through the deployed Veraison service (https://localhost:8443)"
   "$BIN/rrpverify-fixed" service -in "$OUT" -handles "$OUT/handles.json" -not-before "$NB" -not-after "$NA" \
-    -out "$OUT/rrpverify-service.json" | tee "$OUT/rrpverify-service.txt"
+    -out "$OUT/rrpverify-service.json" -save-ears "$OUT/ears" | tee "$OUT/rrpverify-service.txt"
 fi
 rc=0
 python3 "$BENCH_REPO/scripts/verdict.py" attacks "$OUT" --out "$OUT/verdict.txt" || rc=$?

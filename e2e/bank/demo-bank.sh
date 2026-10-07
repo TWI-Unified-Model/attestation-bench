@@ -234,9 +234,9 @@ PY
   rm -f "$1"/.trust-marks "$1"/.core-marks
 }
 
-guest_run() { # trust-zone-ip core-ip payments-flags how-to-ssh...
+guest_run() { # trust-zone-ip core-ip payments-flags how-to-ssh...: detached from the SSH session (scripts/lib.sh)
   local trust_ip="$1" core_ip="$2" flags="$3"; shift 3
-  "$@" "
+  bench_guest_run "$OUT/ssh.stderr" "
 set -e
 sudo modprobe sev-guest 2>/dev/null || sudo modprobe tdx_guest 2>/dev/null || true
 mountpoint -q /sys/kernel/config || sudo mount -t configfs none /sys/kernel/config
@@ -248,7 +248,7 @@ sleep 1
 sudo ~/payments -config ~/payments.json -from ACC-1001 -to ACC-2002 -amount 125.50 -out ~/report.json $flags 2>&1 || true
 sudo chown \$(id -u):\$(id -g) ~/report.json
 uname -a > ~/kernel.txt
-kill \"\$(cat ~/caapi-est.pid)\" || true"
+kill \"\$(cat ~/caapi-est.pid)\" || true" "$@"
 }
 
 finish_run() { # run dir, expect: the run's verdict (scripts/verdict.py, kept in verdict.txt), then its seal
@@ -337,10 +337,10 @@ pay_aws() { # run dir
     --rules=tcp:18443,tcp:5432,tcp:8444 --source-ranges="$IP/32" --target-tags=demobank >/dev/null 2>>"$OUT/ssh.stderr"
   local SSHO=(-i "$K/key" -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$K/known_hosts" -o ConnectTimeout=10)
   for _ in $(seq 1 40); do ssh "${SSHO[@]}" "ubuntu@$IP" true >/dev/null 2>&1 && break; sleep 8; done
-  scp "${SSHO[@]}" "$ST/stage/workload/payments" "$ST/stage/workload/caapi-est" "$R/payments.json" "$OUT/public/trust-tls-root.crt" "ubuntu@$IP:~/" >/dev/null 2>>"$OUT/ssh.stderr"
+  bench_retry "$OUT/ssh.stderr" scp "${SSHO[@]}" "$ST/stage/workload/payments" "$ST/stage/workload/caapi-est" "$R/payments.json" "$OUT/public/trust-tls-root.crt" "ubuntu@$IP:~/" >/dev/null
   log "aws-snp: run the payment service (over the internet to the bank in GCP)"
   guest_run "$TRUST_EXT" "$CORE_EXT" "" ssh "${SSHO[@]}" "ubuntu@$IP" | tee "$R/guest-stdout.txt"
-  scp "${SSHO[@]}" "ubuntu@$IP:~/report.json" "ubuntu@$IP:~/caapi-est.log" "ubuntu@$IP:~/kernel.txt" "$R/" >/dev/null 2>>"$OUT/ssh.stderr"
+  bench_retry "$OUT/ssh.stderr" scp "${SSHO[@]}" "ubuntu@$IP:~/report.json" "ubuntu@$IP:~/caapi-est.log" "ubuntu@$IP:~/kernel.txt" "$R/" >/dev/null
   log "aws-snp: terminate, delete the security group, key pair and firewall rule"
   aws_cleanup; trap - EXIT
   slice_logs "$R"
