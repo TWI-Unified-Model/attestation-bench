@@ -66,7 +66,7 @@ def demo(run, expect, reason, cause):
         if off:
             return lines, False, f"{len(off)} of {len(appraisals)} appraisals without {cause!r}"
         because += f"; the stand-in's verifier: {cause!r}, {len(appraisals)} of {len(appraisals)} appraisals"
-    return lines, True, f"all {len(results)} Targets refused, no credential issued{because}"
+    return lines, True, f"{len(results)} of {len(results)} Targets refused, no credential issued{because}"
 
 
 def attacks(run):

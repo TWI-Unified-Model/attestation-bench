@@ -116,7 +116,7 @@ class ChangedRuns(unittest.TestCase):
         (self.tmp / "results.json").write_text(json.dumps(results))
         self.assertEqual(
             verdict("demo", self.tmp, "--expect", "refused", "--reason", "403 RRP ca: reason"),
-            (0, "VERDICT PASS: all 2 Targets refused, no credential issued, each with '403 RRP ca: reason'"),
+            (0, "VERDICT PASS: 2 of 2 Targets refused, no credential issued, each with '403 RRP ca: reason'"),
         )
         self.assertEqual(
             verdict("demo", self.tmp, "--expect", "refused", "--reason", "reason 1"),
