@@ -3,7 +3,8 @@
 
 For each attest-* resource: attest-initiate answers JSON with the Handle as unpadded base64url; the resource takes its
 own media type (the reference implementation's) and application/json, and answers 415 to any other, the other
-resource's included, without using up the Handle; a Handle serves one request only.
+resource's included, without using up the Handle; a Handle serves one request only. The server's wire log
+(est-server.json, wire_log) holds each of these exchanges as it was sent and answered, octet for octet.
 
 Every request carries real Evidence and a real CSR or CEKpub: those of the honest present-nonce cases of a committed
 Google Cloud SEV-SNP hardware run. That Evidence is bound to the Handle of its own run, so on a fresh Handle the
@@ -54,13 +55,21 @@ class EST:
         self.host, self.port = host, int(port)
         self.ctx = ssl.create_default_context(cafile=str(Path(home, "tls", "root.crt")))
         self.ctx.minimum_version = ssl.TLSVersion.TLSv1_3
+        self.wire_log = Path(cfg["wire_log"]) if cfg.get("wire_log") else None
+        self.exchanges = []  # every exchange as this check sent it and the server answered it, in order
 
     def call(self, method, path, body=None, ctype=None):
         conn = http.client.HTTPSConnection(self.host, self.port, context=self.ctx, timeout=120)
         try:
             conn.request(method, "/.well-known/est" + path, body=body, headers={"Content-Type": ctype} if ctype else {})
             resp = conn.getresponse()
-            return resp.status, resp.getheader("Content-Type", ""), resp.read().decode(errors="replace").strip()
+            raw = resp.read()
+            where, _, query = ("/.well-known/est" + path).partition("?")
+            self.exchanges.append({"method": method, "path": where, "query": query,
+                                   "request_content_type": ctype or "", "request_body": (body or b"").decode(),
+                                   "status": resp.status, "response_content_type": resp.getheader("Content-Type", ""),
+                                   "response_body": raw.decode()})  # fmt: skip
+            return resp.status, resp.getheader("Content-Type", ""), raw.decode(errors="replace").strip()
         finally:
             conn.close()
 
@@ -72,6 +81,10 @@ def main(argv=None):
     a = ap.parse_args(argv)
     est = EST(a.home)
     bad = 0
+    if est.wire_log is None or not est.wire_log.is_file():
+        print(f"BAD the EST server keeps no wire log ({est.wire_log}): make config, then make stop start")
+        return 1
+    wire_from = est.wire_log.stat().st_size
 
     def check(name, ok, got):
         nonlocal bad
@@ -129,6 +142,17 @@ def main(argv=None):
             continue
         st, _, body = est.call("POST", resource, request(handle), "application/json")
         check(f"{resource} as application/json, a new Handle", refused_by_rrp(st, body), answer(st, body))
+
+    with est.wire_log.open("rb") as f:
+        f.seek(wire_from)
+        recorded = [json.loads(line) for line in f.read().splitlines() if line.strip()]
+    fields = ("method", "path", "query", "request_content_type", "request_body", "status", "response_content_type",
+              "response_body")  # fmt: skip
+    seen = [{k: r.get(k, 0 if k == "status" else "") for k in fields} for r in recorded]
+    differ = [i for i, (s, e) in enumerate(zip(seen, est.exchanges)) if s != e]
+    check("the wire log", len(seen) == len(est.exchanges) and not differ,
+          f"{len(seen)} exchanges recorded, {len(est.exchanges)} made"
+          + (f"; first difference at exchange {differ[0] + 1}" if differ else "; each as sent and answered"))  # fmt: skip
 
     print(f"EST wire format: {'every check as expected' if not bad else f'{bad} checks not as expected'}")
     return 1 if bad else 0

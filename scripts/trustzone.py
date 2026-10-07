@@ -369,6 +369,9 @@ def est_server(home, logs, listen, vd, root, verifiers, rrps, targets):
         "timeout": 60,
         "rate_limit": 0,
         "log_file": f"{logs}/est-server.log",
+        # every attest-* exchange, request and response, as it crossed the wire; a run keeps its part
+        # (bench-logs/est-wire.log)
+        "wire_log": f"{logs}/est-wire.log",
         "tacra": dict(
             identity(home, "est-server"),
             verifiers={v["name"]: {"url": v["url"], "ca": v["ca"], "provider": v["provider"]} for v in verifiers},

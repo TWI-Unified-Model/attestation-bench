@@ -57,7 +57,10 @@ echo "$MODEL" > "$OUT/rats-model.txt"
 # the platform rule the RRPs apply (trust/platform-policy.json, as scripts/trustzone.py gave it to them)
 python3 -c "import json,sys; json.dump(json.load(open(sys.argv[1])).get('platform'), sys.stdout, indent=1)" \
   "$B/config/vault-gateway.json" > "$OUT/platform-rule.json"
-for f in est-server ca-gateway vault-gateway rup tdx-verifier; do wc -l < "$B/$f.log" > "$OUT/bench-logs/.$f.start"; done
+# the EST server writes every attest-* exchange to its wire log (scripts/trustzone.py, wire_log), from its start
+[ -f "$B/est-wire.log" ] || bench_die "no EST wire log in $B: the EST server runs with an older configuration;" \
+  "make config, then make stop start"
+for f in est-server est-wire ca-gateway vault-gateway rup tdx-verifier; do wc -l < "$B/$f.log" > "$OUT/bench-logs/.$f.start"; done
 wc -l < "$VERAISON_DEPLOYMENT/logs/vts.log" > "$OUT/bench-logs/.vts.start"
 wc -l < "$VERAISON_DEPLOYMENT/logs/verification.log" > "$OUT/bench-logs/.verification.start"
 
@@ -160,7 +163,7 @@ trap 'rm -rf "$BIN"' EXIT
 cleanup
 
 echo "== bench logs for the run"
-for f in est-server ca-gateway vault-gateway rup tdx-verifier; do tail -n +"$(( $(cat "$OUT/bench-logs/.$f.start") + 1 ))" "$B/$f.log" | grep -v "TLS handshake error" > "$OUT/bench-logs/$f.log" || true; done
+for f in est-server est-wire ca-gateway vault-gateway rup tdx-verifier; do tail -n +"$(( $(cat "$OUT/bench-logs/.$f.start") + 1 ))" "$B/$f.log" | grep -v "TLS handshake error" > "$OUT/bench-logs/$f.log" || true; done
 tail -n +"$(( $(cat "$OUT/bench-logs/.vts.start") + 1 ))" "$VERAISON_DEPLOYMENT/logs/vts.log" | grep -v DEBUG > "$OUT/bench-logs/veraison-vts.log" || true
 # Veraison's verification API: who asked for each session (client-ca)
 tail -n +"$(( $(cat "$OUT/bench-logs/.verification.start") + 1 ))" "$VERAISON_DEPLOYMENT/logs/verification.log" | grep -v DEBUG \

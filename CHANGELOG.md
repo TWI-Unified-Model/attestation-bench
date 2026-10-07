@@ -23,6 +23,14 @@ What changed, newest first. Dates are UTC.
   on the three platforms in both models, the median Initiate took 259 ms from the guest, through the bench's SSH
   tunnel, of a 564 ms acquisition; the EST server and the RRP spent 1.35 ms of it (their log).
 
+- **The EST wire log** (EST patch 0013, `wire_log` in the EST server's configuration): every exchange on an attest-*
+  resource, request and response, as it crossed the wire, one JSON object per line; a demo run keeps its part in
+  `bench-logs/est-wire.log`. The record does not change the exchange: the patch's test serves each request with the
+  log and without it and gets the same answer; `make test-live` checks that the log holds its own exchanges octet
+  for octet. `e2e/scripts/est-wire-cddl.py` checks the logged messages against a CDDL with the cddl tool, after
+  showing that the tool refuses a message without a required member, with a member the CDDL does not define, or
+  with a byte string in standard base64.
+
 ### Fixed
 
 - The EST server kept one attest-initiate session per Handle, so an attest-initiate for a second Target's
