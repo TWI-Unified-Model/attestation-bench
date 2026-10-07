@@ -1,4 +1,5 @@
-"""Tests of scripts/verdict.py: every run of gate 5 and gate 6 passes, and a run changed in one place fails.
+"""Tests of scripts/verdict.py: every run of gate 5 and gate 6 passes, every run of a refusal scenario passes as a
+refusal for its own reason, and a run changed in one place, or judged against another expectation, fails.
 
     python3 -m unittest discover -s scripts/tests        (make test)
 
@@ -34,6 +35,19 @@ REDIRECT_RUNS = [
     "20261006T225943Z-gcp-tdx-redirect",
     "20261006T230316Z-aws-snp-redirect",
 ]
+# the refusal scenarios on hardware (make demo with UNAPPROVED=1 or OTHER_PLATFORM=1), each with the reason it expects
+REFUSAL_RUNS = {
+    "20261007T140959Z-gcp-sev-snp-e2e-passport-unapproved": "ear: not affirming: SEVSNP is",
+    "20261007T141302Z-aws-sev-snp-e2e-passport-unapproved": "ear: not affirming: SEVSNP is",
+    "20261007T012220Z-gcp-sev-snp-e2e-passport-other-platform": "none of the verifiers this RRP takes for the Target",
+    "20261007T012516Z-aws-sev-snp-e2e-passport-other-platform": "none of the verifiers this RRP takes for the Target",
+    "20261007T012715Z-gcp-tdx-e2e-passport-other-platform": "none of the verifiers this RRP takes for the Target",
+    "20261007T015243Z-gcp-tdx-e2e-background-check-other-platform": "none of the verifiers this RRP takes for the Target",
+}
+UNAPPROVED = "20261007T140959Z-gcp-sev-snp-e2e-passport-unapproved"
+OTHER_PLATFORM = "20261007T012220Z-gcp-sev-snp-e2e-passport-other-platform"
+# the run whose SSH session broke on 7 October 2026: it stopped before it wrote its results (its README)
+STOPPED = "20261007T045819Z-gcp-sev-snp-e2e-background-check"
 BANK_RUNS = {
     "20261006T231902Z-gcp-snp": "pay",
     "20261006T232202Z-gcp-tdx": "pay",
@@ -56,6 +70,15 @@ class CommittedRuns(unittest.TestCase):
                 self.assertEqual(
                     verdict("demo", E2E / run),
                     (0, "VERDICT PASS: all 10 Targets: credential acquired and admitted by the relying party"),
+                )
+
+    def test_refusal_scenarios(self):
+        for run, reason in REFUSAL_RUNS.items():
+            with self.subTest(run=run):
+                n = len(json.loads((E2E / run / "results.json").read_text()))
+                self.assertEqual(
+                    verdict("demo", E2E / run, "--expect", "refused", "--reason", reason),
+                    (0, f"VERDICT PASS: {n} of {n} Targets refused, no credential issued, each with '{reason}'"),
                 )
 
     def test_attacks(self):
@@ -101,8 +124,12 @@ class ChangedRuns(unittest.TestCase):
         self.assertEqual(verdict("demo", run), (1, "VERDICT FAIL: 1 of 10 Targets not admitted"))
 
     def test_demo_no_target(self):
-        (self.tmp / "results.json").write_text("[]")
-        self.assertEqual(verdict("demo", self.tmp), (1, "VERDICT FAIL: the workload asked for no Target"))
+        run = self.copy(E2E / DEMO_RUNS[0], "results.json")
+        self.edit_json("results.json", lambda r: r.clear())
+        self.assertEqual(verdict("demo", run), (1, "VERDICT FAIL: the workload asked for no Target"))
+
+    def test_refusal_run_is_not_a_demo(self):
+        self.assertEqual(verdict("demo", E2E / UNAPPROVED), (1, "VERDICT FAIL: 10 of 10 Targets not admitted"))
 
     def test_refusal_scenario_that_issued(self):
         run = self.copy(E2E / DEMO_RUNS[0], "results.json")
@@ -110,17 +137,19 @@ class ChangedRuns(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertTrue(last.startswith("VERDICT FAIL: a credential was issued for https://"), last)
 
-    def test_refusal_reason(self):
-        refused = {"type": "x509", "ok": False, "attempts": 1, "acquire_ms": 1.0, "rup_status": 0}
-        results = [dict(refused, target=f"https://t{i}.example", error=f"403 RRP ca: reason {i}") for i in (1, 2)]
-        (self.tmp / "results.json").write_text(json.dumps(results))
+    def test_refused_for_another_reason(self):
+        unapproved, other = REFUSAL_RUNS[UNAPPROVED], REFUSAL_RUNS[OTHER_PLATFORM]
+        # the unapproved launch's run judged against the other platform's reason: its Targets are named
+        code, last = verdict("demo", E2E / UNAPPROVED, "--expect", "refused", "--reason", other)
+        self.assertEqual(code, 1)
+        self.assertTrue(last.startswith(f"VERDICT FAIL: refused, but not with '{other}': https://db-nonce."), last)
+        # one of its Targets refused for the other platform's reason, as that run recorded it: that Target is named
+        run = self.copy(E2E / UNAPPROVED, "results.json")
+        error = json.loads((E2E / OTHER_PLATFORM / "results.json").read_text())[0]["error"]
+        self.edit_json("results.json", lambda r: r[6].update(error=error))
         self.assertEqual(
-            verdict("demo", self.tmp, "--expect", "refused", "--reason", "403 RRP ca: reason"),
-            (0, "VERDICT PASS: 2 of 2 Targets refused, no credential issued, each with '403 RRP ca: reason'"),
-        )
-        self.assertEqual(
-            verdict("demo", self.tmp, "--expect", "refused", "--reason", "reason 1"),
-            (1, "VERDICT FAIL: refused, but not with 'reason 1': https://t2.example"),
+            verdict("demo", run, "--expect", "refused", "--reason", unapproved),
+            (1, f"VERDICT FAIL: refused, but not with '{unapproved}': https://ledger-epoch.tacra.example"),
         )
 
     def test_attack_not_refused(self):
@@ -135,8 +164,10 @@ class ChangedRuns(unittest.TestCase):
         self.assertEqual(code, 0, last)
 
     def test_no_attack_results(self):
+        # an attack run with only the results of the builds the bench compares with
+        run = self.copy(HW / ATTACK_RUNS[0], "rrpverify-veraison-fork.json", "rrpverify-veraison-fixed.json")
         self.assertEqual(
-            verdict("attacks", self.tmp), (1, "VERDICT FAIL: no results of the bench's own checks (rrpverify-*.json)")
+            verdict("attacks", run), (1, "VERDICT FAIL: no results of the bench's own checks (rrpverify-*.json)")
         )
 
     def test_redirect_refused_without_rrp_id(self):
@@ -168,10 +199,10 @@ class ChangedRuns(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertTrue(last.startswith("VERDICT FAIL: the payment went through; a credential was issued"), last)
 
-    def test_unreadable_run(self):
-        code, last = verdict("demo", self.tmp / "absent")
+    def test_run_that_stopped_early(self):
+        code, last = verdict("demo", E2E / STOPPED)
         self.assertEqual(code, 1)
-        self.assertTrue(last.startswith("VERDICT FAIL: cannot read the run in "), last)
+        self.assertTrue(last.startswith(f"VERDICT FAIL: cannot read the run in {E2E / STOPPED}: "), last)
 
     def test_out_holds_what_was_printed(self):
         out = self.tmp / "verdict.txt"

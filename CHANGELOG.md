@@ -146,6 +146,10 @@ release's code; the hardware runs identical to gate 5's, check by check).
   The tests on the reference implementation's EST messages moved to a package of their own (EST patch 0010): their
   test binary had held the fork's tests, whose start creates a mock CA. The checks of the EST server's media types
   and Handle encoding through the server went with the removed tests ([docs/limits.md](docs/limits.md)).
+- **Made-up runs in the verdict tests**: two refused Targets with invented reasons, a result list written empty, an
+  empty directory. The tests judge real runs instead: the six runs of the refusal scenarios, each refused for its own
+  reason; one of them with one Target's reason taken from another; a real run with its Targets taken out; an attack
+  run holding only the compared builds' results; and the run of 7 October that stopped before it wrote its results.
 
 ## Before: the TACRA proof of concept and the bench's first stages
 
