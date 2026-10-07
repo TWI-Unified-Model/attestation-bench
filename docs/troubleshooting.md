@@ -4,6 +4,9 @@ Each entry: what you see, why, what to do. Most of them were met while the bench
 
 ## Setting up
 
+**`make: command not found`.** make is not installed: `sudo apt-get install -y make` on Debian or Ubuntu,
+`xcode-select --install` on macOS. Then `make doctor`.
+
 **`make doctor` lists `MISSING …`.** A tool is missing or too old; the line ends with the command that installs it
 (Homebrew on macOS, apt on Linux). Install it and run `make doctor` again.
 

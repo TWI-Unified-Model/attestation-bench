@@ -6,6 +6,9 @@ Nothing here uses a cloud account or costs money.
 ## 1. What you need
 
 - **macOS** (Apple silicon or Intel) or **Linux** (CI runs every change on Ubuntu 24.04).
+- **git and make**, to get the code and run its commands. On macOS they come with the Xcode Command Line Tools
+  (`xcode-select --install`); on Debian or Ubuntu, `sudo apt-get install -y git make` (a fresh Ubuntu 24.04 has git,
+  not make).
 - **Go 1.26.5 or later**: <https://go.dev/dl/>.
 - **Python 3.10 or later**, with its `venv` module.
 - **About 5 GB of free disk** for the tools, Veraison and the Go module cache.
