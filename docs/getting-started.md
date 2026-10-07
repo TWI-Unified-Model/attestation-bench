@@ -28,9 +28,9 @@ Every command below runs from this directory.
 make doctor
 ```
 
-It lists each tool the bench needs with `ok`, or with `need` and the command to install it, then the cloud tools the
-hardware runs use (not needed for anything on this page), the ports and the disk. When everything is there it ends
-with:
+It lists each tool the bench needs with `ok`, or with `MISSING` and the command to install it, then the cloud tools
+the hardware runs use (not needed for anything on this page), the ports and the disk. When everything is there it
+ends with:
 
 ```
   ok       disk         13 GB free

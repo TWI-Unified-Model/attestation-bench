@@ -4,7 +4,7 @@ Each entry: what you see, why, what to do. Most of them were met while the bench
 
 ## Setting up
 
-**`make doctor` lists `need …`.** A tool is missing or too old; the line ends with the command that installs it
+**`make doctor` lists `MISSING …`.** A tool is missing or too old; the line ends with the command that installs it
 (Homebrew on macOS, apt on Linux). Install it and run `make doctor` again.
 
 **`make doctor` says a port is in use.** Another program listens on one of the trust zone's ports. If it is an earlier
