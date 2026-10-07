@@ -22,8 +22,8 @@ shows nothing about isolation, since anyone with the file can make the stand-in'
   the report's mitigation vector (report version 5), which Veraison's Attestation Results do not carry, so no RRP
   rule can require them. The reports show them: no SEV-SNP host the bench has met sets bit 4 (0x10), though every one
   has TCB[SNP] 0x1D or above; Google Cloud's vector was 0xb in every run, AWS's 0xf, 0x10f or 0xfef, from 28 September
-  to 7 October 2026 (the reports under `hwcheck/evidence/*-sev-snp/`). By AMD's value none of them attests that fix,
-  and the bench admitted them all.
+  to 7 October 2026 (the reports under `hwcheck/evidence/*-sev-snp/`, read by `hwcheck/cmd/snpreport`:
+  [results.md](results.md)). By AMD's value none of them attests that fix, and the bench admitted them all.
 - **No hardware run shows a debuggable SEV-SNP guest refused.** Veraison, with our patch 0005, does not affirm a
   guest whose policy lets the hypervisor debug it or binds it to a migration agent, and it checks the AMD intermediate
   that signed the report's certificate (the ASK, or the ASVK for a VLEK) against AMD's revocation list. The clouds
