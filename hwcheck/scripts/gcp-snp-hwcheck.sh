@@ -33,6 +33,7 @@ echo "$CODE_REV" > "$OUT/code-rev.txt"
 
 echo "== build hwrun (linux/amd64) and rrpverify (three Veraison builds)"
 (cd "$HW" && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -o "$BIN/hwrun" ./cmd/hwrun)
+(cd "$REPO/rrp" && GOWORK=off go build -o "$BIN/platform-check" ./cmd/platform-check)
 (cd "$HW" && go build -o "$BIN/rrpverify-fork" ./cmd/rrpverify && go build -modfile=go.patched.mod -o "$BIN/rrpverify-fixed" ./cmd/rrpverify \
   && go build -modfile=go.v015.mod -o "$BIN/rrpverify-v015" ./cmd/rrpverify)
 shasum -a 256 "$BIN/hwrun" | awk '{print $1"  hwrun (linux/amd64)"}' > "$OUT/binaries.sha256"
@@ -124,6 +125,12 @@ done
 echo "== RRP verification through the deployed Veraison service (https://localhost:8443)"
 "$BIN/rrpverify-fixed" service -in "$OUT" -handles "$OUT/handles.json" -not-before "$NB" -not-after "$NA" \
   -out "$OUT/rrpverify-service.json" -save-ears "$OUT/ears" | tee "$OUT/rrpverify-service.txt"
+echo "== the RRPs' platform rule on the honest Attestation Results: the bench's, a bank's, one step stricter"
+# the platform rule the RRPs apply (trust/platform-policy.json, as scripts/trustzone.py gave it to them)
+python3 -c "import json,sys; json.dump(json.load(open(sys.argv[1])).get('platform'), sys.stdout, indent=1)" \
+  "$BENCH_HOME/config/vault-gateway.json" > "$OUT/platform-rule.json"
+"$BIN/platform-check" -ears "$OUT/ears" -rule "$OUT/platform-rule.json" -submod SEVSNP \
+  -out "$OUT/rrpverify-platform.json" | tee "$OUT/rrpverify-platform.txt"
 echo "== pre-play: the Evidence presented to the live RRPs, at once and when their clock reaches it"
 python3 "$HW/scripts/preplay.py" "$OUT" | tee "$OUT/preplay.txt" || true # verdict.py judges what it wrote
 rc=0

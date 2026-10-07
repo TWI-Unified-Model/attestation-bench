@@ -42,6 +42,13 @@ clock: …`, and keeps every check in `rrpverify-*.json` and the pre-play in `pr
 | GCP TDX | 82 (go-tdx-guest, Intel's collateral) | 50 (the deployed TDX verifier) |
 | AWS SEV-SNP | 162 with the bench's Veraison build | 50 |
 
+The run then applies the RRPs' platform rule to the honest Attestation Results it kept (`rrpverify-platform.json`,
+`rrp/cmd/platform-check`): the bench's own rule admits them, on SEV-SNP Milan under its named waiver of AMD-SB-3034's
+bit 4; a bank's rule, the same without waivers, refuses them for that bit; and the rule one step stricter than the
+host, a TCB floor one above its value on SEV-SNP and the TD's own ATTRIBUTES refused on TDX, refuses them for that
+reason. Each is a check of the run, judged with the others; the run keeps the rule (`platform-rule.json`), and a
+SEV-SNP run's verdict names the waiver, as a demo's does.
+
 On SEV-SNP the run also appraises the reports with two older builds of Veraison's scheme, to record what each fix
 changes; their results are findings, not failures ([hardware/gcp-snp.md](hardware/gcp-snp.md),
 [hardware/aws-snp.md](hardware/aws-snp.md)).

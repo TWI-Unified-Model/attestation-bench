@@ -34,6 +34,7 @@ echo "$CODE_REV" > "$OUT/code-rev.txt"
 echo "== build hwrun (linux/amd64) and rrpverify"
 (cd "$HW" && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -o "$BIN/hwrun" ./cmd/hwrun)
 (cd "$HW" && go build -o "$BIN/rrpverify" ./cmd/rrpverify)
+(cd "$REPO/rrp" && GOWORK=off go build -o "$BIN/platform-check" ./cmd/platform-check)
 shasum -a 256 "$BIN/hwrun" | awk '{print $1"  hwrun (linux/amd64)"}' > "$OUT/binaries.sha256"
 echo "TDX quotes verified with github.com/google/go-tdx-guest $(cd "$HW" && go list -m -f '{{.Version}}' github.com/google/go-tdx-guest)" > "$OUT/verifier.txt"
 
@@ -117,6 +118,12 @@ v = json.load(open(sys.argv[1]))["tacra"]["verifiers"]["tdx"]
 print(v["url"], v["ca"])' "$BENCH_HOME/config/est-server.json")
 "$BIN/rrpverify" service -in "$OUT" -handles "$OUT/handles.json" -not-before "$NB" -not-after "$NA" -url "$TDX_URL" \
   -submod TDX -ca "$TDX_CA" -out "$OUT/rrpverify-service.json" -save-ears "$OUT/ears" | tee "$OUT/rrpverify-service.txt"
+echo "== the RRPs' platform rule on the honest Attestation Results: the bench's, a bank's, one step stricter"
+# the platform rule the RRPs apply (trust/platform-policy.json, as scripts/trustzone.py gave it to them)
+python3 -c "import json,sys; json.dump(json.load(open(sys.argv[1])).get('platform'), sys.stdout, indent=1)" \
+  "$BENCH_HOME/config/vault-gateway.json" > "$OUT/platform-rule.json"
+"$BIN/platform-check" -ears "$OUT/ears" -rule "$OUT/platform-rule.json" -submod TDX \
+  -out "$OUT/rrpverify-platform.json" | tee "$OUT/rrpverify-platform.txt"
 echo "== pre-play: the Evidence presented to the live RRPs, at once and when their clock reaches it"
 python3 "$HW/scripts/preplay.py" "$OUT" | tee "$OUT/preplay.txt" || true # verdict.py judges what it wrote
 rc=0

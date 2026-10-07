@@ -21,7 +21,9 @@ hwcheck/evidence included.
             not judged: what they get wrong is the reason the bench runs its own build. And, in a run that made it,
             the pre-play check (preplay.json, hwcheck/scripts/preplay.py): absent-timestamp Evidence made with the
             guest's clock ahead, refused by each RRP at once (409, freshness) and accepted later, older than the
-            Target's max_age. That is reported as an exposure, not as a pass; any other outcome fails the run.
+            Target's max_age. That is reported as an exposure, not as a pass; any other outcome fails the run. The
+            RRPs' platform rule on the honest Attestation Results is one of the files (rrpverify-platform.json); a
+            SEV-SNP run that keeps the rule (platform-rule.json) names its waivers in the verdict, as a demo does.
   redirect  results.jsonl. ca1 issues for every Freshness Kind in both passes. With the RRP identifier in the binding,
             ca2 refuses every kind; without it, ca2 refuses present-nonce alone.
   bank-pay  report.json, from the Demo Bank's payment service. pay: the payment went through. ordinary: no
@@ -133,7 +135,8 @@ def attacks(run):
             lines.append(f"  {r['case']}: {r['check']}: want {r['want']}, got {r['got']} {r.get('error', '')}".rstrip())
     pre_lines, pre_bad, exposures = preplay(run)
     lines += pre_lines
-    lines += clock_lines(run)
+    waivers = waivers_in_force(run)
+    lines += [f"the platform rule's waiver: {w}" for w in waivers] + clock_lines(run)
     if not judged:
         return lines, False, "no results of the bench's own checks (rrpverify-*.json)"
     if failed:
@@ -141,6 +144,8 @@ def attacks(run):
     if pre_bad:
         return lines, False, f"the pre-play check not as expected: {', '.join(pre_bad)}"
     summary = f"{judged} checks: the honest Evidence passed, every attack refused for its own reason"
+    if waivers:
+        summary += f"; the honest Evidence admitted under the bench's waiver: {'; '.join(waivers)}"
     if exposures:
         summary += "; exposure, the guest's clock: " + "; ".join(exposures)
     return lines, True, summary

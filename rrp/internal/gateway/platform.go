@@ -71,6 +71,24 @@ var tcbLayouts = map[string]map[string]uint{
 	"Turin": {"fmc": 0, "bl": 1, "tee": 2, "snp": 3, "ucode": 7},
 }
 
+// ProductOf names the product line of a SEV-SNP report from its CPUID family and extended model (snpProducts).
+func ProductOf(c *ear.SNPClaims) (string, bool) {
+	if c == nil || !c.HasCPUID {
+		return "", false
+	}
+	p, ok := snpProducts[[2]byte{c.Family, c.Model >> 4}]
+	return p, ok
+}
+
+// TCBComponent is one component of a 64-bit TCB_VERSION, as the product line lays it out (tcbLayouts).
+func TCBComponent(product, component string, tcb uint64) (int, bool) {
+	at, ok := tcbLayouts[product][component]
+	if !ok {
+		return 0, false
+	}
+	return int(tcb >> (8 * at) & 0xFF), true
+}
+
 // Validate checks the policy.
 func (p *PlatformPolicy) Validate() error {
 	if s := p.SEVSNP; s != nil {

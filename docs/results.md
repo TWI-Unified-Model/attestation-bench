@@ -82,12 +82,13 @@ reference runs, six fail: each found a fault in its day, which its README or the
 | `ears/` (SEV-SNP) | the Attestation Results the deployed Veraison issued for the honest Evidence (`<request>.ear.jws`) and the binding value each answers (`<request>.bv.hex`): what an RRP's platform rule reads, kept to check it again later |
 | `rrp-clock-window.txt` | the RRP's clock before and after the guest made its reports, in seconds since 1970: the window timestamps are checked against |
 | `clock.txt`, `clock-offset.txt` | what the guest's clock rests on and its offset from the RRP's clock, as in a demo run |
+| `platform-rule.json`, `rrpverify-platform.json`, `rrpverify-platform.txt` | the platform rule the RRPs applied, as in a demo run, and that rule on the honest Attestation Results kept in `ears/` (with `ears/verifier-key.jwk`, the key that signed them): the bench's rule, a bank's without waivers, and the rule one step stricter than the host, each with what it was expected to do. `rrp/cmd/platform-check` gives the same checks again from these files alone |
 | `preplay/`, `preplay.json`, `preplay.txt` | the pre-play check: the absent-timestamp Evidence the guest made with its clock set ahead (`preplay/clock-ahead.txt` says by how much, and when it was put back), and each RRP's answer at once and when its clock reached the timestamp (`at_once`, `later`), with the RRP's log lines (`rrp_log`) in runs after 7 October 2026 |
 | hardware: `amd-kds-*.pem` (SEV-SNP), `kernel.txt`, `dmesg-*.txt`, `vm-deleted.txt` | the vendor chain used, the guest's kernel and messages, the deletion record with its time |
 
 The variant names in `rrpverify-*`: on SEV-SNP `veraison-v015` (the bench's Veraison build), `veraison-fixed`,
 `veraison-fork` and `service` (the deployed Veraison); `tdx` (in process) and `service` (the deployed TDX verifier) on
-TDX.
+TDX; `platform` (the RRPs' platform rule) on both.
 
 ## `make redirect`: `…-<platform>-redirect`
 

@@ -32,6 +32,7 @@ type veraisonService struct {
 	base   string
 	client *http.Client
 	key    *ecdsa.PublicKey
+	jwk    []byte // the key as the service published it, a public JWK: kept with the EARs (-save-ears)
 	submod string // the EAR submodule read: SEVSNP (Veraison)
 }
 
@@ -77,6 +78,7 @@ func newVeraisonService(base, caPath, certPath, keyPath string) (*veraisonServic
 	if v.key, err = ecdsa.ParseUncompressedPublicKey(elliptic.P256(), append(append([]byte{4}, x...), y...)); err != nil {
 		return nil, fmt.Errorf("EAR key is not a P-256 point: %w", err)
 	}
+	v.jwk, _ = json.Marshal(map[string]string{"kty": "EC", "crv": "P-256", "x": wk.Key.X, "y": wk.Key.Y})
 	return v, nil
 }
 
@@ -223,6 +225,10 @@ func serviceVerify(args []string) {
 	v, err := newVeraisonService(*base, *caPath, *certPath, *keyPath)
 	must(err)
 	v.submod = *submod
+	if *saveEARs != "" { // the key that signed the EARs kept there, so that they can be checked again later
+		must(os.MkdirAll(*saveEARs, 0o755))
+		must(os.WriteFile(filepath.Join(*saveEARs, "verifier-key.jwk"), append(v.jwk, '\n'), 0o644))
+	}
 	var h handles
 	b, err := os.ReadFile(*handlesPath)
 	must(err)

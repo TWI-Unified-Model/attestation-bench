@@ -63,6 +63,11 @@ release's code; the hardware runs identical to gate 5's, check by check).
   the EST server at once, refused (409, freshness), and again when their clock reaches the timestamp, accepted, older
   than the Target's `max_age`. `verdict.py` reports that as an exposure, not a pass ([docs/limits.md](docs/limits.md),
   "Time").
+- **The platform rule in every attack run** (`rrp/cmd/platform-check`): the run applies the RRPs' platform rule to the
+  honest Attestation Results it kept, with the key that signed them: the bench's rule admits them, a bank's without
+  waivers refuses SEV-SNP Milan for AMD-SB-3034's bit 4, a rule one step stricter than the host refuses them for that
+  reason. Each is a check of the run (`rrpverify-platform.json`), judged with the others. The run keeps the rule
+  (`platform-rule.json`), and a SEV-SNP run's verdict names the waiver, as a demo's does.
 - **Documentation**: [README.md](README.md) and [docs/](docs/getting-started.md), with how the release was checked:
   [docs/verification.md](docs/verification.md).
 
@@ -70,8 +75,8 @@ release's code; the hardware runs identical to gate 5's, check by check).
 
 - **The platform rule requires the mitigation bits AMD's bulletins name**, in both vectors: Milan bits 1 (AMD-SB-3020)
   and 4 (AMD-SB-3034), Genoa bit 1, Turin bit 0. A pack can admit hosts without a required bit under a named waiver
-  (`platform_waivers`), which the RRP writes in its log line of each issuance and release and each SEV-SNP demo's
-  verdict names. The bench's own pack waives Milan's bit 4, which no Google Cloud or AWS host sets; the Demo Bank's
+  (`platform_waivers`), which the RRP writes in its log line of each issuance and release and the verdict of each
+  SEV-SNP demo and attack run names. The bench's own pack waives Milan's bit 4, which no Google Cloud or AWS host sets; the Demo Bank's
   waives nothing, so its SEV-SNP payments are refused for bit 4 and only its TDX payment goes through
   ([docs/limits.md](docs/limits.md)).
 - The attack runs need the running bench: their checks through the live Veraison no longer skip when it is down, and

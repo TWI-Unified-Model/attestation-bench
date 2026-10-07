@@ -22,10 +22,11 @@ Read this page before you cite a result.
   September to 7 October 2026 (the reports under `hwcheck/evidence/*-sev-snp/`, read by `hwcheck/cmd/snpreport`:
   [results.md](results.md)). By AMD's value none of them attests the fix. The bench's own pack admits them under the
   waiver `admitted without bit 4, AMD-SB-3034` (packs/tacra-bench, `platform_waivers`), so that the protocol can be
-  shown on SEV-SNP: the RRP writes the waiver into its log line of each issuance and release, and each SEV-SNP demo's
-  verdict names it, so no run can be taken for an attested fix. The Demo Bank's pack, a bank's, names no waiver: it
+  shown on SEV-SNP: the RRP writes the waiver into its log line of each issuance and release, and the verdict of each
+  SEV-SNP demo and attack run names it, so no run can be taken for an attested fix. The Demo Bank's pack, a bank's, names no waiver: it
   refuses those hosts, naming bit 4 and its bulletin. Tested on the real results of both clouds under both packs
-  (`TestBenchPlatformRule`, `rrp/internal/gateway`). The rule also requires PLATFORM_INFO bit 5, the evidence of the
+  (`TestBenchPlatformRule`, `rrp/internal/gateway`), and checked again in every attack run on the Attestation Results
+  it got (`rrpverify-platform.json`). The rule also requires PLATFORM_INFO bit 5, the evidence of the
   BadRAM fix (AMD-SB-3015), which every host sets.
 - **No hardware run shows a debuggable SEV-SNP guest refused.** Veraison, with our patch 0005, does not affirm a
   guest whose policy lets the hypervisor debug it or binds it to a migration agent, and it checks the AMD intermediate
