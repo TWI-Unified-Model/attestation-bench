@@ -4,8 +4,8 @@
     python3 scripts/report.py [RUN_DIR ...]        (make report; default: every run in RUNS_DIR, else BENCH_HOME/runs)
 
 A run that kept its verdict (verdict.txt) is reported by it; a run made before verdicts existed is judged again from
-its files by scripts/verdict.py, and marked so, when its files are of the current format (otherwise its README says
-what it showed). A bank's directory gives one row per payment. A directory that is not a run of the
+its files by scripts/verdict.py, and marked so. A run that stopped before its results, or whose files are of an earlier
+format, is listed as not judged. A bank's directory gives one row per payment. A directory that is not a run of the
 bench's make commands (an earlier experiment, an endorsement record) is listed, not judged. Prints a Markdown table
 and a count of the verdicts.
 """
@@ -51,7 +51,9 @@ STAMP = re.compile(r"\d{8}T\d{6}Z-(?P<name>.+)")
 # the attack results of the current format: the bench's own checks, and the builds of Veraison it compares with
 OWN_CHECKS = ("rrpverify-veraison-v015", "rrpverify-tdx", "rrpverify-sim")
 KNOWN_CHECKS = {*OWN_CHECKS, "rrpverify-service", *verdict.COMPARED_BUILDS}
-EARLIER = "an earlier format; its README says what it showed"
+EARLIER = "an earlier format"
+STOPPED = "no results: the run stopped before it finished"
+NO_RESULTS = "no results; the run's own notes say why"
 
 
 def recorded_model(run, default=""):
@@ -59,13 +61,16 @@ def recorded_model(run, default=""):
     return MODELS.get(f.read_text().strip(), default) if f.exists() else default
 
 
-def judged(run, judge, current=True):
-    """The run's verdict: the one it kept; or verdict.py's on its files, marked *, if they are of the current format."""
+def judged(run, judge, results, current=True):
+    """The run's verdict: the one it kept; or verdict.py's on its results (files matching one of `results`), marked *,
+    if they are there and of the current format."""
     kept = run / "verdict.txt"
     if kept.exists():
         m = re.match(r"VERDICT (PASS|FAIL): (.*)", kept.read_text().strip().splitlines()[-1])
         if m:
             return m.group(1), m.group(2)
+    if not any(any(run.glob(pattern)) for pattern in results):  # sealed: it finished, without results
+        return "not judged", NO_RESULTS if (run / "sha256sums.txt").exists() else STOPPED
     if not current:
         return "not judged", EARLIER
     try:
@@ -83,26 +88,48 @@ def rows(run):
         bank = name or run.name
         for pay in sorted(p for p in (run / "runs").iterdir() if p.is_dir()):
             what, plat, expect = PAYMENTS.get(pay.name[17:], (pay.name[17:], "", ""))
-            v = judged(pay, lambda p=pay, e=expect: verdict.bank_pay(p, e)) if expect else ("not judged", "")
+            v = (
+                judged(pay, lambda p=pay, e=expect: verdict.bank_pay(p, e), ["report.json"])
+                if expect
+                else ("not judged", "")
+            )
             yield f"{run.name}/runs/{pay.name}", f"{bank}: {what}", plat, recorded_model(run), *v
         return
     if e := E2E.fullmatch(name):
         scen = e.group("scen") or ""
         model = MODELS.get(e.group("model") or "", "") or recorded_model(run, "Passport")
         expect = "refused" if scen in ("debug", "unapproved", "other-platform") else "admitted"
-        v = judged(run, lambda: verdict.demo(run, expect, "", ""))
+        v = judged(run, lambda: verdict.demo(run, expect, "", ""), ["results.json"])
         yield run.name, SCENARIOS[scen], PLATFORMS[e.group("plat")], model, *v
     elif name.startswith("bench-mtls"):
         model = recorded_model(run, "Background Check" if "background-check" in name else "Passport")
-        yield run.name, "mutual TLS (N23)", "stand-in", model, *judged(run, lambda: verdict.mtls(run))
+        yield (
+            run.name,
+            "mutual TLS (N23)",
+            "stand-in",
+            model,
+            *judged(run, lambda: verdict.mtls(run), ["mtls.json", "checks.json"]),
+        )
     elif a := ATTACKS.fullmatch(name):
         plat = PLATFORMS[a.group("plat") or a.group("hw")]
         checks = {f.stem for f in run.glob("rrpverify-*.json")}
         current = checks <= KNOWN_CHECKS and any(c in checks for c in OWN_CHECKS)
-        yield run.name, "substitution attacks", plat, "", *judged(run, lambda: verdict.attacks(run), current)
+        yield (
+            run.name,
+            "substitution attacks",
+            plat,
+            "",
+            *judged(run, lambda: verdict.attacks(run), ["rrpverify-*.json"], current),
+        )
     elif r := REDIRECT.fullmatch(name):
         plat = PLATFORMS[r.group("plat")]
-        yield run.name, "#20 redirection", plat, "Background Check", *judged(run, lambda: verdict.redirect(run))
+        yield (
+            run.name,
+            "#20 redirection",
+            plat,
+            "Background Check",
+            *judged(run, lambda: verdict.redirect(run), ["results.jsonl"]),
+        )
     else:
         yield run.name, "not a run of the make commands", "", "", "not judged", ""
 

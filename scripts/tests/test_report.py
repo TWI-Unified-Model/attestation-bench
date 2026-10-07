@@ -47,9 +47,18 @@ class Report(unittest.TestCase):
         self.assertIn("| demo-bank: control: an unapproved launch | GCP SEV-SNP | Passport | PASS: genuine", rows[4])
 
     def test_earlier_format_is_not_judged(self):
-        rows, count = report(HW / "20260928T192839Z-gcp-tdx")
-        self.assertEqual(count, "1 runs: 0 PASS, 0 FAIL, 1 not judged")
+        rows, count = report(HW / "20260928T190538Z-gcp-sev-snp", HW / "20260928T192839Z-gcp-tdx")
+        self.assertEqual(count, "2 runs: 0 PASS, 0 FAIL, 2 not judged")
         self.assertIn("not judged: an earlier format", rows[0])
+        self.assertIn("not judged: no results; the run's own notes say why", rows[1])
+
+    def test_a_run_that_stopped_early_is_not_judged(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp)
+        (tmp / "20261007T000000Z-local-sim-e2e-passport").mkdir()
+        rows, count = report(tmp / "20261007T000000Z-local-sim-e2e-passport")
+        self.assertEqual(count, "1 runs: 0 PASS, 0 FAIL, 1 not judged")
+        self.assertIn("not judged: no results: the run stopped before it finished", rows[0])
 
     def test_a_failure_of_its_day_still_fails(self):
         rows, count = report(E2E / "20261001T210405Z-bench-mtls-check")

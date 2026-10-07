@@ -42,8 +42,9 @@ make report RUNS="e2e/evidence/* hwcheck/evidence/*"     # or any run directorie
 ```
 
 One row per run (per payment, for a bank): what it tested, the platform, the RATS model and the verdict, then how
-many passed and failed. A run made before runs kept their verdict is judged again from its files and marked `*`; one
-whose files are of an earlier format is listed as not judged, and its `README.md` says what it showed. Among the
+many passed and failed. A run made before runs kept their verdict is judged again from its files and marked `*`. A
+run that stopped before its results, finished without any, or whose files are of an earlier format is listed as not
+judged, with the reason; a reference run's `README.md` says what it showed. Among the
 reference runs, six fail: each found a fault in its day, which its README or the results file that cites it
 (`e2e/RESULTS-*.md`) describes, and a later run shows fixed.
 
