@@ -55,9 +55,10 @@ release's code; the hardware runs identical to gate 5's, check by check).
   the live Veraison and TDX verifier with each run's own records: the honest Evidence passes and every changed binding
   fails, as when the run was made (23 runs, 1150 checks). It fails, never skips, when the bench is not up; CI runs it
   in both RATS models.
-- **The guest's clock, recorded and attacked.** Every attack run records what the guest's clock rests on
-  (`clock.txt`: the clocksource, the boot lines on SEV, TDX and the TSC, the time service and how its sources are
-  authenticated) and its offset from the RRP's (`clock-offset.txt`). And it pre-plays absent-timestamp Evidence: made
+- **The guest's clock, recorded and attacked.** Every hardware run, attack, demo and redirect, records what the guest's
+  clock rests on (`clock.txt`: the clocksource, the boot lines on SEV, TDX and the TSC, the time service and how its
+  sources are authenticated) and its offset from the RRP's (`clock-offset.txt`). Every attack run also pre-plays
+  absent-timestamp Evidence: made
   in the guest with its clock set 300 s ahead (`hwcheck/scripts/preplay-guest.sh`), presented to the live RRPs through
   the EST server at once, refused (409, freshness), and again when their clock reaches the timestamp, accepted, older
   than the Target's `max_age`. `verdict.py` reports that as an exposure, not a pass ([docs/limits.md](docs/limits.md),

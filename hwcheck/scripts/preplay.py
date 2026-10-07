@@ -98,6 +98,11 @@ def main(argv=None):
                         "clock_skew_s": policy["clock_skew"], "initiate": {"status": st, "answer": answer[:300]},
                         "body": body, "media": media})  # fmt: skip
 
+    # the RRPs' own record of what they did with the Evidence: their log lines from now on (BENCH_HOME/<rrp>.log), the
+    # platform rule's waivers among them
+    logs = {e["rrp"]: Path(a.home, f"{e['rrp']}.log") for e in entries}
+    marks = {r: len(f.read_bytes().splitlines()) if f.exists() else 0 for r, f in logs.items()}
+
     def present(e):
         at = time.time()
         st, answer = est.call("POST", f"/attest-{e['mode']}", e["body"], e["media"])
@@ -116,6 +121,10 @@ def main(argv=None):
         print(f"{e['target']}: at {e['later']['at']:.0f} {e['later']['status']}: "
               f"{max(0, e['later']['at'] - made_to):.0f} s or more after the Evidence was made "
               f"(max_age {e['max_age_s']} s)")  # fmt: skip
+    for e in entries:
+        f = logs[e["rrp"]]
+        lines = f.read_text(errors="replace").splitlines()[marks[e["rrp"]] :] if f.exists() else []
+        e["rrp_log"] = [x for x in lines if f"target={e['target']}" in x]
     results = [{k: v for k, v in e.items() if k not in ("body", "media")} for e in entries]
     ahead = (pre / "clock-ahead.txt").read_text()
     out = {"made": {"not_before": made_from, "not_after": made_to}, "guest_clock": ahead, "results": results}

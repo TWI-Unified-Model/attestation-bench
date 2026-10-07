@@ -137,11 +137,13 @@ json.dump({"present-nonce": "https://db-nonce.tacra.example", "present-epoch": "
            "absent-epoch": "https://db-lepoch.tacra.example", "absent-timestamp": "https://db-time.tacra.example",
            "absent-none": "https://db-none.tacra.example"}, open(os.path.join(d, "targets.json"), "w"))
 PY
-  guest_in "$BIN/hwrun" "$d/handles.json" "$d/targets.json"
+  guest_in "$BIN/hwrun" "$d/handles.json" "$d/targets.json" "$HW/scripts/guest-clock.sh"
   bench_guest_run "$OUT/run-ssh.stderr" "set -e
 sudo ~/hwrun -tee $TEE -targets ~/targets.json -handles ~/handles.json -rrp-ca '$RRPCA' -csr-cn payments.workload.tacra.example -out /root/redir 2>&1
+sudo bash ~/guest-clock.sh /root/redir
 sudo chmod -R a+rX /root/redir; rm -rf ~/redir; sudo cp -r /root/redir ~/redir; sudo chown -R \$(id -u):\$(id -g) ~/redir" \
     guest_ssh | tee -a "$OUT/hwrun-stdout.txt"
+  [ -f "$OUT/clock-offset.txt" ] || bench_clock_offset "$OUT/clock-offset.txt" guest_ssh
   guest_out redir "$d/"
   local k fresh tgt ev subj handle res
   : > "$d/results.jsonl"

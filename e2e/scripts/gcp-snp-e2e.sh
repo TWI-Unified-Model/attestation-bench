@@ -112,7 +112,7 @@ mountpoint -q /sys/kernel/config || sudo mount -t configfs none /sys/kernel/conf
 ls -ld /sys/kernel/config/tsm/report; uname -r' 2>>"$OUT/ssh.stderr" | tee "$OUT/provision.txt"
 
 echo "== copy the workload, the CAS Client and the public configuration"
-GUEST_FILES=("$BIN/e2e-attester" "$BIN/e2e-attester.json" "$BIN/bench-tls-root.crt")
+GUEST_FILES=("$BIN/e2e-attester" "$BIN/e2e-attester.json" "$BIN/bench-tls-root.crt" "$HERE/hwcheck/scripts/guest-clock.sh")
 [ -n "$CAS_OUTSIDE" ] || GUEST_FILES+=("$BIN/caapi-est")
 bench_retry "$OUT/ssh.stderr" gcloud compute scp "${GUEST_FILES[@]}" "$NAME:~/" --project="$PROJECT" --zone="$ZONE" >/dev/null
 if [ -n "$CAS_OUTSIDE" ]; then
@@ -148,12 +148,14 @@ set -e
 $START_CAS"'
 sudo ~/e2e-attester -config ~/e2e-attester.json -out ~/results.json 2>&1
 sudo chown $(id -u):$(id -g) ~/results.json; uname -a > ~/kernel.txt
+sudo bash ~/guest-clock.sh ~ && sudo chown $(id -u):$(id -g) ~/clock.txt
 (curl -s -H Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/machine-type > ~/machine-type.txt || true)
 [ "$(cat ~/caapi-est.pid)" = 0 ] || kill "$(cat ~/caapi-est.pid)" || true' "${SSH[@]}" --command | tee "$OUT/e2e-attester-stdout.txt"
 NA="$(date -u +%s)"
 echo "$NB $NA" > "$OUT/run-window.txt"
+bench_clock_offset "$OUT/clock-offset.txt" "${SSH[@]}" --command
 bench_retry "$OUT/ssh.stderr" gcloud compute scp "$NAME:~/results.json" "$NAME:~/caapi-est.log" "$NAME:~/kernel.txt" \
-  "$NAME:~/machine-type.txt" "$OUT/" --project="$PROJECT" --zone="$ZONE" >/dev/null
+  "$NAME:~/machine-type.txt" "$NAME:~/clock.txt" "$OUT/" --project="$PROJECT" --zone="$ZONE" >/dev/null
 trap 'rm -rf "$BIN"' EXIT
 cleanup
 

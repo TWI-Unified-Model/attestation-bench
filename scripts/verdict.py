@@ -42,6 +42,12 @@ REDIRECT_PASSES = ("with-rrp-id", "no-rrp-id")
 COMPARED_BUILDS = ("rrpverify-veraison-fork", "rrpverify-veraison-fixed")
 
 
+def clock_lines(run):
+    """The guest's clock against the RRP's, when the run measured it (clock-offset.txt)."""
+    offset = run / "clock-offset.txt"
+    return [x for x in offset.read_text().splitlines() if x.startswith("guest minus RRP")] if offset.exists() else []
+
+
 def waivers_in_force(run):
     """The named waivers of the platform rule a SEV-SNP run ran under (platform-rule.json, as the RRPs applied it):
     the mitigation bits the bench's own pack admits hosts without."""
@@ -64,7 +70,7 @@ def demo(run, expect, reason):
     if not results:
         return lines, False, "the workload asked for no Target"
     waivers = waivers_in_force(run)
-    lines += [f"the platform rule's waiver: {w}" for w in waivers]
+    lines += [f"the platform rule's waiver: {w}" for w in waivers] + clock_lines(run)
     under = f"; admitted under the bench's waiver: {'; '.join(waivers)}" if waivers else ""
     if expect == "admitted":
         if len(admitted) < len(results):
@@ -127,9 +133,7 @@ def attacks(run):
             lines.append(f"  {r['case']}: {r['check']}: want {r['want']}, got {r['got']} {r.get('error', '')}".rstrip())
     pre_lines, pre_bad, exposures = preplay(run)
     lines += pre_lines
-    offset = run / "clock-offset.txt"
-    if offset.exists():
-        lines += [x for x in offset.read_text().splitlines() if x.startswith("guest minus RRP")]
+    lines += clock_lines(run)
     if not judged:
         return lines, False, "no results of the bench's own checks (rrpverify-*.json)"
     if failed:
@@ -156,6 +160,7 @@ def redirect(run):
                 if issued is not want[rrp]:
                     wrong.append(f"{p} {k} {rrp}: {cells[-1]}, expected {'ISSUED' if want[rrp] else 'refused'}")
             lines.append(f"{p:12} {k:18} {cells[0]:8} {cells[1]}")
+    lines += clock_lines(run)
     if wrong:
         outcomes = len(REDIRECT_PASSES) * len(FRESHNESS_KINDS) * 2
         return lines + wrong, False, f"{len(wrong)} of {outcomes} outcomes not as expected"
