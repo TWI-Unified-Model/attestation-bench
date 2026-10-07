@@ -1,0 +1,9 @@
+2026-10-07T13:46:22Z BENCH_CHAOS_SSH=1: the VM breaks this call's session once the script started, and every SSH session to it from the script's 20th second to its 35th
+Connection to 3.138.123.115 closed by remote host.
+2026-10-07T13:46:23Z try 1 of 3 failed, exit 255: ssh
+Connection to 3.138.123.115 closed by remote host.
+2026-10-07T13:46:46Z a call to the VM failed; asking again
+Connection to 3.138.123.115 closed by remote host.
+2026-10-07T13:46:50Z a call to the VM failed; asking again
+Connection to 3.138.123.115 closed by remote host.
+2026-10-07T13:46:53Z a call to the VM failed; asking again

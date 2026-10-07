@@ -1,0 +1,27 @@
+2026-10-07T13:49:46Z BENCH_CHAOS_SSH=1: the VM breaks this call's session once the script started, and every SSH session to it from the script's 20th second to its 35th
+Connection to 136.65.214.192 closed by remote host.
+
+Recommendation: To check for possible causes of SSH connectivity issues and get
+recommendations, rerun the ssh command with the --troubleshoot option.
+
+gcloud compute ssh tacra-hwcheck-2610071348 --project=rats-probe --zone=us-central1-c --troubleshoot
+
+Or, to investigate an IAP tunneling issue:
+
+gcloud compute ssh tacra-hwcheck-2610071348 --project=rats-probe --zone=us-central1-c --troubleshoot --tunnel-through-iap
+
+ERROR: (gcloud.compute.ssh) [/usr/bin/ssh] exited with return code [255].
+2026-10-07T13:49:50Z try 1 of 3 failed, exit 255: gcloud
+Connection to 136.65.214.192 closed by remote host.
+
+Recommendation: To check for possible causes of SSH connectivity issues and get
+recommendations, rerun the ssh command with the --troubleshoot option.
+
+gcloud compute ssh tacra-hwcheck-2610071348 --project=rats-probe --zone=us-central1-c --troubleshoot
+
+Or, to investigate an IAP tunneling issue:
+
+gcloud compute ssh tacra-hwcheck-2610071348 --project=rats-probe --zone=us-central1-c --troubleshoot --tunnel-through-iap
+
+ERROR: (gcloud.compute.ssh) [/usr/bin/ssh] exited with return code [255].
+2026-10-07T13:50:15Z a call to the VM failed; asking again
