@@ -10,3 +10,19 @@ client/http-client
 server/http-server
 hwcheck/vlekcheck/vlekcheck
 __pycache__/
+# programs built by hand in a module's root (go build ./cmd/<name>); the scripts build into temporary directories
+/rrp/ca-gateway
+/rrp/gce-endorsement
+/rrp/sim-verifier
+/rrp/tdx-verifier
+/rrp/vault-gateway
+/hwcheck/hwrun
+/hwcheck/mkcorim
+/hwcheck/preflight
+/hwcheck/rrp-issue
+/hwcheck/rrpverify
+/e2e/caapi-est
+/e2e/e2e-attester
+/e2e/rup
+/e2e/fraud-api
+/e2e/payments
