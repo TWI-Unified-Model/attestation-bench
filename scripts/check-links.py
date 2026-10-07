@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Checks that every relative link in the repository's Markdown points at a file or directory that exists.
+"""Checks that every relative link in the repository's Markdown points at a file or directory of the repository.
 
     python3 scripts/check-links.py [FILE.md ...]        (make lint; default: every tracked .md file)
 
 Links to the web (http, https, mailto) and to anchors within a page are not followed. The proof of concept's
-third-party sources (third_party/*/src*) are not checked. Prints each broken link with its file and line; exits 1 if
-there is one.
+third-party sources (third_party/*/src*) are not checked. A link out of the repository is broken even if its target
+exists on this machine: a fresh clone has nothing beside it. Prints each broken link with its file and line; exits 1
+if there is one.
 """
 
 import re
@@ -33,8 +34,10 @@ def broken(path):
         for target in LINK.findall(line):
             if re.match(r"(https?|mailto):", target) or target.startswith("#"):
                 continue
-            file_part = target.split("#", 1)[0]
-            if not (path.parent / file_part).exists():
+            dest = (path.parent / target.split("#", 1)[0]).resolve()
+            if dest != REPO and REPO not in dest.parents:
+                yield n, f"{target} (out of the repository)"
+            elif not dest.exists():
                 yield n, target
 
 

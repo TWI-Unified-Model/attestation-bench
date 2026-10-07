@@ -1,5 +1,9 @@
 # EST attested credential acquisition (TACRA extensions)
 
+_The proof of concept's own document, as the TWI SIG wrote it. attestation-bench changed only the links to the EST
+server's sources: they point at the SIG's fork at the commit the bench builds on
+([../third_party/globalsign-est/UPSTREAM](../third_party/globalsign-est/UPSTREAM))._
+
 This document describes the TACRA attested credential acquisition extensions
 added to the workspace `globalsign-est` project, and the integration test that
 validates them in [est_attest_test.go](est_attest_test.go).
@@ -18,8 +22,8 @@ Interface (CAI). This POC maps those roles onto the workspace as follows.
 | TACRA role | Component | POC treatment |
 | --- | --- | --- |
 | Attester + CAI | [est_attest_test.go](est_attest_test.go) | The test plays Attester and CAI |
-| CAS Client | `est.Client` in [../../globalsign-est/attest_client.go](../../globalsign-est/attest_client.go) | Extended with three methods |
-| CAS Server | `est.NewRouter` in [../../globalsign-est/server.go](../../globalsign-est/server.go) | Extended with three resources |
+| CAS Client | `est.Client` in [attest_client.go](https://github.com/TWI-Unified-Model/globalsign-est/blob/04ffa468b167eb36d8b1af0e354c4af41427a02e/attest_client.go) | Extended with three methods |
+| CAS Server | `est.NewRouter` in [server.go](https://github.com/TWI-Unified-Model/globalsign-est/blob/04ffa468b167eb36d8b1af0e354c4af41427a02e/server.go) | Extended with three resources |
 | Verifier | veraison-services | **Mocked** in `internal/mockca` |
 | Credential Authority | step-ca | **Mocked** by the existing `MockCA` |
 | Secret Vault | hashicorp-vault | **Mocked** in `internal/mockca` |
@@ -200,7 +204,7 @@ items typed `x509-cert`, `pkcs8-key` and `ca-certs-pem`.
 
 ## Implementation notes
 
-The `CA` interface in [../../globalsign-est/ca.go](../../globalsign-est/ca.go)
+The `CA` interface in [ca.go](https://github.com/TWI-Unified-Model/globalsign-est/blob/04ffa468b167eb36d8b1af0e354c4af41427a02e/ca.go)
 is **unchanged**. Attestation support is a separate optional interface,
 `est.AttestationCA`, which the server type-asserts per request. A backing CA
 that does not implement it causes the attest resources to return `501 Not
