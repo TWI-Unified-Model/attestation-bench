@@ -48,8 +48,8 @@ VM's clock can be trusted depends on the platform and its configuration; the ben
   finds these in code the bench reaches, each fixed in a later release:
   - Veraison, as pinned with our patches: `google.golang.org/grpc` v1.79.3 (GO-2026-6061, GO-2026-6348, GO-2026-6443;
     fixed in v1.82.1, v1.83.1, v1.82.2), `go.opentelemetry.io/otel/sdk` v1.39.0 (GO-2026-4394, GO-2026-6505; fixed in
-    v1.40.0, v1.45.0), `golang.org/x/text` v0.37.0 (GO-2026-5970; fixed in v0.39.0). The bench's `hwcheck` module,
-    which builds Veraison's code in, has the same grpc and x/text.
+    v1.40.0, v1.45.0), `golang.org/x/text` v0.37.0 (GO-2026-5970; fixed in v0.39.0). The bench's own modules, which
+    build Veraison's code in, use fixed releases (grpc v1.83.2, x/text v0.41.0).
   - The EST server and the bench's `e2e` module: `github.com/go-chi/chi` v4.1.2 (GO-2026-4316, an open redirect in its
     RedirectSlashes middleware, which the code does not use: only the package's initialisation is reached). No release
     of chi v4 fixes it.

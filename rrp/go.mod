@@ -24,7 +24,7 @@ require (
 	github.com/veraison/swid v1.1.1-0.20251003121634-fd1f7f1e1897 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.54.0 // indirect
+	golang.org/x/crypto v0.56.0 // indirect
 	golang.org/x/exp v0.0.0-20240409090435-93d18d7e34b8 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

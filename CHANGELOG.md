@@ -57,6 +57,10 @@ release's code; the hardware runs identical to gate 5's, check by check).
   was refused.
 - AWS VLEK reports are checked by the bench's Veraison build, which gives go-sev-guest AMD's roots.
 - A run exited 0 whatever happened: `make demo` could print "0 of 10 Targets" and succeed.
+- The bench's own modules and scripts used releases with known vulnerabilities, as Dependabot and govulncheck
+  reported: `golang.org/x/crypto` v0.17.0 in `platform` and `hwcheck/vlekcheck` (now v0.56.0, as in the other
+  modules), grpc v1.79.3 and x/text v0.37.0 in `hwcheck` (now v1.83.2 and v0.41.0), and `cryptography` 42.0.8 for
+  the scripts (now 50.0.2).
 
 ## Before: the TACRA proof of concept and the bench's first stages
 
