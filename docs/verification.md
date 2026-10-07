@@ -1,7 +1,8 @@
 # Verification of the first release
 
-How this release was checked before it was published, on 6 and 7 October 2026, and what each check found. Every
-result names its evidence: a run directory in this repository, a command anyone can run again, or a commit.
+How this release was checked before it was published, on 6 and 7 October 2026, what each check found, and what
+followed publishing (below). Every result names its evidence: a run directory in this repository, a command anyone
+can run again, or a commit.
 
 | # | Gate | Checked | Result |
 |---|---|---|---|
@@ -11,7 +12,7 @@ result names its evidence: a run directory in this repository, a command anyone 
 | 4 | A newcomer's run | [getting-started.md](getting-started.md) alone, on a fresh Ubuntu 24.04 VM and on a Mac with a fresh bench home | every step passed, after three fixes to the guide |
 | 5 | Hardware | `make demo`, `attacks` and `redirect` on GCP SEV-SNP, GCP TDX and AWS SEV-SNP | identical to the earlier runs, check by check |
 | 6 | The Demo Bank | `bank-up`, the five `bank-pay`, `bank-audit`, `bank-down`, in both RATS models, and a bank of one's own | as expected; both clouds empty afterwards |
-| 7 | The documentation | every command in it run as written; every number tied to its evidence | done, but for `git clone` from GitHub (below) |
+| 7 | The documentation | every command in it run as written; every number tied to its evidence | done; `git clone` from GitHub after publishing, and one command that failed as written (below) |
 
 ## 1 and 2. Build, lint and tests
 
@@ -102,10 +103,50 @@ Google Cloud project held no instance and no disk of any kind.
 Every command in the documentation was run as written, on the release's code, the hardware ones included; the runs
 are those of 7 October. Every number in it names the run, the command or the source it comes from. One command was
 not run here: `git clone` from GitHub, as the repository did not exist yet; it is run after publishing. The uninstall,
-`rm -rf ~/.attestation-bench`, ran in both tests of section 4 on the test's own home.
+`rm -rf ~/.attestation-bench`, ran in both tests of section 4 on the test's own home. One command, in
+`trust/README.md`, did not run as written in a plain shell; it was found after publishing (below).
 
 The proof of concept's own guides ([tacra-poc/](tacra-poc/README.md), `est/readme.md`, `deploy/`) are the TWI SIG's
 and describe its own deployment; they were not part of this check.
+
+## After publishing
+
+The repository went up on GitHub, private, on 7 October 2026 at `3aaeede`. Then:
+
+| Check | Result |
+|---|---|
+| CI on GitHub, on every push | both jobs pass. At `3aaeede`: lint and unit tests in 378 s, the bench from zero with its local runs in 522 s; at `43b4505`: 265 s and 520 s |
+| Dependabot | its 44 alerts, all on the bench's own pins, closed with `d2c9712`; none open |
+| `gh repo clone`, then the hardware runs as the docs write them, at `3aaeede` | every run passed, one at its second try: a copy from a VM had failed once, its error unrecorded (fixed in `7cee226`). These runs were made in a working directory outside the repository and are not kept |
+| A review of the published repository | four points to close before any of its numbers go into a draft, and three more; what changed is below |
+| `gh repo clone` again, `make setup` from that clone, then every hardware run and the Demo Bank as the docs write them, at `43b4505` | 17 runs, 17 PASS (`make report`): six `make demo`, three `make attacks`, three `make redirect`, and the Demo Bank's three payments and two refusals ([e2e/evidence/20261007T061608Z-demo-bank](../e2e/evidence/20261007T061608Z-demo-bank)). Each run that has a counterpart before is identical to it, check by check; both clouds empty after |
+
+### The review
+
+| Point | What changed |
+|---|---|
+| Veraison affirmed a debuggable SEV-SNP guest and never checked AMD's intermediate for revocation | patch 0005 (`6e9e98f`): our earlier `6bbeaf9`, ported onto the chain check up to AMD's roots; its tests run in `make test`. The hardware runs on that commit, added in `43b4505`, are identical to gate 7's, check by check |
+| The RRPs had no platform policy: no minimum TCB, no rule on the product line | `trust/platform-policy.json` (`4e5e699`), with the source of each value; each `make demo` run keeps the rule it ran under |
+| `absent-timestamp` rests on the guest's clock | said in [concepts.md](concepts.md) and [limits.md](limits.md) (`e074285`) |
+| The AWS launch is trusted on first use | said in [limits.md](limits.md) and [../trust/README.md](../trust/README.md); open |
+| The trust zone's keys are files on its disk | said in [limits.md](limits.md), "Keys and secrets"; unchanged on a bench |
+| Known vulnerabilities in the pinned dependencies | the bench's own modules on fixed releases (`d2c9712`); Veraison's own pins listed in [limits.md](limits.md), to change with a release that repeats the hardware runs |
+| Test coverage | `make test` runs the tests of the packages our third-party patches change (`6e9e98f`); the platform rule is tested on the committed policy file and real results (`4e5e699`) |
+
+Comparing the TCB floors with the hosts' reports found what a floor does not cover: no SEV-SNP host the bench has met
+sets the mitigation bit AMD-SB-3034 names for Milan ([limits.md](limits.md), "A TCB floor is not every
+mitigation"). `hwcheck/cmd/snpreport` reads the bits from the reports, as go-sev-guest parses them
+([results.md](results.md)).
+
+### Found after publishing, and the fixes
+
+| Found | Fixed in |
+|---|---|
+| `make setup` kept a Veraison built from older sources after a patch changed them | `6e9e98f` |
+| CI did not run the tests of our third-party patches | `6e9e98f` |
+| `2acbcb7` says a run's `veraison-vts.log` shows each revocation check. It does not: Veraison's trust service records its plugins' lines at debug level, below the bench's log level. At debug the line is there, once per appraisal: replaying the evidence of `20261007T055700Z-gcp-sev-snp` through the deployed service gave ten | the CHANGELOG, corrected with this section |
+| A command of `trust/README.md` runs Go in `rrp`, which the repository's `go.work` does not list, and failed as written | `GOWORK=off` in the command, with this section |
+| A hardware run that loses its SSH session to the guest stops without a verdict ([e2e/evidence/20261007T045819Z-gcp-sev-snp-e2e-background-check](../e2e/evidence/20261007T045819Z-gcp-sev-snp-e2e-background-check/README.md)) | not fixed: [troubleshooting.md](troubleshooting.md) says how to tell and what to do |
 
 ## What the checks found, and the fixes
 

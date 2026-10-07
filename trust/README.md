@@ -55,7 +55,8 @@ floor is refused, and the refusal names the component, its value and the floor.
 
 1. Establish where the value comes from. For Google Cloud, Google's signed endorsement must verify to the pinned
    root:
-   `(cd rrp && go run ./cmd/gce-endorsement -root ../trust/GCE-cc-tcb-root_1.crt -tdx <MRTD>)` (or `-snp <MEASUREMENT>`).
+   `(cd rrp && GOWORK=off go run ./cmd/gce-endorsement -root ../trust/GCE-cc-tcb-root_1.crt -tdx <MRTD>)` (or
+   `-snp <MEASUREMENT>`).
 2. Add it to `approved-launches.json` with its launch, its endorsement and the record of the check.
 3. For SEV-SNP, Veraison needs a reference value for it as well: make a new `veraison-corim-milan.cbor` with
    `hwcheck/cmd/mkcorim`. `trust/check.sh` and `scripts/trustzone.py` refuse an approved SEV-SNP launch that the

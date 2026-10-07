@@ -93,17 +93,23 @@ network, the cloud. The ideas in plain words: [docs/concepts.md](docs/concepts.m
 | What | Result | Evidence |
 |---|---|---|
 | Local, `make check-mtls`: mutual TLS between all components | 47 of 47, in Passport and in Background Check | [Passport](e2e/evidence/20261006T222549Z-bench-mtls), [Background Check](e2e/evidence/20261006T223444Z-bench-mtls) |
-| Hardware, `make demo`, three platforms × two RATS models | 10 of 10 Targets in each of the six runs | e.g. [GCP SEV-SNP, Passport](e2e/evidence/20261006T222601Z-gcp-sev-snp-e2e-passport), [AWS SEV-SNP, Background Check](e2e/evidence/20261006T224133Z-aws-sev-snp-e2e-background-check) |
+| Hardware, `make demo`, three platforms × two RATS models | 10 of 10 Targets in each of the six runs, under the platform rule and with Veraison's patch 0005 | e.g. [GCP SEV-SNP, Passport](e2e/evidence/20261007T054201Z-gcp-sev-snp-e2e-passport), [AWS SEV-SNP, Background Check](e2e/evidence/20261007T055226Z-aws-sev-snp-e2e-background-check) |
 | Hardware, `OTHER_PLATFORM=1 make demo` (tacra-est N24) | each platform's genuine Evidence refused at the Target of the other platform's verifier: in Passport after appraisal, in Background Check before it | [GCP SEV-SNP](e2e/evidence/20261007T012220Z-gcp-sev-snp-e2e-passport-other-platform), [AWS SEV-SNP](e2e/evidence/20261007T012516Z-aws-sev-snp-e2e-passport-other-platform), [GCP TDX](e2e/evidence/20261007T012715Z-gcp-tdx-e2e-passport-other-platform), [GCP TDX, Background Check](e2e/evidence/20261007T015243Z-gcp-tdx-e2e-background-check-other-platform) |
-| Hardware, `make attacks` | every attack refused for its own reason: 162 checks in process and 50 through Veraison on each SEV-SNP platform, 82 on TDX | [GCP SEV-SNP](hwcheck/evidence/20261006T224346Z-gcp-sev-snp), [GCP TDX](hwcheck/evidence/20261006T225040Z-gcp-tdx), [AWS SEV-SNP](hwcheck/evidence/20261006T225323Z-aws-sev-snp) |
-| Hardware, `make redirect` | 20 of 20 cases on each platform, as in the table above | [GCP SEV-SNP](hwcheck/evidence/20261006T225552Z-gcp-snp-redirect), [GCP TDX](hwcheck/evidence/20261006T225943Z-gcp-tdx-redirect), [AWS SEV-SNP](hwcheck/evidence/20261006T230316Z-aws-snp-redirect) |
-| The Demo Bank in the cloud | three payments from confidential VMs went through; an ordinary VM and an unapproved launch were refused; in Passport and in Background Check | [Passport](e2e/evidence/20261006T230714Z-demo-bank), [Background Check](e2e/evidence/20261007T015626Z-demo-bank) |
+| Hardware, `make attacks` | every attack refused for its own reason: 162 checks in process and 50 through Veraison on each SEV-SNP platform, 82 on TDX | [GCP SEV-SNP](hwcheck/evidence/20261007T055700Z-gcp-sev-snp), [GCP TDX](hwcheck/evidence/20261007T060345Z-gcp-tdx), [AWS SEV-SNP](hwcheck/evidence/20261007T060138Z-aws-sev-snp) |
+| Hardware, `make redirect` | 20 of 20 cases on each platform, as in the table above | [GCP SEV-SNP](hwcheck/evidence/20261007T060630Z-gcp-snp-redirect), [GCP TDX](hwcheck/evidence/20261007T061254Z-gcp-tdx-redirect), [AWS SEV-SNP](hwcheck/evidence/20261007T061008Z-aws-snp-redirect) |
+| The Demo Bank in the cloud | three payments from confidential VMs went through; an ordinary VM and an unapproved launch were refused; in Passport and in Background Check | [Passport](e2e/evidence/20261007T061608Z-demo-bank), [Background Check](e2e/evidence/20261007T015626Z-demo-bank) |
 | A bank of your own, `make bank-new NAME=acme-bank` | its own Targets, RRP identifiers and names: the ledger admitted `payments.workload.acme-bank.example`, and the payment from GCP SEV-SNP went through | [run](e2e/evidence/20261007T021953Z-acme-bank) |
 
-Every hardware result above was compared check by check with the previous runs and found identical. On 7 October
-2026 every command in the docs was run again as written, on the release's code: the hardware runs were identical
-once more, check by check (`make report RUNS="e2e/evidence/20261007* hwcheck/evidence/20261007*"` lists them). What a
-run does **not** prove: [docs/limits.md](docs/limits.md).
+The `make demo`, `attacks` and `redirect` runs and the Demo Bank in Passport above are the release's last: made on
+7 October 2026 from a fresh clone of the GitHub repository at `43b4505`, with Veraison's patch 0005 and the platform
+rule, and compared check by check with the runs of 6 and 7 October before them: identical. The other rows are the
+runs of [the release's verification](docs/verification.md). The last runs are listed with
+
+```bash
+make report RUNS="e2e/evidence/20261007T05[4-9]* e2e/evidence/20261007T06* hwcheck/evidence/20261007T05[5-9]* hwcheck/evidence/20261007T06*"
+```
+
+What a run does **not** prove: [docs/limits.md](docs/limits.md).
 
 ## Documentation
 

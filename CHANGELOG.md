@@ -31,6 +31,9 @@ release's code; the hardware runs identical to gate 5's, check by check).
   SEV-SNP the product line, the minimum TCB from AMD's bulletins (on REPORTED_TCB and COMMITTED_TCB) and SMT only
   with the microcode floor met; on TDX a TD under debug, profiled or migratable is refused. Each `make demo` run keeps
   the rule it ran under (`platform-rule.json`).
+- **`hwcheck/cmd/snpreport`**: the platform fields of the SEV-SNP reports a hardware run kept, as go-sev-guest reads
+  them: the TCBs, the CPUID, the CHIP_ID and the mitigation vectors, which the Attestation Results do not carry
+  ([docs/results.md](docs/results.md)).
 - **`trust/`**: the approved launches, each with its endorsement and the record of the check, and the vendor roots
   and CoRIM the verifiers trust, each with its source; `make trust-check` compares them with their origins.
 - **`packs/` and `scripts/trustzone.py`**: a bank's Targets and policy as data, and one program that writes every
@@ -72,7 +75,9 @@ release's code; the hardware runs identical to gate 5's, check by check).
 - Veraison affirmed a debuggable SEV-SNP guest and never checked AMD's intermediate for revocation. Patch 0005 (our
   earlier Veraison commit `6bbeaf9`, ported onto the chain check up to AMD's roots) refuses a guest whose policy
   allows debugging or a migration agent, and checks the intermediate that signed the report's certificate against
-  AMD's CRL, fetched once per validity period; the check fails closed, and Veraison's log shows each one.
+  AMD's CRL, fetched once per validity period; the check fails closed. Each check that passes is logged by the
+  plugin at INFO; Veraison's trust service records its plugins' INFO lines at debug level, so at the bench's log
+  level (info) they are not in `vts.log`, and a run shows the check by the plugin's build in `code-revs.txt`.
 - `make setup` kept a Veraison built from older sources after a patch changed them. The deployment now records the
   source tree it was built from, and `make setup` builds it again when the tree changes, keeping its keys,
   certificates and stores.

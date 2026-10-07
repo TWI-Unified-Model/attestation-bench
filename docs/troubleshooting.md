@@ -57,6 +57,13 @@ exists ([hardware/](hardware/README.md)).
 Login with administrator rights; on AWS, that your public address did not change during the run. The VM is deleted
 anyway; run again.
 
+**A hardware run stops after `== run in the guest`, without a verdict, and `ssh.stderr` (or `run-ssh.stderr`) says
+the read from the VM timed out.** The SSH session that ran the workload in the guest broke. The run stops before it
+copies the guest's results, and deletes the VM; `make report` lists it as not judged. The trust zone's own logs on
+this machine (`~/.attestation-bench/ca-gateway.log`, `vault-gateway.log`) show whether the guest was served before
+the break. Run it again. An example, with what the logs showed:
+[e2e/evidence/20261007T045819Z-gcp-sev-snp-e2e-background-check](../e2e/evidence/20261007T045819Z-gcp-sev-snp-e2e-background-check/README.md).
+
 **GCP TDX: every Target refused, `contraindicated`, and the TDX verifier logs an MRTD that matches no reference
 value.** The VM started on a TDX firmware build the bench has not approved. Check Google's endorsement of that MRTD and
 approve it ([../trust/README.md](../trust/README.md)); never approve a build whose endorsement does not check out.
