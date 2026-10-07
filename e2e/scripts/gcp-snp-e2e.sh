@@ -156,4 +156,4 @@ for x in r:
     print(("ok " if x["ok"] else "BAD"), x["target"].ljust(38), x["type"].ljust(8), f'{x["acquire_ms"]:8.1f} ms', x["rup_status"], x.get("error", "")[:120])
 PY
 bench_seal "$OUT"
-echo "== evidence in $OUT"
+echo "== run directory: $OUT"

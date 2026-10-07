@@ -102,4 +102,4 @@ if curl -sf --cacert "$VERAISON_DEPLOYMENT/certs/rootCA.crt" --cert "$BENCH_HOME
     -out "$OUT/rrpverify-service.json" | tee "$OUT/rrpverify-service.txt"
 fi
 bench_seal "$OUT"
-echo "== evidence in $OUT"
+echo "== run directory: $OUT"

@@ -189,7 +189,7 @@ reconfigure normal
 
 cat "$OUT"/*/results.jsonl > "$OUT/results.jsonl"
 bench_seal "$OUT"
-echo "== evidence in $OUT"
+echo "== run directory: $OUT"
 python3 - "$OUT/results.jsonl" <<'PY'
 import sys, json
 rows = [json.loads(l) for l in open(sys.argv[1])]
