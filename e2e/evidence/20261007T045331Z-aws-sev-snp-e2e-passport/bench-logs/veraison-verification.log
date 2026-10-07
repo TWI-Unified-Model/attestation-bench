@@ -1,0 +1,70 @@
+INFO	session requested	{"caller": ["est-server.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/10/06 - 23:54:39 | 201 |   29.066584ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=jPwRp7lBdEKAneX-PTX8HNRGPzCXV2PuoDS3WbCxv2N5mBCh3owf895Tp8cg74sKiTC9qLDxn1eXsEginvBJLg%3D%3D"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/06 - 23:54:39 | 200 |     150.091ms |       127.0.0.1 | POST     "/challenge-response/v1/session/33b88d7a-c20b-11f1-a2b3-313543423532"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/06 - 23:54:39 | 204 |      44.333µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/33b88d7a-c20b-11f1-a2b3-313543423532"
+INFO	gin	
+INFO	session requested	{"caller": ["est-server.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/10/06 - 23:54:40 | 201 |   34.687708ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=2OPMVFR7KnqHLxIzOKnBylgR2vAYdNklt1kbZLvGSeriT-_ViLQmHQQw_yDMmcCjsJtatVa4a3zdZKwEJvSFRg%3D%3D"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/06 - 23:54:40 | 200 |   10.286166ms |       127.0.0.1 | POST     "/challenge-response/v1/session/3452cbe2-c20b-11f1-a2b3-313543423532"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/06 - 23:54:40 | 204 |        2.25µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/3452cbe2-c20b-11f1-a2b3-313543423532"
+INFO	gin	
+INFO	session requested	{"caller": ["est-server.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/10/06 - 23:54:41 | 201 |   21.115667ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=Qf0HP_B7bsEZkOxAgPkdNtfTU8KEH6hQsqRMXJjtwXDpWVmYveiFrOU1LqE0dVfcwJKFffDKgEzbFSsnldSPhg%3D%3D"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/06 - 23:54:41 | 200 |    8.244708ms |       127.0.0.1 | POST     "/challenge-response/v1/session/34c54870-c20b-11f1-a2b3-313543423532"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/06 - 23:54:41 | 204 |       8.916µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/34c54870-c20b-11f1-a2b3-313543423532"
+INFO	gin	
+INFO	session requested	{"caller": ["est-server.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/10/06 - 23:54:41 | 201 |   29.256625ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=lH-x9IUd2jLJxP9wKJgqimhU62DWkq05g9XQKX0QKZ67c-aTUMBT5OPwH49fBU4H3wewpiTFEaWZQudvV74epw%3D%3D"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/06 - 23:54:41 | 200 |   10.730291ms |       127.0.0.1 | POST     "/challenge-response/v1/session/3548abb6-c20b-11f1-a2b3-313543423532"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/06 - 23:54:41 | 204 |       2.792µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/3548abb6-c20b-11f1-a2b3-313543423532"
+INFO	gin	
+INFO	session requested	{"caller": ["est-server.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/10/06 - 23:54:42 | 201 |   21.032542ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=nMddx47oxe-TcGfTC3wLdBX6I8paf1eoP0d1TBuMV2nUdVMf1iN96nYMCQq0SMCUukRYeNHNj1tcmmBq7CIlsQ%3D%3D"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/06 - 23:54:42 | 200 |    9.097666ms |       127.0.0.1 | POST     "/challenge-response/v1/session/35cb3090-c20b-11f1-a2b3-313543423532"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/06 - 23:54:42 | 204 |       5.875µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/35cb3090-c20b-11f1-a2b3-313543423532"
+INFO	gin	
+INFO	session requested	{"caller": ["est-server.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/10/06 - 23:54:43 | 201 |   36.718917ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=MeUALk9ysPb8yIcTEnloRnVkoSabQR-SrxdiagA_a4zSow-rnb494ao7hfxi9MNkZe-aw8hLObC5PdI9OUqsaw%3D%3D"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/06 - 23:54:43 | 200 |   11.885959ms |       127.0.0.1 | POST     "/challenge-response/v1/session/364c641c-c20b-11f1-a2b3-313543423532"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/06 - 23:54:43 | 204 |       2.875µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/364c641c-c20b-11f1-a2b3-313543423532"
+INFO	gin	
+INFO	session requested	{"caller": ["est-server.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/10/06 - 23:54:44 | 201 |   44.537709ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=KaD12Gapw_JpY4jX23N9HLVwNmf37xxr3yMKu7sTSHueB3DatSo4yF3B_fLvUiwl6n9Iy-R1ukNtKZnviAgrKw%3D%3D"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/06 - 23:54:44 | 200 |     9.81825ms |       127.0.0.1 | POST     "/challenge-response/v1/session/36e1ea3c-c20b-11f1-a2b3-313543423532"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/06 - 23:54:44 | 204 |       2.417µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/36e1ea3c-c20b-11f1-a2b3-313543423532"
+INFO	gin	
+INFO	session requested	{"caller": ["est-server.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/10/06 - 23:54:45 | 201 |   39.385667ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=2kb-JQ-y5terJ0KYAjkDCDAnnTCHav-Ja9A3JHwl9DBderV2xzVqR96wWbIgrHlabdsZM4cTag1UdostQi95sg%3D%3D"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/06 - 23:54:45 | 200 |   11.273458ms |       127.0.0.1 | POST     "/challenge-response/v1/session/377439dc-c20b-11f1-a2b3-313543423532"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/06 - 23:54:45 | 204 |       6.208µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/377439dc-c20b-11f1-a2b3-313543423532"
+INFO	gin	
+INFO	session requested	{"caller": ["est-server.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/10/06 - 23:54:46 | 201 |   42.029583ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=HS7DKRG7omSBSsHRRLTnAxif3haiVv66yjr15sTlOJ8dmsiOs8azRu_JNmScWIaB3fGLc0oo_y33j2OkQ-Y8eQ%3D%3D"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/06 - 23:54:46 | 200 |   19.058917ms |       127.0.0.1 | POST     "/challenge-response/v1/session/380c39bc-c20b-11f1-a2b3-313543423532"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/06 - 23:54:46 | 204 |       4.542µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/380c39bc-c20b-11f1-a2b3-313543423532"
+INFO	gin	
+INFO	session requested	{"caller": ["est-server.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/10/06 - 23:54:47 | 201 |   39.886458ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=5EgcsbSRmX-LTiXTkkcuJQKERk7d8RvXJdDdVBtpgl3Kr_jqULWHw-qEb4c2ygtaoHGlFiD--Vms1AA38Wdelw%3D%3D"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/06 - 23:54:47 | 200 |   12.616208ms |       127.0.0.1 | POST     "/challenge-response/v1/session/3889d6ec-c20b-11f1-a2b3-313543423532"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/06 - 23:54:47 | 204 |       2.375µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/3889d6ec-c20b-11f1-a2b3-313543423532"
+INFO	gin	
