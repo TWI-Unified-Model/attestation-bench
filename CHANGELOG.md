@@ -63,8 +63,9 @@ release's code; the hardware runs identical to gate 5's, check by check).
   tree (Removed, below).
 - `make redirect` puts the bench back as it was (its RATS model, the RRP identifier in the binding) when it ends,
   fails or is interrupted; it used to leave the bench in Background Check.
-- `make test` (and so `make check` and CI) also runs, in each third-party component, the tests of the Go packages
-  our patches change.
+- `make test` (and so `make check` and CI) also runs, in each third-party component, the tests our patches add, and
+  no others. It checks that each of them ran and that none of their test binaries links a mock; upstream's tests,
+  some of them on mocks, are not run ([CONTRIBUTING.md](CONTRIBUTING.md), "Tests").
 - **The approved AWS launch rests on AWS's published firmware**, no longer on trust on first use:
   `approved-launches.json` pins the binary of AWS's EC2 SEV-SNP UEFI, release 20260814 (its SHA-256), and how
   `sev-snp-measure` 0.0.13 measures it for a c6a.large; `make trust-check` and the Demo Bank at start download it and
@@ -133,6 +134,18 @@ release's code; the hardware runs identical to gate 5's, check by check).
   and checks their signatures; the certificate chain is completed on AWS's real table; the identity and group rules
   run on the approved launches; the TDX verifier fetches Intel's real revocation list; `make check-mtls` checks the
   live trust zone. The rule is in [CONTRIBUTING.md](CONTRIBUTING.md), "Tests".
+- **The EST server's mock CA** (EST patch 0009). The fork's server made a mock CA at every start, issued its own TLS
+  certificate from it when its configuration had no `tls` section, and used it as its CA unless a `tacra` or `attest`
+  section replaced it. The bench's server runs only with the TACRA backend: it needs its `tls` and `tacra` sections,
+  and refuses `mock_ca`, `attest` and any field it does not know.
+- **The tests of our third-party patches on stand-ins.** The EST backend's tests ran on a verifier, RRPs and a CA of
+  their own (EST patch 0008). Veraison's revocation tests ran on a snapshot of AMD's CRLs at a stopped clock, its DER
+  certificate table was made by re-encoding a PEM one, and its mitigation vectors were made up (Veraison patch 0008).
+  go-gen-ref's parser tests built their reports from scratch (go-gen-ref patch 0003). They run now on AMD's CRLs
+  fetched from its key server at the time of the test, on real Google Cloud and AWS reports and on the bench's CoRIM.
+  The tests on the reference implementation's EST messages moved to a package of their own (EST patch 0010): their
+  test binary had held the fork's tests, whose start creates a mock CA. The checks of the EST server's media types
+  and Handle encoding through the server went with the removed tests ([docs/limits.md](docs/limits.md)).
 
 ## Before: the TACRA proof of concept and the bench's first stages
 

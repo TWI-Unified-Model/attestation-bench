@@ -1,0 +1,216 @@
+From f265f1a26478b3ae6621248375e9338fccff6a89 Mon Sep 17 00:00:00 2001
+From: Serhii Nikolaichuk <nikolaichuk.s.f@gmail.com>
+Date: Wed, 7 Oct 2026 09:38:36 -0500
+Subject: [PATCH] sevsnp: the parser's tests on real reports
+
+The SIGNER_INFO and mitigation-vector tests built their reports from scratch, a MEASUREMENT of repeated 0x11 octets.
+They now read two real version 5 reports (testdata/SOURCES.md): a Google Cloud one signed with the chip's VCEK
+(SIGNER_INFO 0x0, vectors 0xb) and an AWS one signed with a VLEK (0x4, vectors 0x10f). A case no real report shows
+is one of them with one field changed: another SIGNER_INFO, a current vector unlike the launch one, version 3.
+---
+ cmd/sevsnp/parser_test.go                     |  91 +++++++++++-------
+ cmd/sevsnp/testdata/SOURCES.md                |  10 ++
+ .../report-aws-vlek-20261007T134512Z.bin      | Bin 0 -> 1184 bytes
+ .../report-gcp-vcek-20261007T134801Z.bin      | Bin 0 -> 1184 bytes
+ 4 files changed, 66 insertions(+), 35 deletions(-)
+ create mode 100644 cmd/sevsnp/testdata/SOURCES.md
+ create mode 100644 cmd/sevsnp/testdata/report-aws-vlek-20261007T134512Z.bin
+ create mode 100644 cmd/sevsnp/testdata/report-gcp-vcek-20261007T134801Z.bin
+
+diff --git a/cmd/sevsnp/parser_test.go b/cmd/sevsnp/parser_test.go
+index e6c8fb1..b67ca24 100644
+--- a/cmd/sevsnp/parser_test.go
++++ b/cmd/sevsnp/parser_test.go
+@@ -2,55 +2,75 @@ package sevsnp
+ 
+ import (
+ 	"bytes"
++	"os"
+ 	"testing"
+ 
++	"github.com/google/go-sev-guest/abi"
+ 	"github.com/google/go-sev-guest/proto/sevsnp"
+ )
+ 
+-// SIGNER_INFO is a bit field: SIGNING_KEY in bits 4:2, MASK_CHIP_KEY in bit 1,
+-// AUTHOR_KEY_EN in bit 0. A VLEK-signed report, as AWS returns on shared
+-// tenancy, has SIGNER_INFO 0x4.
++// The tests read real reports (testdata/SOURCES.md): a Google Cloud one signed with the chip's VCEK and an AWS one
++// signed with a VLEK. A case that no real report shows is that report with one field changed.
++func realReport(t *testing.T, name string) *sevsnp.Report {
++	t.Helper()
++	raw, err := os.ReadFile("testdata/" + name)
++	if err != nil {
++		t.Fatal(err)
++	}
++	r, err := abi.ReportToProto(raw)
++	if err != nil {
++		t.Fatal(err)
++	}
++	return r
++}
++
++const (
++	gcpReport = "report-gcp-vcek-20261007T134801Z.bin"
++	awsReport = "report-aws-vlek-20261007T134512Z.bin"
++)
++
++// SIGNER_INFO is a bit field: SIGNING_KEY in bits 4:2, MASK_CHIP_KEY in bit 1, AUTHOR_KEY_EN in bit 0. The Google
++// Cloud report has SIGNER_INFO 0x0 (VCEK), the AWS one 0x4 (VLEK).
+ func TestReportToComidSignerInfo(t *testing.T) {
+ 	for _, tc := range []struct {
+ 		name       string
+-		signerInfo uint32
+-		wantClass  string // empty: an error is expected
++		report     string
++		signerInfo int64 // -1: as the report has it
++		wantClass  string
+ 	}{
+-		{"VCEK", 0x0, ClassIDByChip},
+-		{"VCEK, AUTHOR_KEY_EN", 0x1, ClassIDByChip},
+-		{"VCEK, MASK_CHIP_KEY", 0x2, ClassIDByChip},
+-		{"VLEK", 0x4, ClassIDByCsp},
+-		{"VLEK, MASK_CHIP_KEY", 0x6, ClassIDByCsp},
+-		{"reserved signing key 2", 0x8, ""},
+-		{"no signing key", 0x1c, ""},
++		{"Google Cloud, VCEK, as reported", gcpReport, -1, ClassIDByChip},
++		{"AWS, VLEK, as reported", awsReport, -1, ClassIDByCsp},
++		{"VCEK, AUTHOR_KEY_EN", gcpReport, 0x1, ClassIDByChip},
++		{"VCEK, MASK_CHIP_KEY", gcpReport, 0x2, ClassIDByChip},
++		{"VLEK, MASK_CHIP_KEY", awsReport, 0x6, ClassIDByCsp},
++		{"reserved signing key 2", gcpReport, 0x8, ""},
++		{"no signing key", gcpReport, 0x1c, ""},
+ 	} {
+ 		t.Run(tc.name, func(t *testing.T) {
+-			report := &sevsnp.Report{
+-				Version:     2,
+-				SignerInfo:  tc.signerInfo,
+-				Measurement: bytes.Repeat([]byte{0x11}, 48),
++			report := realReport(t, tc.report)
++			if tc.signerInfo >= 0 {
++				report.SignerInfo = uint32(tc.signerInfo)
+ 			}
+ 			c, err := ReportToComid(report, 0)
+ 			if tc.wantClass == "" {
+ 				if err == nil {
+-					t.Fatalf("signer info %#x: want an error", tc.signerInfo)
++					t.Fatalf("signer info %#x: want an error", report.SignerInfo)
+ 				}
+ 				return
+ 			}
+ 			if err != nil {
+-				t.Fatalf("signer info %#x: %v", tc.signerInfo, err)
++				t.Fatalf("signer info %#x: %v", report.SignerInfo, err)
+ 			}
+ 			got := c.Triples.ReferenceValues.Values[0].Environment.Class.ClassID.String()
+ 			if got != tc.wantClass {
+-				t.Fatalf("signer info %#x: class %s, want %s", tc.signerInfo, got, tc.wantClass)
++				t.Fatalf("signer info %#x: class %s, want %s", report.SignerInfo, got, tc.wantClass)
+ 			}
+ 		})
+ 	}
+ }
+ 
+ // Report version 5 carries the mitigation vectors; the CoMID holds them as mkeys 4032 (LAUNCH_MIT_VECTOR) and 4096
+-// (CURRENT_MIT_VECTOR), big-endian raw values. An earlier version has neither. The values are those an AWS SEV-SNP
+-// host reported on 7 October 2026 (0x10f) and a Google Cloud one (0xb).
++// (CURRENT_MIT_VECTOR), big-endian raw values. An earlier version has neither.
+ func TestReportToComidMitigationVectors(t *testing.T) {
+ 	raw := func(c interface {
+ 		GetBytes() ([]byte, error)
+@@ -62,23 +82,24 @@ func TestReportToComidMitigationVectors(t *testing.T) {
+ 		return b
+ 	}
+ 	for _, tc := range []struct {
+-		name            string
+-		version         uint32
+-		launch, current uint64
+-		want            map[uint64][]byte // nil: neither mkey present
++		name   string
++		report string
++		change func(*sevsnp.Report)
++		want   map[uint64][]byte // nil: neither mkey present
+ 	}{
+-		{"version 5, AWS", 5, 0x10f, 0x10f, map[uint64][]byte{
++		{"AWS, as reported", awsReport, nil, map[uint64][]byte{
+ 			4032: {0, 0, 0, 0, 0, 0, 0x01, 0x0f}, 4096: {0, 0, 0, 0, 0, 0, 0x01, 0x0f}}},
+-		{"version 5, GCP, launch and current differ", 5, 0xb, 0x1b, map[uint64][]byte{
+-			4032: {0, 0, 0, 0, 0, 0, 0, 0x0b}, 4096: {0, 0, 0, 0, 0, 0, 0, 0x1b}}},
+-		{"version 3", 3, 0, 0, nil},
++		{"Google Cloud, as reported", gcpReport, nil, map[uint64][]byte{
++			4032: {0, 0, 0, 0, 0, 0, 0, 0x0b}, 4096: {0, 0, 0, 0, 0, 0, 0, 0x0b}}},
++		{"Google Cloud, the current vector changed: each kept as reported", gcpReport,
++			func(r *sevsnp.Report) { r.CurrentMitVector = 0x1b }, map[uint64][]byte{
++				4032: {0, 0, 0, 0, 0, 0, 0, 0x0b}, 4096: {0, 0, 0, 0, 0, 0, 0, 0x1b}}},
++		{"Google Cloud, as version 3", gcpReport, func(r *sevsnp.Report) { r.Version = 3 }, nil},
+ 	} {
+ 		t.Run(tc.name, func(t *testing.T) {
+-			report := &sevsnp.Report{
+-				Version:          tc.version,
+-				Measurement:      bytes.Repeat([]byte{0x11}, 48),
+-				LaunchMitVector:  tc.launch,
+-				CurrentMitVector: tc.current,
++			report := realReport(t, tc.report)
++			if tc.change != nil {
++				tc.change(report)
+ 			}
+ 			c, err := ReportToComid(report, 0)
+ 			if err != nil {
+@@ -94,7 +115,7 @@ func TestReportToComidMitigationVectors(t *testing.T) {
+ 			}
+ 			if tc.want == nil {
+ 				if len(got) != 0 {
+-					t.Fatalf("version %d: mitigation mkeys %v, want none", tc.version, got)
++					t.Fatalf("version %d: mitigation mkeys %v, want none", report.Version, got)
+ 				}
+ 				return
+ 			}
+diff --git a/cmd/sevsnp/testdata/SOURCES.md b/cmd/sevsnp/testdata/SOURCES.md
+new file mode 100644
+index 0000000..37f22c2
+--- /dev/null
++++ b/cmd/sevsnp/testdata/SOURCES.md
+@@ -0,0 +1,10 @@
++# testdata
++
++Two SEV-SNP attestation reports (version 5), byte for byte as real guests returned them through configfs-tsm on
++7 October 2026, each the report of the honest Enrollment Evidence (present-nonce) of an attestation-bench hardware
++run (`hwcheck/evidence/<run>/enroll-present-nonce/evidence.tsm.cbor`, its `outblob`).
++
++| file | sha256 | run | signed with | mitigation vectors (launch, current) |
++|---|---|---|---|---|
++| `report-gcp-vcek-20261007T134801Z.bin` | `e00000cf1111812890b850d5a6c11663e382b741db39ae201c8859c5b5136702` | `20261007T134801Z-gcp-sev-snp`, Google Cloud n2d-standard-2 | the chip's VCEK (SIGNER_INFO 0x0) | 0xb, 0xb |
++| `report-aws-vlek-20261007T134512Z.bin` | `daca1c7bf8a347fa816e7d5389d2f086396be566ded1251f731d6c89564a568f` | `20261007T134512Z-aws-sev-snp`, AWS c6a.large | a VLEK (SIGNER_INFO 0x4) | 0x10f, 0x10f |
+diff --git a/cmd/sevsnp/testdata/report-aws-vlek-20261007T134512Z.bin b/cmd/sevsnp/testdata/report-aws-vlek-20261007T134512Z.bin
+new file mode 100644
+index 0000000000000000000000000000000000000000..813d09fd8e1469129741711181170f1f4db55239
+GIT binary patch
+literal 1184
+zcmZQ&fB|ME7>f|i2vooVRwVyW9jX|@XJELidO)T|tw=}oAjeaYSpQ$@vL0e)^WRxF
+ziS<Tqxo7oR=gN%BR>AX*IW~A|l^*`*vm$>Pd$N3CZe_?h8_#;}g;kwrUaelR`|ch8
+z@~AV5--}-SxxZ`A*<*q+zpnr8TPJAy`5pIGzF#J{=LD}~i<Ui}M#!zSmbWoHwdq1_
+z9oM6M<*p3(4Ii?(oH-j=>ce{3<M1xOvZ@3B2>?jA$=;J>1cfT~0W6-Ftr!_V7{=#^
+zS_h-4Z!>jFJfFdNx$cYlLif!Px97=j%5FEh+qqppYOAf>k$l}ZGPyI)ZrG=3ztte#
+zB=P)A=2=O&Y%S|_nDOMxpW2rx!q$x&BZKaqY)JcPCl*;Iv6IhJGRp0gXjhOHi%(zb
+TR++p%Wno)!nKLR*-w*%*rl^^H
+
+literal 0
+HcmV?d00001
+
+diff --git a/cmd/sevsnp/testdata/report-gcp-vcek-20261007T134801Z.bin b/cmd/sevsnp/testdata/report-gcp-vcek-20261007T134801Z.bin
+new file mode 100644
+index 0000000000000000000000000000000000000000..4aa85486a702e05844b1241af6c57b575ae367a6
+GIT binary patch
+literal 1184
+zcmZQ&fB|M0gCNZaRKWsPC3{a5P4$myyPPysc1LeekX;fvXQIj_uN~9Q*u3H5v6}Ph
+z<WhxxpFOo!3w}&Jb4=!YqfE5UF})=+1?7SP&wMyfmt_P`RXKAf=7aR2P_@0O0k%^o
+zOIK7ow=Pz%`RC%X_Wm5ZPEU_@J>NIXOyaXsDy)6<J67!%n)P(&a=yCN8g|H(yYII6
+z4=wgn{_AE{em&;-@?^Z)oO@ZbJ{SHc0AS%L$p{KnOmLw+_l0;~l?&sKGTD&Ovl5*~
+zGu-a(oA;`#W#K%DUpm(Pufy)l{l4cWuVI@Ldo|;|IqMg@FIc9$BPeFZ;`Nub<zVJB
+zS}`(!FpSR)wF*XK+B`T!DjQex<li@7op<u^qtXPMzpWplz8lXo`FrbS$m(1Fw_5&6
+z;C*pi$zaF*u)W>_-y=<Mxq9obgSWnGY&DwmDXwzm$>tsLjIJI3TOtm~B-SihW`29B
+cN&3e54C{TTrp$NQ@oY2GOkC!Siqkg)05bf)^#A|>
+
+literal 0
+HcmV?d00001
+

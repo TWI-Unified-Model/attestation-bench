@@ -14,7 +14,7 @@ Then run what your change touches, and say in the commit message what you ran an
 |---|---|
 | a script, the trust zone, a gateway, a verifier, the generator, a pack | `make setup`, `make check-mtls`, and `make demo`, `make attacks`, `make redirect` with `PLATFORM=gcp-snp` (and the other platforms the change reaches) |
 | a platform plug-in, the CAI, the binding | the above, on every platform it touches (`PLATFORM=…`) |
-| a third-party patch (`third_party/`) | the above, and the hardware runs of the platforms it touches; `make check` runs the tests of the packages the patches change |
+| a third-party patch (`third_party/`) | the above, and the hardware runs of the platforms it touches; `make check` runs the tests the patches add |
 | the Demo Bank | `make bank-up`, `bank-pay` on the platforms and both controls, `bank-audit`, `bank-down` |
 | documentation | every command you added or changed, exactly as written |
 
@@ -30,9 +30,14 @@ Then run what your change touches, and say in the commit message what you ran an
 Nothing in a test stands in for a part of the system: no fake verifier, Vault, CA, EST server or TSM device, and no
 made-up report, EAR, certificate or log. A test runs on real data (the reports, EARs and certificate tables that
 hardware runs kept under `*/evidence/`, the draft's test vector, the reference implementation's vectors), on the live
-trust zone that `make setup` brings up, or on the live services of AMD, Intel and Google. A test of a refusal changes
-one input of real data, as an attacker would. What only a confidential VM can do, such as making Evidence, is tested
-by the hardware runs.
+trust zone that `make setup` brings up, or on the live services of AMD and Intel (AMD's key server for its CRLs,
+Intel's provisioning certification service for its PCK CRL), so `make test` needs the network and fails without it. A test of a refusal
+changes one input of real data, as an attacker would. What only a confidential VM can do, such as making Evidence, is
+tested by the hardware runs.
+
+In a third-party component, `make test` runs the tests our patches add (the test files the pinned upstream commit
+does not have) and no others. It checks that each of them ran, and refuses a test binary that links a mock. Upstream's
+own tests are not run: some of them use mocks, as the EST fork's tests use its mock CA.
 
 ## Evidence
 
@@ -83,7 +88,7 @@ which checks the recorded tree, and run Veraison's tests on it:
 ```bash
 git checkout -- third_party/veraison-services/patches/<a patch you did not change>
 third_party/fetch.sh veraison-services
-(cd third_party/veraison-services/src && GOWORK=off go test ./scheme/sevsnp/...)   # outside the bench's go.work
+make test                                       # our tests in every component, Veraison's among them
 ```
 
 `make setup` then builds the bench's Veraison again from the new tree, keeping its keys, certificates and stores

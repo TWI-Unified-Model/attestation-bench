@@ -1,0 +1,1097 @@
+From 922f4269e97394a1315dad171c69845fe31a627e Mon Sep 17 00:00:00 2001
+From: Serhii Nikolaichuk <nikolaichuk.s.f@gmail.com>
+Date: Wed, 7 Oct 2026 09:36:31 -0500
+Subject: [PATCH] sevsnp: the tests of our patches on real data, with AMD's KDS
+ live
+
+The revocation tests read AMD's CRLs from a snapshot of the KDS and
+appraised at a fixed time inside its validity. They now fetch the CRLs
+from the KDS with the scheme's own getter and check them at the time
+they run, against the ASK and ARK the scheme trusts (amdRoots); without
+the KDS they fail. The snapshot, the chains beside it and TestMain go.
+
+- TestIntermediateNotRevoked: the Milan and Genoa ASKs are not revoked,
+  and the CRL is fetched once per validity period. The Genoa ASK under a
+  serial the Genoa CRL revokes is refused, and so are a CRL at its
+  nextUpdate, another product line's CRL and a distribution point
+  outside the KDS.
+- TestForgedCRL refused a CRL the test made with a key of its own; it
+  now refuses AMD's Milan CRL as the KDS serves it, with the last octet
+  of its signature changed.
+- TestIntegrityNeedsTheCRL stood the KDS in with a getter that returned
+  an error; the getter now fetches over HTTPS as the scheme's does, with
+  its connections sent to a local port nothing listens on, so the
+  failure is the network's.
+- TestTrustedIssuerUnknownLeaf made up a certificate; it now takes a
+  real one that AMD did not issue, Google's root for its launch
+  endorsements (test/certs/SOURCES.md).
+- The DER certificate table was made by re-encoding the PEM table of
+  upstream's report. The test now takes a report from a Google Cloud
+  guest, with the table as the host supplied it, and the trust anchor of
+  the attestation-bench CoRIM (test/evidence/SOURCES.md,
+  test/corim/SOURCES.md).
+- TestMatchSkipsMitigationVectors matched vectors the test made up; it
+  now matches the claims of that Google Cloud report, which holds its
+  vectors, against the reference values go-gen-ref makes from it and
+  those of the attestation-bench CoRIM.
+---
+ scheme/sevsnp/p0_test.go                      | 264 +++++++++++-------
+ scheme/sevsnp/scheme_der_test.go              | 113 ++++----
+ scheme/sevsnp/test/certs/SOURCES.md           |   5 +
+ .../sevsnp/test/certs/gce-cc-tcb-root_1.crt   | Bin 0 -> 1570 bytes
+ scheme/sevsnp/test/corim/SOURCES.md           |   9 +
+ .../corim/attestation-bench-corim-milan.cbor  | Bin 0 -> 3741 bytes
+ scheme/sevsnp/test/crl/SOURCES.md             |  19 --
+ .../test/crl/kds-vcek-cert_chain-genoa.pem    |  74 -----
+ .../test/crl/kds-vcek-cert_chain-milan.pem    |  74 -----
+ .../test/crl/kds-vcek-crl-genoa-20260930.der  | Bin 890 -> 0 bytes
+ .../test/crl/kds-vcek-crl-milan-20260930.der  | Bin 866 -> 0 bytes
+ .../test/crl/kds-vcek-crl-turin-20260930.der  | Bin 866 -> 0 bytes
+ scheme/sevsnp/test/evidence/SOURCES.md        |  10 +
+ .../test/evidence/sevsnp-gcp-tsm-report.cbor  | Bin 0 -> 5989 bytes
+ 14 files changed, 238 insertions(+), 330 deletions(-)
+ create mode 100644 scheme/sevsnp/test/certs/SOURCES.md
+ create mode 100644 scheme/sevsnp/test/certs/gce-cc-tcb-root_1.crt
+ create mode 100644 scheme/sevsnp/test/corim/SOURCES.md
+ create mode 100644 scheme/sevsnp/test/corim/attestation-bench-corim-milan.cbor
+ delete mode 100644 scheme/sevsnp/test/crl/SOURCES.md
+ delete mode 100644 scheme/sevsnp/test/crl/kds-vcek-cert_chain-genoa.pem
+ delete mode 100644 scheme/sevsnp/test/crl/kds-vcek-cert_chain-milan.pem
+ delete mode 100644 scheme/sevsnp/test/crl/kds-vcek-crl-genoa-20260930.der
+ delete mode 100644 scheme/sevsnp/test/crl/kds-vcek-crl-milan-20260930.der
+ delete mode 100644 scheme/sevsnp/test/crl/kds-vcek-crl-turin-20260930.der
+ create mode 100644 scheme/sevsnp/test/evidence/SOURCES.md
+ create mode 100644 scheme/sevsnp/test/evidence/sevsnp-gcp-tsm-report.cbor
+
+diff --git a/scheme/sevsnp/p0_test.go b/scheme/sevsnp/p0_test.go
+index afed2c5..a4f5b5d 100644
+--- a/scheme/sevsnp/p0_test.go
++++ b/scheme/sevsnp/p0_test.go
+@@ -5,25 +5,22 @@ package sevsnp
+ 
+ import (
+ 	"bytes"
+-	"crypto/ecdsa"
+-	"crypto/elliptic"
+-	"crypto/rand"
+-	"crypto/rsa"
++	"context"
+ 	"crypto/x509"
+-	"crypto/x509/pkix"
+ 	"encoding/base64"
+ 	"encoding/binary"
+ 	"encoding/hex"
+ 	"encoding/json"
+-	"encoding/pem"
+ 	"errors"
+-	"fmt"
+-	"math/big"
++	"io"
++	"maps"
++	"net"
++	"net/http"
+ 	"os"
+-	"strings"
+ 	"testing"
+ 	"time"
+ 
++	"github.com/google/go-sev-guest/verify/trust"
+ 	"github.com/stretchr/testify/require"
+ 	"github.com/veraison/corim/comid"
+ 	"github.com/veraison/corim/corim"
+@@ -32,49 +29,28 @@ import (
+ 	"github.com/veraison/services/vts/appraisal"
+ )
+ 
+-// test/crl/ holds AMD's CRLs and VCEK chains for Milan, Genoa and Turin as the KDS served them on 30 September 2026
+-// (CRL this update 2026-09-22, next update 2026-11-09; the Genoa CRL revokes serial 020001). The tests appraise at a
+-// fixed time inside that window and never reach the network.
+-var snapshotTime = time.Date(2026, 9, 30, 12, 0, 0, 0, time.UTC)
++// The revocation tests fetch AMD's CRLs from the KDS, live, with the scheme's own getter, and check them at the time
++// they run; without the KDS they fail.
+ 
+-type snapshotGetter struct{ calls map[string]int }
+-
+-func (g *snapshotGetter) Get(url string) ([]byte, error) {
+-	g.calls[url]++
+-	for _, p := range []string{"Milan", "Genoa", "Turin"} {
+-		// The KDS serves the ARK's one CRL at both distribution points, the VCEK's and the VLEK's (test/crl/SOURCES.md).
+-		if url == "https://kdsintf.amd.com/vcek/v1/"+p+"/crl" || url == "https://kdsintf.amd.com/vlek/v1/"+p+"/crl" {
+-			return os.ReadFile("test/crl/kds-vcek-crl-" + strings.ToLower(p) + "-20260930.der")
+-		}
+-	}
+-	return nil, fmt.Errorf("no snapshot for %s", url)
++// countingGetter is the scheme's getter, counting its fetches by URL.
++type countingGetter struct {
++	live  trust.HTTPSGetter
++	calls map[string]int
+ }
+ 
+-var snapshot = &snapshotGetter{calls: map[string]int{}}
+-
+-func TestMain(m *testing.M) {
+-	crlGetter = snapshot
+-	now = func() time.Time { return snapshotTime }
+-	os.Exit(m.Run())
++func (g *countingGetter) Get(url string) ([]byte, error) {
++	g.calls[url]++
++	return g.live.Get(url)
+ }
+ 
+-func chainCerts(t *testing.T, product string) (ask, ark *x509.Certificate) {
++// vcekChain is the ASK and ARK the scheme trusts for a product line (amdRoots), and the ASK's CRL distribution point.
++func vcekChain(t *testing.T, product string) (ask, ark *x509.Certificate, crlURL string) {
+ 	t.Helper()
+-	raw, err := os.ReadFile("test/crl/kds-vcek-cert_chain-" + product + ".pem")
++	roots, err := amdRoots()
+ 	require.NoError(t, err)
+-	var certs []*x509.Certificate
+-	for {
+-		var b *pem.Block
+-		b, raw = pem.Decode(raw)
+-		if b == nil {
+-			break
+-		}
+-		c, err := x509.ParseCertificate(b.Bytes)
+-		require.NoError(t, err)
+-		certs = append(certs, c)
+-	}
+-	require.Len(t, certs, 2)
+-	return certs[0], certs[1]
++	pc := roots[product][0].ProductCerts
++	require.Len(t, pc.Ask.CRLDistributionPoints, 1)
++	return pc.Ask, pc.Ark, pc.Ask.CRLDistributionPoints[0]
+ }
+ 
+ func resetCache() {
+@@ -83,61 +59,77 @@ func resetCache() {
+ 	crlCache.Unlock()
+ }
+ 
++// cached is the CRL the scheme keeps for url.
++func cached(url string) *x509.RevocationList {
++	crlCache.Lock()
++	defer crlCache.Unlock()
++	return crlCache.m[url]
++}
++
+ func TestIntermediateNotRevoked(t *testing.T) {
+ 	resetCache()
+-	ask, ark := chainCerts(t, "milan")
+-	require.NoError(t, intermediateNotRevoked(ark, ask, snapshot, snapshotTime), "the Milan ASK 010001")
+-	before := snapshot.calls["https://kdsintf.amd.com/vcek/v1/Milan/crl"]
+-	require.NoError(t, intermediateNotRevoked(ark, ask, snapshot, snapshotTime))
+-	require.Equal(t, before, snapshot.calls["https://kdsintf.amd.com/vcek/v1/Milan/crl"], "the CRL is fetched once per validity period")
+-
+-	gask, gark := chainCerts(t, "genoa")
+-	require.NoError(t, intermediateNotRevoked(gark, gask, snapshot, snapshotTime), "the Genoa ASK 020002")
++	defer resetCache()
++	kds := &countingGetter{live: trust.DefaultHTTPSGetter(), calls: map[string]int{}}
++	now := time.Now()
++
++	ask, ark, milan := vcekChain(t, "Milan")
++	require.Equal(t, "https://kdsintf.amd.com/vcek/v1/Milan/crl", milan)
++	require.NoError(t, intermediateNotRevoked(ark, ask, kds, now), "the Milan ASK")
++	require.NoError(t, intermediateNotRevoked(ark, ask, kds, now))
++	require.Equal(t, 1, kds.calls[milan], "the CRL is fetched once per validity period")
++	milanCRL := cached(milan)
++
++	gask, gark, genoa := vcekChain(t, "Genoa")
++	require.Equal(t, "https://kdsintf.amd.com/vcek/v1/Genoa/crl", genoa)
++	require.NoError(t, intermediateNotRevoked(gark, gask, kds, now), "the Genoa ASK")
++	// the Genoa CRL revokes a serial; the Genoa ASK under that serial is refused
++	entries := cached(genoa).RevokedCertificateEntries
++	require.NotEmpty(t, entries, "the Genoa CRL revokes nothing now: the test needs a revoked serial")
+ 	revoked := *gask
+-	revoked.SerialNumber = big.NewInt(0x020001)
+-	err := intermediateNotRevoked(gark, &revoked, snapshot, snapshotTime)
++	revoked.SerialNumber = entries[0].SerialNumber
++	err := intermediateNotRevoked(gark, &revoked, kds, now)
+ 	require.ErrorIs(t, err, ErrRevocation)
+ 	require.Contains(t, err.Error(), "was revoked")
+ 
+-	// after the CRL's nextUpdate, a CRL that is no longer current is refused (fail closed)
++	// at the CRL's nextUpdate, the CRL the KDS serves is no longer current and is refused (fail closed)
+ 	resetCache()
+-	err = intermediateNotRevoked(ark, ask, snapshot, time.Date(2026, 11, 10, 0, 0, 0, 0, time.UTC))
++	err = intermediateNotRevoked(ark, ask, kds, milanCRL.NextUpdate)
+ 	require.ErrorIs(t, err, ErrRevocation)
+ 	require.Contains(t, err.Error(), "not current")
+ 
+ 	// the Genoa CRL checked against the Milan ARK: not signed by it
+ 	resetCache()
+ 	wrongPoint := *ask
+-	wrongPoint.CRLDistributionPoints = []string{"https://kdsintf.amd.com/vcek/v1/Genoa/crl"}
+-	err = intermediateNotRevoked(ark, &wrongPoint, snapshot, snapshotTime)
++	wrongPoint.CRLDistributionPoints = []string{genoa}
++	err = intermediateNotRevoked(ark, &wrongPoint, kds, now)
+ 	require.ErrorIs(t, err, ErrRevocation)
+ 	require.Contains(t, err.Error(), "not signed by the ARK")
+ 
+-	// a distribution point outside AMD's KDS
++	// a distribution point outside AMD's KDS: refused, and not fetched
+ 	elsewhere := *ask
+ 	elsewhere.CRLDistributionPoints = []string{"https://crl.example/milan.crl"}
+-	require.ErrorIs(t, intermediateNotRevoked(ark, &elsewhere, snapshot, snapshotTime), ErrRevocation)
+-	resetCache()
++	require.ErrorIs(t, intermediateNotRevoked(ark, &elsewhere, kds, now), ErrRevocation)
++	require.Zero(t, kds.calls["https://crl.example/milan.crl"])
+ }
+ 
+-// A CRL made by someone else under ARK-Milan's name is refused.
++// A CRL under ARK-Milan's name that ARK-Milan did not sign is refused: AMD's Milan CRL as the KDS serves it, with the
++// last octet of its signature changed on its way to the scheme.
+ func TestForgedCRL(t *testing.T) {
+ 	resetCache()
+-	ask, ark := chainCerts(t, "milan")
+-	key, err := rsa.GenerateKey(rand.Reader, 2048)
++	defer resetCache()
++	ask, ark, milan := vcekChain(t, "Milan")
++	der, err := trust.DefaultHTTPSGetter().Get(milan)
+ 	require.NoError(t, err)
+-	issuer := &x509.Certificate{Subject: ark.Subject, SubjectKeyId: []byte{1, 2, 3, 4}, KeyUsage: x509.KeyUsageCRLSign,
+-		PublicKey: &key.PublicKey}
+-	der, err := x509.CreateRevocationList(rand.Reader, &x509.RevocationList{Number: big.NewInt(12),
+-		ThisUpdate: snapshotTime.Add(-time.Hour), NextUpdate: snapshotTime.Add(24 * time.Hour)}, issuer, key)
+-	require.NoError(t, err)
+-	forged := forgedGetter{der}
+-	err = intermediateNotRevoked(ark, ask, forged, snapshotTime)
++	forged := append([]byte(nil), der...)
++	forged[len(forged)-1] ^= 1 // the signature, a BIT STRING, ends the CRL
++	_, err = x509.ParseRevocationList(forged)
++	require.NoError(t, err, "still a well-formed CRL")
++	err = intermediateNotRevoked(ark, ask, forgedGetter{forged}, time.Now())
+ 	require.ErrorIs(t, err, ErrRevocation)
+ 	require.Contains(t, err.Error(), "not signed by the ARK")
+-	resetCache()
+ }
+ 
++// forgedGetter answers every fetch with the changed CRL, as whoever changed it would.
+ type forgedGetter struct{ der []byte }
+ 
+ func (g forgedGetter) Get(string) ([]byte, error) { return g.der, nil }
+@@ -160,12 +152,33 @@ func TestGuestPolicyViolation(t *testing.T) {
+ 	require.False(t, errors.Is(nil, ErrRevocation))
+ }
+ 
+-type failingGetter struct{}
++// unreachableGetter fetches over HTTPS as the scheme's getter does, but sends its connections to a local port that
++// nothing listens on, as when the KDS cannot be reached: the error is the network's own.
++type unreachableGetter struct{ client *http.Client }
++
++func newUnreachableGetter(t *testing.T) unreachableGetter {
++	t.Helper()
++	l, err := net.Listen("tcp", "127.0.0.1:0")
++	require.NoError(t, err)
++	addr := l.Addr().String()
++	require.NoError(t, l.Close()) // nothing listens there any more
++	dial := func(ctx context.Context, network, _ string) (net.Conn, error) {
++		return (&net.Dialer{}).DialContext(ctx, network, addr)
++	}
++	return unreachableGetter{&http.Client{Transport: &http.Transport{DialContext: dial}, Timeout: 10 * time.Second}}
++}
+ 
+-func (failingGetter) Get(url string) ([]byte, error) { return nil, fmt.Errorf("unreachable: %s", url) }
++func (g unreachableGetter) Get(url string) ([]byte, error) {
++	resp, err := g.client.Get(url)
++	if err != nil {
++		return nil, err
++	}
++	defer resp.Body.Close()
++	return io.ReadAll(resp.Body)
++}
+ 
+-// The evidence of the other tests passes only because the snapshot CRL is served; with the KDS unreachable and
+-// nothing cached, the same evidence is refused: the revocation check is on the path and fails closed.
++// The evidence passes with AMD's CRL fetched from the KDS; with the KDS unreachable and nothing cached, the same
++// evidence is refused: the revocation check is on the path and fails closed.
+ func TestIntegrityNeedsTheCRL(t *testing.T) {
+ 	var (
+ 		endCorim     corim.UnsignedCorim
+@@ -181,11 +194,12 @@ func TestIntegrityNeedsTheCRL(t *testing.T) {
+ 	evidence := appraisal.Evidence{Data: sevsnpTSMReportCBOR, MediaType: EvidenceMediaTypeTSMCbor, Nonce: nonce}
+ 
+ 	resetCache()
+-	require.NoError(t, NewImplementation().ValidateEvidenceIntegrity(&evidence, trustAnchors, nil), "with the snapshot CRL")
++	require.NoError(t, NewImplementation().ValidateEvidenceIntegrity(&evidence, trustAnchors, nil), "with AMD's CRL from the KDS")
+ 
+ 	resetCache()
+-	crlGetter = failingGetter{}
+-	defer func() { crlGetter = snapshot; resetCache() }()
++	live := crlGetter
++	crlGetter = newUnreachableGetter(t)
++	defer func() { crlGetter = live; resetCache() }()
+ 	err = NewImplementation().ValidateEvidenceIntegrity(&evidence, trustAnchors, nil)
+ 	require.ErrorIs(t, err, ErrRevocation)
+ 	t.Logf("KDS unreachable: %v", err)
+@@ -216,15 +230,12 @@ func TestAppraiseClaimsRefusesDebug(t *testing.T) {
+ }
+ 
+ // The intermediate whose revocation is checked is the one among AMD's roots that signed the report's certificate; a
+-// certificate none of them signed has no such intermediate, and the check fails closed.
++// certificate none of them signed has no such intermediate, and the check fails closed. The certificate is a real one
++// that AMD did not issue: Google's root for its launch endorsements (test/certs/SOURCES.md).
+ func TestTrustedIssuerUnknownLeaf(t *testing.T) {
+ 	roots, err := amdRoots()
+ 	require.NoError(t, err)
+-	key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+-	require.NoError(t, err)
+-	tmpl := &x509.Certificate{SerialNumber: big.NewInt(1), Subject: pkix.Name{CommonName: "SEV-VCEK"},
+-		NotBefore: snapshotTime.Add(-time.Hour), NotAfter: snapshotTime.Add(time.Hour)}
+-	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
++	der, err := os.ReadFile("test/certs/gce-cc-tcb-root_1.crt")
+ 	require.NoError(t, err)
+ 	leaf, err := x509.ParseCertificate(der)
+ 	require.NoError(t, err)
+@@ -232,29 +243,70 @@ func TestTrustedIssuerUnknownLeaf(t *testing.T) {
+ 	require.ErrorIs(t, err, ErrRevocation)
+ }
+ 
+-// The mitigation vectors are the relying party's policy, not reference values: reference values that hold them (as a
+-// CoRIM made from a report by go-gen-ref does) still match Evidence whose vectors differ, or that has none, while a
+-// launch value still has to match.
++// The mitigation vectors are the relying party's policy, not reference values. The Evidence is the claims of the
++// Google Cloud report (test/evidence/SOURCES.md), of version 5, which holds them. The reference values are those
++// go-gen-ref makes from that report, which hold its vectors too, and those of the attestation-bench CoRIM, one set per
++// approved launch. The reference values of the report's launch match its claims with the report's vectors, with
++// other vectors, and with none (report version 3); those of the other launch do not.
+ func TestMatchSkipsMitigationVectors(t *testing.T) {
+-	raw := func(k uint64, b []byte) comid.Measurement {
++	logger := log.Named("test")
++	evidence := appraisal.Evidence{Data: sevsnpGCPTSMReportCBOR, MediaType: EvidenceMediaTypeTSMCbor}
++	claims, err := NewImplementation().ExtractClaims(&evidence, nil)
++	require.NoError(t, err)
++	ev, err := transformClaimsToMeasurementsMap(claims)
++	require.NoError(t, err)
++
++	vectors := []uint64{mKeyLaunchMitVector, mKeyCurrentMitVector}
++	otherVectors, noVectors := maps.Clone(ev), maps.Clone(ev)
++	for _, k := range vectors {
++		require.Contains(t, ev, k, "the report holds its mitigation vectors")
++		require.NotNil(t, ev[k].Val.RawValue)
++		b, err := ev[k].Val.RawValue.GetBytes()
++		require.NoError(t, err)
++		b = bytes.Clone(b)
++		b[len(b)-1] ^= 1 // one mitigation more or less
+ 		m := comid.MustNewUintMeasurement(uint(k))
+ 		m.SetRawValueBytes(b, nil)
+-		return *m
++		otherVectors[k] = *m
++		delete(noVectors, k)
+ 	}
+-	vec := func(v byte) []byte { return []byte{0, 0, 0, 0, 0, 0, 0, v} }
+-	ref := map[uint64]comid.Measurement{
+-		mKeyLaunchMitVector:  raw(mKeyLaunchMitVector, vec(0x1f)),
+-		mKeyCurrentMitVector: raw(mKeyCurrentMitVector, vec(0x1f)),
++
++	evComid, err := transformEvidenceToComid(&evidence)
++	require.NoError(t, err)
++	fromReport, err := transformValueTripleToMeasurementsMap(&evComid.Triples.ReferenceValues.Values[0])
++	require.NoError(t, err)
++	for _, k := range vectors {
++		require.Contains(t, fromReport, k, "go-gen-ref keeps the vectors in the reference values")
++	}
++
++	var launch, other []map[uint64]comid.Measurement
++	for _, m := range benchComids(t) {
++		if m.Triples.ReferenceValues == nil {
++			continue
++		}
++		for i := range m.Triples.ReferenceValues.Values {
++			ref, err := transformValueTripleToMeasurementsMap(&m.Triples.ReferenceValues.Values[i])
++			require.NoError(t, err)
++			if tryMatchEvidence(logger, ev, ref) {
++				launch = append(launch, ref)
++			} else {
++				other = append(other, ref)
++			}
++		}
++	}
++	require.Len(t, launch, 1, "the reference values of the report's launch, in the attestation-bench CoRIM")
++	require.NotEmpty(t, other, "the reference values of the other approved launch")
++
++	for name, ref := range map[string]map[uint64]comid.Measurement{
++		"go-gen-ref, from the report": fromReport,
++		"the attestation-bench CoRIM": launch[0],
++	} {
++		require.True(t, tryMatchEvidence(logger, ev, ref), "%s: the report's vectors", name)
++		require.True(t, tryMatchEvidence(logger, otherVectors, ref), "%s: other vectors", name)
++		require.True(t, tryMatchEvidence(logger, noVectors, ref), "%s: no vectors (report version 3)", name)
++	}
++	for _, ref := range other {
++		require.False(t, tryMatchEvidence(logger, otherVectors, ref), "the other launch")
++		require.False(t, tryMatchEvidence(logger, noVectors, ref), "the other launch")
+ 	}
+-	logger := log.Named("test")
+-	require.True(t, tryMatchEvidence(logger, map[uint64]comid.Measurement{
+-		mKeyLaunchMitVector:  raw(mKeyLaunchMitVector, vec(0x0b)),
+-		mKeyCurrentMitVector: raw(mKeyCurrentMitVector, vec(0x0b)),
+-	}, ref), "other vectors")
+-	require.True(t, tryMatchEvidence(logger, map[uint64]comid.Measurement{}, ref), "no vectors (report version 3)")
+-
+-	tcb := comid.MustNewUintMeasurement(uint(mKeyLaunchTcb))
+-	tcb.SetSVN(0xde1d000000000004)
+-	ref[mKeyLaunchTcb] = *tcb
+-	require.False(t, tryMatchEvidence(logger, map[uint64]comid.Measurement{}, ref), "a launch value is still required")
+ }
+diff --git a/scheme/sevsnp/scheme_der_test.go b/scheme/sevsnp/scheme_der_test.go
+index b0a6fc4..b4088c5 100644
+--- a/scheme/sevsnp/scheme_der_test.go
++++ b/scheme/sevsnp/scheme_der_test.go
+@@ -4,7 +4,6 @@ package sevsnp
+ 
+ import (
+ 	_ "embed"
+-	"encoding/binary"
+ 	"encoding/hex"
+ 	"encoding/pem"
+ 	"testing"
+@@ -19,80 +18,84 @@ import (
+ //go:embed test/evidence/sevsnp-tsm-report.cbor
+ var sevsnpTSMReportCBOR []byte
+ 
+-// derCertTable rewrites a certificate table whose entries are PEM into the
+-// same table with DER entries, as Google Cloud hosts supply it.
+-func derCertTable(t *testing.T, table []byte) []byte {
+-	t.Helper()
++// A report from a Google Cloud n2d-standard-2 (Milan) guest, signed with the chip's VCEK, with the certificate table as
++// the host supplied it: DER entries (test/evidence/SOURCES.md).
++//
++//go:embed test/evidence/sevsnp-gcp-tsm-report.cbor
++var sevsnpGCPTSMReportCBOR []byte
+ 
+-	type entry struct {
+-		guid []byte
+-		der  []byte
+-	}
++// the binding value of the run that made that report: its REPORT_DATA
++const sevsnpGCPBindingValue = "f896ba422824bb5bb0201da4599c9124d24ab896cc3cec0a0c3a9ceac9a5208f4cbc7d3aa0f895ccc61cf7811c5b2cc62ea41c70771150e64c09cb7668539524"
+ 
+-	var entries []entry
+-	for i := 0; i+24 <= len(table); i += 24 {
+-		guid := table[i : i+16]
+-		if string(guid) == string(make([]byte, 16)) {
+-			break
+-		}
+-		off := binary.LittleEndian.Uint32(table[i+16:])
+-		n := binary.LittleEndian.Uint32(table[i+20:])
+-		block, _ := pem.Decode(table[off : off+n])
+-		require.NotNil(t, block)
+-		entries = append(entries, entry{guid: guid, der: block.Bytes})
+-	}
+-	require.NotEmpty(t, entries)
++// The CoRIM the attestation-bench trust zone provisions this scheme with: the ARK-Milan trust anchor, and reference
++// values for its approved launches on Google Cloud and AWS (test/corim/SOURCES.md).
++//
++//go:embed test/corim/attestation-bench-corim-milan.cbor
++var benchCorimMilan []byte
+ 
+-	off := uint32(24 * (len(entries) + 1))
+-	var head, body []byte
+-	for _, e := range entries {
+-		head = append(head, e.guid...)
+-		head = binary.LittleEndian.AppendUint32(head, off+uint32(len(body)))
+-		head = binary.LittleEndian.AppendUint32(head, uint32(len(e.der)))
+-		body = append(body, e.der...)
++// benchComids is the CoMIDs of the attestation-bench CoRIM.
++func benchComids(t *testing.T) []comid.Comid {
++	t.Helper()
++	var c corim.UnsignedCorim
++	require.NoError(t, c.FromCBOR(benchCorimMilan))
++	var out []comid.Comid
++	for _, tag := range c.Tags {
++		var m comid.Comid
++		require.NoError(t, m.FromCBOR(tag.Content))
++		out = append(out, m)
+ 	}
+-	head = append(head, make([]byte, 24)...)
++	return out
++}
+ 
+-	return append(head, body...)
++// benchTrustAnchors is the trust anchor of the attestation-bench CoRIM.
++func benchTrustAnchors(t *testing.T) []*comid.KeyTriple {
++	t.Helper()
++	var tas []*comid.KeyTriple
++	for _, m := range benchComids(t) {
++		if m.Triples.AttestVerifKeys == nil {
++			continue
++		}
++		for i := range *m.Triples.AttestVerifKeys {
++			tas = append(tas, &(*m.Triples.AttestVerifKeys)[i])
++		}
++	}
++	require.Len(t, tas, 1)
++	return tas
+ }
+ 
++// A host's certificate table holds PEM entries (upstream's report) or DER entries (Google Cloud's): both verify.
+ func Test_ValidateEvidenceIntegrity_DERCertTable(t *testing.T) {
+ 	var (
+-		endCorim     corim.UnsignedCorim
+-		endComid     comid.Comid
+-		trustAnchors []*comid.KeyTriple
+-		tsm          tokens.TSMReport
++		endCorim corim.UnsignedCorim
++		endComid comid.Comid
+ 	)
+-
+ 	require.NoError(t, endCorim.FromCBOR(sevsnpCorimValidEndorsements))
+ 	require.NoError(t, endComid.FromCBOR(endCorim.Tags[1].Content))
+ 	keyTriples := *endComid.Triples.AttestVerifKeys
+-	trustAnchors = append(trustAnchors, &keyTriples[0])
+-
+-	nonce, err := hex.DecodeString("4d4944424e48323869696f69736a5079787878787878787878787878787878784d4944424e48323869696f69736a507978787878787878787878787878787878")
++	upstreamTA := []*comid.KeyTriple{&keyTriples[0]}
++	upstreamNonce, err := hex.DecodeString("4d4944424e48323869696f69736a5079787878787878787878787878787878784d4944424e48323869696f69736a507978787878787878787878787878787878")
+ 	require.NoError(t, err)
+ 
+-	require.NoError(t, tsm.FromCBOR(sevsnpTSMReportCBOR))
+-	pemToken, err := tsm.ToCBOR()
+-	require.NoError(t, err)
+-	tsm.AuxBlob = derCertTable(t, tsm.AuxBlob)
+-	derToken, err := tsm.ToCBOR()
++	gcpNonce, err := hex.DecodeString(sevsnpGCPBindingValue)
+ 	require.NoError(t, err)
++	benchTA := benchTrustAnchors(t)
+ 
+ 	Impl := NewImplementation()
+ 
+ 	for _, tc := range []struct {
+ 		name    string
+ 		token   []byte
++		ta      []*comid.KeyTriple
+ 		nonce   []byte
+ 		wantErr string
+ 	}{
+-		{name: "PEM certificate table", token: pemToken, nonce: nonce},
+-		{name: "DER certificate table", token: derToken, nonce: nonce},
++		{name: "PEM certificate table", token: sevsnpTSMReportCBOR, ta: upstreamTA, nonce: upstreamNonce},
++		{name: "DER certificate table, Google Cloud", token: sevsnpGCPTSMReportCBOR, ta: benchTA, nonce: gcpNonce},
+ 		{
+-			name:    "DER certificate table, other nonce",
+-			token:   derToken,
+-			nonce:   append([]byte{nonce[0] ^ 0xff}, nonce[1:]...),
++			name:    "DER certificate table, Google Cloud, other nonce",
++			token:   sevsnpGCPTSMReportCBOR,
++			ta:      benchTA,
++			nonce:   append([]byte{gcpNonce[0] ^ 0xff}, gcpNonce[1:]...),
+ 			wantErr: "nonce in the evidence doesn't match",
+ 		},
+ 	} {
+@@ -102,7 +105,7 @@ func Test_ValidateEvidenceIntegrity_DERCertTable(t *testing.T) {
+ 				MediaType: EvidenceMediaTypeTSMCbor,
+ 				Nonce:     tc.nonce,
+ 			}
+-			err := Impl.ValidateEvidenceIntegrity(&evidence, trustAnchors, nil)
++			err := Impl.ValidateEvidenceIntegrity(&evidence, tc.ta, nil)
+ 			if tc.wantErr != "" {
+ 				require.ErrorContains(t, err, tc.wantErr)
+ 				return
+@@ -114,13 +117,9 @@ func Test_ValidateEvidenceIntegrity_DERCertTable(t *testing.T) {
+ 
+ func Test_ValidateEvidenceIntegrity_DERCertTable_TAMismatch(t *testing.T) {
+ 	var tsm tokens.TSMReport
++	require.NoError(t, tsm.FromCBOR(sevsnpGCPTSMReportCBOR))
+ 
+-	require.NoError(t, tsm.FromCBOR(sevsnpTSMReportCBOR))
+-	tsm.AuxBlob = derCertTable(t, tsm.AuxBlob)
+-	derToken, err := tsm.ToCBOR()
+-	require.NoError(t, err)
+-
+-	// the ASK from the same table stands in for a trust anchor that is not the ARK
++	// the ASK from the same DER table, given as the trust anchor: it is not the ARK
+ 	certs, err := parseCertChainFromTSMReport(&tsm)
+ 	require.NoError(t, err)
+ 	askPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certs.GetAskCert()})
+@@ -128,7 +127,7 @@ func Test_ValidateEvidenceIntegrity_DERCertTable_TAMismatch(t *testing.T) {
+ 	require.NoError(t, err)
+ 	trustAnchors := []*comid.KeyTriple{{VerifKeys: comid.CryptoKeys{ta}}}
+ 
+-	evidence := appraisal.Evidence{Data: derToken, MediaType: EvidenceMediaTypeTSMCbor}
++	evidence := appraisal.Evidence{Data: sevsnpGCPTSMReportCBOR, MediaType: EvidenceMediaTypeTSMCbor}
+ 	err = NewImplementation().ValidateEvidenceIntegrity(&evidence, trustAnchors, nil)
+ 	require.ErrorIs(t, err, ErrTAMismatch)
+ }
+diff --git a/scheme/sevsnp/test/certs/SOURCES.md b/scheme/sevsnp/test/certs/SOURCES.md
+new file mode 100644
+index 0000000..2783d2c
+--- /dev/null
++++ b/scheme/sevsnp/test/certs/SOURCES.md
+@@ -0,0 +1,5 @@
++# test/certs
++
++`gce-cc-tcb-root_1.crt`, sha256 `e876bc6978bf4f3da445f98a0a82363c8c0bae5a1fc033c6df65846a6cb0f18c`, is Google's root
++for its signed launch endorsements, from https://pki.goog/cloud_integrity/GCE-cc-tcb-root_1.crt (the same bytes on
++7 October 2026): a real certificate that AMD did not issue.
+diff --git a/scheme/sevsnp/test/certs/gce-cc-tcb-root_1.crt b/scheme/sevsnp/test/certs/gce-cc-tcb-root_1.crt
+new file mode 100644
+index 0000000000000000000000000000000000000000..045019cd089b8c78e99202d1d965b36fbafe3ba9
+GIT binary patch
+literal 1570
+zcmXqLVv{pyV!pJ1nTe5!iILI3k&RQU&7<u*FC!zDfyn}X170@Hgf<VxRAv??MplM}
+zG6qrz6&z@?i-4vm7*reb7;v#MhqAB<GlvE{8gd(Of_NOlOyQ1(f(HB`4!baicV<y`
+zPGVk)A;=D(5SK8Udwza;PO71Zfe=W5TbSE5FFi9aHMJ-+FWpeWKnx_xEX?oj?5dlb
+ztXq<tq+67qUt-8*zyXqB6=pOvkQ3)MGBz|YG&3?ZH8C=c66ZCs0CG*C+<|pm6O$4s
+z#9#po3{U1JCVmEkCMGVXCMHIPZBmb(Yp)8`EV#q7D&tceZ%VwPbeEXczcQP*HbU>W
+z`mnLzVGv%U6vDZnki}+!ht8F=oaSY(avs;Wr(ZeQK6O{m_NkT^OW#WxHVPh!Zsiwx
+zE3&S+s8z(S;m0TMc_9y)(k4e+dEHNY_=qDux%2b$@OvQ-j@AEDs$959u-fk6^2K@f
+zDF)%vtai&=&Er0?Jxk!)FHu?}<oNw$UT)yc4UC^WE4h=CZ#+u#?)jlC@c;efRciN+
+zn>guDZ)Di;c-!T=tAfX45)TF@zy9&^-qQY$a=-iz%Gc)YDLWEs!Z+_>hpy3O!I<`K
+zd%7Dcxc1rZllu_=Qo+N|$?xaRo1E_+@0usJ?)IWZ677>x68yvpUYwV@l$5O|*?fKH
+zelyiVncP{4ZLd~FY@BPCBD?qW)K8+FyUJ7+otP*XaP$m!HVc<__{4mZGc0fSD7G&2
+z{#|gq>Se3wR&AD!Qx86vIT`HCKgqOZ<2A3`!-0-RRhI6^-#hd5qqWxztADL?P<f=9
+z<C!e2+#a&k^8HM=^u+$ZXWSA>Roza>^ZY5VdR{vF74zop`75~A?Jx*=T6zEC1kpE^
+zFLX_|9M=lG-L9~2%9J3xhxwYux~ugLT=-HJqczR&>O8;Rxadx&ye~CfXWAk)xPDGG
+z%sdg~X6ou@Y@77td+MR;q^}J7(qxrhUEIPYxT$8U^v9@{2d9~s85tNCyBatf@BtIF
+zEI%XTe-;*Co?-)M2w7nepTmF+NC6Xzfh<T3ABz}^Na6Ci7X%ZxZdCbJ`*zLWrr#g4
+zRc)z|lYxnok)dMq4c!R^owxN`<aRu?Gnb9uv()3Yk@|mIj+r};AD5cG*0f~xt6zK_
+z?>NN1?pSTV|Hn5it_NL94{|MBp5N)uWPfT?uzK22_hsEzOk<n=O6%%09y@Eb^NkVz
+z%o$HoLar=p`R1C%{HO1b<z=%2`}SEpK5ujTu)M+X8KT9qH}X={?u2Q&KW)+9uHq*D
+zr%ie9Ij_HSW~+uq6>KXtP_Q!Ee~B~E{E2{JX02_X!TQ&QZ3WN8*KPRlX=B+m{lH45
+z)dgoO#f2_LK5A)D`0l>iqD|ya(BYMa4(3dDU&YSO@s+C$GT#x$b}gWU%~OZr%jrnt
+z$5FL$&s<j}_xUqzdT>el_iVYkDGn|Y`|b<<Zx>wYk(`)#NUxDspkbA%<Ru{iZFiP?
+zfzK2Z-b{Bdt`26pAKtQcm+6~T*SX!EC1<hhHQ%uD<8n7Uxl_T+RrMYHx*G#EpE6YK
+zGFWI3BrPN!u5xeBof}3vkMi$aJFw>c`w890(>V5SeADt|lB`Xh@a{wW#un~IZ~f~Y
+z?oLqLz0M}<!<3`JDn>eMD=a<j%(A;Ki{7%G|3A<&?}K|o_LGKJkA82Ge8ly2W$Po(
+zkXo^V*{f$)XfK&;!S?yj9*O6lxXZg$e_i?^eBJrDYu9z2)CtkdpZTQ^2AUk{VEQ>d
+h?S@Cq<3r0%#N;Q;GU>8bzc6Xb7rpCu3PfLW0|2fPUseDB
+
+literal 0
+HcmV?d00001
+
+diff --git a/scheme/sevsnp/test/corim/SOURCES.md b/scheme/sevsnp/test/corim/SOURCES.md
+new file mode 100644
+index 0000000..189db04
+--- /dev/null
++++ b/scheme/sevsnp/test/corim/SOURCES.md
+@@ -0,0 +1,9 @@
++# test/corim
++
++`attestation-bench-corim-milan.cbor` is, byte for byte, the CoRIM the attestation-bench trust zone provisions this
++scheme with (`trust/veraison-corim-milan.cbor` there, sha256
++`77c4da9cec5c9213a8b5a8f9522cbafe7dc8c3cd762172dcc3d421040042166d`). It holds one CoMID with AMD's ARK-Milan as the
++trust anchor and one reference-value CoMID for each approved SEV-SNP launch, on Google Cloud and on AWS, made on
++28 September 2026 by go-gen-ref's ReportToComid from SEV-SNP reports of those launches (`hwcheck/cmd/mkcorim`).
++
++The other files are upstream's.
+diff --git a/scheme/sevsnp/test/corim/attestation-bench-corim-milan.cbor b/scheme/sevsnp/test/corim/attestation-bench-corim-milan.cbor
+new file mode 100644
+index 0000000000000000000000000000000000000000..589c55dba182d7e6688826ca85f547406d557bce
+GIT binary patch
+literal 3741
+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
+ab$T3%C(m^H!*$wV)V9_QM}t<or~eDzk@-0Q
+
+literal 0
+HcmV?d00001
+
+diff --git a/scheme/sevsnp/test/crl/SOURCES.md b/scheme/sevsnp/test/crl/SOURCES.md
+deleted file mode 100644
+index be1bc70..0000000
+--- a/scheme/sevsnp/test/crl/SOURCES.md
++++ /dev/null
+@@ -1,19 +0,0 @@
+-# test/crl
+-
+-Byte-for-byte copies of files the AMD Key Distribution Service served on 30 September 2026, kept for the
+-revocation tests of `p0_test.go` (no test reaches the network).
+-
+-| file | sha256 | fetched from |
+-|---|---|---|
+-| `kds-vcek-crl-milan-20260930.der` | `dd68e9e3feb97dd0e95135feeae47d9cc193c73239a6281ec9884c00d5e6a525` | https://kdsintf.amd.com/vcek/v1/Milan/crl |
+-| `kds-vcek-crl-genoa-20260930.der` | `f242adeb201bd20fc6bf2cd5b77646619ac4a55983e53bbe34a29ae58ba0cc16` | https://kdsintf.amd.com/vcek/v1/Genoa/crl |
+-| `kds-vcek-crl-turin-20260930.der` | `0699382acf7fb955e57c54aaa2f1e8b43908ebc3181f63d6ae5503e6cd4f604b` | https://kdsintf.amd.com/vcek/v1/Turin/crl |
+-| `kds-vcek-cert_chain-milan.pem` | `22e62f8d2c21a156470145fc75f7b5a377cb053ced3e97f0bd3f8d8ca5941ce6` | https://kdsintf.amd.com/vcek/v1/Milan/cert_chain |
+-| `kds-vcek-cert_chain-genoa.pem` | `e6ecc853fa56d3170a624d40851f98a1036f974b50204ea69e6aec91d777aca3` | https://kdsintf.amd.com/vcek/v1/Genoa/cert_chain |
+-
+-The three CRLs: this update 2026-09-22, next update 2026-11-09; the Genoa CRL revokes serial 020001 (the Genoa ASK
+-before the current 020002), the Milan and Turin CRLs revoke nothing.
+-
+-The KDS serves the same CRL, the ARK's, at the VLEK's distribution point (`https://kdsintf.amd.com/vlek/v1/<product>/crl`):
+-on 7 October 2026 at 04:36Z its bytes for Milan, Genoa and Turin had the SHA-256 of the three files above, so the tests
+-serve those files for both points.
+diff --git a/scheme/sevsnp/test/crl/kds-vcek-cert_chain-genoa.pem b/scheme/sevsnp/test/crl/kds-vcek-cert_chain-genoa.pem
+deleted file mode 100644
+index 2abca27..0000000
+--- a/scheme/sevsnp/test/crl/kds-vcek-cert_chain-genoa.pem
++++ /dev/null
+@@ -1,74 +0,0 @@
+------BEGIN CERTIFICATE-----
+-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
+------END CERTIFICATE-----
+------BEGIN CERTIFICATE-----
+-MIIGYzCCBBKgAwIBAgIDAgAAMEYGCSqGSIb3DQEBCjA5oA8wDQYJYIZIAWUDBAIC
+-BQChHDAaBgkqhkiG9w0BAQgwDQYJYIZIAWUDBAICBQCiAwIBMKMDAgEBMHsxFDAS
+-BgNVBAsMC0VuZ2luZWVyaW5nMQswCQYDVQQGEwJVUzEUMBIGA1UEBwwLU2FudGEg
+-Q2xhcmExCzAJBgNVBAgMAkNBMR8wHQYDVQQKDBZBZHZhbmNlZCBNaWNybyBEZXZp
+-Y2VzMRIwEAYDVQQDDAlBUkstR2Vub2EwHhcNMjIwMTI2MTUzNDM3WhcNNDcwMTI2
+-MTUzNDM3WjB7MRQwEgYDVQQLDAtFbmdpbmVlcmluZzELMAkGA1UEBhMCVVMxFDAS
+-BgNVBAcMC1NhbnRhIENsYXJhMQswCQYDVQQIDAJDQTEfMB0GA1UECgwWQWR2YW5j
+-ZWQgTWljcm8gRGV2aWNlczESMBAGA1UEAwwJQVJLLUdlbm9hMIICIjANBgkqhkiG
+-9w0BAQEFAAOCAg8AMIICCgKCAgEA3Cd95S/uFOuRIskW9vz9VDBF69NDQF79oRhL
+-/L2PVQGhK3YdfEBgpF/JiwWFBsT/fXDhzA01p3LkcT/7LdjcRfKXjHl+0Qq/M4dZ
+-kh6QDoUeKzNBLDcBKDDGWo3v35NyrxbA1DnkYwUKU5AAk4P94tKXLp80oxt84ahy
+-HoLmc/LqsGsp+oq1Bz4PPsYLwTG4iMKVaaT90/oZ4I8oibSru92vJhlqWO27d/Rx
+-c3iUMyhNeGToOvgx/iUo4gGpG61NDpkEUvIzuKcaMx8IdTpWg2DF6SwF0IgVMffn
+-vtJmA68BwJNWo1E4PLJdaPfBifcJpuBFwNVQIPQEVX3aP89HJSp8YbY9lySS6PlV
+-EqTBBtaQmi4ATGmMR+n2K/e+JAhU2Gj7jIpJhOkdH9firQDnmlA2SFfJ/Cc0mGNz
+-W9RmIhyOUnNFoclmkRhl3/AQU5Ys9Qsan1jT/EiyT+pCpmnA+y9edvhDCbOG8F2o
+-xHGRdTBkylungrkXJGYiwGrR8kaiqv7NN8QhOBMqYjcbrkEr0f8QMKklIS5ruOfq
+-lLMCBw8JLB3LkjpWgtD7OpxkzSsohN47Uom86RY6lp72g8eXHP1qYrnvhzaG1S70
+-vw6OkbaaC9EjiH/uHgAJQGxon7u0Q7xgoREWA/e7JcBQwLg80Hq/sbRuqesxz7wB
+-WSY254cCAwEAAaN+MHwwDgYDVR0PAQH/BAQDAgEGMB0GA1UdDgQWBBSfXfn+Ddjz
+-WtAzGiXvgSlPvjGoWzAPBgNVHRMBAf8EBTADAQH/MDoGA1UdHwQzMDEwL6AtoCuG
+-KWh0dHBzOi8va2RzaW50Zi5hbWQuY29tL3ZjZWsvdjEvR2Vub2EvY3JsMEYGCSqG
+-SIb3DQEBCjA5oA8wDQYJYIZIAWUDBAICBQChHDAaBgkqhkiG9w0BAQgwDQYJYIZI
+-AWUDBAICBQCiAwIBMKMDAgEBA4ICAQAdIlPBC7DQmvH7kjlOznFx3i21SzOPDs5L
+-7SgFjMC9rR07292GQCA7Z7Ulq97JQaWeD2ofGGse5swj4OQfKfVv/zaJUFjvosZO
+-nfZ63epu8MjWgBSXJg5QE/Al0zRsZsp53DBTdA+Uv/s33fexdenT1mpKYzhIg/cK
+-tz4oMxq8JKWJ8Po1CXLzKcfrTphjlbkh8AVKMXeBd2SpM33B1YP4g1BOdk013kqb
+-7bRHZ1iB2JHG5cMKKbwRCSAAGHLTzASgDcXr9Fp7Z3liDhGu/ci1opGmkp12QNiJ
+-uBbkTU+xDZHm5X8Jm99BX7NEpzlOwIVR8ClgBDyuBkBC2ljtr3ZSaUIYj2xuyWN9
+-5KFY49nWxcz90CFa3Hzmy4zMQmBe9dVyls5eL5p9bkXcgRMDTbgmVZiAf4afe8DL
+-dmQcYcMFQbHhgVzMiyZHGJgcCrQmA7MkTwEIds1wx/HzMcwU4qqNBAoZV7oeIIPx
+-dqFXfPqHqiRlEbRDfX1TG5NFVaeByX0GyH6jzYVuezETzruaky6fp2bl2bczxPE8
+-HdS38ijiJmm9vl50RGUeOAXjSuInGR4bsRufeGPB9peTa9BcBOeTWzstqTUB/F/q
+-aZCIZKr4X6TyfUuSDz/1JDAGl+lxdM0P9+lLaP9NahQjHCVf0zf1c1salVuGFk2w
+-/wMz1R1BHg==
+------END CERTIFICATE-----
+diff --git a/scheme/sevsnp/test/crl/kds-vcek-cert_chain-milan.pem b/scheme/sevsnp/test/crl/kds-vcek-cert_chain-milan.pem
+deleted file mode 100644
+index 148ca46..0000000
+--- a/scheme/sevsnp/test/crl/kds-vcek-cert_chain-milan.pem
++++ /dev/null
+@@ -1,74 +0,0 @@
+------BEGIN CERTIFICATE-----
+-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
+------END CERTIFICATE-----
+------BEGIN CERTIFICATE-----
+-MIIGYzCCBBKgAwIBAgIDAQAAMEYGCSqGSIb3DQEBCjA5oA8wDQYJYIZIAWUDBAIC
+-BQChHDAaBgkqhkiG9w0BAQgwDQYJYIZIAWUDBAICBQCiAwIBMKMDAgEBMHsxFDAS
+-BgNVBAsMC0VuZ2luZWVyaW5nMQswCQYDVQQGEwJVUzEUMBIGA1UEBwwLU2FudGEg
+-Q2xhcmExCzAJBgNVBAgMAkNBMR8wHQYDVQQKDBZBZHZhbmNlZCBNaWNybyBEZXZp
+-Y2VzMRIwEAYDVQQDDAlBUkstTWlsYW4wHhcNMjAxMDIyMTcyMzA1WhcNNDUxMDIy
+-MTcyMzA1WjB7MRQwEgYDVQQLDAtFbmdpbmVlcmluZzELMAkGA1UEBhMCVVMxFDAS
+-BgNVBAcMC1NhbnRhIENsYXJhMQswCQYDVQQIDAJDQTEfMB0GA1UECgwWQWR2YW5j
+-ZWQgTWljcm8gRGV2aWNlczESMBAGA1UEAwwJQVJLLU1pbGFuMIICIjANBgkqhkiG
+-9w0BAQEFAAOCAg8AMIICCgKCAgEA0Ld52RJOdeiJlqK2JdsVmD7FktuotWwX1fNg
+-W41XY9Xz1HEhSUmhLz9Cu9DHRlvgJSNxbeYYsnJfvyjx1MfU0V5tkKiU1EesNFta
+-1kTA0szNisdYc9isqk7mXT5+KfGRbfc4V/9zRIcE8jlHN61S1ju8X93+6dxDUrG2
+-SzxqJ4BhqyYmUDruPXJSX4vUc01P7j98MpqOS95rORdGHeI52Naz5m2B+O+vjsC0
+-60d37jY9LFeuOP4Meri8qgfi2S5kKqg/aF6aPtuAZQVR7u3KFYXP59XmJgtcog05
+-gmI0T/OitLhuzVvpZcLph0odh/1IPXqx3+MnjD97A7fXpqGd/y8KxX7jksTEzAOg
+-bKAeam3lm+3yKIcTYMlsRMXPcjNbIvmsBykD//xSniusuHBkgnlENEWx1UcbQQrs
+-+gVDkuVPhsnzIRNgYvM48Y+7LGiJYnrmE8xcrexekBxrva2V9TJQqnN3Q53kt5vi
+-Qi3+gCfmkwC0F0tirIZbLkXPrPwzZ0M9eNxhIySb2npJfgnqz55I0u33wh4r0ZNQ
+-eTGfw03MBUtyuzGesGkcw+loqMaq1qR4tjGbPYxCvpCq7+OgpCCoMNit2uLo9M18
+-fHz10lOMT8nWAUvRZFzteXCm+7PHdYPlmQwUw3LvenJ/ILXoQPHfbkH0CyPfhl1j
+-WhJFZasCAwEAAaN+MHwwDgYDVR0PAQH/BAQDAgEGMB0GA1UdDgQWBBSFrBrRQ/fI
+-rFXUxR1BSKvVeErUUzAPBgNVHRMBAf8EBTADAQH/MDoGA1UdHwQzMDEwL6AtoCuG
+-KWh0dHBzOi8va2RzaW50Zi5hbWQuY29tL3ZjZWsvdjEvTWlsYW4vY3JsMEYGCSqG
+-SIb3DQEBCjA5oA8wDQYJYIZIAWUDBAICBQChHDAaBgkqhkiG9w0BAQgwDQYJYIZI
+-AWUDBAICBQCiAwIBMKMDAgEBA4ICAQC6m0kDp6zv4Ojfgy+zleehsx6ol0ocgVel
+-ETobpx+EuCsqVFRPK1jZ1sp/lyd9+0fQ0r66n7kagRk4Ca39g66WGTJMeJdqYriw
+-STjjDCKVPSesWXYPVAyDhmP5n2v+BYipZWhpvqpaiO+EGK5IBP+578QeW/sSokrK
+-dHaLAxG2LhZxj9aF73fqC7OAJZ5aPonw4RE299FVarh1Tx2eT3wSgkDgutCTB1Yq
+-zT5DuwvAe+co2CIVIzMDamYuSFjPN0BCgojl7V+bTou7dMsqIu/TW/rPCX9/EUcp
+-KGKqPQ3P+N9r1hjEFY1plBg93t53OOo49GNI+V1zvXPLI6xIFVsh+mto2RtgEX/e
+-pmMKTNN6psW88qg7c1hTWtN6MbRuQ0vm+O+/2tKBF2h8THb94OvvHHoFDpbCELlq
+-HnIYhxy0YKXGyaW1NjfULxrrmxVW4wcn5E8GddmvNa6yYm8scJagEi13mhGu4Jqh
+-3QU3sf8iUSUr09xQDwHtOQUVIqx4maBZPBtSMf+qUDtjXSSq8lfWcd8bLr9mdsUn
+-JZJ0+tuPMKmBnSH860llKk+VpVQsgqbzDIvOLvD6W1Umq25boxCYJ+TuBoa4s+HH
+-CViAvgT9kf/rBq1d+ivj6skkHxuzcxbk1xv6ZGxrteJxVH7KlX7YRdZ6eARKwLe4
+-AFZEAwoKCQ==
+------END CERTIFICATE-----
+diff --git a/scheme/sevsnp/test/crl/kds-vcek-crl-genoa-20260930.der b/scheme/sevsnp/test/crl/kds-vcek-crl-genoa-20260930.der
+deleted file mode 100644
+index 4c62b80b3655488adc3a2322f574501518da6566..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 890
+zcmXqLVlFdiV$@<{WHfMO<J4;NX#38~$jD`2vVh-!myI)_&4V$OnT3gom0_WbffPao
+z2b%06W+p}hgK9$&10go%P!?_;Zr8l@%)HdpqRhN>Lv903kSLolQ)n<u2|EvWaAICb
+zqJncyVo@SY2?r08v!kKBfh<Tp7mt`@N?BrFa%zf#Z)S2)zJg0?S!Qx-v7wNG07wBd
+z52s_0x2}6?UVfrDuaTL7rIC?=xv`<KaTJJaXlP(*U}yjYQ3hfLB23Io42(c=BSQmY
+zLqj95_yT<cT?2WbS+dG35(Z)oBJ*Q^{^PyzIqHJ3l<NCNP5*s{E20g!Kng@yfPUnr
+zLNGBmF)=bY@IQQZ`heP<DY_C|H-g#Xyuvp9uRXTx@bBs0yrtaMXJsbmKJt2O^zQ8K
+z@Vd(Pd)7U1zje~re`<<c;c9cgloZaEmppd=Bh5J`mu<X~c~ow>#DS@;nWrCK;Qlk|
+zW5=;X&nkffR(oIWKE<HE^K{XAg+mLXk8zx6%2JB0lx+z4?eQnyiFHp!nkuiMfAj02
+zw@SZQd&RTmg1gUjJM&d;PRok=yQH<yy5``m-QVL9LvpKs_uqc;D_GLo{HyBJ8}V-{
+zex-96UOMihDbjoEQ%K63q|0KQnKCmOj=5T@AJ@5Qq1>Os{YygjkHdP_*t^1yQuCb*
+z_x)yd^>|)w9<+R+-GeQiM=XB*ZIx%}R61~{|H01-5vd1P9y}m-{=<$NVPe-_<OrVp
+zrF=ZmWK-zpr|+v?XfNCsrWPpjIMdro?v}{2C(9R3wcS7aNS%@Q7oVl?U(8_q`dOXL
+z;gqDo<6YMZYm=83eq&%fRG29k{na7pKIb_G8`nBUos5+c%Zwk+`^&N|bEor^BljZ$
+z#AlmyTr(@JZP<8c^2c`d2Dc9?6Lz)y^AmHE`C2SH?Z?{?o{iTY|DUXPXOm`fZOZm-
+zl}~C6oX*@U5e)eE-~dyp0Jq4a_G4!Qe=WSBcl#pO1HVK0AuHbrx7TR>TyK!@?D6&O
+gs?WAOU%Pwd)}REwsAbzyr(6&SJ>g}ud*Ll907Y(88UO$Q
+
+diff --git a/scheme/sevsnp/test/crl/kds-vcek-crl-milan-20260930.der b/scheme/sevsnp/test/crl/kds-vcek-crl-milan-20260930.der
+deleted file mode 100644
+index 5a7ad65690430202c635c5c0cca33adf3bfb5870..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 866
+zcmXqLVvaLtViaOxWHfMO<J4;NX#38~$jD`2vVh-!myI)_&4V$OnT3gom0_WbffPao
+z2b%06W+p}hgK9$&10go%P!?_;Zr8l@%)HdpqRhN>Lv903kSLolQ)n<u2|EvWaAICb
+zqJncyVo@SY2?r08v!kKBfh<Tp7mt`@N?BrFa%zf#Z)S2)zJg0?S!Qx-v7wNG07wBd
+z52s_0x2|tyPGX)ouaTL7rIC?=xv{B<Q51-4XlP(*U}yjYQ4919bPeQzdSsPZBn-qF
+zL|WHKU3C6_Vom6kqq2@3tFKmgT?sbe0x1w-0s4i93c<nL#Kg$3);q=PxqI~8sVci$
+zTJ|qp(sSs2rLu5R?3q+a<>CW-53hUp?A5emto+%(YR?<=-#h&*R^jwU+w+&+#H0xX
+z^-f4JpHlhxkjkp7dkViV=v~Khdt)Q(=cSW2_m$^8?z=kSqSVxozS}A1GfuU+=Y6c2
+z;QF;gN&DpC?+qbGcYJ0&AhN6Do2Gs?gJitA_3?Qe{cQ1Ui>IDi%2VgN=<O=0m5=|+
+zzPp^xJ#j+&qigB>(+eUlOtE3jHnC_gy=NAE$iLu*?`{D(X`tKHqhGTW2N?;Z?rXW<
+z5n)rxo9`JC=-_C}bdGO-z0%{^(JTx8`z~8><6zK~?d6AMBgIb|mu}lPDahr><Jp!S
+zzckK1?A>@mn*CcX%lUL?_JrA2{2JylzK-6nl-%y`^S|KgwR5kQ{V=_=?QNUF-CWhS
+zH@<=SA6MPqts=&oB&Xn)_-RU;O}<a#r-c&P%S)mcJ@%1Y%D7qji_MYabCkZ{^Qovw
+zp8O^Afuy7!tJk%cT6V#6zeru1_sp6*=$Cs%&c&5$s`4*!F51p(cPhL6+R>Z*Duwqx
+z=tWJ~C(zhE>4et$I$xn>ht(OD?%<V6xp(Tf@S90O`y^yIg7qes2|I?*{XN$xuj=@x
+z%1+K}zQ>+j*!lXZS;5L>MmlZVdgjOPYFswMkGC!7Z~YP1h0g0<hE{3o$Hz#!Wy-%~
+L>t5-h5-kG&;h0J+
+
+diff --git a/scheme/sevsnp/test/crl/kds-vcek-crl-turin-20260930.der b/scheme/sevsnp/test/crl/kds-vcek-crl-turin-20260930.der
+deleted file mode 100644
+index 46f2bc78d790f517ca2ed0c6848d405adb74a688..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 866
+zcmXqLVvaLtViaOxWHfMO<J4;NX#38~$jD`2vVh-!myI)_&4V$OnT3gom0_WbffPao
+z2b%06W+p}hgK9$&10go%P!?_;Zr8l@%)HdpqRhN>Lv903kSLolQ)n<u2|EvWaAICb
+zqJncyVo@SY2?r08v!kKBfh<Tp7mt`@N?BrFa%zf#Z)S2)zJg0?S!Qx-v7wNG07wBd
+z52s_0w{A!&&=zrCBQpa_BO?QIV@qShC=l1s(7@8b&;SUc7U&!38ps3n$SSi)7>G59
+zq%4Rpe9Xg@a>KgxDP!b3?RRX<E(Tm61tKg!zi?0?IGCH57#Vz@nP>fVpIQ-CqpJIK
+z#p?dsr}lI1WxKUmGRNc0t?FY}Ij=3A>=!oA`q0v4MUR~YU2OXAe)_cenNx=_r(OCn
+z{o6j@cP-fK`;uXX?0eo7l~?+nZ=8K#$LrLU7W-84oa!S_ZuIR@sAl4Rx-w?<&8Lj^
+zIXzkx9ge$szkNve{Vk@gw)$v`)@sM!kF8Z?er}$+#P8^KjX$f{xiw{(qh7lH%~+A9
+z(VG!*hC5T}L40yo!P_}bvaj-VMb_=_*tBi+^}63lb-l?fZ^XlXJuTYR)Dqz)b-7el
+z_T|Lr%_>}{UpTJZX7&HlA6F^WOMNB#uGLKJS*`h_FXn}7ZN(>RmM?QF>bMSapJ|P|
+zk>;VfI>6;l;8bm^N6qW2oy6C@zR6*EPpf@xSg?6to&K7yC6#ItU;FNDoPD-q7rU+9
+z_j|WH9A>AyocL{D{Z2*Z#s3bioPObDnn#hfVrT!%GiMSvzGzcPeW^A{K<sOZe7NJ!
+zmruTl{>jn&Z+jq6l3&q+E9DlSu8>l=bkMx58nvIpShjSlTw1p-(ECr}oj1yszoIR_
+ziSx|TTkHC_sP606eX&nB)nvYU(Je8*@vG-ML75a4d#%Ek-g?ivY=o!mv+Q3dv9<fI
+z<HU1(4;MA2O+U8ZBu@70?FT0^+|%vs%I@TH-uvtS>)CX7S+g~P3s1zic}LD&?KgAd
+Ki!4DaQC$G)&r0F|
+
+diff --git a/scheme/sevsnp/test/evidence/SOURCES.md b/scheme/sevsnp/test/evidence/SOURCES.md
+new file mode 100644
+index 0000000..5ff49ad
+--- /dev/null
++++ b/scheme/sevsnp/test/evidence/SOURCES.md
+@@ -0,0 +1,10 @@
++# test/evidence
++
++`sevsnp-gcp-tsm-report.cbor` is, byte for byte, the TSM report token of the honest Enrollment Evidence (present-nonce)
++of an attestation-bench hardware run on Google Cloud (n2d-standard-2, Milan) on 7 October 2026, as the guest made it
++through configfs-tsm: `hwcheck/evidence/20261007T134801Z-gcp-sev-snp/enroll-present-nonce/evidence.tsm.cbor` there,
++sha256 `ddc3306caf7fd898cf38b41c81cf528aa21959e8cbceb55e0e3c5593d939605a`. The report is signed with the chip's VCEK,
++and the host's certificate table holds DER entries. Its REPORT_DATA is the run's binding value (`binding_value_hex` in
++the run's `enroll-present-nonce/meta.json`).
++
++`sevsnp-vlek-tsm-report.cbor` is described in `scheme_vlek_test.go`; the other files are upstream's.
+diff --git a/scheme/sevsnp/test/evidence/sevsnp-gcp-tsm-report.cbor b/scheme/sevsnp/test/evidence/sevsnp-gcp-tsm-report.cbor
+new file mode 100644
+index 0000000000000000000000000000000000000000..41c2396c722a81856bb51e0080f729d9c0c4b542
+GIT binary patch
+literal 5989
+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
+
+literal 0
+HcmV?d00001
+

@@ -1,7 +1,10 @@
 # The EST server: GlobalSign's EST (MIT) as forked by the TWI SIG, at the head of Sudar's pull request #3
-# (branch sudar_feature_01), with our TACRA backend on top (patches/).
+# (branch sudar_feature_01), with our patches: 0001-0006 the TACRA backend and the attest-* wire format,
+#   0007 dependencies without a reached vulnerability, 0008 no tests on stand-ins, 0009 the server without the
+#   fork's mock CA (the TACRA backend alone, a strict configuration), 0010 the reference-vector tests in a package of
+#   their own, apart from the upstream tests' mock CA.
 NAME=globalsign-est
 REPO=https://github.com/TWI-Unified-Model/globalsign-est.git
 BASE=04ffa468b167eb36d8b1af0e354c4af41427a02e   # sudar_feature_01, sudarsh4495, 2026-09-27
 LICENSE=MIT
-VARIANTS="src:7:cec0552c07a049c5627f8c6fc849fbf41e001869"
+VARIANTS="src:10:04b06cb5ae48d919204c0e895337499171fb858c"

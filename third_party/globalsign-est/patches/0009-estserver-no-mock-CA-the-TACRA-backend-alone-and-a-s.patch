@@ -1,0 +1,627 @@
+From 0b1b5ceab0af9acea2ad4a5b93161c5cd865a260 Mon Sep 17 00:00:00 2001
+From: Serhii Nikolaichuk <nikolaichuk.s.f@gmail.com>
+Date: Wed, 7 Oct 2026 09:50:26 -0500
+Subject: [PATCH] estserver: no mock CA; the TACRA backend alone, and a strict
+ configuration
+
+The server created a mock CA at every start (a transient one when the
+configuration named none), issued its own TLS certificate from it when
+the configuration had no tls section, and used it as the CA behind the
+EST resources unless a tacra or attest section replaced it. The server
+now runs only with the TACRA backend: the mock CA, the mock attested CA
+(attest) and the self-issued server certificate are removed, and the tls
+and tacra sections are required. With tacra always present, TLS 1.3 is
+always the minimum.
+
+The configuration is decoded strictly: mock_ca, attest, any field the
+server does not know, or data after the object is an error, where it
+was ignored before. The sample and estserver.json.example are in the
+TACRA backend's shape. config_test.go checks that both parse, and that
+the mock CA's sections, a missing section, a missing key file and a
+misspelt field are refused.
+
+internal/mockca stays for the upstream tests that use it; the server no
+longer imports it.
+---
+ cmd/estserver/config.go      | 113 ++++++++++++++---------
+ cmd/estserver/config_test.go |  72 +++++++++++++++
+ cmd/estserver/doc.go         |   4 +-
+ cmd/estserver/flags.go       |   4 +-
+ cmd/estserver/main.go        | 172 +++++++----------------------------
+ estserver.json.example       |  47 +++++++---
+ 6 files changed, 216 insertions(+), 196 deletions(-)
+ create mode 100644 cmd/estserver/config_test.go
+
+diff --git a/cmd/estserver/config.go b/cmd/estserver/config.go
+index 8cac19a..14c1c01 100644
+--- a/cmd/estserver/config.go
++++ b/cmd/estserver/config.go
+@@ -16,40 +16,30 @@ limitations under the License.
+ package main
+ 
+ import (
++	"bytes"
+ 	"encoding/json"
++	"errors"
+ 	"fmt"
+-	"github.com/globalsign/est/internal/tacra"
+-	"io/ioutil"
++	"io"
++	"os"
+ 
+-	"github.com/globalsign/est/internal/mockca"
++	"github.com/globalsign/est/internal/tacra"
+ )
+ 
+-// config contains the EST server configuration.
++// config contains the EST server configuration. The server has no CA of its
++// own: the tls and tacra sections are required, and the mock CA's sections
++// of the server this one is forked from (mock_ca, attest) are refused, as is
++// any field the server does not know.
+ type config struct {
+-	MockCA              *mockCAConfig `json:"mock_ca,omitempty"`
+-	TLS                 *tlsConfig    `json:"tls,omitempty"`
++	TLS                 *tlsConfig    `json:"tls"`
+ 	AllowedHosts        []string      `json:"allowed_hosts,omitempty"`
+-	Attest              *attestConfig `json:"attest,omitempty"`
+-	Tacra               *tacra.Config `json:"tacra,omitempty"` // deployed Verifier and RRPs instead of the mock
++	Tacra               *tacra.Config `json:"tacra"` // the deployed verifiers and RRPs
+ 	HealthCheckPassword string        `json:"healthcheck_password"`
+ 	RateLimit           int           `json:"rate_limit"`
+ 	Timeout             int           `json:"timeout"`
+ 	Logfile             string        `json:"log_file"`
+ }
+ 
+-// attestConfig contains the attested credential acquisition configuration.
+-// The CAS decides the credential acquisition mechanism per target.
+-type attestConfig struct {
+-	Targets                  []mockca.TargetPolicy `json:"targets,omitempty"`
+-	TrustedProviderPublicKey string                `json:"trusted_provider_public_key"`
+-}
+-
+-// mockCAConfig contains the mock CA configuration.
+-type mockCAConfig struct {
+-	Certs string `json:"certificates"`
+-	Key   string `json:"private_key"`
+-}
+-
+ // tlsConfig contains the server's TLS configuration.
+ type tlsConfig struct {
+ 	ListenAddr string   `json:"listen_address"`
+@@ -61,32 +51,47 @@ type tlsConfig struct {
+ // configFromFile returns a new EST server configuration from a JSON-encoded
+ // configuration file.
+ func configFromFile(filename string) (*config, error) {
+-	data, err := ioutil.ReadFile(filename)
++	data, err := os.ReadFile(filename)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+ 
++	return parseConfig(data)
++}
++
++// parseConfig decodes a configuration strictly: an unknown field, or anything
++// after the configuration object, is an error.
++func parseConfig(data []byte) (*config, error) {
++	dec := json.NewDecoder(bytes.NewReader(data))
++	dec.DisallowUnknownFields()
++
+ 	var cfg config
+-	if err := json.Unmarshal(data, &cfg); err != nil {
++	if err := dec.Decode(&cfg); err != nil {
+ 		return nil, err
+ 	}
++	if _, err := dec.Token(); err != io.EOF {
++		return nil, errors.New("data after the configuration object")
++	}
++
++	switch {
++	case cfg.TLS == nil:
++		return nil, errors.New("no tls section: the server's certificates and private key are required")
++	case cfg.TLS.ListenAddr == "" || cfg.TLS.Certs == "" || cfg.TLS.Key == "":
++		return nil, errors.New("tls: listen_address, certificates and private_key are required")
++	case cfg.Tacra == nil:
++		return nil, errors.New("no tacra section: the server provisions credentials only with the TACRA backend")
++	}
+ 
+ 	return &cfg, nil
+ }
+ 
+ const sample = `{
+-    "mock_ca": {
+-        "certificates": "/path/to/CA/certificates.pem",
+-        "private_key": "/path/to/CA/private/key.pem"
+-    },
+     "tls": {
+         "listen_address": "localhost:8443",
+         "certificates": "/path/to/server/certificates.pem",
+         "private_key": "/path/to/server/private/key.pem",
+         "client_cas": [
+-            "/path/to/first/client/CA/root/certificate.pem",
+-            "/path/to/second/client/CA/root/certificate.pem",
+-            "/path/to/third/client/CA/root/certificate.pem"
++            "/path/to/client/CA/root/certificate.pem"
+         ]
+     },
+     "allowed_hosts": [
+@@ -94,21 +99,43 @@ const sample = `{
+         "127.0.0.1",
+         "[::1]"
+     ],
+-    "attest": {
+-		"trusted_provider_public_key": "/path/to/mock/provider-public-key.pem",
+-        "targets": [
+-            {
+-                "name": "RUP-workload-1",
+-                "mechanism": "enroll",
+-                "freshness_kind": "present-nonce"
++    "tacra": {
++        "client_cert": "/path/to/this/server/client/certificate.pem",
++        "client_key": "/path/to/this/server/client/private/key.pem",
++        "verifiers": {
++            "veraison": {
++                "url": "https://localhost:8080",
++                "ca": "/path/to/verifier/TLS/CA/certificate.pem",
++                "provider": "sev_guest"
++            }
++        },
++        "rrps": {
++            "ca": {
++                "url": "https://localhost:9101",
++                "ca": "/path/to/CA/gateway/TLS/CA/certificate.pem",
++                "rrp_id": "https://ca1.tacra.example",
++                "mode": "enroll",
++                "rats_model": "passport",
++                "verifiers": [
++                    "veraison"
++                ]
+             },
+-            {
+-                "name": "RUP-workload-2",
+-                "mechanism": "retrieve",
+-                "freshness_kind": "present-epoch",
+-                "epoch_marker": "deployment-epoch-1"
++            "vault": {
++                "url": "https://localhost:9102",
++                "ca": "/path/to/vault/gateway/TLS/CA/certificate.pem",
++                "rrp_id": "https://vault1.tacra.example",
++                "mode": "retrieve",
++                "rats_model": "background-check"
+             }
+-        ]
++        },
++        "targets": {
++            "https://workload-1.tacra.example": "ca",
++            "https://workload-2.tacra.example": "vault"
++        },
++        "acceptable_evidence": [
++            "application/vnd.veraison.tsm-report+cbor"
++        ],
++        "ca_certs": "/path/to/CA/certificates.pem"
+     },
+     "healthcheck_password": "xyzzy",
+     "rate_limit": 150,
+diff --git a/cmd/estserver/config_test.go b/cmd/estserver/config_test.go
+new file mode 100644
+index 0000000..fd3410d
+--- /dev/null
++++ b/cmd/estserver/config_test.go
+@@ -0,0 +1,72 @@
++package main
++
++import (
++	"encoding/json"
++	"os"
++	"strings"
++	"testing"
++)
++
++// The configuration's rules, on the sample, the example, and the sample with one field changed. The server itself
++// starts with the bench's configuration in every run of the bench.
++
++func TestSampleAndExample(t *testing.T) {
++	example, err := os.ReadFile("../../estserver.json.example")
++	if err != nil {
++		t.Fatal(err)
++	}
++	for name, data := range map[string][]byte{"sample": []byte(sample), "example": example} {
++		cfg, err := parseConfig(data)
++		if err != nil {
++			t.Fatalf("%s: %v", name, err)
++		}
++		if len(cfg.Tacra.Verifiers) == 0 || len(cfg.Tacra.RRPs) == 0 || len(cfg.Tacra.Targets) == 0 {
++			t.Fatalf("%s: a tacra section without verifiers, RRPs or Targets", name)
++		}
++	}
++}
++
++// changed is the sample with one change made.
++func changed(t *testing.T, change func(map[string]any)) []byte {
++	t.Helper()
++	var m map[string]any
++	if err := json.Unmarshal([]byte(sample), &m); err != nil {
++		t.Fatal(err)
++	}
++	change(m)
++	b, err := json.Marshal(m)
++	if err != nil {
++		t.Fatal(err)
++	}
++	return b
++}
++
++func TestRefused(t *testing.T) {
++	section := func(m map[string]any, k string) map[string]any { return m[k].(map[string]any) }
++	for _, c := range []struct {
++		name string
++		data []byte
++		want string
++	}{
++		{"the mock CA of the server this one is forked from", changed(t, func(m map[string]any) {
++			m["mock_ca"] = map[string]any{"certificates": "/path/to/CA/certificates.pem", "private_key": "/path/to/CA/private/key.pem"}
++		}), `unknown field "mock_ca"`},
++		{"its mock attested CA", changed(t, func(m map[string]any) {
++			m["attest"] = map[string]any{"trusted_provider_public_key": "/path/to/provider/public/key.pem"}
++		}), `unknown field "attest"`},
++		{"no tacra section", changed(t, func(m map[string]any) { delete(m, "tacra") }), "no tacra section"},
++		{"no tls section", changed(t, func(m map[string]any) { delete(m, "tls") }), "no tls section"},
++		{"no server key", changed(t, func(m map[string]any) { delete(section(m, "tls"), "private_key") }),
++			"tls: listen_address, certificates and private_key are required"},
++		{"an RRP's field misspelt", changed(t, func(m map[string]any) {
++			rrp := section(section(section(m, "tacra"), "rrps"), "ca")
++			rrp["rrpid"] = rrp["rrp_id"]
++			delete(rrp, "rrp_id")
++		}), `unknown field "rrpid"`},
++		{"a second object after the first", []byte(sample + sample), "data after the configuration object"},
++	} {
++		if _, err := parseConfig(c.data); err == nil || !strings.Contains(err.Error(), c.want) {
++			t.Errorf("%s: got %v, want an error with %q", c.name, err, c.want)
++		}
++	}
++}
+diff --git a/cmd/estserver/doc.go b/cmd/estserver/doc.go
+index 16ffd14..b56b806 100644
+--- a/cmd/estserver/doc.go
++++ b/cmd/estserver/doc.go
+@@ -14,6 +14,8 @@ limitations under the License.
+ */
+ 
+ /*
+-Application estserver is a basic EST server for testing purposes.
++Application estserver is a basic EST server for testing purposes. It provisions
++credentials only through the attested resources of draft-novak-lamps-tacra-est,
++with the TACRA backend (internal/tacra); it has no CA of its own.
+ */
+ package main
+diff --git a/cmd/estserver/flags.go b/cmd/estserver/flags.go
+index 72042e1..99e69b9 100644
+--- a/cmd/estserver/flags.go
++++ b/cmd/estserver/flags.go
+@@ -49,7 +49,9 @@ func usage() {
+ 
+ 	fmt.Printf("%s is a non-production Enrollment over Secure Transport (EST)\n", appName)
+ 	fmt.Printf("certificate enrollment protocol server for testing and demonstration\n")
+-	fmt.Printf("purposes. See RFC7030.\n")
++	fmt.Printf("purposes. See RFC7030. It provisions credentials only through the\n")
++	fmt.Printf("attested resources of draft-novak-lamps-tacra-est, with the verifiers\n")
++	fmt.Printf("and RATS Relying Parties its configuration names; it has no CA of its own.\n")
+ 	fmt.Println()
+ 
+ 	const fw = 16
+diff --git a/cmd/estserver/main.go b/cmd/estserver/main.go
+index ff91ab2..fd880b7 100644
+--- a/cmd/estserver/main.go
++++ b/cmd/estserver/main.go
+@@ -17,19 +17,12 @@ package main
+ 
+ import (
+ 	"context"
+-	"crypto"
+-	"crypto/ecdsa"
+-	"crypto/elliptic"
+-	"crypto/rand"
+ 	"crypto/tls"
+ 	"crypto/x509"
+-	"crypto/x509/pkix"
+-	"encoding/pem"
+ 	"errors"
+ 	"flag"
+ 	"fmt"
+ 	"log"
+-	"net"
+ 	"net/http"
+ 	"os"
+ 	"os/signal"
+@@ -39,37 +32,15 @@ import (
+ 
+ 	"github.com/globalsign/est"
+ 	"github.com/globalsign/est/internal/basiclogger"
+-	"github.com/globalsign/est/internal/mockca"
+ 	"github.com/globalsign/est/internal/tacra"
+ 	"github.com/globalsign/pemfile"
+ )
+ 
+ const (
+-	defaultListenAddr   = ":8443"
+ 	healthCheckUsername = "healthcheck"
+ 	healthCheckEndpoint = "/healthcheck"
+ )
+ 
+-func loadProviderPublicKey(filename string) (crypto.PublicKey, error) {
+-	data, err := os.ReadFile(filename)
+-	if err != nil {
+-		return nil, fmt.Errorf("read trusted provider public key: %w", err)
+-	}
+-	block, _ := pem.Decode(data)
+-	if block == nil || block.Type != "PUBLIC KEY" {
+-		return nil, fmt.Errorf("trusted provider public key must be PKIX PUBLIC KEY PEM")
+-	}
+-	key, err := x509.ParsePKIXPublicKey(block.Bytes)
+-	if err != nil {
+-		return nil, fmt.Errorf("parse trusted provider public key: %w", err)
+-	}
+-	ecKey, ok := key.(*ecdsa.PublicKey)
+-	if !ok || ecKey.Curve != elliptic.P256() {
+-		return nil, fmt.Errorf("trusted provider public key must be ECDSA P-256")
+-	}
+-	return ecKey, nil
+-}
+-
+ func main() {
+ 	log.SetPrefix(fmt.Sprintf("%s: ", appName))
+ 	log.SetFlags(0)
+@@ -92,31 +63,16 @@ func main() {
+ 		return
+ 	}
+ 
+-	// Load and process configuration.
+-	var cfg *config
+-	var err error
+-	if *fConfig != "" {
+-		cfg, err = configFromFile(*fConfig)
+-		if err != nil {
+-			log.Fatalf("failed to read configuration file: %v", err)
+-		}
+-	} else {
+-		cfg = &config{}
++	// Load and process configuration. The server has no CA of its own: it
++	// provisions credentials only through the attest-* resources, with the
++	// TACRA backend, so a configuration file with tls and tacra sections is
++	// required.
++	if *fConfig == "" {
++		log.Fatalf("a configuration file is required (-%s <path>); -%s outputs a sample", configFlag, sampleConfigFlag)
+ 	}
+-
+-	// Create mock CA. If no mock CA was specified in the configuration file,
+-	// create a transient one.
+-	var ca *mockca.MockCA
+-	if cfg.MockCA != nil {
+-		ca, err = mockca.NewFromFiles(cfg.MockCA.Certs, cfg.MockCA.Key)
+-		if err != nil {
+-			log.Fatalf("failed to create mock CA: %v", err)
+-		}
+-	} else {
+-		ca, err = mockca.NewTransient()
+-		if err != nil {
+-			log.Fatalf("failed to create mock CA: %v", err)
+-		}
++	cfg, err := configFromFile(*fConfig)
++	if err != nil {
++		log.Fatalf("failed to read configuration file: %v", err)
+ 	}
+ 
+ 	// Create logger. If no log file was specified, log to standard error.
+@@ -132,74 +88,24 @@ func main() {
+ 		defer f.Close()
+ 	}
+ 
+-	// Create server TLS configuration. If a server TLS configuration was
+-	// specified in the configuration file, use it. Otherwise, generate a
+-	// transient server key and enroll for a server certificate with the
+-	// mock CA, and use the CA certificates as the client CA certificates
+-	// also.
+-	var listenAddr = defaultListenAddr
+-	var serverKey interface{}
+-	var serverCerts []*x509.Certificate
+-	var clientCACerts []*x509.Certificate
+-
+-	if cfg.TLS != nil {
+-		serverKey, err = pemfile.ReadPrivateKey(cfg.TLS.Key)
+-		if err != nil {
+-			log.Fatalf("failed to read server private key from file: %v", err)
+-		}
+-
+-		serverCerts, err = pemfile.ReadCerts(cfg.TLS.Certs)
+-		if err != nil {
+-			log.Fatalf("failed to read server certificates from file: %v", err)
+-		}
+-
+-		for _, certPath := range cfg.TLS.ClientCAs {
+-			certs, err := pemfile.ReadCerts(certPath)
+-			if err != nil {
+-				log.Fatalf("failed to read client CA certificates from file: %v", err)
+-			}
+-			clientCACerts = append(clientCACerts, certs...)
+-		}
+-
+-		listenAddr = cfg.TLS.ListenAddr
+-	} else {
+-		serverKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+-		if err != nil {
+-			log.Fatalf("failed to generate server private key: %v", err)
+-		}
+-
+-		tmpl := &x509.CertificateRequest{
+-			Subject:     pkix.Name{CommonName: "Testing Non-Production EST Server"},
+-			DNSNames:    []string{"localhost"},
+-			IPAddresses: []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")},
+-		}
+-
+-		der, err := x509.CreateCertificateRequest(rand.Reader, tmpl, serverKey)
+-		if err != nil {
+-			log.Fatalf("failed to generate server certificate signing request: %v", err)
+-		}
+-
+-		csr, err := x509.ParseCertificateRequest(der)
+-		if err != nil {
+-			log.Fatalf("failed to parse server certificate signing request: %v", err)
+-		}
+-
+-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
++	// Create server TLS configuration from the configuration file.
++	serverKey, err := pemfile.ReadPrivateKey(cfg.TLS.Key)
++	if err != nil {
++		log.Fatalf("failed to read server private key from file: %v", err)
++	}
+ 
+-		cert, err := ca.Enroll(ctx, csr, "", nil)
+-		if err != nil {
+-			log.Fatalf("failed to enroll for server certificate: %v", err)
+-		}
++	serverCerts, err := pemfile.ReadCerts(cfg.TLS.Certs)
++	if err != nil {
++		log.Fatalf("failed to read server certificates from file: %v", err)
++	}
+ 
+-		cacerts, err := ca.CACerts(ctx, "", nil)
++	var clientCACerts []*x509.Certificate
++	for _, certPath := range cfg.TLS.ClientCAs {
++		certs, err := pemfile.ReadCerts(certPath)
+ 		if err != nil {
+-			log.Fatalf("failed to retrieve CA certificates: %v", err)
++			log.Fatalf("failed to read client CA certificates from file: %v", err)
+ 		}
+-
+-		cancel()
+-
+-		serverCerts = append([]*x509.Certificate{cert}, cacerts...)
+-		clientCACerts = []*x509.Certificate{cacerts[len(cacerts)-1]}
++		clientCACerts = append(clientCACerts, certs...)
+ 	}
+ 
+ 	var tlsCerts [][]byte
+@@ -212,14 +118,10 @@ func main() {
+ 		clientCAs.AddCert(cert)
+ 	}
+ 
+-	minTLS := uint16(tls.VersionTLS12)
+-	if cfg.Tacra != nil {
++	tlsCfg := &tls.Config{
+ 		// the bank profile's CAS channel: TLS 1.3, as the reference implementation's EST server (tacra-est
+ 		// BANK-PROFILE, "TLS between the CAS client and server")
+-		minTLS = tls.VersionTLS13
+-	}
+-	tlsCfg := &tls.Config{
+-		MinVersion:       minTLS,
++		MinVersion:       tls.VersionTLS13,
+ 		CurvePreferences: []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
+ 		ClientAuth:       tls.VerifyClientCertIfGiven,
+ 		Certificates: []tls.Certificate{
+@@ -249,26 +151,16 @@ func main() {
+ 		return nil
+ 	}
+ 
+-	// Wrap the mock CA with mock attested credential acquisition support, or
+-	// use the backend that forwards to a deployed Verifier and RRPs.
+-	var serverCA est.CA = ca
+-	if cfg.Tacra != nil {
+-		backend, err := tacra.New(*cfg.Tacra)
+-		if err != nil {
+-			log.Fatalf("failed to configure the TACRA backend: %v", err)
+-		}
+-		serverCA = backend
+-	} else if cfg.Attest != nil {
+-		trustedProviderKey, err := loadProviderPublicKey(cfg.Attest.TrustedProviderPublicKey)
+-		if err != nil {
+-			log.Fatalf("failed to load attestation trust anchor: %v", err)
+-		}
+-		serverCA = mockca.NewAttested(ca, cfg.Attest.Targets, trustedProviderKey)
++	// The server's CA is the TACRA backend, which forwards to the deployed
++	// verifiers and RRPs.
++	backend, err := tacra.New(*cfg.Tacra)
++	if err != nil {
++		log.Fatalf("failed to configure the TACRA backend: %v", err)
+ 	}
+ 
+ 	// Create server mux.
+ 	r, err := est.NewRouter(&est.ServerConfig{
+-		CA:             serverCA,
++		CA:             backend,
+ 		Logger:         logger,
+ 		AllowedHosts:   cfg.AllowedHosts,
+ 		Timeout:        time.Duration(cfg.Timeout) * time.Second,
+@@ -281,7 +173,7 @@ func main() {
+ 
+ 	// Create and start server.
+ 	s := &http.Server{
+-		Addr:      listenAddr,
++		Addr:      cfg.TLS.ListenAddr,
+ 		Handler:   r,
+ 		TLSConfig: tlsCfg,
+ 	}
+diff --git a/estserver.json.example b/estserver.json.example
+index cb8562d..521d847 100644
+--- a/estserver.json.example
++++ b/estserver.json.example
+@@ -1,8 +1,4 @@
+ {
+-  "mock_ca": {
+-    "certificates": "/etc/est/certs/ca-certificates.pem",
+-    "private_key": "/etc/est/certs/ca-key.pem"
+-  },
+   "tls": {
+     "listen_address": ":8443",
+     "certificates": "/etc/est/certs/server-certificates.pem",
+@@ -15,14 +11,43 @@
+     "localhost",
+     "127.0.0.1"
+   ],
+-  "attest": {
+-    "trusted_provider_public_key": "/etc/est/certs/mock-tee-provider-public-key.pem",
+-    "targets": [
+-      { "name": "RUP-workload-1", "mechanism": "enroll" },
+-      { "name": "RUP-workload-2", "mechanism": "retrieve" }
+-    ]
++  "tacra": {
++    "client_cert": "/etc/est/certs/est-server-client.pem",
++    "client_key": "/etc/est/certs/est-server-client-key.pem",
++    "verifiers": {
++      "veraison": {
++        "url": "https://verifier:8080",
++        "ca": "/etc/est/certs/verifier-ca.pem",
++        "provider": "sev_guest"
++      }
++    },
++    "rrps": {
++      "ca": {
++        "url": "https://ca-gateway:9101",
++        "ca": "/etc/est/certs/ca-gateway-ca.pem",
++        "rrp_id": "https://ca1.tacra.example",
++        "mode": "enroll",
++        "rats_model": "passport",
++        "verifiers": ["veraison"]
++      },
++      "vault": {
++        "url": "https://vault-gateway:9102",
++        "ca": "/etc/est/certs/vault-gateway-ca.pem",
++        "rrp_id": "https://vault1.tacra.example",
++        "mode": "retrieve",
++        "rats_model": "background-check"
++      }
++    },
++    "targets": {
++      "https://workload-1.tacra.example": "ca",
++      "https://workload-2.tacra.example": "vault"
++    },
++    "acceptable_evidence": [
++      "application/vnd.veraison.tsm-report+cbor"
++    ],
++    "ca_certs": "/etc/est/certs/ca-certificates.pem"
+   },
+   "healthcheck_password": "replace-with-a-local-secret",
+   "rate_limit": 150,
+   "timeout": 30
+-}
+\ No newline at end of file
++}

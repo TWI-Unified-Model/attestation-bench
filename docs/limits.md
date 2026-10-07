@@ -82,6 +82,13 @@ VM's clock can be trusted depends on the platform and its configuration; the ben
 - **One Credential Acquisition System**: EST, through the GlobalSign EST server with TACRA's resources.
 - **The channel between the CAI and the CAS Client inside the guest** is plain gRPC: the CAS is untrusted by design,
   so the bench does not protect it.
+- **The EST server's wire format is checked on the reference implementation's messages, not through the running
+  server.** Our EST patches take the reference implementation's media types (`application/est-attest-enroll+json`,
+  `application/est-attest-retrieve+json`) and `application/json`, answer any other with 415, and send the Handle of
+  `attest-initiate` as unpadded base64url. The test that showed this through the server ran it with a CA of its own
+  and was removed (EST patch 0008). The message types are still checked on the reference implementation's messages
+  (`internal/refvectors`), and every hardware run goes through the server with the bench's own client; the media
+  types, the 415 and the Handle's encoding wait for a test against the live server.
 - **The plug-in's own refusals of a wrong device answer are not tested.** The SEV-SNP and TDX plug-ins refuse a
   report from another provider and one whose report data is not the binding value they asked for. No confidential
   VM answers that way, and the bench runs nothing that stands in for the device, so no test reaches those branches.

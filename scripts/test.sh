@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The repository's unit tests: go test in every Go module of BENCH_GO_MODULES (scripts/lib.sh); in each third-party
-# component, the tests of the Go packages our patches change, run in the patched sources; and the Python scripts'
-# tests (scripts/tests: the run verdicts, judged on the committed reference runs). Exits non-zero on any failure.
+# component, the tests our patches add, run in the patched sources, and no others; and the Python scripts' tests
+# (scripts/tests: the run verdicts, judged on the committed reference runs). Exits non-zero on any failure.
 #
 #   scripts/test.sh        (make test)
 #
@@ -26,24 +26,55 @@ for m in $BENCH_GO_MODULES; do
     failed="$failed $m"
   fi
 done
-bench_say "our patches' tests, in the third-party sources they change"
+bench_say "our tests in the third-party sources: the test files our patches add, and no others"
 for up in third_party/*/UPSTREAM; do
   c="$(basename "$(dirname "$up")")"
-  # the directories of the Go files the patch series changes, as package patterns of the patched sources (third_party/
-  # <c>/src); they are tested outside the bench's Go workspace, with the component's own go.mod
-  pkgs=()
-  while IFS= read -r d; do pkgs+=("$d"); done < <(cat "third_party/$c/patches/"*.patch | awk '
-    /^diff --git a\// { f = substr($3, 3); if (f !~ /\.go$/) next
-      n = split(f, part, "/"); print (n == 1 ? "." : "./" substr(f, 1, length(f) - length(part[n]) - 1)) }' | sort -u)
-  if [ "${#pkgs[@]}" -eq 0 ]; then
-    printf '  ok    %-18s no Go code in its patches\n' "$c"
-  elif out="$(cd "third_party/$c/src" && GOWORK=off go test -count=1 "${pkgs[@]}" 2>&1)"; then
-    printf '  ok    %-18s packages with tests: %2s, without: %2s\n' "$c" "$(grep -c '^ok' <<<"$out")" \
-      "$(grep -c 'no test files' <<<"$out")"
-  else
-    printf '  FAIL  third_party/%s\n' "$c"
-    grep -v -e '^ok' -e 'no test files' <<<"$out" | sed 's/^/        /'
+  src="third_party/$c/src"
+  # Ours are the test files the pinned upstream commit (the sources' HEAD, third_party/fetch.sh) does not have, wherever
+  # the series puts them. Upstream's tests are not run: some of them use mocks, as the EST fork's tests use its mock CA.
+  ours=()
+  while IFS= read -r f; do
+    git -C "$src" cat-file -e "HEAD:$f" 2>/dev/null || ours+=("$f")
+  done < <(git -C "$src" ls-files -- '*_test.go')
+  if [ "${#ours[@]}" -eq 0 ]; then
+    printf '  ok    %-18s no tests in its patches\n' "$c"
+    continue
+  fi
+  ran=0 cfail=""
+  for d in $(printf '%s\n' "${ours[@]}" | xargs -n1 dirname | sort -u); do
+    names=()
+    for f in "${ours[@]}"; do
+      [ "$(dirname "$f")" = "$d" ] || continue
+      while IFS= read -r t; do names+=("$t"); done < <(sed -nE 's/^func (Test[A-Za-z0-9_]*)\(.*/\1/p' "$src/$f")
+    done
+    pkg="./$d"
+    [ "$d" = . ] && pkg=.
+    # the package's test binary links no mock: a mock that upstream test code set up at start would run with ours
+    if mocks="$(cd "$src" && GOWORK=off go list -deps -test "$pkg" | grep -i -E 'mock|fake|stub')"; then
+      printf '  FAIL  %-18s %s: its test binary links %s\n' "$c" "$d" "$(tr '\n' ' ' <<<"$mocks")"
+      cfail=1
+      continue
+    fi
+    re="^($(IFS='|'; echo "${names[*]}"))\$"
+    if out="$(cd "$src" && GOWORK=off go test -count=1 -v -run "$re" "$pkg" 2>&1)"; then
+      missing=""
+      for t in "${names[@]}"; do grep -q -- "^--- PASS: $t " <<<"$out" || missing="$missing $t"; done
+      if [ -n "$missing" ]; then
+        printf '  FAIL  %-18s %s: did not run:%s\n' "$c" "$d" "$missing"
+        cfail=1
+        continue
+      fi
+      ran=$((ran + ${#names[@]}))
+    else
+      printf '  FAIL  third_party/%s, %s\n' "$c" "$d"
+      grep -E -- '^(--- FAIL|FAIL|ok)|Error|error' <<<"$out" | sed 's/^/        /'
+      cfail=1
+    fi
+  done
+  if [ -n "$cfail" ]; then
     failed="$failed third_party/$c"
+  else
+    printf '  ok    %-18s our tests: %2s, in %s file(s)\n' "$c" "$ran" "${#ours[@]}"
   fi
 done
 bench_say "Python, scripts/tests"
@@ -55,4 +86,4 @@ else
   failed="$failed scripts/tests"
 fi
 if [ -n "$failed" ]; then bench_die "tests failed in:$failed"; fi
-echo "test: every Go module, our patches' tests and the Python tests pass"
+echo "test: every Go module, our tests in the third-party sources and the Python tests pass"
