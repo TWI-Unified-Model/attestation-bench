@@ -6,8 +6,8 @@
 A case is keyed by (pass, freshness kind, RRP). Its outcome is (issued, HTTP status, refusal reason). The reason is
 compared without the Handle- or session-specific values that change from run to run: hex strings of 16 or more digits
 and base64url strings of 22 or more characters are replaced by a placeholder. Serials and certificate details are not
-compared. --ignore-platform also reads the verifier's submodule named in a reason (SEVSNP, TDX, SIM) as one, to
-compare a run on one platform with a run on another (a local run with the software stand-in against a hardware run).
+compared. --ignore-platform also reads the verifier's submodule named in a reason (SEVSNP, TDX) as one, to compare a
+run on one platform with a run on another.
 Exit status 0 only when both runs hold the same cases with the same outcomes.
 """
 
@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 VOLATILE = re.compile(r"\b[0-9a-f]{16,}\b|[A-Za-z0-9_-]{22,}")
-PLATFORM = re.compile(r"\b(SEVSNP|TDX|SIM)\b")
+PLATFORM = re.compile(r"\b(SEVSNP|TDX)\b")
 args = [a for a in sys.argv[1:] if a != "--ignore-platform"]
 IGNORE_PLATFORM = len(args) != len(sys.argv) - 1
 

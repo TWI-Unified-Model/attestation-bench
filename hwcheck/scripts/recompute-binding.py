@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """Independent character-level check of the TACRA binding in a redirect.sh run (no Go code involved).
 
-    recompute-binding.py EVIDENCE_DIR sev-snp|tdx|sim
+    recompute-binding.py EVIDENCE_DIR sev-snp|tdx
 
 For every Enrollment case of both passes, recompute SHA-512 over (len32||freshness element, len32||Target,
 len32||RRP identifier, len32||CSR DER) with each candidate identifier: ca1's, ca2's and none. Compare it with the
-report's own REPORT_DATA: SEV-SNP report offset 0x50; TDX quote 48+520 (hwcheck/cmd/rrpverify/tdx.go:90); the
-software stand-in's report_data inside its COSE_Sign1 payload (platform/simtee.go; the signature is not checked here).
+report's own REPORT_DATA: SEV-SNP report offset 0x50; TDX quote 48+520 (hwcheck/cmd/rrpverify/tdx.go:90).
 Expected: the with-rrp-id pass matches ca1's identifier only, and the no-rrp-id pass matches no identifier only
 (redirect.sh binds "" there). It also checks that hwrun's recorded binding_value_hex is the matching value. Exit
 status 0 only when every case is as expected.
@@ -38,10 +37,6 @@ def lp(*parts):
 
 def report_data(token):
     blob = cbor2.loads(token)["outblob"]
-    if TEE == "sim":
-        sign1 = cbor2.loads(blob)
-        sign1 = sign1.value if hasattr(sign1, "value") else sign1  # COSE_Sign1, tag 18
-        return cbor2.loads(sign1[2])["report_data"]
     return blob[0x50 : 0x50 + 64] if TEE == "sev-snp" else blob[48 + 520 : 48 + 584]
 
 

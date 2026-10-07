@@ -10,7 +10,6 @@ __pycache__/
 # programs built by hand in a module's root (go build ./cmd/<name>); the scripts build into temporary directories
 /rrp/ca-gateway
 /rrp/gce-endorsement
-/rrp/sim-verifier
 /rrp/tdx-verifier
 /rrp/vault-gateway
 /hwcheck/hwrun

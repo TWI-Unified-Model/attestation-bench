@@ -10,9 +10,10 @@
 # AWS_REGION, AWS_AZ: where the instance goes (scripts/lib.sh). RUNS_DIR: where the run directory goes (default
 # BENCH_HOME/runs). Env: TYPE (default c6a.large), AMI_PARAM (SSM parameter of the image; default Ubuntu 24.04).
 # OTHER_PLATFORM=1: the workload asks for the Targets that take another platform's verifier alone (tacra-est N24),
-# and every one must be refused.
+# and every one must be refused. UNAPPROVED=1: the instance is a c6a.xlarge, whose launch (four vCPUs) the bench does
+# not approve (trust/approved-launches.json): Veraison does not affirm it, and every Target must be refused for it.
 # The run ends with its verdict (scripts/verdict.py) and exits 1 unless every Target was admitted (refused, with
-# OTHER_PLATFORM).
+# OTHER_PLATFORM or UNAPPROVED).
 set -euo pipefail
 # shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
@@ -29,10 +30,13 @@ B="$BENCH_HOME"
 # the bench's RATS model (bench.sh config, RATS_MODEL): who asks the verifiers
 MODEL="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('rats_model') or 'passport')" "$B/config/vault-gateway.json")"
 OTHER_PLATFORM="${OTHER_PLATFORM:-}"
+UNAPPROVED="${UNAPPROVED:-}"
 EXPECT=(--expect admitted) # what the run must show (scripts/verdict.py)
 [ -z "$OTHER_PLATFORM" ] || EXPECT=(--expect refused --reason "none of the verifiers this RRP takes for the Target")
+# UNAPPROVED=1: a c6a.xlarge, whose launch (four vCPUs) the bench does not approve; every Target must be refused for it
+[ -z "$UNAPPROVED" ] || { TYPE=c6a.xlarge; EXPECT=(--expect refused --reason "ear: not affirming: SEVSNP is"); }
 RUNS_DIR="${RUNS_DIR:-$B/runs}"
-OUT="$RUNS_DIR/${STAMP}-aws-${TEE}-e2e-${MODEL}${OTHER_PLATFORM:+-other-platform}"
+OUT="$RUNS_DIR/${STAMP}-aws-${TEE}-e2e-${MODEL}${OTHER_PLATFORM:+-other-platform}${UNAPPROVED:+-unapproved}"
 BIN="$(mktemp -d)"
 mkdir -p "$OUT/bench-logs"
 ID="" SG="" KEY="$NAME"

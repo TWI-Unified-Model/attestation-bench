@@ -1,8 +1,9 @@
-# CI: on every push to main and every pull request, the checks (make check), then the bench set up from zero on Linux
-# and its local runs on the software stand-in TEE: the end-to-end run and its refusal scenarios, the attacks and the
-# redirection experiment, in Passport and in Background Check. Each run fails its step unless its verdict is PASS
-# (scripts/verdict.py). No cloud, no secrets. Every step is a command a contributor runs the same way
-# (docs/getting-started.md, docs/attacks.md).
+# CI: on every push to main and every pull request, the checks (make check), then the trust zone set up from zero on
+# Linux and run live: Veraison, step-ca, Vault, the gateways, the EST server; its mutual TLS checked channel by channel
+# in Passport and in Background Check (make check-mtls), each run failing its step unless its verdict is PASS
+# (scripts/verdict.py). The protocol itself runs only on real hardware (docs/hardware/), which CI has no account for:
+# nothing stands in for the hardware. Every step is a command a contributor runs the same way
+# (docs/getting-started.md).
 #
 # Actions are pinned to the commit of their release, named in the comment beside each.
 name: ci
@@ -34,8 +35,8 @@ jobs:
       - name: make check
         run: make check
 
-  local-bench:
-    name: the bench from zero, local runs
+  trust-zone:
+    name: the trust zone from zero, live
     needs: check
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -57,25 +58,11 @@ jobs:
         run: make setup
       - name: make check-mtls
         run: make check-mtls
-      - name: make demo
-        run: make demo
-      - name: make demo, a debuggable instance (every Target refused)
-        run: SIM_DEBUG=1 make demo
-      - name: make demo, a workload that is not the approved one (every Target refused)
-        run: SIM_LABEL="other workload" make demo
-      - name: make demo, the Targets of other platforms (every Target refused; tacra-est N24)
-        run: OTHER_PLATFORM=1 make demo
-      - name: make attacks
-        run: make attacks
-      - name: make redirect
-        run: make redirect
-      - name: Background Check, then make check-mtls and make demo
+      - name: Background Check, then make check-mtls
         run: |
           RATS_MODEL=background-check make config
           make stop start
           make check-mtls
-          make demo
-          OTHER_PLATFORM=1 make demo
       - name: keep the run directories
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

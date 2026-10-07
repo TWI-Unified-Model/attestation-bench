@@ -4,7 +4,7 @@
 hpke-base-signed container's trust anchor, from 01.10 on, so Retrieval on AWS failed (evidence
 20261006T160234Z-aws-sev-snp-e2e). Public material only: trust anchors, the Vault's public keys, the epoch marker.
 
-    TEE=sev-snp|tdx|sim B=$BENCH_HOME BIN=<dir holding origin-keys.json> [TARGETS=all|other-platform] \
+    TEE=sev-snp|tdx B=$BENCH_HOME BIN=<dir holding origin-keys.json> [TARGETS=all|other-platform] \
         python3 e2e/scripts/guest_config.py
 
 The Targets, the RRP identifiers and the workload's name come from the bench's pack (packs/tacra-bench/pack.json).
@@ -18,7 +18,7 @@ import os
 from pathlib import Path
 
 B, BIN = Path(os.environ["B"]), Path(os.environ["BIN"])
-VERIFIER = {"sev-snp": "veraison", "tdx": "tdx", "sim": "sim"}[os.environ["TEE"]]  # the verifier of this platform
+VERIFIER = {"sev-snp": "veraison", "tdx": "tdx"}[os.environ["TEE"]]  # the verifier of this platform
 SELECT = {
     "all": lambda verifiers: verifiers == "all",
     "other-platform": lambda verifiers: verifiers != "all" and VERIFIER not in verifiers,

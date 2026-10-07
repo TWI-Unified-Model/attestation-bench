@@ -10,12 +10,15 @@
 #
 # GCP_PROJECT, GCP_ZONE: where the VM goes (scripts/lib.sh). RUNS_DIR: where the run directory goes (default
 # BENCH_HOME/runs). The run ends with its verdict (scripts/verdict.py) and exits 1 unless every Target was admitted
-# (refused, with OTHER_PLATFORM).
+# (refused, with OTHER_PLATFORM or UNAPPROVED).
 #
 # CAS_OUTSIDE=1 runs the CAS Client (caapi-est, the conduit) outside the guest, on this machine, and gives the
 # workload's CAI the way to it through the reverse tunnel (tacra-est N1: "a run with the conduit outside the guest").
 # OTHER_PLATFORM=1: the workload asks for the Targets that take another platform's verifier alone (tacra-est N24),
 # and every one must be refused.
+# UNAPPROVED=1 (SEV-SNP): the guest is an n2d-standard-4, whose launch (four vCPUs, four VMSAs in the measurement) is
+# not one the bench approves (trust/approved-launches.json): Veraison does not affirm it, and every Target must be
+# refused for it. A real VM, so the refusal is the hardware's measurement against the approved list.
 set -euo pipefail
 # shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
@@ -31,10 +34,13 @@ B="$BENCH_HOME"
 MODEL="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('rats_model') or 'passport')" "$B/config/vault-gateway.json")"
 CAS_OUTSIDE="${CAS_OUTSIDE:-}"
 OTHER_PLATFORM="${OTHER_PLATFORM:-}"
+UNAPPROVED="${UNAPPROVED:-}"
+[ -z "$UNAPPROVED" ] || [ "$TEE" = sev-snp ] || bench_die "UNAPPROVED is for SEV-SNP: a TDX launch's MRTD does not change with the machine size"
 EXPECT=(--expect admitted) # what the run must show (scripts/verdict.py)
 [ -z "$OTHER_PLATFORM" ] || EXPECT=(--expect refused --reason "none of the verifiers this RRP takes for the Target")
+[ -z "$UNAPPROVED" ] || EXPECT=(--expect refused --reason "ear: not affirming: SEVSNP is")
 RUNS_DIR="${RUNS_DIR:-$B/runs}"
-OUT="$RUNS_DIR/${STAMP}-gcp-${TEE}-e2e-${MODEL}${CAS_OUTSIDE:+-cas-outside}${OTHER_PLATFORM:+-other-platform}"
+OUT="$RUNS_DIR/${STAMP}-gcp-${TEE}-e2e-${MODEL}${CAS_OUTSIDE:+-cas-outside}${OTHER_PLATFORM:+-other-platform}${UNAPPROVED:+-unapproved}"
 BIN="$(mktemp -d)"
 mkdir -p "$OUT/bench-logs"
 SSH=(gcloud compute ssh "$NAME" --project="$PROJECT" --zone="$ZONE")
@@ -77,6 +83,7 @@ if [ "$TEE" = tdx ]; then
   MACHINE=(--machine-type=c3-standard-4 --confidential-compute-type=TDX)
 else
   MACHINE=(--machine-type=n2d-standard-2 --min-cpu-platform="AMD Milan" --confidential-compute-type=SEV_SNP)
+  [ -z "$UNAPPROVED" ] || MACHINE=(--machine-type=n2d-standard-4 --min-cpu-platform="AMD Milan" --confidential-compute-type=SEV_SNP)
 fi
 echo "== create $NAME ($ZONE, $TEE)"
 gcloud compute instances create "$NAME" --project="$PROJECT" --zone="$ZONE" "${MACHINE[@]}" \

@@ -81,7 +81,7 @@ tls() {
     openssl x509 -checkend 2592000 -noout -in root.crt >/dev/null \
       || echo "  warning: the TLS root expires within 30 days; remove $B to start over"
     local s renewed=""
-    for s in ca-gateway vault-gateway est-server tdx-verifier sim-verifier vault rup; do
+    for s in ca-gateway vault-gateway est-server tdx-verifier vault rup; do
       if [ -f "$s.crt" ] && openssl x509 -checkend 1209600 -noout -in "$s.crt" >/dev/null; then continue; fi
       quiet step certificate create localhost "$s.crt" "$s.key" --profile leaf --ca root.crt --ca-key root.key \
         --san localhost --san 127.0.0.1 --no-password --insecure --not-after 2160h --force || fail "certificate $s"

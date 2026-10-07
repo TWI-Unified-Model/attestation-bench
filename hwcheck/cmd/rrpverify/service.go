@@ -32,7 +32,7 @@ type veraisonService struct {
 	base   string
 	client *http.Client
 	key    *ecdsa.PublicKey
-	submod string // the EAR submodule read: SEVSNP (Veraison), TDX or SIM (the bench's own verifiers)
+	submod string // the EAR submodule read: SEVSNP (Veraison)
 }
 
 func newVeraisonService(base, caPath, certPath, keyPath string) (*veraisonService, error) {
@@ -199,13 +199,13 @@ func veraisonDeployment() string {
 }
 
 // serviceVerify is `rrpverify service`: the same cases and changed inputs as `verify`, against a deployed verifier
-// (Veraison, or the bench's sim-verifier with -url, -ca and -submod SIM).
+// (Veraison).
 func serviceVerify(args []string) {
 	fs := flag.NewFlagSet("service", flag.ExitOnError)
 	in := fs.String("in", "hwrun-out", "hwrun output directory")
 	handlesPath := fs.String("handles", "handles.json", "the handles this RRP minted")
-	base := fs.String("url", "https://localhost:8443", "verification service (Veraison; the bench's sim-verifier is https://localhost:8463)")
-	submod := fs.String("submod", "SEVSNP", "the EAR submodule to read: SEVSNP (Veraison), SIM (the sim-verifier)")
+	base := fs.String("url", "https://localhost:8443", "verification service (the bench's Veraison)")
+	submod := fs.String("submod", "SEVSNP", "the EAR submodule to read (SEVSNP for Veraison)")
 	caPath := fs.String("ca", filepath.Join(veraisonDeployment(), "certs", "rootCA.crt"), "CA of the service's TLS certificate")
 	certPath := fs.String("cert", filepath.Join(benchHome(), "tls", "clients", "ca-gateway.crt"), "this RRP's client certificate (mutual TLS)")
 	keyPath := fs.String("key", filepath.Join(benchHome(), "tls", "clients", "ca-gateway.key"), "its private key")

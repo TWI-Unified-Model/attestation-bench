@@ -54,17 +54,17 @@ check: lint test
 third-party:
 	@third_party/fetch.sh
 
-# PLATFORM picks where the TEE runs for demo, attacks and redirect: local (default: this machine, the software
-# stand-in TEE, no hardware, no cost, no security), or gcp-snp, gcp-tdx, aws-snp (real hardware: one VM in your own
-# cloud account, deleted at the end; scripts/lib.sh). See scripts/run.sh.
-PLATFORM ?= local
+# PLATFORM picks the hardware for demo, attacks and redirect: gcp-snp, gcp-tdx or aws-snp, one VM in your own cloud
+# account, deleted at the end (scripts/lib.sh). It has no default: nothing stands in for the hardware. See
+# scripts/run.sh.
+PLATFORM ?=
 
-## demo: end to end, 10 Targets acquire their credentials and use them   [PLATFORM=local|gcp-snp|gcp-tdx|aws-snp]
-##       refusal scenarios, every Target refused: SIM_DEBUG=1, SIM_LABEL=..., OTHER_PLATFORM=1 (docs/attacks.md)
+## demo: end to end, 10 Targets acquire their credentials and use them   [PLATFORM=gcp-snp|gcp-tdx|aws-snp]
+##       refusal scenarios, every Target refused: UNAPPROVED=1 (SEV-SNP: a launch not approved), OTHER_PLATFORM=1
 demo:
 	@scripts/run.sh demo $(PLATFORM)
 
-## attacks: the substitution suite, every attack refused for its own reason   [PLATFORM=local|gcp-snp|gcp-tdx|aws-snp]
+## attacks: the substitution suite, every attack refused for its own reason   [PLATFORM=gcp-snp|gcp-tdx|aws-snp]
 attacks:
 	@scripts/run.sh attacks $(PLATFORM)
 

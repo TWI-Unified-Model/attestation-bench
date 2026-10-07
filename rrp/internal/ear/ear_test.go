@@ -2,14 +2,9 @@ package ear
 
 import (
 	"bytes"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"os"
@@ -133,50 +128,5 @@ func TestProvisionedKey(t *testing.T) {
 	}
 	if len(v.Keys) != 1 {
 		t.Fatal("Only changed the Verifier it was called on")
-	}
-}
-
-// signTestEAR signs claims as the bench's verifiers do (compact JWS, ES256).
-func signTestEAR(t *testing.T, key *ecdsa.PrivateKey, claims map[string]any) string {
-	t.Helper()
-	enc := base64.RawURLEncoding
-	h, _ := json.Marshal(map[string]string{"alg": "ES256", "typ": "JWT"})
-	p, _ := json.Marshal(claims)
-	signing := enc.EncodeToString(h) + "." + enc.EncodeToString(p)
-	d := sha256.Sum256([]byte(signing))
-	r, s, err := ecdsa.Sign(rand.Reader, key, d[:])
-	if err != nil {
-		t.Fatal(err)
-	}
-	sig := make([]byte, 64)
-	r.FillBytes(sig[:32])
-	s.FillBytes(sig[32:])
-	return signing + "." + enc.EncodeToString(sig)
-}
-
-// TestSimSubmodule: results of the bench's sim-verifier (submodule SIM) give the annotated measurement and
-// annotations, and only to a key provisioned for SIM; a key provisioned for SEVSNP cannot speak for SIM.
-func TestSimSubmodule(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	now := time.Now()
-	bv := bytes.Repeat([]byte{0xb1}, 64)
-	m := bytes.Repeat([]byte{0x4d}, 48)
-	jws := signTestEAR(t, key, map[string]any{"eat_profile": "tag:github.com,2023:veraison/ear", "iat": now.Unix(),
-		"eat_nonce": base64.RawURLEncoding.EncodeToString(bv),
-		"submods": map[string]any{"SIM": map[string]any{"ear.status": "affirming",
-			"ear.veraison.annotated-evidence": map[string]string{"measurement": hex.EncodeToString(m), "debug": "false"}}}})
-	v := &Verifier{Keys: []TrustedKey{{Name: "sim", Key: &key.PublicKey, Submods: []string{"SIM"}}}, MaxAge: time.Minute,
-		Skew: 5 * time.Second, Now: func() time.Time { return now }}
-	res, err := v.Verify(jws, bv)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if res.Submod != "SIM" || !bytes.Equal(res.Measurement, m) || res.SIM["debug"] != "false" {
-		t.Fatalf("got %s %x %v", res.Submod, res.Measurement, res.SIM)
-	}
-	snpOnly := &Verifier{Keys: []TrustedKey{{Name: "sim", Key: &key.PublicKey, Submods: []string{"SEVSNP"}}},
-		MaxAge: time.Minute, Skew: 5 * time.Second, Now: func() time.Time { return now }}
-	if _, err := snpOnly.Verify(jws, bv); !errors.Is(err, ErrNotAffirming) {
-		t.Fatalf("a key provisioned for SEVSNP spoke for SIM: %v", err)
 	}
 }

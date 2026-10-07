@@ -18,8 +18,6 @@ from pathlib import Path
 import verdict
 
 PLATFORMS = {
-    "local": "stand-in",
-    "local-sim": "stand-in",
     "gcp-snp": "GCP SEV-SNP",
     "gcp-sev-snp": "GCP SEV-SNP",
     "gcp-tdx": "GCP TDX",
@@ -30,8 +28,7 @@ MODELS = {"passport": "Passport", "background-check": "Background Check"}
 SCENARIOS = {
     "": "end to end",
     "cas-outside": "end to end, the CAS Client outside the guest",
-    "debug": "refusal: a debuggable instance",
-    "unapproved": "refusal: a workload not approved",
+    "unapproved": "refusal: a launch not approved",
     "other-platform": "refusal: Targets of another platform (N24)",
 }
 PAYMENTS = {  # a bank's payment run: what it is, its platform, what its verdict expects
@@ -42,14 +39,14 @@ PAYMENTS = {  # a bank's payment run: what it is, its platform, what its verdict
     "unapproved": ("control: an unapproved launch", "GCP SEV-SNP", "unapproved"),
 }
 E2E = re.compile(
-    r"(?P<plat>local-sim|gcp-sev-snp|gcp-tdx|aws-sev-snp)-e2e(?:-(?P<model>passport|background-check))?"
-    r"(?:-(?P<scen>cas-outside|debug|unapproved|other-platform))?"
+    r"(?P<plat>gcp-sev-snp|gcp-tdx|aws-sev-snp)-e2e(?:-(?P<model>passport|background-check))?"
+    r"(?:-(?P<scen>cas-outside|unapproved|other-platform))?"
 )
-ATTACKS = re.compile(r"(?:(?P<plat>local-sim)-attacks|(?P<hw>gcp-sev-snp|gcp-tdx|aws-sev-snp))")
-REDIRECT = re.compile(r"(?P<plat>local|gcp-snp|gcp-tdx|aws-snp)-redirect")
+ATTACKS = re.compile(r"(?P<hw>gcp-sev-snp|gcp-tdx|aws-sev-snp)")
+REDIRECT = re.compile(r"(?P<plat>gcp-snp|gcp-tdx|aws-snp)-redirect")
 STAMP = re.compile(r"\d{8}T\d{6}Z-(?P<name>.+)")
 # the attack results of the current format: the bench's own checks, and the builds of Veraison it compares with
-OWN_CHECKS = ("rrpverify-veraison-v015", "rrpverify-tdx", "rrpverify-sim")
+OWN_CHECKS = ("rrpverify-veraison-v015", "rrpverify-tdx")
 KNOWN_CHECKS = {*OWN_CHECKS, "rrpverify-service", *verdict.COMPARED_BUILDS}
 EARLIER = "an earlier format"
 STOPPED = "no results: the run stopped before it finished"
@@ -98,20 +95,20 @@ def rows(run):
     if e := E2E.fullmatch(name):
         scen = e.group("scen") or ""
         model = MODELS.get(e.group("model") or "", "") or recorded_model(run, "Passport")
-        expect = "refused" if scen in ("debug", "unapproved", "other-platform") else "admitted"
-        v = judged(run, lambda: verdict.demo(run, expect, "", ""), ["results.json"])
+        expect = "refused" if scen in ("unapproved", "other-platform") else "admitted"
+        v = judged(run, lambda: verdict.demo(run, expect, ""), ["results.json"])
         yield run.name, SCENARIOS[scen], PLATFORMS[e.group("plat")], model, *v
     elif name.startswith("bench-mtls"):
         model = recorded_model(run, "Background Check" if "background-check" in name else "Passport")
         yield (
             run.name,
             "mutual TLS (N23)",
-            "stand-in",
+            "trust zone, no TEE",
             model,
             *judged(run, lambda: verdict.mtls(run), ["mtls.json", "checks.json"]),
         )
     elif a := ATTACKS.fullmatch(name):
-        plat = PLATFORMS[a.group("plat") or a.group("hw")]
+        plat = PLATFORMS[a.group("hw")]
         checks = {f.stem for f in run.glob("rrpverify-*.json")}
         current = checks <= KNOWN_CHECKS and any(c in checks for c in OWN_CHECKS)
         yield (

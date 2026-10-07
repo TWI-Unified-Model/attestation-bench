@@ -1,4 +1,4 @@
-// Command fraud-api is Demo Bank's fraud-scoring service, a stand-in for an external partner API that knows nothing
+// Command fraud-api is Demo Bank's fraud-scoring service, in the role of an external partner API that knows nothing
 // of attestation: it admits a caller that presents the pre-shared API key it was configured with, and scores a
 // transfer. Demo Bank is fictional; its accounts and amounts are made up.
 //

@@ -1,5 +1,5 @@
-// Package verifierapi serves the subset of Veraison's challenge-response API that the bench's own verifiers offer
-// (the TDX verifier, the sim-verifier), as the EST server and the RRP gateways use it: a session whose nonce the
+// Package verifierapi serves the subset of Veraison's challenge-response API that the bench's own verifier offers
+// (the TDX verifier), as the EST server and the RRP gateways use it: a session whose nonce the
 // caller chooses, Evidence as a TSM report, and an EAR signed ES256 with the verifier's own key. The verifier brings
 // the appraisal; this package brings the sessions, the EAR and its key.
 package verifierapi
@@ -40,7 +40,7 @@ type Appraise func(token, nonce []byte) (status string, ann map[string]string, e
 // Server is one verifier's API.
 type Server struct {
 	Key      *ecdsa.PrivateKey // signs the EARs
-	Submod   string            // the EAR submodule it speaks for ("TDX", "SIM")
+	Submod   string            // the EAR submodule it speaks for ("TDX")
 	PolicyID string            // ear.appraisal-policy-id
 	Build    string            // ear.verifier-id build
 	// Developer is ear.verifier-id developer; empty: "TACRA test bench".

@@ -123,40 +123,6 @@ class ChangedRuns(unittest.TestCase):
             (1, "VERDICT FAIL: refused, but not with 'reason 1': https://t2.example"),
         )
 
-    def refused_run(self, appraisals):
-        refused = {"type": "x509", "ok": False, "attempts": 1, "acquire_ms": 1.0, "rup_status": 0}
-        error = 'cai: EnrollCredential: 403 RRP ca: attestation: ear: not affirming: SIM is "contraindicated"'
-        (self.tmp / "results.json").write_text(json.dumps([dict(refused, target="https://t.example", error=error)]))
-        (self.tmp / "bench-logs").mkdir()
-        log = "".join(f"2026/10/07 00:52:57 appraisal: {a}\n" for a in appraisals)
-        (self.tmp / "bench-logs" / "sim-verifier.log").write_text("2026/10/07 00:52:50 sim-verifier listening\n" + log)
-        return self.tmp
-
-    def test_refusal_cause(self):
-        run = self.refused_run(["contraindicated: the instance is debuggable"] * 2)
-        code, last = verdict("demo", run, "--expect", "refused", "--cause", "the instance is debuggable")
-        self.assertEqual(code, 0, last)
-        self.assertTrue(last.endswith("the stand-in's verifier: 'the instance is debuggable', 2 of 2 appraisals"), last)
-
-    def test_refusal_for_another_cause(self):
-        run = self.refused_run(
-            [
-                "contraindicated: the instance is debuggable",
-                "contraindicated: measurement 9d matches no reference value",
-            ]
-        )
-        self.assertEqual(
-            verdict("demo", run, "--expect", "refused", "--cause", "the instance is debuggable"),
-            (1, "VERDICT FAIL: 1 of 2 appraisals without 'the instance is debuggable'"),
-        )
-
-    def test_refusal_without_appraisal(self):
-        run = self.refused_run([])
-        self.assertEqual(
-            verdict("demo", run, "--expect", "refused", "--cause", "the instance is debuggable"),
-            (1, "VERDICT FAIL: the stand-in's verifier logged no appraisal"),
-        )
-
     def test_attack_not_refused(self):
         run = self.copy(HW / ATTACK_RUNS[0], "rrpverify-veraison-v015.json", "rrpverify-service.json")
         self.edit_json("rrpverify-veraison-v015.json", lambda d: d["results"][1].update(got="pass", ok=False))

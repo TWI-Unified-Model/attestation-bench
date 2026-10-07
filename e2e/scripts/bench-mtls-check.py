@@ -144,23 +144,6 @@ def main() -> int:
             "est-server",
         ),
         (
-            "EST server or gateway -> sim-verifier: new session",
-            8463,
-            ROOT,
-            "POST",
-            "/challenge-response/v1/newSession" + nonce,
-            None,
-            {
-                "est-server": 201,
-                "ca-gateway": 201,
-                "vault-gateway": 201,
-                "operator": 403,
-                "foreign": "tls",
-                "none": "tls",
-            },
-            "est-server",
-        ),
-        (
             "EST server or gateway -> Veraison: new session",
             8443,
             VERAISON_CA,

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Demo Bank's core, run as root on its own VM: the ledger (PostgreSQL 16; the payment service's role logs in only by a
 # client certificate from the bank's workload CA, over TLS 1.3, and the ledger itself records which certificate moved
-# money) and the fraud-scoring service (a stand-in for a partner API that admits a pre-shared API key). The TLS root
+# money) and the fraud-scoring service (in the role of a partner API that admits a pre-shared API key). The TLS root
 # for these two servers is made here and never leaves. Accounts, names and amounts are fictional.
 #
 #   core.sh install

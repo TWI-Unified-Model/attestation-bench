@@ -36,7 +36,9 @@ class Report(unittest.TestCase):
             HW / "20261006T225552Z-gcp-snp-redirect",
         )
         self.assertEqual(count, "4 runs: 4 PASS, 0 FAIL, 0 not judged")
-        self.assertIn("| mutual TLS (N23) | stand-in | Passport | PASS*: 47 of 47 checks as expected", rows[0])
+        self.assertIn(
+            "| mutual TLS (N23) | trust zone, no TEE | Passport | PASS*: 47 of 47 checks as expected", rows[0]
+        )
         self.assertIn("| end to end | GCP SEV-SNP | Passport | PASS*: all 10 Targets", rows[1])
         self.assertIn("| substitution attacks | GCP TDX |  | PASS*: 82 checks", rows[2])
         self.assertIn("| #20 redirection | GCP SEV-SNP | Background Check | PASS*: with the RRP identifier", rows[3])
@@ -53,10 +55,8 @@ class Report(unittest.TestCase):
         self.assertIn("not judged: no results; the run's own notes say why", rows[1])
 
     def test_a_run_that_stopped_early_is_not_judged(self):
-        tmp = Path(tempfile.mkdtemp())
-        self.addCleanup(shutil.rmtree, tmp)
-        (tmp / "20261007T000000Z-local-sim-e2e-passport").mkdir()
-        rows, count = report(tmp / "20261007T000000Z-local-sim-e2e-passport")
+        # the run the network stopped on 7 October 2026, after the bench had served it (its README)
+        rows, count = report(E2E / "20261007T045819Z-gcp-sev-snp-e2e-background-check")
         self.assertEqual(count, "1 runs: 0 PASS, 0 FAIL, 1 not judged")
         self.assertIn("not judged: no results: the run stopped before it finished", rows[0])
 

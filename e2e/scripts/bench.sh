@@ -30,14 +30,13 @@ config() {
   [ -f "$B/epoch.hex" ] || (umask 077; openssl rand -hex 32 > "$B/epoch.hex")
   local flags=(--rats-model "${RATS_MODEL:-passport}")
   if [ "${OMIT_RRP_ID:-}" = 1 ]; then flags+=(--omit-rrp-id); fi
-  python3 "$HERE/scripts/trustzone.py" --home "$B" --veraison "$VERAISON_DEPLOYMENT" --pack "$PACK" --simulated-tee "${flags[@]}"
+  python3 "$HERE/scripts/trustzone.py" --home "$B" --veraison "$VERAISON_DEPLOYMENT" --pack "$PACK" "${flags[@]}"
   (cd "$HERE/rrp" && GOWORK=off go build -o "$BIN/ca-gateway" ./cmd/ca-gateway && GOWORK=off go build -o "$BIN/vault-gateway" ./cmd/vault-gateway \
-    && GOWORK=off go build -o "$BIN/tdx-verifier" ./cmd/tdx-verifier && GOWORK=off go build -o "$BIN/sim-verifier" ./cmd/sim-verifier)
+    && GOWORK=off go build -o "$BIN/tdx-verifier" ./cmd/tdx-verifier)
   (cd "$EST" && GOWORK=off go build -o "$BIN/estserver" ./cmd/estserver)
   (cd "$HERE/e2e" && GOWORK=off go build -o "$BIN/rup" ./cmd/rup)
   # the TDX verifier's EAR key, provisioned to the gateways as a file (its signing key is created if absent)
   "$BIN/tdx-verifier" -config "$B/config/tdx-verifier.json" -public-jwk >"$B/gateways/tdx-verifier.ear.jwk" 2>>"$B/tdx-verifier.log"
-  "$BIN/sim-verifier" -config "$B/config/sim-verifier.json" -public-jwk >"$B/gateways/sim-verifier.ear.jwk" 2>>"$B/sim-verifier.log"
   echo "binaries in $BIN"
 }
 
@@ -61,7 +60,7 @@ case "${1:-status}" in
   start)
     # every service stopped before: what they start with is recorded (make setup compares it later)
     none_running=yes
-    for s in step-ca vault tdx-verifier sim-verifier ca-gateway ca-gateway-2 vault-gateway est-server rup; do
+    for s in step-ca vault tdx-verifier ca-gateway ca-gateway-2 vault-gateway est-server rup; do
       if running "$s"; then none_running=; fi
     done
     "$HERE/e2e/scripts/veraison-local.sh" start
@@ -72,8 +71,7 @@ case "${1:-status}" in
       vault operator unseal "$(python3 -c "import json;print(json.load(open('$B/secrets/vault-init.json'))['unseal_keys_b64'][0])")" >/dev/null && echo "vault unsealed"
     fi
     start_one tdx-verifier "$BIN/tdx-verifier" -config "$B/config/tdx-verifier.json"
-    start_one sim-verifier "$BIN/sim-verifier" -config "$B/config/sim-verifier.json"
-    wait_port 8453; wait_port 8463
+    wait_port 8453
     start_one ca-gateway "$BIN/ca-gateway" -config "$B/config/ca-gateway.json"
     [ -f "$B/config/ca-gateway-2.json" ] && start_one ca-gateway-2 "$BIN/ca-gateway" -config "$B/config/ca-gateway-2.json"
     start_one vault-gateway "$BIN/vault-gateway" -config "$B/config/vault-gateway.json"
@@ -84,7 +82,7 @@ case "${1:-status}" in
     wait_port 18443; wait_port 19443
     if [ -n "$none_running" ]; then bench_fingerprint >"$B/started.fingerprint"; fi ;;
   stop)
-    for s in rup est-server vault-gateway ca-gateway-2 ca-gateway sim-verifier tdx-verifier vault step-ca; do
+    for s in rup est-server vault-gateway ca-gateway-2 ca-gateway tdx-verifier vault step-ca; do
       if running "$s"; then pid="$(cat "$B/$s.pid")"; kill "$pid"; for _ in 1 2 3 4 5 6 7 8 9 10; do kill -0 "$pid" 2>/dev/null || break; sleep 0.5; done; echo "$s stopped"; fi
       rm -f "$B/$s.pid"
     done
@@ -92,7 +90,7 @@ case "${1:-status}" in
     "$HERE/e2e/scripts/veraison-local.sh" stop ;;
   status)
     "$HERE/e2e/scripts/veraison-local.sh" status
-    for s in step-ca vault tdx-verifier sim-verifier ca-gateway ca-gateway-2 vault-gateway est-server rup; do
+    for s in step-ca vault tdx-verifier ca-gateway ca-gateway-2 vault-gateway est-server rup; do
       if running "$s"; then echo "$s running ($(cat "$B/$s.pid"))"; else echo "$s stopped"; fi
     done ;;
   *) echo "usage: $0 config|start|stop|status" >&2; exit 2 ;;

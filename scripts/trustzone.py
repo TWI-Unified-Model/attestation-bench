@@ -5,7 +5,7 @@
 
 A trust zone is what one bank runs to give credentials to attested workloads (tacra-est): the EST server, the one
 port workloads reach; the Credential Authority and Secret Vault gateways, the RRPs; the verifiers (Veraison for
-SEV-SNP, the TDX verifier and, on a laptop, the software stand-in's verifier); step-ca and HashiCorp Vault. The local
+SEV-SNP, the TDX verifier); step-ca and HashiCorp Vault. The local
 bench (e2e/scripts/bench.sh config) and the Demo Bank's trust VM (e2e/bank/remote/trust.sh) both write their
 configuration with this program, so the two cannot drift apart.
 
@@ -16,12 +16,11 @@ TD attributes on TDX, which every RRP checks in the Attestation Results besides 
 how it runs.
 
 Under --home it writes:
-  config/<service>.json           the gateways, the EST server, the TDX verifier, the stand-in's verifier
+  config/<service>.json           the gateways, the EST server, the TDX verifier
   tls/clients/<name>.crt|.key     each component's client certificate under the home's TLS root, tls/root.crt (mutual
                                   TLS, tacra-est N23); issued when absent or within 14 days of its end
   gateways/veraison.ear.jwk       Veraison's EAR key, given to the RRPs as a file (N24: never fetched from Veraison)
   vault/config.hcl                Vault: TLS 1.3, a client certificate of the home's root required
-  sim-measurement.hex, secrets/sim-tee-ak.jwk, gateways/sim-tee-ak.pub.jwk     (--simulated-tee only)
 and it edits two files the services own: Veraison's config.yaml (its verification API requires a client certificate
 of the home's root) and step-ca's ca.json (TLS 1.3). Everything else under --home (the TLS root and the services'
 server certificates, step-ca, Vault's data, the gateways' keys and tokens) the caller creates.
@@ -31,9 +30,7 @@ affirm it, so the bank would approve a launch it can never admit.
 """
 
 import argparse
-import base64
 import datetime
-import hashlib
 import json
 import os
 import re
@@ -45,9 +42,6 @@ KINDS = ("present-nonce", "present-epoch", "absent-epoch", "absent-timestamp", "
 FRESHNESS_PARAMS = ("expires_in", "max_age", "clock_skew")
 INFRA = ("est-server", "ca-gateway", "vault-gateway", "operator")  # the components with a client certificate
 SERVICE = {"credential-authority": "ca-gateway", "secret-vault": "vault-gateway"}  # an RRP kind's program
-# The software stand-in TEE (platform/simtee.go: NO isolation, NO security) has one approved launch: SHA-384 of a
-# fixed label. A real RRP never accepts its results (allow_simulated_tee).
-SIM_LABEL = b"attestation-bench simulated TEE: approved workload"
 
 
 class PackError(Exception):
@@ -59,7 +53,7 @@ def main():
     home = os.path.abspath(a.home)
     logs = os.path.abspath(a.logs or home)
     vd = os.path.abspath(a.veraison)
-    pack = load_pack(a.pack, a.simulated_tee)
+    pack = load_pack(a.pack)
     approved = json.loads(Path(a.approved).read_text())
     platform = load_platform(a.platform)
     snp = [e["measurement"] for e in approved["sev-snp"]]
@@ -67,12 +61,11 @@ def main():
     check_corim(snp, a.corim)
 
     client_certificates(home, pack["infra_domain"])
-    sim = simulated_tee(home) if a.simulated_tee else None
-    measurements = snp + tdx + ([sim["measurement"]] if sim else [])
+    measurements = snp + tdx
 
     root = f"{home}/tls/root.crt"
     infra = {n: f"{n}.{pack['infra_domain']}" for n in INFRA}
-    verifiers = site_verifiers(home, vd, root, a.simulated_tee)
+    verifiers = site_verifiers(home, vd, root)
     everyone = [v["name"] for v in verifiers]
     common = {
         "verifiers": verifiers,
@@ -83,9 +76,6 @@ def main():
         "clients": [infra["est-server"]],
         "platform": platform,
     }
-    if a.simulated_tee:
-        # bench only: accept the software stand-in TEE's results (submodule SIM); a production RRP never sets it
-        common["allow_simulated_tee"] = True
 
     rrps, est_rrps, est_targets = {}, {}, {}
     for r in pack["rrps"]:
@@ -162,22 +152,6 @@ def main():
             },
         )
     )
-    if sim:
-        files.append(
-            (
-                "sim-verifier",
-                {
-                    "listen": "127.0.0.1:8463",
-                    "tls_cert": f"{home}/tls/sim-verifier.crt",
-                    "tls_key": f"{home}/tls/sim-verifier.key",
-                    "client_ca": root,
-                    "clients": others,
-                    "signing_key": f"{home}/secrets/sim-verifier.jwk",
-                    "attestation_keys": [sim["public_key"]],
-                    "reference_measurements": [sim["measurement"]],
-                },
-            )
-        )
     os.makedirs(f"{home}/config", exist_ok=True)
     for name, c in files:
         p = f"{home}/config/{name}.json"
@@ -217,11 +191,6 @@ def parse_args():
     p.add_argument("--logs", help="where the EST server writes its log (default: --home)")
     p.add_argument("--est-listen", default="127.0.0.1:18443", help="the EST server's address (default 127.0.0.1:18443)")
     p.add_argument(
-        "--simulated-tee",
-        action="store_true",
-        help="laptop only: run the software stand-in TEE's verifier and accept its results (NO security)",
-    )
-    p.add_argument(
         "--rats-model",
         choices=("passport", "background-check"),
         default="passport",
@@ -243,7 +212,7 @@ def load_platform(path):
     return rule
 
 
-def load_pack(path, simulated):
+def load_pack(path):
     """Reads a pack and refuses one that does not hold together, saying what is wrong."""
     pack = json.loads(Path(path).read_text())
     for k in ("name", "infra_domain", "workload", "ear", "rrps", "targets"):
@@ -268,7 +237,7 @@ def load_pack(path, simulated):
             raise PackError(f"{path}: two {r['kind']} RRPs; the second can only be a same_as copy of the first")
         else:
             kinds.append(r["kind"])
-    available = ["veraison", "tdx"] + (["sim"] if simulated else [])
+    available = ["veraison", "tdx"]
     seen = set()
     for t in pack["targets"]:
         where = f"{path}: Target {t.get('target')!r}"
@@ -308,7 +277,7 @@ def check_corim(snp, corim_path):
         )
 
 
-def site_verifiers(home, vd, root, simulated):
+def site_verifiers(home, vd, root):
     """The verifiers the RRPs may take, by name, each with its EAR key as a provisioned file (N24)."""
     v = [
         {
@@ -328,17 +297,6 @@ def site_verifiers(home, vd, root, simulated):
             "provider": "tdx_guest",
         },
     ]
-    if simulated:
-        v.append(
-            {
-                "url": "https://localhost:8463",
-                "ca": root,
-                "name": "sim",
-                "ear_key": f"{home}/gateways/sim-verifier.ear.jwk",
-                "submods": ["SIM"],
-                "provider": "sim_guest",
-            }
-        )
     return v
 
 
@@ -456,37 +414,6 @@ def dns_names(cert):
         )
     except x509.ExtensionNotFound:
         return []
-
-
-def simulated_tee(home):
-    """The software stand-in TEE's attestation key (an ordinary file: the local attester holds it, the stand-in's
-    verifier trusts its public half) and its one approved launch measurement."""
-    m = hashlib.sha384(SIM_LABEL).hexdigest()
-    with open(f"{home}/sim-measurement.hex", "w") as f:
-        f.write(m + "\n")
-    ak, ak_pub = f"{home}/secrets/sim-tee-ak.jwk", f"{home}/gateways/sim-tee-ak.pub.jwk"
-    if not os.path.exists(ak):
-        from cryptography.hazmat.primitives.asymmetric import ec
-
-        n = ec.generate_private_key(ec.SECP256R1()).private_numbers()
-        b64 = lambda v: base64.urlsafe_b64encode(v.to_bytes(32, "big")).rstrip(b"=").decode()
-        old_umask = os.umask(0o077)
-        with open(ak, "w") as f:
-            json.dump(
-                {
-                    "kty": "EC",
-                    "crv": "P-256",
-                    "x": b64(n.public_numbers.x),
-                    "y": b64(n.public_numbers.y),
-                    "d": b64(n.private_value),
-                },
-                f,
-            )
-        os.umask(old_umask)
-    j = json.loads(Path(ak).read_text())
-    with open(ak_pub, "w") as f:
-        json.dump({k: j[k] for k in ("kty", "crv", "x", "y")}, f)
-    return {"measurement": m, "public_key": ak_pub}
 
 
 def veraison_ear_key(home, vd):

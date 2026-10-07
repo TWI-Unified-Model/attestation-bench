@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Says whether a run came out as its experiment expects.
 
-    python3 scripts/verdict.py demo RUN_DIR [--expect admitted|refused] [--reason TEXT] [--cause TEXT] [--out FILE]
+    python3 scripts/verdict.py demo RUN_DIR [--expect admitted|refused] [--reason TEXT] [--out FILE]
     python3 scripts/verdict.py attacks RUN_DIR [--out FILE]
     python3 scripts/verdict.py redirect RUN_DIR [--out FILE]
     python3 scripts/verdict.py bank-pay RUN_DIR --expect pay|ordinary|unapproved [--out FILE]
@@ -14,8 +14,7 @@ hwcheck/evidence included.
 
   demo      results.json. admitted (the default): every Target's credential acquired and admitted by the RATS-unaware
             Relying Party. refused: no credential issued for any Target, and each refusal's error contains the
-            --reason TEXT; with --cause, every appraisal the stand-in's verifier logged in the run
-            (bench-logs/sim-verifier.log) gives that cause.
+            --reason TEXT.
   attacks   rrpverify-*.json. Every check as expected: the honest Evidence passed, each attack refused for its own
             reason. The builds of Veraison the bench compares with (rrpverify-veraison-fork and -fixed) are reported,
             not judged: what they get wrong is the reason the bench runs its own build.
@@ -31,7 +30,6 @@ hwcheck/evidence included.
 import argparse
 import json
 import sys
-from collections import Counter
 from pathlib import Path
 
 FRESHNESS_KINDS = ("present-nonce", "present-epoch", "absent-epoch", "absent-timestamp", "absent-none")
@@ -39,7 +37,7 @@ REDIRECT_PASSES = ("with-rrp-id", "no-rrp-id")
 COMPARED_BUILDS = ("rrpverify-veraison-fork", "rrpverify-veraison-fixed")
 
 
-def demo(run, expect, reason, cause):
+def demo(run, expect, reason):
     results = json.loads((run / "results.json").read_text())
     admitted = [r for r in results if r["ok"]]
     lines = [f"{len(admitted)} of {len(results)} Targets: credential acquired and admitted by the relying party"]
@@ -59,16 +57,6 @@ def demo(run, expect, reason, cause):
     if other:
         return lines, False, f"refused, but not with {reason!r}: {', '.join(other)}"
     because = f", each with {reason!r}" if reason else ""
-    if cause:
-        log = (run / "bench-logs" / "sim-verifier.log").read_text().splitlines()
-        appraisals = [x.split("appraisal: ", 1)[1] for x in log if "appraisal: " in x]
-        lines += [f"the stand-in's verifier, {n} appraisal(s): {a}" for a, n in Counter(appraisals).items()]
-        if not appraisals:
-            return lines, False, "the stand-in's verifier logged no appraisal"
-        off = [a for a in appraisals if cause not in a]
-        if off:
-            return lines, False, f"{len(off)} of {len(appraisals)} appraisals without {cause!r}"
-        because += f"; the stand-in's verifier: {cause!r}, {len(appraisals)} of {len(appraisals)} appraisals"
     return lines, True, f"{len(results)} of {len(results)} Targets refused, no credential issued{because}"
 
 
@@ -159,7 +147,7 @@ def mtls(run):
 
 
 JUDGES = {
-    "demo": lambda a: demo(a.run, a.expect, a.reason, a.cause),
+    "demo": lambda a: demo(a.run, a.expect, a.reason),
     "attacks": lambda a: attacks(a.run),
     "redirect": lambda a: redirect(a.run),
     "bank-pay": lambda a: bank_pay(a.run, a.expect),
@@ -177,7 +165,6 @@ def main(argv=None):
         if kind == "demo":
             p.add_argument("--expect", choices=("admitted", "refused"), default="admitted")
             p.add_argument("--reason", default="", help="refused: the text every refusal's error must contain")
-            p.add_argument("--cause", default="", help="refused: the cause every appraisal of the stand-in must give")
         if kind == "bank-pay":
             p.add_argument("--expect", choices=("pay", "ordinary", "unapproved"), required=True)
     args = parser.parse_args(argv)
