@@ -36,8 +36,8 @@ config() {
   (cd "$EST" && GOWORK=off go build -o "$BIN/estserver" ./cmd/estserver)
   (cd "$HERE/e2e" && GOWORK=off go build -o "$BIN/rup" ./cmd/rup)
   # the TDX verifier's EAR key, provisioned to the gateways as a file (its signing key is created if absent)
-  "$BIN/tdx-verifier" -config "$B/config/tdx-verifier.json" -public-jwk > "$B/gateways/tdx-verifier.ear.jwk"
-  "$BIN/sim-verifier" -config "$B/config/sim-verifier.json" -public-jwk > "$B/gateways/sim-verifier.ear.jwk"
+  "$BIN/tdx-verifier" -config "$B/config/tdx-verifier.json" -public-jwk >"$B/gateways/tdx-verifier.ear.jwk" 2>>"$B/tdx-verifier.log"
+  "$BIN/sim-verifier" -config "$B/config/sim-verifier.json" -public-jwk >"$B/gateways/sim-verifier.ear.jwk" 2>>"$B/sim-verifier.log"
   echo "binaries in $BIN"
 }
 

@@ -10,6 +10,9 @@ set -euo pipefail
 # shellcheck source=SCRIPTDIR/lib.sh
 . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 cd "$BENCH_REPO"
+bench_say "third-party sources: the Go modules build against them (third_party/fetch.sh)"
+"$BENCH_REPO/third_party/fetch.sh"
+
 failed=""
 bench_say "go test, every module"
 for m in $BENCH_GO_MODULES; do

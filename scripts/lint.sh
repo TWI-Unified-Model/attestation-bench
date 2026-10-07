@@ -73,6 +73,9 @@ hwcheck_vet() {
   for mf in go.mod go.patched.mod go.v015.mod; do (cd hwcheck && go vet -modfile="$mf" ./...) || return 1; done
 }
 
+bench_say "third-party sources: the Go modules build against them (third_party/fetch.sh)"
+"$BENCH_REPO/third_party/fetch.sh"
+
 bench_say "linters"
 sh_files=()
 while IFS= read -r f; do sh_files+=("$f"); done < <(git ls-files '*.sh' | grep -v -e '^deploy/' -e '^third_party/.*/src')

@@ -106,7 +106,7 @@ config() {
   "$D/venv/bin/python3" "$D/scripts/trustzone.py" --home "$D" --veraison "$V" --pack "$D/packs/demo-bank/pack.json" \
     --approved "$D/trust/approved-launches.json" --corim "$D/trust/veraison-corim-milan.cbor" --logs "$D/logs" \
     --est-listen 0.0.0.0:18443 --rats-model "${RATS_MODEL:-passport}"
-  "$D/bin/tdx-verifier" -config "$D/config/tdx-verifier.json" -public-jwk > "$D/gateways/tdx-verifier.ear.jwk"
+  "$D/bin/tdx-verifier" -config "$D/config/tdx-verifier.json" -public-jwk >"$D/gateways/tdx-verifier.ear.jwk" 2>>"$D/logs/tdx-verifier.log"
   publish
 }
 
