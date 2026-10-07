@@ -12,7 +12,7 @@ Then run what your change touches, and say in the commit message what you ran an
 
 | You changed | Run |
 |---|---|
-| a script, the trust zone, a gateway, a verifier, the generator, a pack | `make setup`, `make check-mtls`, and `make demo`, `make attacks`, `make redirect` with `PLATFORM=gcp-snp` (and the other platforms the change reaches) |
+| a script, the trust zone, a gateway, a verifier, the generator, a pack | `make setup`, `make check-mtls`, `make test-live`, and `make demo`, `make attacks`, `make redirect` with `PLATFORM=gcp-snp` (and the other platforms the change reaches) |
 | a platform plug-in, the CAI, the binding | the above, on every platform it touches (`PLATFORM=…`) |
 | a third-party patch (`third_party/`) | the above, and the hardware runs of the platforms it touches; `make check` runs the tests the patches add |
 | the Demo Bank | `make bank-up`, `bank-pay` on the platforms and both controls, `bank-audit`, `bank-down` |
@@ -39,6 +39,10 @@ In a third-party component, `make test` runs the tests our patches add (the test
 does not have) and no others. It checks that each of them ran, and refuses a test binary that links a mock. Upstream's
 own tests are not run: some of them use mocks, as the EST fork's tests use its mock CA. And no program the bench
 builds, its own or a third-party one, may link a package named mock, fake or stub: `make test` checks every one.
+
+`make test-live` runs the tests that need the running bench and no hardware: the EST server's wire format through the
+live server, and the Evidence of the committed attack runs appraised again by the live verifiers. It fails when the
+bench is not up; it never skips.
 
 ## Evidence
 

@@ -124,6 +124,27 @@ VERDICT PASS: 40 of 40 checks as expected: only the allowed components, over TLS
 == run directory: /Users/you/.attestation-bench/runs/20261007T140853Z-bench-mtls-passport
 ```
 
+Then the tests that need the running bench, still without hardware:
+
+```bash
+make test-live
+```
+
+It checks the EST server's wire format through the running server: the media types each attest-* resource takes, the
+415 it answers to any other, the Handle as unpadded base64url, a Handle that serves one request only. Each request
+carries the real Evidence of a committed hardware run, which the RRP refuses because it is bound to another Handle.
+Then the live verifiers appraise again the Evidence of every committed attack run from 6 October 2026 on, with each
+run's own records as the RRP's: the honest Evidence must pass and each changed binding must fail, as when the run was
+made. Veraison fetches AMD's revocation list and the TDX verifier Intel's collateral, so it needs the network.
+
+```
+  ok  attest-initiate https://db-nonce.tacra.example: 200, mode enroll, Handle 43 characters of unpadded base64url, 32 octets
+  ok  /attest-enroll as text/plain: 415 Content-Type must be application/json
+  ...
+  ok    20261007T134801Z-gcp-sev-snp   50 checks, 0 not as expected
+test-live: the EST wire format as expected; 23 committed runs appraised again, 1150 checks as expected
+```
+
 ## 7. Run TACRA end to end, on real hardware
 
 ```bash

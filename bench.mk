@@ -5,7 +5,7 @@
 # directories. See scripts/lib.sh.
 
 .PHONY: doctor setup start stop status config check-mtls trust-check third-party demo attacks redirect report \
-	bank-new bank-up bank-pay bank-audit bank-down lint test check cloud-check
+	bank-new bank-up bank-pay bank-audit bank-down lint test test-live check cloud-check
 
 ## doctor: checks this machine for what the bench needs: tools and versions, ports, disk
 doctor:
@@ -46,6 +46,11 @@ lint:
 ## test: the unit tests: every Go module, our third-party patches', the Python scripts' (scripts/tests)
 test:
 	@scripts/test.sh
+
+## test-live: the tests that need the running bench, no hardware: the EST wire format, and the committed attack runs
+##   since 6 October appraised again by the live verifiers
+test-live:
+	@scripts/test-live.sh
 
 ## check: lint, then test (what CI runs first)
 check: lint test

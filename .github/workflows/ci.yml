@@ -58,11 +58,14 @@ jobs:
         run: make setup
       - name: make check-mtls
         run: make check-mtls
-      - name: Background Check, then make check-mtls
+      - name: make test-live
+        run: make test-live
+      - name: Background Check, then make check-mtls and make test-live
         run: |
           RATS_MODEL=background-check make config
           make stop start
           make check-mtls
+          make test-live
       - name: keep the run directories
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

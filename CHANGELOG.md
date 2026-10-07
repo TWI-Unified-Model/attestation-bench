@@ -49,6 +49,12 @@ release's code; the hardware runs identical to gate 5's, check by check).
   mutual TLS in Passport and in Background Check. CI runs no protocol: it has no hardware.
 - **A secrets scan in `make lint`**: gitleaks over the git history, with `.gitleaks.toml` allowing, by narrow
   patterns and with the reason for each, the things that look like secrets and are not.
+- **`make test-live`**: the tests that need the running bench and no hardware. Through the live EST server: the media
+  types each attest-* resource takes, the 415 it answers to any other, the Handle as unpadded base64url, a Handle that
+  serves one request only. And the Evidence of every committed attack run from 6 October 2026 on, appraised again by
+  the live Veraison and TDX verifier with each run's own records: the honest Evidence passes and every changed binding
+  fails, as when the run was made (23 runs, 1150 checks). It fails, never skips, when the bench is not up; CI runs it
+  in both RATS models.
 - **Documentation**: [README.md](README.md) and [docs/](docs/getting-started.md), with how the release was checked:
   [docs/verification.md](docs/verification.md).
 
@@ -148,7 +154,8 @@ release's code; the hardware runs identical to gate 5's, check by check).
   fetched from its key server at the time of the test, on real Google Cloud and AWS reports and on the bench's CoRIM.
   The tests on the reference implementation's EST messages moved to a package of their own (EST patch 0010): their
   test binary had held the fork's tests, whose start creates a mock CA. The checks of the EST server's media types
-  and Handle encoding through the server went with the removed tests ([docs/limits.md](docs/limits.md)).
+  and Handle encoding through the server went with the removed tests; `make test-live` makes them on the running
+  server (Added).
 - **Made-up runs in the verdict tests**: two refused Targets with invented reasons, a result list written empty, an
   empty directory. The tests judge real runs instead: the six runs of the refusal scenarios, each refused for its own
   reason; one of them with one Target's reason taken from another; a real run with its Targets taken out; an attack

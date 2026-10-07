@@ -33,6 +33,7 @@ the rest and says how to install what is missing.
 make doctor                     # checks this machine; ends with "Ready for make setup."
 make setup                      # builds and starts the trust zone in ~/.attestation-bench
 make check-mtls                 # VERDICT PASS: 40 of 40 checks as expected: only the allowed components, over TLS 1.3
+make test-live                  # the EST wire format, and the committed runs appraised again by the live verifiers
 make demo     PLATFORM=gcp-snp  # VERDICT PASS: all 10 Targets: credential acquired and admitted by the relying party
 make attacks  PLATFORM=gcp-snp  # VERDICT PASS: 212 checks: the honest Evidence passed, every attack refused ...
 make redirect PLATFORM=gcp-snp  # the #20 table: which Credential Authority issued, with and without the RRP identifier
