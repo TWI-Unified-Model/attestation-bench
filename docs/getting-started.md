@@ -1,7 +1,9 @@
 # Getting started
 
-From a fresh clone to a passing local run, one step at a time. Each step says what it does and what you should see.
-Nothing here uses a cloud account or costs money.
+From a fresh clone to a passing run on real hardware, one step at a time. Each step says what it does and what you
+should see. Steps 1 to 6 set up and check the trust zone on your machine, at no cost. Steps 7 to 9 run TACRA with a
+confidential VM in your own cloud account: one small VM for a few minutes each, deleted at the end. Nothing stands in
+for the hardware.
 
 ## 1. What you need
 
@@ -14,6 +16,9 @@ Nothing here uses a cloud account or costs money.
 - **About 8 GB of free disk.** On a fresh Ubuntu 24.04, `make setup` took 7.3 GB: the bench's home 1.4 GB, Go's
   module cache 2.6 GB and build cache 1.8 GB, and the third-party sources in the clone; `make check` takes 1.7 GB
   more ([verification.md](verification.md)).
+- **For steps 7 to 9, a cloud account that can create confidential VMs:** a Google Cloud project (AMD SEV-SNP and
+  Intel TDX) or an AWS account (AMD SEV-SNP), with its CLI signed in. How to set it up, the quotas and the cost:
+  [hardware/](hardware/README.md).
 - Access to the repository. It is private: ask its owner to invite your GitHub account.
 
 `make doctor` (step 3) checks everything else and prints the command that installs what is missing.
@@ -34,8 +39,7 @@ make doctor
 ```
 
 It lists each tool the bench needs with `ok`, or with `MISSING` and the command to install it, then the cloud tools
-the hardware runs use (not needed for anything on this page), the ports and the disk. When everything is there it
-ends with:
+the hardware runs use (from step 7), the ports and the disk. When everything is there it ends with:
 
 ```
   ok       disk         13 GB free
@@ -45,16 +49,17 @@ Ready for make setup.
 
 Install what it asks for and run it again until it says `Ready for make setup.`
 
-## 4. Set the bench up
+## 4. Set the trust zone up
 
 ```bash
 make setup
 ```
 
 It builds and starts a complete trust zone on your machine, under `~/.attestation-bench` (set `BENCH_HOME` to use
-another directory). Nothing is installed system-wide. Ten steps, each announced with `== n/10`:
+another directory): what a bank runs to give credentials to attested workloads. Nothing is installed system-wide. Ten
+steps, each announced with `== n/10`:
 
-1. a Python environment with the two packages the scripts use;
+1. a Python environment with the packages the scripts use (`scripts/requirements.txt`);
 2. pinned tools, built from source or downloaded and checked against their SHA-256: `step`, `step-ca`, HashiCorp Vault,
    the protoc plug-ins;
 3. the third-party sources: the EST server, Veraison and go-gen-ref, each at a pinned upstream commit plus our patches;
@@ -85,24 +90,23 @@ make status
 ```
 
 ```
-vts running (58326)
-provisioning running (58352)
-verification running (58354)
-management running (58356)
-step-ca running (58358)
-vault running (58359)
-tdx-verifier running (58383)
-sim-verifier running (58384)
-ca-gateway running (58391)
-ca-gateway-2 running (58392)
-vault-gateway running (58393)
-est-server running (58406)
-rup running (58407)
+vts running (10698)
+provisioning running (10724)
+verification running (10726)
+management running (10728)
+step-ca running (10730)
+vault running (10731)
+tdx-verifier running (10755)
+ca-gateway running (10760)
+ca-gateway-2 running (10761)
+vault-gateway running (10762)
+est-server running (10775)
+rup running (10776)
 ```
 
-Thirteen services, all listening on `127.0.0.1` only: Veraison's four, step-ca, Vault, the TDX verifier, the stand-in
-TEE's verifier, the two Credential Authority gateways (the second exists for the redirection experiment), the Secret
-Vault gateway, the EST server and the Relying Party (`rup`). What each one does: [architecture.md](architecture.md).
+Twelve services, all listening on `127.0.0.1` only: Veraison's four, step-ca, Vault, the TDX verifier, the two
+Credential Authority gateways (the second exists for the redirection experiment), the Secret Vault gateway, the EST
+server and the Relying Party (`rup`). What each one does: [architecture.md](architecture.md).
 
 ## 6. Check that every component authenticates the others
 
@@ -116,50 +120,56 @@ certificate at all, and an allowed component limited to TLS 1.2. Only the allowe
 through.
 
 ```
-VERDICT PASS: 47 of 47 checks as expected: only the allowed components, over TLS 1.3
-== run directory: /Users/you/.attestation-bench/runs/20261007T020029Z-bench-mtls-passport
+VERDICT PASS: 40 of 40 checks as expected: only the allowed components, over TLS 1.3
+== run directory: /Users/you/.attestation-bench/runs/20261007T140853Z-bench-mtls-passport
 ```
 
-## 7. Run TACRA end to end
+## 7. Run TACRA end to end, on real hardware
 
 ```bash
-make demo
+make demo PLATFORM=gcp-snp    # or gcp-tdx, aws-snp
 ```
 
-The workload asks for a credential for each of ten Targets: an X.509 certificate from the Credential Authority and an
-API key from the Secret Vault, each under the five Freshness Kinds. For each one it proves itself with a report from
-the stand-in TEE, gets the credential through the EST server, and presents it to the Relying Party.
+It creates one confidential VM in your account, AMD SEV-SNP here, and runs the workload in it. The workload asks for
+a credential for each of ten Targets: an X.509 certificate from the Credential Authority and an API key from the
+Secret Vault, each under the five Freshness Kinds. For each one it proves itself with the hardware's report, gets the
+credential through the EST server on your machine, and presents it to the Relying Party. Then the VM is deleted, and
+the deletion checked.
 
 ```
 10 of 10 Targets: credential acquired and admitted by the relying party
-ok  https://db-nonce.tacra.example         x509         89.9 ms 200
-ok  https://db-epoch.tacra.example         x509          8.1 ms 200
+ok  https://db-nonce.tacra.example         x509        755.8 ms 200
+ok  https://db-epoch.tacra.example         x509        645.9 ms 200
 ...
-ok  https://ledger-none.tacra.example      api-key       9.1 ms 200
+ok  https://ledger-none.tacra.example      api-key     491.9 ms 200
 VERDICT PASS: all 10 Targets: credential acquired and admitted by the relying party
-== run directory: /Users/you/.attestation-bench/runs/20261007T005245Z-local-sim-e2e-passport
+== run directory: /Users/you/.attestation-bench/runs/20261007T135611Z-gcp-sev-snp-e2e-passport
 ```
 
 Every run ends this way: its verdict, then the directory that holds everything it recorded. A run whose verdict is
-`FAIL` makes `make` fail too. The same command can play an attacker: `SIM_DEBUG=1 make demo` and two other refusal
-scenarios, in which every Target must be refused ([attacks.md](attacks.md), sections 4 and 5).
+`FAIL` makes `make` fail too. The same command can play an attacker: `UNAPPROVED=1` (a launch the bench does not
+approve) and `OTHER_PLATFORM=1` (the Targets of another platform's verifier), in which every Target must be refused
+([attacks.md](attacks.md), sections 4 and 5).
 
 ## 8. Attack it
 
 ```bash
-make attacks
+make attacks PLATFORM=gcp-snp
 ```
 
 For each of the ten requests it first checks the honest Evidence, then changes one input at a time, as an
 intermediary could: another Target, another RRP, another key, a replayed or stale freshness value, a key that is not
 the platform's, an unapproved launch, a timestamp an hour off. Each must be refused for its own reason. It runs the
-checks twice: inside one program, and through the bench's verifier as an RRP would ask it.
+checks twice: inside one program, with the bench's build of Veraison, and through the deployed Veraison as an RRP
+would ask it; two other builds of Veraison are run beside them, for comparison only.
 
 ```
 rrpverify-service: 50 checks, 0 not as expected
-rrpverify-sim: 82 checks, 0 not as expected
-VERDICT PASS: 132 checks: the honest Evidence passed, every attack refused for its own reason
-== run directory: /Users/you/.attestation-bench/runs/20261007T005635Z-local-sim-attacks
+rrpverify-veraison-fixed: 162 checks, 0 not as expected (a build the bench compares with: reported, not judged)
+rrpverify-veraison-fork: 142 checks, 60 not as expected (a build the bench compares with: reported, not judged)
+rrpverify-veraison-v015: 162 checks, 0 not as expected
+VERDICT PASS: 212 checks: the honest Evidence passed, every attack refused for its own reason
+== run directory: /Users/you/.attestation-bench/runs/20261007T134801Z-gcp-sev-snp
 ```
 
 The catalogue of attacks and what stops each: [attacks.md](attacks.md).
@@ -167,7 +177,7 @@ The catalogue of attacks and what stops each: [attacks.md](attacks.md).
 ## 9. The redirection experiment
 
 ```bash
-make redirect
+make redirect PLATFORM=gcp-snp
 ```
 
 The workload produces Evidence for a Target of one Credential Authority, `ca1`. A hostile intermediary then offers
@@ -187,7 +197,7 @@ no-rrp-id    absent-epoch       ISSUED   ISSUED
 no-rrp-id    absent-timestamp   ISSUED   ISSUED
 no-rrp-id    absent-none        ISSUED   ISSUED
 VERDICT PASS: with the RRP identifier, ca2 refused all 5 Freshness Kinds; without it, all but present-nonce
-== run directory: /Users/you/.attestation-bench/runs/20261007T005429Z-local-redirect
+== run directory: /Users/you/.attestation-bench/runs/20261007T060630Z-gcp-snp-redirect
 ```
 
 With the RRP identifier in the binding, `ca2` refuses every Freshness Kind. Without it, only a nonce `ca2` never
@@ -201,7 +211,7 @@ Every run writes a directory under `~/.attestation-bench/runs/` (set `RUNS_DIR` 
 
 ```bash
 ls ~/.attestation-bench/runs/
-cd "$(ls -d ~/.attestation-bench/runs/*-local-sim-e2e-* | tail -1)"
+cd "$(ls -d ~/.attestation-bench/runs/*-e2e-* | tail -1)"
 shasum -a 256 -c sha256sums.txt
 ```
 
@@ -220,7 +230,7 @@ the RRP) or **Background Check** (the RRP asks the verifier itself). To switch:
 ```bash
 RATS_MODEL=background-check make config
 make stop start
-make demo
+make demo PLATFORM=gcp-snp
 ```
 
 `make demo` names its run directory after the model it ran in. To switch back: `RATS_MODEL=passport make config`,
@@ -245,7 +255,7 @@ The next `make setup` builds it again from zero.
 
 ## Next
 
-- Run the same three experiments on real hardware: [hardware/](hardware/README.md).
+- The other platforms, their quotas and their cost: [hardware/](hardware/README.md).
 - Bring up the Demo Bank in the cloud: [demo-bank.md](demo-bank.md).
 - Change what a bank issues: [../packs/README.md](../packs/README.md).
 - Every `make` target: `make help`.

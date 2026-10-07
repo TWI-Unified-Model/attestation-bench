@@ -12,19 +12,17 @@ release's code; the hardware runs identical to gate 5's, check by check).
 ### Added
 
 - **One command per job**: `make doctor`, `setup`, `start`, `stop`, `status`, `config`; `make demo`, `attacks` and
-  `redirect`, on the software stand-in TEE or with `PLATFORM=gcp-snp|gcp-tdx|aws-snp` on real hardware;
+  `redirect` on real hardware, `PLATFORM=gcp-snp|gcp-tdx|aws-snp`;
   `make bank-new`, `bank-up`, `bank-pay`, `bank-audit`, `bank-down`; `make check-mtls`, `trust-check`, `cloud-check`;
   `make report`; `make lint`, `test`, `check`. `make help` lists them.
 - **Every run judges itself** (`scripts/verdict.py`): its verdict, `VERDICT PASS` or `VERDICT FAIL`, is kept in the
   sealed run directory, and on FAIL the run, `make` and CI fail. Its tests judge every reference run of 6 October.
   `make report` lists runs, one row each with its verdict, the reference runs included.
-- **Refusal scenarios of `make demo`**, each refused for its own reason: `SIM_DEBUG=1` (a debuggable instance),
-  `SIM_LABEL=…` (an unapproved workload) and `OTHER_PLATFORM=1` (the Targets of another platform's verifier,
-  tacra-est N24; also on hardware).
+- **Refusal scenarios of `make demo`** on hardware, each refused for its own reason: `UNAPPROVED=1` (an SEV-SNP
+  launch the bench does not approve: four vCPUs) and `OTHER_PLATFORM=1` (the Targets of another platform's verifier,
+  tacra-est N24).
 - **Banks of your own**: `make bank-new NAME=…` makes a bank's pack from the Demo Bank's under its own names;
   `BANK=… make bank-up` brings it up.
-- **Local mode**: the software stand-in TEE (`platform.SimTEE`) and its verifier (`sim-verifier`), so every flow
-  runs on a laptop; RRPs refuse its results unless their configuration allows them.
 - **Your own cloud**: hardware runs use the project or account your `gcloud` or `aws` CLI is signed in to
   (`GCP_PROJECT`, `GCP_ZONE`, `AWS_REGION`, `AWS_AZ`), and check it before creating anything.
 - **A platform rule** (`trust/platform-policy.json`) that every RRP applies besides the verifier's verdict: on
@@ -47,8 +45,8 @@ release's code; the hardware runs identical to gate 5's, check by check).
   trust zone's configuration, the bench's and the Demo Bank's alike.
 - **Third-party components as pinned upstream commits plus our patches** (`third_party/`), each checked against the
   tree it was tested with.
-- **CI** on every push and pull request: `make check`, then the bench from zero on Ubuntu 24.04 and its local runs,
-  the refusal scenarios included, in Passport and in Background Check.
+- **CI** on every push and pull request: `make check`, then the trust zone from zero on Ubuntu 24.04, live, and its
+  mutual TLS in Passport and in Background Check. CI runs no protocol: it has no hardware.
 - **A secrets scan in `make lint`**: gitleaks over the git history, with `.gitleaks.toml` allowing, by narrow
   patterns and with the reason for each, the things that look like secrets and are not.
 - **Documentation**: [README.md](README.md) and [docs/](docs/getting-started.md), with how the release was checked:
@@ -104,6 +102,9 @@ release's code; the hardware runs identical to gate 5's, check by check).
   takes for API keys (a module named `oauth2`), found only after the commit, before it was pushed. `make lint` now
   also scans the changes not yet committed, staged or not, and `.gitleaks.toml` allows `go.sum` lines in our patches
   by their form (a module, its version and a hash), and nothing else in them.
+- The bench's RRPs accepted the software stand-in's results whenever the bench ran, hardware runs included:
+  `bench.sh` wrote their configuration with `allow_simulated_tee`, and the stand-in's verifier ran beside the real
+  ones. No hardware run used that path; the path is gone with the stand-in (the Demo Bank's trust zone never had it).
 - A hardware run whose SSH session to the VM broke ended without a verdict
   (`e2e/evidence/20261007T045819Z-gcp-sev-snp-e2e-background-check`). The workload now runs in the VM detached from
   any session (`bench_guest_run`, `scripts/lib.sh`): the bench reads its output and its end with short calls, each
@@ -120,6 +121,11 @@ release's code; the hardware runs identical to gate 5's, check by check).
   guides, and the CAI's and the plug-in interface's tests, which ran on the Simulated plug-in and on stand-ins for
   the CAAPI and the CA ([CONTRIBUTING.md](CONTRIBUTING.md)). The CAI and the SEV-SNP and TDX plug-ins run in every
   hardware run. `git log` keeps what was removed.
+- **The software stand-in TEE** (`platform.SimTEE`) and its verifier (`sim-verifier`), and with them the local mode
+  (`PLATFORM=local`, the default until then), the stand-in's refusal scenarios (`SIM_DEBUG`, `SIM_LABEL`) and every
+  test built on it: the bench runs nothing that stands in for the hardware. `UNAPPROVED=1 make demo` shows on
+  hardware what `SIM_LABEL` showed on the stand-in; no cloud launches a debuggable guest, so no run shows that refusal
+  ([docs/limits.md](docs/limits.md)).
 
 ## Before: the TACRA proof of concept and the bench's first stages
 

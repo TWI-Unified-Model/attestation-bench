@@ -7,7 +7,7 @@ terms are explained in [concepts.md](concepts.md).
 
 ```mermaid
 flowchart LR
-  subgraph TEE["trusted: the confidential VM (or the stand-in TEE)"]
+  subgraph TEE["trusted: the confidential VM"]
     A["workload<br/>CAI + plug-in"]
   end
   subgraph CAS["not trusted: the credential acquisition system"]
@@ -18,14 +18,13 @@ flowchart LR
     VG["Vault gateway<br/>:9102"] --> H["Vault :8200"]
     VE["Veraison :8443"]
     TD["TDX verifier :8453"]
-    SI["stand-in verifier :8463"]
   end
   A --> C
   E --> CA
   E --> VG
-  E -. Passport .-> VE & TD & SI
-  CA -. Background Check .-> VE & TD & SI
-  VG -. Background Check .-> VE & TD & SI
+  E -. Passport .-> VE & TD
+  CA -. Background Check .-> VE & TD
+  VG -. Background Check .-> VE & TD
   A -- "credential" --> R["Relying Party (RUP) :19443"]
 ```
 
@@ -37,7 +36,7 @@ flowchart LR
 - **Not involved**: the Relying Party. It authenticates the workload with an ordinary credential and knows nothing of
   attestation.
 
-Locally all of it runs on one machine; in a hardware run the workload and the CAS Client run in the confidential VM
+The trust zone runs on one machine, yours; in every run the workload and the CAS Client run in the confidential VM
 and reach the EST server through an SSH reverse tunnel, with TLS end to end over it. In the Demo Bank each part has a
 VM of its own ([demo-bank.md](demo-bank.md)).
 
@@ -45,7 +44,7 @@ VM of its own ([demo-bank.md](demo-bank.md)).
 
 | Component | Program | Listens on | Role |
 |---|---|---|---|
-| Workload | `e2e-attester` (`e2e/cmd`) | | the Attester: the TACRA proof of concept's CAI with a platform plug-in (`platform/`: SEV-SNP, TDX, the stand-in) |
+| Workload | `e2e-attester` (`e2e/cmd`) | | the Attester: the TACRA proof of concept's CAI with a platform plug-in (`platform/`: SEV-SNP, TDX) |
 | CAS Client | `caapi-est` (`e2e/cmd`) | `127.0.0.1:50061` (the CAAPI, for the CAI) | turns CAAPI calls into EST requests |
 | EST server | GlobalSign's EST server with TACRA's `attest-*` resources (`third_party/globalsign-est`) | `127.0.0.1:18443` | the CAS Server: routes each Target to its RRP; in Passport it asks the verifier |
 | Credential Authority gateway | `ca-gateway` (`rrp/cmd`) | `127.0.0.1:9101` | an RRP: mints Freshness Handles, checks the binding and the verifier result, asks step-ca to sign |
@@ -55,10 +54,9 @@ VM of its own ([demo-bank.md](demo-bank.md)).
 | HashiCorp Vault | `vault` | `127.0.0.1:8200` | stores the secret the Vault gateway releases |
 | Veraison | `vts`, `provisioning`, `verification`, `management` (`third_party/veraison-services`) | `127.0.0.1:50051` (VTS), `:9443`, `:8443`, `:10443` | the SEV-SNP verifier; provisioned with AMD's ARK and the approved launches (`trust/`) |
 | TDX verifier | `tdx-verifier` (`rrp/cmd`) | `127.0.0.1:8453` | the TDX verifier: go-tdx-guest against Intel's collateral, and the approved MRTDs |
-| Stand-in verifier | `sim-verifier` (`rrp/cmd`) | `127.0.0.1:8463` | appraises the stand-in TEE's reports |
 | Relying Party | `rup` (`e2e/cmd`) | `127.0.0.1:19443` | the RATS-unaware service: `/hello` admits a certificate of the workload CA for an allowed name, `/api` the API key |
 
-`make status` lists the thirteen that run in the trust zone. Their configuration is written by
+`make status` lists the twelve that run in the trust zone. Their configuration is written by
 `scripts/trustzone.py` from the pack ([../packs/README.md](../packs/README.md)); the files are in
 `~/.attestation-bench/config/`.
 
@@ -72,7 +70,7 @@ root wherever the server takes one (tacra-est requirement N23).
 |---|---|---|
 | CAS Client | EST server | the server only: the CAS is not trusted, so the request's own Evidence is what counts |
 | EST server | CA and Vault gateways | a client certificate, `est-server.bench.tacra.example` and no other (the Vault gateway's origin-keys route, which serves its public keys, takes any of the root) |
-| EST server, gateways | TDX verifier, stand-in verifier | a client certificate of one of those three components |
+| EST server, gateways | TDX verifier | a client certificate of one of those three components |
 | EST server, gateways | Veraison (verification) | a client certificate of the bench's root |
 | CA gateway | step-ca | a one-time token per request, signed with the provisioner key the gateway holds |
 | Vault gateway | Vault | a client certificate, plus a Vault token that may only read its Targets' secrets |

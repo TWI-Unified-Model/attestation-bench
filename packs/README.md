@@ -47,14 +47,13 @@ brings it up ([../docs/demo-bank.md](../docs/demo-bank.md)).
 | `freshness_kind` | `present-nonce`, `present-epoch`, `absent-epoch`, `absent-timestamp`, `absent-none` |
 | `expires_in` | for `present-*`: how long a Freshness Handle lives (seconds) |
 | `max_age`, `clock_skew` | for `absent-timestamp`: how old the timestamp may be, and the skew allowed (seconds) |
-| `verifiers` | `"all"`, or the verifiers it takes by name: `veraison` (SEV-SNP), `tdx` (TDX), `sim` (the software stand-in, laptop only) |
+| `verifiers` | `"all"`, or the verifiers it takes by name: `veraison` (SEV-SNP), `tdx` (TDX) |
 | `acceptable` | the algorithms it accepts: `ecdsa-p256-sha256` for a CSR; `MLKEM768-P256+HKDF-SHA256+AES-256-GCM` for the signed container |
 | `certificate_validity` | Credential Authority Targets: how long the certificate is valid, e.g. `1h` |
 | `secret` | Secret Vault Targets: `path` in Vault (mount `secret`), `policy_version`, and the key block's `purpose`, `algorithm`, `validity_seconds` |
 
-Every Target admits the workload only from an approved launch: the measurements in `trust/approved-launches.json`,
-plus, on a laptop, the software stand-in's one launch; and only on a platform the rule in `trust/platform-policy.json`
-admits, which applies to every pack.
+Every Target admits the workload only from an approved launch, the measurements in `trust/approved-launches.json`,
+and only on a platform the rule in `trust/platform-policy.json` admits, which applies to every pack.
 
 ## Changing a pack
 
@@ -63,5 +62,5 @@ admits, which applies to every pack.
    without a `secret`.
 2. Write the configuration again and restart: `make config && make stop start`.
 
-The end-to-end runs (`make demo`, on a laptop or on hardware) ask for every Target whose `verifiers` is `"all"`, each
+The end-to-end runs (`make demo`, on hardware) ask for every Target whose `verifiers` is `"all"`, each
 for the credential its RRP issues: `e2e/scripts/guest_config.py` reads the same pack.

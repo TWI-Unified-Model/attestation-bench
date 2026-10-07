@@ -55,7 +55,6 @@ reference runs, six fail: each found a fault in its day, which its README or the
 | `code-rev.txt` or `code-revs.txt` | the bench's commit (`-dirty` if the code had uncommitted changes), and for end-to-end runs each third-party component's upstream commit and patches, and the deployed Veraison's build |
 | `binaries.sha256` | the SHA-256 of the programs the run built and ran |
 | `rats-model.txt` | `passport` or `background-check` |
-| `platform.txt` | on the stand-in TEE only: a reminder that it gives no security |
 | `verdict.txt` | the run's verdict (above) |
 | `sha256sums.txt` | the seal (above) |
 
@@ -69,9 +68,9 @@ reference runs, six fail: each found a fault in its day, which its README or the
 | `bench-logs/` | each trust zone service's log lines for this run only |
 | `run-window.txt` | the run's start and end, in seconds since 1970 |
 | `platform-rule.json` | the platform rule the RRPs applied: product lines, minimum TCB, required PLATFORM_INFO and mitigation bits and SMT on SEV-SNP, refused TD attributes on TDX ([../trust/README.md](../trust/README.md)); runs before 7 October 2026 have none |
-| hardware only: `kernel.txt`, `machine-type.txt` (GCP) or `instance.txt` (AWS), `vm-deleted.txt` | the guest's kernel, the machine, and the record of its deletion, with the time it was found gone |
+| `kernel.txt`, `machine-type.txt` (GCP) or `instance.txt` (AWS), `vm-deleted.txt` | the guest's kernel, the machine, and the record of its deletion, with the time it was found gone |
 
-## `make attacks`: `…-local-sim-attacks`, `…-gcp-sev-snp`, `…-gcp-tdx`, `…-aws-sev-snp`
+## `make attacks`: `…-gcp-sev-snp`, `…-gcp-tdx`, `…-aws-sev-snp`
 
 | File | Holds |
 |---|---|
@@ -83,8 +82,8 @@ reference runs, six fail: each found a fault in its day, which its README or the
 | `rrp-clock-window.txt` | the RRP's clock before and after the guest made its reports, in seconds since 1970: the window timestamps are checked against |
 | hardware: `amd-kds-*.pem` (SEV-SNP), `kernel.txt`, `dmesg-*.txt`, `vm-deleted.txt` | the vendor chain used, the guest's kernel and messages, the deletion record with its time |
 
-The variant names in `rrpverify-*`: `sim` and `service` locally; on SEV-SNP `veraison-v015` (the bench's Veraison
-build), `veraison-fixed`, `veraison-fork` and `service` (the deployed Veraison); `tdx` on TDX.
+The variant names in `rrpverify-*`: on SEV-SNP `veraison-v015` (the bench's Veraison build), `veraison-fixed`,
+`veraison-fork` and `service` (the deployed Veraison); `tdx` on TDX.
 
 ## `make redirect`: `…-<platform>-redirect`
 
@@ -96,7 +95,7 @@ build), `veraison-fixed`, `veraison-fork` and `service` (the deployed Veraison);
 To check the binding of every Enrollment yourself, character by character, with no Go code involved:
 
 ```bash
-python3 hwcheck/scripts/recompute-binding.py <run directory> sev-snp     # or tdx, sim
+python3 hwcheck/scripts/recompute-binding.py <run directory> sev-snp     # or tdx
 ```
 
 ## `make check-mtls`: `…-bench-mtls-<model>`
@@ -117,7 +116,7 @@ payment's steps and verdict, the server log lines for it, the endorsements, the 
 |---|---|
 | `e2e/scripts/compare-e2e.py A/results.json B/results.json` | two end-to-end runs, Target by Target |
 | `hwcheck/scripts/compare-rrpverify.py A.json B.json` | two attack runs, check by check |
-| `hwcheck/scripts/compare-redirect.py [--ignore-platform] A/results.jsonl B/results.jsonl` | two redirect runs, case by case (`--ignore-platform` compares the stand-in with hardware) |
+| `hwcheck/scripts/compare-redirect.py [--ignore-platform] A/results.jsonl B/results.jsonl` | two redirect runs, case by case (`--ignore-platform` compares runs on two platforms) |
 | `e2e/scripts/compare-mtls.py A/mtls.json B/mtls.json` | two mTLS checks |
 
 Each prints what differs and exits 0 only when nothing does. Serial numbers, timings, nonces and other values that

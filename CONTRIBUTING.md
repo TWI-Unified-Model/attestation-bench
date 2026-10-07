@@ -12,8 +12,8 @@ Then run what your change touches, and say in the commit message what you ran an
 
 | You changed | Run |
 |---|---|
-| a script, the trust zone, a gateway, a verifier, the generator, a pack | `make setup`, `make check-mtls`, `make demo`, `make attacks`, `make redirect` |
-| a platform plug-in, the CAI, the binding | the above, and the hardware runs of the platforms it touches (`PLATFORM=…`) |
+| a script, the trust zone, a gateway, a verifier, the generator, a pack | `make setup`, `make check-mtls`, and `make demo`, `make attacks`, `make redirect` with `PLATFORM=gcp-snp` (and the other platforms the change reaches) |
+| a platform plug-in, the CAI, the binding | the above, on every platform it touches (`PLATFORM=…`) |
 | a third-party patch (`third_party/`) | the above, and the hardware runs of the platforms it touches; `make check` runs the tests of the packages the patches change |
 | the Demo Bank | `make bank-up`, `bank-pay` on the platforms and both controls, `bank-audit`, `bank-down` |
 | documentation | every command you added or changed, exactly as written |
@@ -21,8 +21,8 @@ Then run what your change touches, and say in the commit message what you ran an
 ## Commits
 
 - One logical change per commit, with a message that says what changed and why, in plain words.
-- End with a "Checked:" paragraph: the commands you ran and their results ("make demo 10/10; make attacks 82/82 and
-  50/50").
+- End with a "Checked:" paragraph: the commands you ran and their results ("make demo PLATFORM=gcp-snp 10/10; make
+  attacks PLATFORM=gcp-snp 212/212").
 - Author commits with your real name and e-mail address.
 
 ## Evidence

@@ -24,7 +24,7 @@ credential, which the server accepts as it always has. The server needs no chang
 | **Target** | "the RATS-unaware Relying Party for which the Attester seeks credentials" (section 2) | a URL naming it, e.g. `https://db-nonce.tacra.example` |
 | **RATS-Unaware Relying Party (RUP)** | the server that authenticates the workload with the credential | `rup`, an ordinary mTLS service (Demo Bank: a PostgreSQL ledger and a fraud-scoring API) |
 | **RATS Relying Party (RRP)** | a Credential Authority or a Secret Vault that "takes on the role of RATS Relying Party" (section 1) | the CA gateway in front of step-ca, the Vault gateway in front of HashiCorp Vault |
-| **Verifier** | appraises Evidence and signs Attestation Results | Veraison (SEV-SNP), the bench's TDX verifier, the stand-in TEE's verifier |
+| **Verifier** | appraises Evidence and signs Attestation Results | Veraison (SEV-SNP), the bench's TDX verifier |
 | **Credential Acquisition System (CAS)** | the existing mechanism the workload uses to get credentials: a CAS Client and a CAS Server (section 2) | EST: `caapi-est` (the CAS Client) and the GlobalSign EST server with TACRA's `attest-*` resources |
 
 The CAS sits between the Attester and the RRP and is **not trusted** (section 7.2): the bench treats it, the network
@@ -54,10 +54,9 @@ binding_input = len32(freshness element) || freshness element
 binding value = SHA-512(binding_input)
 ```
 
-The value goes into `REPORT_DATA` on AMD SEV-SNP, `REPORTDATA` in an Intel TDX quote, and `report_data` in the
-software stand-in's report. The RRP computes the value itself from what it received and accepts the Evidence only if
-it matches. Changing any of the four parts on the way, a different Target, another RRP, another key, an old freshness
-value, makes the values differ, and the RRP refuses.
+The value goes into `REPORT_DATA` on AMD SEV-SNP and `REPORTDATA` in an Intel TDX quote. The RRP computes the value
+itself from what it received and accepts the Evidence only if it matches. Changing any of the four parts on the way, a
+different Target, another RRP, another key, an old freshness value, makes the values differ, and the RRP refuses.
 
 **The RRP identifier** is the bench's name for the RRP's identity in the binding (`rrp_id` in the configuration).
 Whether it belongs in the binding is the open question of
@@ -101,8 +100,7 @@ with one setting: `RATS_MODEL=passport` or `background-check` ([getting-started.
 ## Attestation Results
 
 The verifier's signed result is an **EAR** (EAT Attestation Result): a JWT signed with ES256 that names the verdict
-per platform ("submodule": `SEVSNP`, `TDX`, or `SIM` for the stand-in), the trustworthiness claims behind it, and the
-nonce. The RRP's checks are in `rrp/internal/ear`.
+per platform ("submodule": `SEVSNP` or `TDX`), the trustworthiness claims behind it, and the nonce. The RRP's checks are in `rrp/internal/ear`.
 
 ## The signed container
 
@@ -111,13 +109,12 @@ ML-KEM-768 + P-256 hybrid key encapsulation (`MLKEM768-P256+HKDF-SHA256+AES-256-
 it, which the workload checks against the Vault's key it holds for that RRP identifier (`bundle/`). Only the TEE that
 generated the CEK can open it, and only the Vault could have made it.
 
-## The software stand-in TEE
+## Only real hardware
 
-So that everything can run on a laptop, the bench has a stand-in for the hardware: `platform.SimTEE` signs its
-reports with a P-256 key from a file (`~/.attestation-bench/secrets/sim-tee-ak.jwk`), and `sim-verifier` appraises
-them like the real verifiers. It gives **no isolation and no security**: anyone with the file can produce its
-reports. The RRPs accept its results only because the bench's configuration says `allow_simulated_tee`; without that
-setting, which no real deployment has, every gateway refuses submodule `SIM`.
+Nothing in the bench stands in for the hardware: every Evidence an RRP appraises comes from an AMD SEV-SNP or an Intel
+TDX VM in a cloud account, signed by a key the vendor certifies. The trust zone (the EST server, the gateways, the
+verifiers, step-ca, Vault) runs on any machine; the protocol runs only when a confidential VM takes part
+([getting-started.md](getting-started.md), [hardware/](hardware/README.md)).
 
 ## Glossary
 

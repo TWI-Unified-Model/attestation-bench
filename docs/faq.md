@@ -1,14 +1,14 @@
 # FAQ
 
 **Do I need a cloud account?**
-No, not for the local bench: `make setup`, `demo`, `attacks`, `redirect` and `check-mtls` run on your machine with the
-software stand-in TEE. You need Google Cloud for hardware runs on `gcp-snp` and `gcp-tdx` and for the Demo Bank, and
-AWS for `aws-snp`.
+Yes, for any run of the protocol: nothing stands in for the hardware. `make setup` and `make check-mtls` set up and
+check the trust zone on your machine; `make demo`, `attacks` and `redirect` need a Google Cloud project (`gcp-snp`,
+`gcp-tdx`) or an AWS account (`aws-snp`) with confidential VMs, and the Demo Bank needs Google Cloud.
 
-**Is the local mode secure?**
-No. The stand-in TEE signs its reports with a key in a file and isolates nothing. It exists so that every flow and
-every check can run anywhere, and the gateways accept it only because the local bench's configuration allows it
-([concepts.md](concepts.md), the software stand-in TEE).
+**Why is there no laptop mode?**
+The bench had one, a software stand-in for the hardware. It showed that the protocol's checks work, but nothing about
+isolation, and a run on it could be taken for an attested one. The bench now runs nothing that stands in for the real
+thing ([concepts.md](concepts.md), only real hardware).
 
 **What does a hardware run cost?**
 One small VM for a few minutes: between 108 and 272 seconds in the fourteen hardware runs of 7 October 2026, at the
@@ -36,13 +36,14 @@ The TACRA proof of concept the bench builds on uses EST as its Credential Acquis
 server with TACRA's `attest-*` resources; the architecture draft names EST among the mechanisms TACRA can extend.
 
 **How do I add a Target, or make my own bank?**
-Edit a pack: [../packs/README.md](../packs/README.md). The local bench uses `packs/tacra-bench`, the Demo Bank
-`packs/demo-bank`.
+Edit a pack: [../packs/README.md](../packs/README.md). The bench's own trust zone uses `packs/tacra-bench`, the Demo
+Bank `packs/demo-bank`.
 
 **How do I approve a new firmware build?**
-Only on its vendor's signed endorsement: [../trust/README.md](../trust/README.md).
+From where its value comes: Google's signed endorsement for Google Cloud, AWS's published firmware measured again for
+AWS ([../trust/README.md](../trust/README.md)). Never from a value a VM reported.
 
 **Who wrote what?**
 The TACRA proof of concept (the CAI, the CAAPI, the platform plug-in interface, the EST server's TACRA resources) is
-the TWI SIG's; the bench (the RRPs, the verifiers for TDX and the stand-in, the runs, the attack suite, the Demo Bank)
+the TWI SIG's; the bench (the RRPs, the TDX verifier, the runs, the attack suite, the Demo Bank)
 was built on it. The repository layout in [../README.md](../README.md) says which directory is which.

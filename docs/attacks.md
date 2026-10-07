@@ -13,7 +13,6 @@ hardware vendors' and Google's roots. What lies outside this model is in [limits
 ## 1. Changing one input of a request
 
 ```bash
-make attacks                    # the software stand-in TEE
 make attacks PLATFORM=gcp-snp   # also gcp-tdx, aws-snp
 ```
 
@@ -28,17 +27,16 @@ request with one input changed, as the attacker could change it:
 | Key substitution | swaps the CSR (Enrollment) or CEKpub (Retrieval) for their own | the CSR or CEKpub is in the binding | refused: the binding does not match |
 | Replay, stale freshness | uses another freshness element: an old or foreign Handle, another epoch | the freshness element is in the binding; the RRP knows its Handles and its epoch | refused |
 | Old timestamp | for `absent-timestamp`, a timestamp an hour outside the window | the RRP's window around its own clock | refused |
-| Forged report | a report that does not chain to the vendor's root: AMD's ASK as the anchor instead of the ARK; a root that is not Intel's; for the stand-in, another key | the vendor's root, pinned | refused |
+| Forged report | a report that does not chain to the vendor's root: AMD's ASK as the anchor instead of the ARK; a root that is not Intel's | the vendor's root, pinned | refused |
 | Unapproved launch | a launch whose measurement (SEV-SNP `MEASUREMENT`, TDX `MRTD`) differs by one byte | the approved launches (`trust/`) | refused |
 
 Each attack must be refused **for its own reason**. A refusal that also refuses the honest request proves nothing and
-is counted as "inconclusive", never as a pass. The run ends with its verdict, on the stand-in
-`VERDICT PASS: 132 checks: the honest Evidence passed, every attack refused for its own reason`, and keeps every
+is counted as "inconclusive", never as a pass. The run ends with its verdict, on SEV-SNP
+`VERDICT PASS: 212 checks: the honest Evidence passed, every attack refused for its own reason`, and keeps every
 check in `rrpverify-*.json` ([results.md](results.md)).
 
 | Platform | Checks in process | Checks through the verifier service |
 |---|---|---|
-| stand-in | 82 | 50 (the stand-in's verifier) |
 | GCP SEV-SNP | 162 with the bench's Veraison build (each report as delivered and with its certificate table normalised) | 50 (the deployed Veraison) |
 | GCP TDX | 82 (the TDX verifier's checks) | |
 | AWS SEV-SNP | 162 with the bench's Veraison build | 50 |
@@ -68,17 +66,17 @@ make check-mtls
 Every channel inside the trust zone authenticates its caller (tacra-est requirement N23). The check calls each one as
 every kind of caller: the right component, another component of the same root (the wrong role), a certificate with
 the EST server's name from a CA the bench does not know, no certificate, and the right component limited to TLS 1.2.
-Only the right component over TLS 1.3 gets through: 47 of 47 checks as expected
+Only the right component over TLS 1.3 gets through: 40 of 40 checks as expected
 ([architecture.md](architecture.md), who may call whom).
 
 ## 4. A machine that is not what it claims
 
 | Attempt | How to run it | Expected result |
 |---|---|---|
-| a debuggable instance (its memory can be read from outside) | `SIM_DEBUG=1 make demo` | 0 of 10: each refused, `not affirming: SIM is "contraindicated"`; the stand-in's verifier: "the instance is debuggable" |
-| a workload that is not the approved one | `SIM_LABEL="other workload" make demo` | 0 of 10: each refused, `contraindicated`; the stand-in's verifier: the measurement "matches no reference value" |
+| genuine SEV-SNP hardware, a launch the bench has not approved (four vCPUs: GCP `n2d-standard-4`, AWS `c6a.xlarge`) | `UNAPPROVED=1 make demo PLATFORM=gcp-snp` (also `aws-snp`) | 0 of 10: each refused, `ear: not affirming: SEVSNP is "contraindicated"` ([GCP SEV-SNP](../e2e/evidence/20261007T140959Z-gcp-sev-snp-e2e-passport-unapproved), [AWS SEV-SNP](../e2e/evidence/20261007T141302Z-aws-sev-snp-e2e-passport-unapproved)) |
+| the same in the Demo Bank | `make bank-pay PLATFORM=unapproved` | Veraison `contraindicated`: no credential |
 | an ordinary VM, no TEE | `make bank-pay PLATFORM=ordinary` | no attestation, no credential; the ledger and the fraud service refuse it |
-| genuine SEV-SNP hardware, a launch the bank has not approved | `make bank-pay PLATFORM=unapproved` | Veraison `contraindicated`: no credential |
+| a debuggable instance (its memory can be read from outside) | no cloud launches one | Veraison refuses it (our patch 0005; [limits.md](limits.md)) |
 
 ## 5. Evidence for one platform at a Target of another
 
@@ -87,23 +85,16 @@ alone. The Target's configuration chooses the verifier, never the Evidence: one 
 (the other half, the verifier's key held by the RRP as a file, is in [concepts.md](concepts.md)).
 
 ```bash
-OTHER_PLATFORM=1 make demo                    # the stand-in's Evidence at both Targets
 OTHER_PLATFORM=1 make demo PLATFORM=gcp-snp   # genuine SEV-SNP Evidence at db-tdx-only (also aws-snp)
 OTHER_PLATFORM=1 make demo PLATFORM=gcp-tdx   # genuine TDX Evidence at db-snp-only
 ```
 
 | RATS model | Expected result, at each Target |
 |---|---|
-| Passport | refused after appraisal: the stand-in's verifier affirms the Evidence, and the RRP finds `none of the verifiers this RRP takes for the Target (veraison) signed it` (`tdx` at `db-tdx-only`) |
-| Background Check | refused before appraisal: `none of the verifiers this RRP takes for the Target (veraison) appraises Evidence of provider "sim_guest"` (`tdx` at `db-tdx-only`) |
+| Passport | refused after appraisal: the platform's verifier affirms the Evidence, and the RRP finds `none of the verifiers this RRP takes for the Target (tdx) signed it` for SEV-SNP Evidence at `db-tdx-only` (`veraison` for TDX Evidence at `db-snp-only`) |
+| Background Check | refused before appraisal: `none of the verifiers this RRP takes for the Target (veraison) appraises Evidence of provider "tdx_guest"` for TDX Evidence at `db-snp-only` |
 
-The refusal is the same on hardware, with the hardware's verifier and provider in place of the stand-in's. Before the
+Runs: [GCP SEV-SNP](../e2e/evidence/20261007T012220Z-gcp-sev-snp-e2e-passport-other-platform), [AWS SEV-SNP](../e2e/evidence/20261007T012516Z-aws-sev-snp-e2e-passport-other-platform), [GCP TDX](../e2e/evidence/20261007T012715Z-gcp-tdx-e2e-passport-other-platform), [GCP TDX, Background Check](../e2e/evidence/20261007T015243Z-gcp-tdx-e2e-background-check-other-platform). Before the
 `make` command existed, it was run on 1 October 2026 with the reference implementation's client: genuine SEV-SNP
 Evidence refused at `db-tdx-only` in Passport, genuine TDX Evidence at `db-snp-only` in Background Check
 ([e2e/RESULTS-mutual-tls-verifier-choice.md](../e2e/RESULTS-mutual-tls-verifier-choice.md)).
-
-## 6. The software stand-in in production
-
-The stand-in TEE gives no security, so an RRP must never take its results. The gateways refuse an EAR whose
-submodule is `SIM` unless their configuration says `allow_simulated_tee`, which only the local bench's does
-(`rrp/internal/gateway`, with a test), and they refuse a submodule they have no rule for.

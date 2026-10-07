@@ -3,12 +3,6 @@
 A passing run shows that the protocol's checks hold on the platforms and configurations it ran. It does not show more.
 Read this page before you cite a result.
 
-## The software stand-in TEE proves the protocol, not the hardware
-
-Locally, the "hardware" is a key in a file. A local run shows that every flow and every check works as specified; it
-shows nothing about isolation, since anyone with the file can make the stand-in's reports. Only hardware runs
-(`PLATFORM=gcp-snp`, `gcp-tdx`, `aws-snp`) involve a real TEE.
-
 ## What the trust zone does not check yet
 
 - **The platform rule is the bench's, not a bank's.** Every RRP checks what the Attestation Results report about the
@@ -32,9 +26,9 @@ shows nothing about isolation, since anyone with the file can make the stand-in'
 - **No hardware run shows a debuggable SEV-SNP guest refused.** Veraison, with our patch 0005, does not affirm a
   guest whose policy lets the hypervisor debug it or binds it to a migration agent, and it checks the AMD intermediate
   that signed the report's certificate (the ASK, or the ASVK for a VLEK) against AMD's revocation list. The clouds
-  launch no debuggable guest, so the first is shown by Veraison's tests (`make test`), not on hardware; the stand-in's
-  verifier refuses a debuggable instance in a run (`SIM_DEBUG=1 make demo`). The revocation list comes from AMD's key
-  server (kdsintf.amd.com), once per validity period; while it cannot be fetched, SEV-SNP Evidence is refused.
+  launch no debuggable guest, so no run shows the first; the patch's tests do (`make test`). The revocation list comes
+  from AMD's key server (kdsintf.amd.com), once per validity period; while it cannot be fetched, SEV-SNP Evidence is
+  refused.
 - **Veraison and step-ca keep no list of callers.** Veraison's verification API takes any client certificate of the
   bench's root; step-ca authenticates the Credential Authority gateway by its provisioner's token alone.
 
