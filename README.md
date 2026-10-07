@@ -113,6 +113,7 @@ run does **not** prove: [docs/limits.md](docs/limits.md).
 | [Attacks](docs/attacks.md) | see each attack the bench tries, what stops it and what result to expect |
 | [Results](docs/results.md) | read a run directory |
 | [Limits](docs/limits.md) | know what the bench does not prove |
+| [Verification](docs/verification.md) | see how this release was checked, gate by gate, and what the checks found |
 | [Troubleshooting](docs/troubleshooting.md), [FAQ](docs/faq.md) | get unstuck |
 | [Packs](packs/README.md), [Trust inputs](trust/README.md) | change what a bank issues and which launches it approves |
 | [Contributing](CONTRIBUTING.md), [Security](SECURITY.md), [Changelog](CHANGELOG.md) | work on the bench |

@@ -11,7 +11,9 @@ Nothing here uses a cloud account or costs money.
   not make).
 - **Go 1.26.5 or later**: <https://go.dev/dl/>.
 - **Python 3.10 or later**, with its `venv` module.
-- **About 5 GB of free disk** for the tools, Veraison and the Go module cache.
+- **About 8 GB of free disk.** On a fresh Ubuntu 24.04, `make setup` took 7.3 GB: the bench's home 1.4 GB, Go's
+  module cache 2.6 GB and build cache 1.8 GB, and the third-party sources in the clone; `make check` takes 1.7 GB
+  more ([verification.md](verification.md)).
 - Access to the repository. It is private: ask its owner to invite your GitHub account.
 
 `make doctor` (step 3) checks everything else and prints the command that installs what is missing.

@@ -37,7 +37,8 @@ release's code; the hardware runs identical to gate 5's, check by check).
   the refusal scenarios included, in Passport and in Background Check.
 - **A secrets scan in `make lint`**: gitleaks over the git history, with `.gitleaks.toml` allowing, by narrow
   patterns and with the reason for each, the three things that look like secrets and are not.
-- **Documentation**: [README.md](README.md) and [docs/](docs/getting-started.md).
+- **Documentation**: [README.md](README.md) and [docs/](docs/getting-started.md), with how the release was checked:
+  [docs/verification.md](docs/verification.md).
 
 ### Changed
 
