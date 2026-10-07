@@ -10,6 +10,8 @@
 #   ruff           the Python scripts: check, and format --check (ruff.toml)
 #   check-links    every relative link in the Markdown resolves
 #   actionlint     the CI workflows, and that their Go is GO_VERSION
+#   gitleaks       no secret in the git history: the whole history on a full clone, the tracked files on CI's
+#                  one-commit clone (.gitleaks.toml: what it allows, and why)
 #
 # Not linted, kept as upstream has them: the TACRA proof of concept's deploy/ scripts, and its est module, whose test
 # does not build against the current est code (reported to the group).
@@ -23,6 +25,7 @@ mkdir -p "$T"
 bench_say "lint tools"
 bench_go_tool golangci-lint "$GOLANGCI_LINT" "$T"
 bench_go_tool actionlint "$ACTIONLINT" "$T"
+bench_go_tool gitleaks "$GITLEAKS" "$T"
 if ! "$T/shellcheck" --version 2>/dev/null | grep -qx "version: ${SHELLCHECK_VERSION#v}"; then
   sc_arch="$([ "$BENCH_ARCH" = arm64 ] && echo aarch64 || echo x86_64)"
   sc_tgz="shellcheck-$SHELLCHECK_VERSION.$BENCH_OS.$sc_arch.tar.gz"
@@ -95,6 +98,8 @@ if [ -d .github/workflows ]; then
   check "actionlint" "$T/actionlint"
   check "CI's Go is GO_VERSION" ci_go_pinned
 fi
+check "gitleaks ($(git rev-list --count HEAD) commits)" \
+  "$T/gitleaks" git . --config .gitleaks.toml --redact --verbose --no-banner --log-level warn
 
 if [ -n "$failed" ]; then bench_die "lint failed:$failed"; fi
 echo "lint: every linter clean"

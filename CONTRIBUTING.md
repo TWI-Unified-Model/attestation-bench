@@ -85,4 +85,5 @@ keep this repository's copy the same as what the SIG merges.
 
 Never commit keys, tokens, passwords, cloud credentials or anything from `~/.attestation-bench`. Never commit
 material under licence or confidentiality terms, or anyone's personal data. A run directory may show the host names
-and paths of the machine it ran on: look before you commit it.
+and paths of the machine it ran on: look before you commit it. `make lint` scans the git history with gitleaks; add to
+`.gitleaks.toml` only what you have shown is not a secret, with the narrowest pattern and the reason.

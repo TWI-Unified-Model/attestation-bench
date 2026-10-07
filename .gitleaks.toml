@@ -1,0 +1,23 @@
+# gitleaks: its default rules, and the three things in this repository that match them without being secrets, each
+# allowed by the narrowest pattern that covers it. make lint runs gitleaks over the git history (scripts/lint.sh), at
+# the version scripts/versions.env pins.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "the SHA-256 of the demo API key, which an end-to-end run records instead of the key"
+condition = "AND"
+regexTarget = "line"
+regexes = ['''"secret_sha256": "[0-9a-f]{64}"''']
+paths = ['''(^|/)e2e/evidence/[^/]+/results\.json$''']
+
+[[allowlists]]
+description = "the signing key of the signed container's test vectors: made for the vectors, it signs nothing else"
+condition = "AND"
+regexTarget = "line"
+regexes = ['''"vault_signing_key_pkcs8"''']
+paths = ['''(^|/)bundle/testdata/(ref|go)-hpke-base-signed\.json$''']
+
+[[allowlists]]
+description = "a test fixture: an attestation result (EAR) from a GCP SEV-SNP run, a signed token, not a credential"
+paths = ['''(^|/)rrp/internal/ear/testdata/ear-gcp-sevsnp\.jws$''']

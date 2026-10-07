@@ -39,7 +39,7 @@ check-mtls:
 trust-check:
 	@trust/check.sh
 
-## lint: every linter at its pinned version: ShellCheck, gofmt, go vet, golangci-lint, ruff, actionlint
+## lint: every linter at its pinned version: ShellCheck, gofmt, go vet, golangci-lint, ruff, actionlint, gitleaks
 lint:
 	@scripts/lint.sh
 
