@@ -112,7 +112,8 @@ PY
 # launches), then the TDX verifier's EAR key as a file for the gateways (N24; its signing key is made if absent).
 config() {
   "$D/venv/bin/python3" "$D/scripts/trustzone.py" --home "$D" --veraison "$V" --pack "$D/pack.json" \
-    --approved "$D/trust/approved-launches.json" --corim "$D/trust/veraison-corim-milan.cbor" --logs "$D/logs" \
+    --approved "$D/trust/approved-launches.json" --platform "$D/trust/platform-policy.json" \
+    --corim "$D/trust/veraison-corim-milan.cbor" --logs "$D/logs" \
     --est-listen 0.0.0.0:18443 --rats-model "${RATS_MODEL:-passport}"
   "$D/bin/tdx-verifier" -config "$D/config/tdx-verifier.json" -public-jwk >"$D/gateways/tdx-verifier.ear.jwk" 2>>"$D/logs/tdx-verifier.log"
   publish

@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -152,5 +154,72 @@ func TestTDXPolicy(t *testing.T) {
 	}
 	if err := p.Check(&ear.Result{Submod: "TDX", TDX: map[string]string{}}); err == nil {
 		t.Error("no ATTRIBUTES annotated: accepted")
+	}
+}
+
+// benchRule reads the platform rule of trust/platform-policy.json as scripts/trustzone.py gives it to the gateways
+// (its sevsnp and tdx parts), refusing, as the gateways do, a field they do not know.
+func benchRule(t *testing.T) *PlatformPolicy {
+	t.Helper()
+	raw, err := os.ReadFile("../../../trust/platform-policy.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var file map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &file); err != nil {
+		t.Fatal(err)
+	}
+	rule, err := json.Marshal(map[string]json.RawMessage{"sevsnp": file["sevsnp"], "tdx": file["tdx"]})
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := json.NewDecoder(bytes.NewReader(rule))
+	d.DisallowUnknownFields()
+	var p PlatformPolicy
+	if err := d.Decode(&p); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	return &p
+}
+
+// The bench's rule admits the hosts its hardware runs met (trust/platform-policy.json, "hosts"): the GCP host of the
+// real EAR, and an AWS host, VLEK-signed, without CHIP_ID, its COMMITTED_TCB above its REPORTED_TCB. A floor one above
+// the host's value refuses it, for that reason, whichever component it is.
+func TestBenchPlatformRule(t *testing.T) {
+	p := benchRule(t)
+	res := realResult(t)
+	if err := p.Check(res); err != nil {
+		t.Fatalf("the GCP SEV-SNP host: %v", err)
+	}
+	aws := *res.SNP
+	aws.Class, aws.ChipID = ear.ClassByCSP, nil
+	aws.Policy = 0x2030000                // PAGE_SWAP_DISABLE (bit 25), the reserved bit 17, SMT (bit 16)
+	aws.PlatformInfo = 0x27               // SMT_EN, TSME_EN, ECC_EN, ALIAS_CHECK_COMPLETE
+	aws.CommittedTCB = 0xE11F000000000004 // bl 4, tee 0, snp 31, ucode 225 (e2e/evidence/20261007T045331Z-aws-…)
+	if err := p.Check(&ear.Result{Submod: "SEVSNP", SNP: &aws}); err != nil {
+		t.Fatalf("the AWS SEV-SNP host: %v", err)
+	}
+	for comp, host := range map[string]int{"bl": 4, "snp": 29, "ucode": 222} {
+		q := benchRule(t)
+		q.SEVSNP.TCBFloors["Milan"][comp] = host + 1
+		want := fmt.Sprintf("REPORTED_TCB %s %d is below the floor %d", comp, host, host+1)
+		if err := q.Check(res); err == nil || !errors.Is(err, ErrPlatform) || !strings.Contains(err.Error(), want) {
+			t.Errorf("a Milan %s floor of %d: got %v, want %q", comp, host+1, err, want)
+		}
+	}
+	// TDX: the GCP TDs' ATTRIBUTES, SEPT_VE_DISABLE only, pass; a TD under debug, profiled or migratable does not
+	for attrs, want := range map[string]string{
+		"0000000010000000": "",
+		"0000000010000001": "under debug",
+		"0000000010000010": "bits 10 are refused",
+		"0000000030000000": "bits 20000000 are refused",
+	} {
+		err := p.Check(&ear.Result{Submod: "TDX", TDX: map[string]string{"td_attributes": attrs}})
+		if (want == "" && err != nil) || (want != "" && (err == nil || !strings.Contains(err.Error(), want))) {
+			t.Errorf("TD ATTRIBUTES %s: got %v, want %q", attrs, err, want)
+		}
 	}
 }

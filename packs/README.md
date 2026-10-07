@@ -53,7 +53,8 @@ brings it up ([../docs/demo-bank.md](../docs/demo-bank.md)).
 | `secret` | Secret Vault Targets: `path` in Vault (mount `secret`), `policy_version`, and the key block's `purpose`, `algorithm`, `validity_seconds` |
 
 Every Target admits the workload only from an approved launch: the measurements in `trust/approved-launches.json`,
-plus, on a laptop, the software stand-in's one launch.
+plus, on a laptop, the software stand-in's one launch; and only on a platform the rule in `trust/platform-policy.json`
+admits, which applies to every pack.
 
 ## Changing a pack
 

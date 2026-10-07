@@ -93,7 +93,9 @@ Attester" (Goal 6, section 3).
 In both, the RRP accepts only a result it can check itself: the verifier's signature, with the verifier's key given to
 the RRP as a file and never fetched from the verifier at run time (requirement N24 of tacra-est's requirements
 matrix); the verdict
-`affirming`; and the session's nonce, which must equal the binding value the RRP computed. The bench runs either model
+`affirming`; the session's nonce, which must equal the binding value the RRP computed; and, on SEV-SNP and TDX, the
+platform rule ([../trust/README.md](../trust/README.md)): the product line, the minimum TCB and SMT, the TD's
+attributes. The bench runs either model
 with one setting: `RATS_MODEL=passport` or `background-check` ([getting-started.md](getting-started.md), step 11).
 
 ## Attestation Results

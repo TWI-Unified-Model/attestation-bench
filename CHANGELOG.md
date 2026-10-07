@@ -27,6 +27,10 @@ release's code; the hardware runs identical to gate 5's, check by check).
   runs on a laptop; RRPs refuse its results unless their configuration allows them.
 - **Your own cloud**: hardware runs use the project or account your `gcloud` or `aws` CLI is signed in to
   (`GCP_PROJECT`, `GCP_ZONE`, `AWS_REGION`, `AWS_AZ`), and check it before creating anything.
+- **A platform rule** (`trust/platform-policy.json`) that every RRP applies besides the verifier's verdict: on
+  SEV-SNP the product line, the minimum TCB from AMD's bulletins (on REPORTED_TCB and COMMITTED_TCB) and SMT only
+  with the microcode floor met; on TDX a TD under debug, profiled or migratable is refused. Each `make demo` run keeps
+  the rule it ran under (`platform-rule.json`).
 - **`trust/`**: the approved launches, each with its endorsement and the record of the check, and the vendor roots
   and CoRIM the verifiers trust, each with its source; `make trust-check` compares them with their origins.
 - **`packs/` and `scripts/trustzone.py`**: a bank's Targets and policy as data, and one program that writes every

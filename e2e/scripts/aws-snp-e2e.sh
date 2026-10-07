@@ -45,6 +45,9 @@ if grep -q stopped "$OUT/bench-status.txt"; then echo "!! start the bench first:
   # the deployed Veraison, as its binaries say they were built
   "$HERE/e2e/scripts/veraison-build-info.sh"; } > "$OUT/code-revs.txt"
 echo "$MODEL" > "$OUT/rats-model.txt"
+# the platform rule the RRPs apply (trust/platform-policy.json, as scripts/trustzone.py gave it to them)
+python3 -c "import json,sys; json.dump(json.load(open(sys.argv[1])).get('platform'), sys.stdout, indent=1)" \
+  "$B/config/vault-gateway.json" > "$OUT/platform-rule.json"
 for f in est-server ca-gateway vault-gateway rup tdx-verifier; do wc -l < "$B/$f.log" > "$OUT/bench-logs/.$f.start"; done
 wc -l < "$VERAISON_DEPLOYMENT/logs/vts.log" > "$OUT/bench-logs/.vts.start"
 wc -l < "$VERAISON_DEPLOYMENT/logs/verification.log" > "$OUT/bench-logs/.verification.start"

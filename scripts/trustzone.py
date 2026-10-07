@@ -10,8 +10,10 @@ bench (e2e/scripts/bench.sh config) and the Demo Bank's trust VM (e2e/bank/remot
 configuration with this program, so the two cannot drift apart.
 
 The pack says what the bank issues: its Targets, the RRPs that serve them, the workload's names and the EAR policy
-(packs/README.md). trust/approved-launches.json says which launches the bank admits. The options say where the trust
-zone lives and how it runs.
+(packs/README.md). trust/approved-launches.json says which launches the bank admits, and trust/platform-policy.json
+which platforms: the product lines, the minimum TCB and SMT on SEV-SNP, the TD attributes on TDX, which every RRP
+checks in the Attestation Results besides the verifier's "affirming". The options say where the trust zone lives and
+how it runs.
 
 Under --home it writes:
   config/<service>.json           the gateways, the EST server, the TDX verifier, the stand-in's verifier
@@ -59,6 +61,7 @@ def main():
     vd = os.path.abspath(a.veraison)
     pack = load_pack(a.pack, a.simulated_tee)
     approved = json.loads(Path(a.approved).read_text())
+    platform = load_platform(a.platform)
     snp = [e["measurement"] for e in approved["sev-snp"]]
     tdx = [e["mrtd"] for e in approved["tdx"]]
     check_corim(snp, a.corim)
@@ -78,6 +81,7 @@ def main():
         "rats_model": a.rats_model,
         "client_ca": root,
         "clients": [infra["est-server"]],
+        "platform": platform,
     }
     if a.simulated_tee:
         # bench only: accept the software stand-in TEE's results (submodule SIM); a production RRP never sets it
@@ -201,6 +205,11 @@ def parse_args():
         help="the approved launches (default trust/approved-launches.json)",
     )
     p.add_argument(
+        "--platform",
+        default=os.path.join(REPO, "trust", "platform-policy.json"),
+        help="the platform rule every RRP applies (default trust/platform-policy.json)",
+    )
+    p.add_argument(
         "--corim",
         default=os.path.join(REPO, "trust", "veraison-corim-milan.cbor"),
         help="the CoRIM Veraison is provisioned with (default trust/veraison-corim-milan.cbor)",
@@ -222,6 +231,16 @@ def parse_args():
         "--omit-rrp-id", action="store_true", help="the #20 variant: the Credential Authorities bind no RRP identifier"
     )
     return p.parse_args()
+
+
+def load_platform(path):
+    """The platform rule as the gateways take it (rrp/internal/gateway/platform.go): the file's sevsnp and tdx parts.
+    The rest of the file says where each value comes from."""
+    p = json.loads(Path(path).read_text())
+    rule = {k: p[k] for k in ("sevsnp", "tdx") if k in p}
+    if not rule:
+        sys.exit(f"{path}: neither a sevsnp nor a tdx rule")
+    return rule
 
 
 def load_pack(path, simulated):

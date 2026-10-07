@@ -69,6 +69,9 @@ if nc -z 127.0.0.1 50061 2>/dev/null; then echo "!! port 50061 (the CAS Client) 
   "$HERE/third_party/describe.sh" globalsign-est veraison-services go-gen-ref | grep -v -e '/src-fork ' -e '/src-der '
   "$HERE/e2e/scripts/veraison-build-info.sh"; } >"$OUT/code-revs.txt"
 echo "$MODEL" >"$OUT/rats-model.txt"
+# the platform rule the RRPs apply (trust/platform-policy.json, as scripts/trustzone.py gave it to them)
+python3 -c "import json,sys; json.dump(json.load(open(sys.argv[1])).get('platform'), sys.stdout, indent=1)" \
+  "$B/config/vault-gateway.json" >"$OUT/platform-rule.json"
 echo "software stand-in TEE (platform.SimTEE): no hardware, no isolation, no security" >"$OUT/platform.txt"
 for f in est-server ca-gateway vault-gateway rup tdx-verifier sim-verifier; do wc -l <"$B/$f.log" >"$OUT/bench-logs/.$f.start"; done
 wc -l <"$VERAISON_DEPLOYMENT/logs/vts.log" >"$OUT/bench-logs/.vts.start"

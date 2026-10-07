@@ -11,9 +11,19 @@ shows nothing about isolation, since anyone with the file can make the stand-in'
 
 ## What the trust zone does not check yet
 
-- **No platform policy on SEV-SNP and TDX.** The gateways accept a result when the verifier affirms it and the launch
-  is approved. They set no minimum TCB (firmware and microcode versions), and no rule on the machine or the product.
-  A platform with known-vulnerable firmware passes if its verifier affirms it.
+- **The platform rule is the bench's, not a bank's.** Every RRP checks what the Attestation Results report about the
+  platform ([../trust/README.md](../trust/README.md)): on SEV-SNP the product line, the minimum TCB from AMD's
+  bulletins and SMT only with the microcode floor met; on TDX a TD under debug, profiled or migratable is refused. A
+  bank would be stricter: the bench names no machine, since AWS's VLEK-signed reports carry no CHIP_ID, and it admits
+  every product line it has floors for, EPYC Milan among them. Its floors are those of the bulletins read on
+  7 October 2026: a new bulletin needs someone to raise them.
+- **A TCB floor is not every mitigation.** For EPYC Milan, AMD-SB-3034 gives the attestation value of the fix for
+  CVE-2025-54510 as TCB[SNP] 0x1D together with mitigation bit 4; AMD-SB-3020 names bit 1 for its own. The bits are in
+  the report's mitigation vector (report version 5), which Veraison's Attestation Results do not carry, so no RRP
+  rule can require them. The reports show them: no SEV-SNP host the bench has met sets bit 4 (0x10), though every one
+  has TCB[SNP] 0x1D or above; Google Cloud's vector was 0xb in every run, AWS's 0xf, 0x10f or 0xfef, from 28 September
+  to 7 October 2026 (the reports under `hwcheck/evidence/*-sev-snp/`). By AMD's value none of them attests that fix,
+  and the bench admitted them all.
 - **No hardware run shows a debuggable SEV-SNP guest refused.** Veraison, with our patch 0005, does not affirm a
   guest whose policy lets the hypervisor debug it or binds it to a migration agent, and it checks the AMD intermediate
   that signed the report's certificate (the ASK, or the ASVK for a VLEK) against AMD's revocation list. The clouds

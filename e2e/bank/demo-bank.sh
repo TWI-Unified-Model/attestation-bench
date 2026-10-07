@@ -81,14 +81,14 @@ build() {
 }
 
 # The trust VM's text files, staged by build and copied again by provision: the trust zone's script, the bench's
-# configuration program, the bank's pack, the launches it approves, Veraison's CoRIM, the pinned versions.
+# configuration program, the bank's pack, the launches and platforms it approves, Veraison's CoRIM, the pinned versions.
 stage_text() { # dir
   mkdir -p "$1/scripts" "$1/trust"
   cp "$HERE/e2e/bank/remote/trust.sh" "$HERE/scripts/versions.env" "$HERE/scripts/requirements.txt" "$1/"
   cp "$HERE/scripts/trustzone.py" "$1/scripts/"
   cp "$PACK" "$1/pack.json"
   cp "$APPROVED" "$1/trust/approved-launches.json"
-  cp "$HERE/trust/veraison-corim-milan.cbor" "$1/trust/"
+  cp "$HERE/trust/veraison-corim-milan.cbor" "$HERE/trust/platform-policy.json" "$1/trust/"
 }
 
 # Google's signed endorsement of each launch the bank approves at start, checked again and kept with the run

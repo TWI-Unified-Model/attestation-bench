@@ -68,6 +68,7 @@ reference runs, six fail: each found a fault in its day, which its README or the
 | `e2e-attester-stdout.txt`, `caapi-est.log` | what the workload and the CAS Client printed |
 | `bench-logs/` | each trust zone service's log lines for this run only |
 | `run-window.txt` | the run's start and end, in seconds since 1970 |
+| `platform-rule.json` | the platform rule the RRPs applied: product lines, minimum TCB and SMT on SEV-SNP, refused TD attributes on TDX ([../trust/README.md](../trust/README.md)); runs before 7 October 2026 have none |
 | hardware only: `kernel.txt`, `machine-type.txt` (GCP) or `instance.txt` (AWS), `vm-deleted.txt` | the guest's kernel, the machine, and the record of its deletion, with the time it was found gone |
 
 ## `make attacks`: `…-local-sim-attacks`, `…-gcp-sev-snp`, `…-gcp-tdx`, `…-aws-sev-snp`
