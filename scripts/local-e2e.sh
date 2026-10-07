@@ -11,6 +11,8 @@
 # Refusal scenarios, one at a time, where every Target must be refused for the scenario's own reason:
 #   SIM_DEBUG=1                 the stand-in reports a debuggable instance
 #   SIM_LABEL="other workload"  the stand-in reports the launch measurement of another workload (not approved)
+#   OTHER_PLATFORM=1            the workload asks for the Targets that take another platform's verifier alone
+#                               (db-snp-only, db-tdx-only: tacra-est N24)
 #
 # The run ends with its verdict (scripts/verdict.py) and exits 1 unless the run came out as expected.
 # RUNS_DIR: where run directories go (default BENCH_HOME/runs).
@@ -22,6 +24,7 @@ HERE="$BENCH_REPO"
 RUNS_DIR="${RUNS_DIR:-$B/runs}"
 SIM_DEBUG="${SIM_DEBUG:-}"
 SIM_LABEL="${SIM_LABEL:-}"
+OTHER_PLATFORM="${OTHER_PLATFORM:-}"
 MODEL="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('rats_model') or 'passport')" "$B/config/vault-gateway.json")"
 # What the run must show (scripts/verdict.py): every Target admitted; or, in a refusal scenario, every Target refused,
 # with the RRP's reason and, where the verifier refuses, the cause the stand-in's verifier found.
@@ -36,9 +39,13 @@ if [ -n "$SIM_LABEL" ]; then
   SCENARIO="$SCENARIO-unapproved"
   EXPECT=(--expect refused --reason "$CONTRAINDICATED" --cause "matches no reference value")
 fi
+if [ -n "$OTHER_PLATFORM" ]; then
+  SCENARIO="$SCENARIO-other-platform"
+  EXPECT=(--expect refused --reason "none of the verifiers this RRP takes for the Target")
+fi
 case "$SCENARIO" in
-  "" | -debug | -unapproved) ;;
-  *) bench_die "one refusal scenario at a time: SIM_DEBUG or SIM_LABEL" ;;
+  "" | -debug | -unapproved | -other-platform) ;;
+  *) bench_die "one refusal scenario at a time: SIM_DEBUG, SIM_LABEL or OTHER_PLATFORM" ;;
 esac
 OUT="$RUNS_DIR/$(date -u +%Y%m%dT%H%M%SZ)-local-sim-e2e-${MODEL}${SCENARIO}"
 BIN="$(mktemp -d)"
@@ -74,7 +81,7 @@ echo "== build the workload and the CAS Client"
 echo "== the workload's configuration (public material, and the path of the stand-in's key)"
 curl -sf --cacert "$B/tls/root.crt" --cert "$B/tls/clients/operator.crt" --key "$B/tls/clients/operator.key" \
   https://127.0.0.1:9102/tacra/v1/origin-keys >"$BIN/origin-keys.json"
-TEE=sim B="$B" BIN="$BIN" python3 "$HERE/e2e/scripts/guest_config.py"
+TEE=sim B="$B" BIN="$BIN" TARGETS="${OTHER_PLATFORM:+other-platform}" python3 "$HERE/e2e/scripts/guest_config.py"
 measurement="$(tr -d '\n' <"$B/sim-measurement.hex")"
 [ -z "$SIM_LABEL" ] || measurement="$(printf '%s' "$SIM_LABEL" | shasum -a 384 | cut -d' ' -f1)"
 python3 - "$BIN/e2e-attester.json" "$B/secrets/sim-tee-ak.jwk" "$measurement" "${SIM_DEBUG:+1}" <<'PY'

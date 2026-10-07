@@ -48,8 +48,6 @@ VM's clock can be trusted depends on the platform and its configuration; the ben
   `c6a.large` (AMD Milan), in one zone each. Other instance types, processor generations, regions and clouds are not
   tested.
 - **One Credential Acquisition System**: EST, through the GlobalSign EST server with TACRA's resources.
-- **Evidence for a Target of another platform** (tacra-est N24) was run with the reference implementation's client on
-  1 October 2026, not by a `make` target ([attacks.md](attacks.md), section 5).
 - **The channel between the CAI and the CAS Client inside the guest** is plain gRPC: the CAS is untrusted by design,
   so the bench does not protect it.
 

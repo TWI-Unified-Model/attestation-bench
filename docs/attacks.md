@@ -83,10 +83,24 @@ Only the right component over TLS 1.3 gets through: 47 of 47 checks as expected
 ## 5. Evidence for one platform at a Target of another
 
 A Target may take only one platform's verifier: `db-snp-only` takes Veraison alone, `db-tdx-only` the TDX verifier
-alone (tacra-est requirement N24). Evidence of the other platform is refused there, before or after appraisal. This
-was run on 1 October 2026 with the reference implementation's client against the bench
-([e2e/RESULTS-mutual-tls-verifier-choice.md](../e2e/RESULTS-mutual-tls-verifier-choice.md)); no `make` target runs it
-yet.
+alone. The Target's configuration chooses the verifier, never the Evidence: one half of tacra-est requirement N24
+(the other half, the verifier's key held by the RRP as a file, is in [concepts.md](concepts.md)).
+
+```bash
+OTHER_PLATFORM=1 make demo                    # the stand-in's Evidence at both Targets
+OTHER_PLATFORM=1 make demo PLATFORM=gcp-snp   # genuine SEV-SNP Evidence at db-tdx-only (also aws-snp)
+OTHER_PLATFORM=1 make demo PLATFORM=gcp-tdx   # genuine TDX Evidence at db-snp-only
+```
+
+| RATS model | Expected result, at each Target |
+|---|---|
+| Passport | refused after appraisal: the stand-in's verifier affirms the Evidence, and the RRP finds `none of the verifiers this RRP takes for the Target (veraison) signed it` (`tdx` at `db-tdx-only`) |
+| Background Check | refused before appraisal: `none of the verifiers this RRP takes for the Target (veraison) appraises Evidence of provider "sim_guest"` (`tdx` at `db-tdx-only`) |
+
+The refusal is the same on hardware, with the hardware's verifier and provider in place of the stand-in's. Before the
+`make` command existed, it was run on 1 October 2026 with the reference implementation's client: genuine SEV-SNP
+Evidence refused at `db-tdx-only` in Passport, genuine TDX Evidence at `db-snp-only` in Background Check
+([e2e/RESULTS-mutual-tls-verifier-choice.md](../e2e/RESULTS-mutual-tls-verifier-choice.md)).
 
 ## 6. The software stand-in in production
 

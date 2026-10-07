@@ -135,7 +135,8 @@ VERDICT PASS: all 10 Targets: credential acquired and admitted by the relying pa
 ```
 
 Every run ends this way: its verdict, then the directory that holds everything it recorded. A run whose verdict is
-`FAIL` makes `make` fail too.
+`FAIL` makes `make` fail too. The same command can play an attacker: `SIM_DEBUG=1 make demo` and two other refusal
+scenarios, in which every Target must be refused ([attacks.md](attacks.md), sections 4 and 5).
 
 ## 8. Attack it
 

@@ -9,10 +9,13 @@
 #   TEE=tdx e2e/scripts/gcp-snp-e2e.sh        (make demo PLATFORM=gcp-tdx)
 #
 # GCP_PROJECT, GCP_ZONE: where the VM goes (scripts/lib.sh). RUNS_DIR: where the run directory goes (default
-# BENCH_HOME/runs). The run ends with its verdict (scripts/verdict.py) and exits 1 unless every Target was admitted.
+# BENCH_HOME/runs). The run ends with its verdict (scripts/verdict.py) and exits 1 unless every Target was admitted
+# (refused, with OTHER_PLATFORM).
 #
 # CAS_OUTSIDE=1 runs the CAS Client (caapi-est, the conduit) outside the guest, on this machine, and gives the
 # workload's CAI the way to it through the reverse tunnel (tacra-est N1: "a run with the conduit outside the guest").
+# OTHER_PLATFORM=1: the workload asks for the Targets that take another platform's verifier alone (tacra-est N24),
+# and every one must be refused.
 set -euo pipefail
 # shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
@@ -27,8 +30,11 @@ B="$BENCH_HOME"
 # the bench's RATS model (bench.sh config, RATS_MODEL): who asks the verifiers
 MODEL="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('rats_model') or 'passport')" "$B/config/vault-gateway.json")"
 CAS_OUTSIDE="${CAS_OUTSIDE:-}"
+OTHER_PLATFORM="${OTHER_PLATFORM:-}"
+EXPECT=(--expect admitted) # what the run must show (scripts/verdict.py)
+[ -z "$OTHER_PLATFORM" ] || EXPECT=(--expect refused --reason "none of the verifiers this RRP takes for the Target")
 RUNS_DIR="${RUNS_DIR:-$B/runs}"
-OUT="$RUNS_DIR/${STAMP}-gcp-${TEE}-e2e-${MODEL}${CAS_OUTSIDE:+-cas-outside}"
+OUT="$RUNS_DIR/${STAMP}-gcp-${TEE}-e2e-${MODEL}${CAS_OUTSIDE:+-cas-outside}${OTHER_PLATFORM:+-other-platform}"
 BIN="$(mktemp -d)"
 mkdir -p "$OUT/bench-logs"
 SSH=(gcloud compute ssh "$NAME" --project="$PROJECT" --zone="$ZONE")
@@ -61,7 +67,7 @@ echo "== guest configuration (public material only)"
 # the Vault gateway takes callers with a certificate of the bench (mutual TLS): the operator's
 curl -sf --cacert "$B/tls/root.crt" --cert "$B/tls/clients/operator.crt" --key "$B/tls/clients/operator.key" https://127.0.0.1:9102/tacra/v1/origin-keys > "$BIN/origin-keys.json"
 cp "$B/tls/root.crt" "$BIN/bench-tls-root.crt"
-TEE="$TEE" B="$B" BIN="$BIN" python3 "$HERE/e2e/scripts/guest_config.py"
+TEE="$TEE" B="$B" BIN="$BIN" TARGETS="${OTHER_PLATFORM:+other-platform}" python3 "$HERE/e2e/scripts/guest_config.py"
 cp "$BIN/e2e-attester.json" "$OUT/e2e-attester.json"
 
 if [ "$TEE" = tdx ]; then
@@ -148,7 +154,7 @@ tail -n +"$(( $(cat "$OUT/bench-logs/.verification.start") + 1 ))" "$VERAISON_DE
   > "$OUT/bench-logs/veraison-verification.log" || true
 rm -f "$OUT"/bench-logs/.*.start
 rc=0
-python3 "$HERE/scripts/verdict.py" demo "$OUT" --out "$OUT/verdict.txt" || rc=$?
+python3 "$HERE/scripts/verdict.py" demo "$OUT" "${EXPECT[@]}" --out "$OUT/verdict.txt" || rc=$?
 bench_seal "$OUT"
 echo "== run directory: $OUT"
 exit "$rc"
