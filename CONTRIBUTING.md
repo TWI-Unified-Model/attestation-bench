@@ -61,9 +61,18 @@ cd third_party/veraison-services/src
 git reset --hard <BASE from UPSTREAM>           # the pinned upstream commit
 git am ../patches/*.patch                       # our series, as commits
 # ... make the change and commit it ...
-rm ../patches/*.patch && git format-patch -o ../patches <BASE>
+rm ../patches/*.patch && git format-patch --no-signature -o ../patches <BASE>
 git write-tree                                  # record this tree in UPSTREAM, VARIANTS, for the variant
-cd - && third_party/fetch.sh veraison-services  # fetches again and checks the recorded tree
+cd - && git status --short third_party/veraison-services/patches
+```
+
+`git am` makes new commits, so `git format-patch` writes a new commit id on the first line of every patch file. The
+evidence cites the ids the patches have now; put back each patch you did not change, then fetch the sources again,
+which checks the recorded tree:
+
+```bash
+git checkout -- third_party/veraison-services/patches/<a patch you did not change>
+third_party/fetch.sh veraison-services
 ```
 
 ## The TACRA proof of concept's code
