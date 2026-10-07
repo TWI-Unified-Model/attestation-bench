@@ -5,7 +5,7 @@
 # directories. See scripts/lib.sh.
 
 .PHONY: doctor setup start stop status config check-mtls trust-check third-party demo attacks redirect \
-	bank-up bank-pay bank-audit bank-down lint test check
+	bank-up bank-pay bank-audit bank-down lint test check cloud-check
 
 ## doctor: checks this machine for what the bench needs: tools and versions, ports, disk
 doctor:
@@ -70,6 +70,10 @@ attacks:
 ## redirect: the #20 redirection experiment; leaves the bench in Background Check   [PLATFORM=local|gcp-snp|...]
 redirect:
 	@scripts/run.sh redirect $(PLATFORM)
+
+## cloud-check: checks that no VM, disk, firewall rule, key pair or security group of the bench is left in your clouds
+cloud-check:
+	@scripts/cloud-check.sh
 
 # The Demo Bank: a fictional bank in your Google Cloud project, its payment service on real hardware (e2e/bank).
 # Every bank command writes into the bank's run directory under RUNS_DIR; bank-down deletes everything it created.
