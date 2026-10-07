@@ -112,6 +112,8 @@ def preplay(run):
             [],
         )
     d = json.loads(p.read_text())
+    if any("set" in r for r in d["results"]):
+        return preplay_moved(d)
     lines, bad, exposures = [], [], []
     for r in d["results"]:
         once, later = r["at_once"], r["later"]
@@ -124,6 +126,49 @@ def preplay(run):
             exposures.append(f"{r['target']} accepted Evidence {age:.0f} s old or more (max_age {r['max_age_s']} s)")
         else:
             bad.append(r["target"])
+    return lines, bad, exposures
+
+
+def refused_for_freshness(answer):
+    return answer.get("status") == 409 and "freshness" in answer.get("answer", "")
+
+
+def preplay_moved(d):
+    """The pre-play of runs from 8 October 2026 on (hwcheck/scripts/preplay.py): Evidence of every Freshness Kind made
+    with the guest's clock ahead, each offered at once, absent-timestamp's also at its window's edges; and
+    absent-timestamp Evidence made with the clock behind. Ages are from the end of the guest's step, so each is the
+    least the Evidence's age can have been."""
+    made = d["made"]["not_after"]
+    lines, bad, exposures, taken = [], [], [], []
+    for r in d["results"]:
+        name, once = f"{r['set']} {r['case']}", r["at_once"]
+        if r["set"] == "behind":
+            again = r.get("again", {})
+            lines.append(f"pre-play {name}: at once {once['status']}; {again.get('at', made) - made:.0f} s or more "
+                         f"after it was made {again.get('status')}")  # fmt: skip
+            if not (refused_for_freshness(once) and refused_for_freshness(again)):
+                bad.append(f"{name}: made with the clock behind, not refused for freshness each time")
+        elif r["kind"] != "absent-timestamp":
+            lines.append(f"pre-play {name}: at once {once['status']}")
+            if once["status"] == 200:
+                taken.append(r["case"])
+            else:  # a kind that does not rest on the guest's clock must not care where the clock was
+                bad.append(f"{name}: not taken at once ({once['answer'][:80]})")
+        else:
+            o, b, c = r.get("opened", {}), r.get("before_close", {}), r.get("after_close", {})
+            ages = [x.get("at", made) - made for x in (o, b, c)]
+            lines.append(f"pre-play {name}: at once {once['status']}; {ages[0]:.0f} s or more after it was made "
+                         f"{o.get('status')}, {ages[1]:.0f} s {b.get('status')}, {ages[2]:.0f} s {c.get('status')} "
+                         f"(max_age {r['max_age_s']} s, clock_skew {r['clock_skew_s']} s)")  # fmt: skip
+            if (refused_for_freshness(once) and o.get("status") == 200 and b.get("status") == 200
+                    and refused_for_freshness(c) and ages[0] > r["max_age_s"]):  # fmt: skip
+                exposures.append(f"{r['target']} accepted Evidence {ages[0]:.0f} s old or more, and again "
+                                 f"{ages[1]:.0f} s old or more (max_age {r['max_age_s']} s)")  # fmt: skip
+            else:
+                bad.append(f"{name}: not refused at once, taken in its window and refused after it")
+    if exposures and not bad:
+        exposures.append("absent-timestamp Evidence made with the clock behind refused; the other four kinds' Evidence "
+                         "made with it ahead taken at once")  # fmt: skip
     return lines, bad, exposures
 
 

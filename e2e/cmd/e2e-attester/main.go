@@ -24,6 +24,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/TWI-Unified-Model/tacra/cai"
@@ -63,6 +65,8 @@ type result struct {
 	Error       string  `json:"error,omitempty"`
 	Attempts    int     `json:"attempts"`
 	AcquireMs   float64 `json:"acquire_ms"`
+	InitiateMs  float64 `json:"initiate_ms"`   // the CAAPI calls to Initiate, through the EST server to the RRP and back
+	SecondLegMs float64 `json:"second_leg_ms"` // the CAAPI calls to Enroll or Retrieve: Evidence in, the credential out
 	CertSerial  string  `json:"cert_serial,omitempty"`
 	CertNames   string  `json:"cert_names,omitempty"`
 	CertIssuer  string  `json:"cert_issuer,omitempty"`
@@ -73,6 +77,42 @@ type result struct {
 }
 
 var types = map[string]cai.CredentialType{"x509": cai.CredentialTypeX509, "api-key": cai.CredentialTypeAPIKey}
+
+// calls times the CAAPI calls of the Target being acquired, by method, in milliseconds: how much of an acquisition is
+// the Initiate round trip (TACRA #19: what a CAS client that completed Initiate locally would save) and how much the
+// second leg. The CAI's own steps between them, the Evidence among them, are the rest of acquire_ms.
+type calls struct {
+	mu sync.Mutex
+	ms map[string]float64
+}
+
+func (c *calls) reset() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.ms = map[string]float64{}
+}
+
+func (c *calls) took(suffix string) float64 {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	total := 0.0
+	for m, v := range c.ms {
+		if strings.HasSuffix(m, suffix) {
+			total += v
+		}
+	}
+	return total
+}
+
+func (c *calls) interceptor(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn,
+	invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+	start := time.Now()
+	err := invoker(ctx, method, req, reply, cc, opts...)
+	c.mu.Lock()
+	c.ms[method] += float64(time.Since(start).Microseconds()) / 1000
+	c.mu.Unlock()
+	return err
+}
 
 func main() {
 	cfgPath := flag.String("config", "e2e-attester.json", "configuration")
@@ -102,7 +142,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	conn, err := grpc.NewClient(cfg.CAAPI, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	timed := &calls{}
+	timed.reset()
+	conn, err := grpc.NewClient(cfg.CAAPI, grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(timed.interceptor))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -161,6 +204,7 @@ func main() {
 	for _, t := range cfg.Targets {
 		r := result{Target: t.Target, Type: t.Type}
 		var cred *cai.Credential
+		timed.reset()
 		t0 := time.Now()
 		for r.Attempts = 1; r.Attempts <= 3; r.Attempts++ { // TACRA: retry from Initiate when the freshness moved
 			cred, err = c.AcquireCredential(context.Background(), t.Target, types[t.Type], cfg.Hint)
@@ -169,6 +213,8 @@ func main() {
 			}
 		}
 		r.AcquireMs = float64(time.Since(t0).Microseconds()) / 1000
+		r.InitiateMs = timed.took("/InitiateRemoteAttestation")
+		r.SecondLegMs = timed.took("/EnrollCredential") + timed.took("/RetrieveCredential")
 		if err != nil {
 			r.Error = err.Error()
 			results = append(results, r)

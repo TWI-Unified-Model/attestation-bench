@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Runs hwrun in a live AMD SEV-SNP guest on AWS EC2 (shared tenancy: reports are VLEK-signed) and verifies what it
-# wrote with rrpverify against the veraison-services fork as it is, with the DER and signer-info fixes, and with
-# those fixes on go-sev-guest v0.15.0 with AMD's roots for VCEK and VLEK (third_party/veraison-services). Creates
-# a throwaway key pair and a security group that admits SSH from this machine's address only, launches one
-# instance with AmdSevSnp=enabled, runs hwrun as root (configfs-tsm), records what the guest's clock rests on and its
-# offset from this machine's, makes absent-timestamp Evidence with the guest's clock set ahead (the pre-play check),
-# copies the output back, terminates the instance, deletes the key pair and the group, and checks that all three are
-# gone. Then the RRP's checks, through the bench's live Veraison too, and the pre-play Evidence presented to the live
-# RRPs (hwcheck/scripts/preplay.py).
+# wrote with rrpverify against the veraison-services fork as it is, with the DER and signer-info fixes, and with those
+# fixes on go-sev-guest v0.15.0 with AMD's roots for VCEK and VLEK (third_party/veraison-services). Creates a
+# throwaway key pair and a security group that admits SSH from this machine's address only, launches one instance with
+# AmdSevSnp=enabled, runs hwrun as root (configfs-tsm), records what the guest's clock rests on and its offset from
+# this machine's, makes Evidence with the guest's clock moved (the pre-play check: ahead, every Freshness Kind, the
+# Handles minted by the live RRPs; behind, absent-timestamp), copies the output back, terminates the instance, deletes
+# the key pair and the group, and checks that all three are gone. Then the RRP's checks, through the bench's live
+# Veraison too, and, beside them, the pre-play Evidence presented to the live RRPs (hwcheck/scripts/preplay.py).
 #
 #   hwcheck/scripts/aws-snp-hwcheck.sh        (make attacks PLATFORM=aws-snp)
 #
@@ -134,11 +134,15 @@ echo "$NB $NA" > "$OUT/rrp-clock-window.txt"
 bench_clock_offset "$OUT/clock-offset.txt" "${SSH[@]}"
 cat "$OUT/clock-offset.txt"
 
-echo "== pre-play: absent-timestamp Evidence made with the guest's clock $AHEAD s ahead"
+echo "== pre-play: Evidence made with the guest's clock $AHEAD s ahead (every kind) and $AHEAD s behind (absent-timestamp)"
+python3 "$HW/scripts/preplay.py" prepare "$OUT" # the Handles the live RRPs mint for it: they live expires_in seconds
+for f in handles ca-targets vault-targets; do cp "$OUT/preplay/$f.json" "$BIN/preplay-$f.json"; done
+bench_retry "$OUT/run-ssh.stderr" "${SCP[@]}" "$BIN"/preplay-*.json "$SSH_USER@$IP:~/" >/dev/null
 PB="$(date -u +%s)"
 bench_guest_run "$OUT/run-ssh.stderr" "
 set -e
-sudo bash ~/preplay-guest.sh $AHEAD /root/preplay sev-snp https://db-time.tacra.example https://ledger-time.tacra.example 2>&1
+sudo bash ~/preplay-guest.sh $AHEAD /root/preplay/ahead sev-snp all 2>&1
+sudo bash ~/preplay-guest.sh -$AHEAD /root/preplay/behind sev-snp absent-timestamp 2>&1
 rm -rf ~/preplay; sudo cp -r /root/preplay ~/preplay; sudo chown -R \$(id -u):\$(id -g) ~/preplay
 " "${SSH[@]}" | tee "$OUT/preplay-stdout.txt"
 PA="$(date -u +%s)"
@@ -148,6 +152,9 @@ bench_retry "$OUT/run-ssh.stderr" "${SCP[@]}" -r "$SSH_USER@$IP:~/hwrun-out/*" "
 mkdir -p "$OUT/preplay"
 bench_retry "$OUT/run-ssh.stderr" "${SCP[@]}" -r "$SSH_USER@$IP:~/preplay/*" "$OUT/preplay/" >/dev/null
 echo "$PB $PA" > "$OUT/preplay/rrp-clock-window.txt"
+echo "== pre-play: its Evidence offered to the live RRPs now, then at the absent-timestamp window's edges"
+python3 "$HW/scripts/preplay.py" present "$OUT" >"$OUT/preplay.txt" 2>&1 &
+PREPLAY=$!
 trap 'rm -rf "$BIN"' EXIT
 cleanup
 
@@ -167,8 +174,9 @@ python3 -c "import json,sys; json.dump(json.load(open(sys.argv[1])).get('platfor
   "$BENCH_HOME/config/vault-gateway.json" > "$OUT/platform-rule.json"
 "$BIN/platform-check" -ears "$OUT/ears" -rule "$OUT/platform-rule.json" -submod SEVSNP \
   -out "$OUT/rrpverify-platform.json" | tee "$OUT/rrpverify-platform.txt"
-echo "== pre-play: the Evidence presented to the live RRPs, at once and when their clock reaches it"
-python3 "$HW/scripts/preplay.py" "$OUT" | tee "$OUT/preplay.txt" || true # verdict.py judges what it wrote
+echo "== pre-play: its last answers (an absent-timestamp window closes max_age seconds after its timestamp)"
+wait "$PREPLAY" || true # verdict.py judges what it wrote
+cat "$OUT/preplay.txt"
 rc=0
 python3 "$BENCH_REPO/scripts/verdict.py" attacks "$OUT" --out "$OUT/verdict.txt" || rc=$?
 bench_seal "$OUT"

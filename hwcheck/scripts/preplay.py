@@ -1,19 +1,28 @@
 #!/usr/bin/env python3
-"""The pre-play check of an attack run: absent-timestamp Evidence that a guest made with its wall clock set ahead,
-presented to the running bench's RRPs through the EST server, at once and again when their clock reaches it.
+"""The pre-play check of an attack run: Evidence a guest made with its wall clock moved, presented to the running
+bench's RRPs through the EST server, as a workload reaches them.
 
-The guest (hwcheck/scripts/preplay-guest.sh) set its clock AHEAD seconds ahead, made Evidence for an Enrollment at
-db-time (the Credential Authority) and a Retrieval at ledger-time (the Secret Vault), and put its clock back. An RRP
-accepts an absent-timestamp element ts when now - max_age <= ts <= now + clock_skew (rrp/internal/fresh), with
-max_age and clock_skew from the Target's policy. So at once it refuses the Evidence as too new (409, freshness), and
-from ts - clock_skew on it accepts Evidence made AHEAD seconds earlier, older than max_age. That is not a pass: it is
-the exposure of a freshness that rests on the guest's clock, which the guest's root and the host that serves the
-guest its time can set (docs/limits.md, "Time"). scripts/verdict.py expects both answers and reports the exposure.
+An RRP accepts an absent-timestamp element ts when now - max_age <= ts <= now + clock_skew (rrp/internal/fresh), with
+max_age and clock_skew from the Target's policy, and keeps no record of it: the same Evidence is taken as often as it
+is offered inside that window. The guest (hwcheck/scripts/preplay-guest.sh) made two sets:
 
-    hwcheck/scripts/preplay.py RUN_DIR [--home BENCH_HOME]
+- ahead: its clock OFFSET seconds ahead, Evidence of all five Freshness Kinds, an Enrollment at the Credential
+  Authority and a Retrieval at the Secret Vault each, with the Handles the live RRPs minted for it (prepare);
+- behind: its clock OFFSET seconds behind, absent-timestamp Evidence of both modes.
 
-Reads RUN_DIR/preplay (what the guest made, and rrp-clock-window.txt, this machine's clock around it) and the live
-policies (BENCH_HOME/config); writes RUN_DIR/preplay.json.
+present offers every one at once; then each absent-timestamp Evidence of the ahead set two seconds into its window,
+two seconds before the window closes, and two seconds after; then the behind set again. What the kinds other than
+absent-timestamp get at once shows whether they rest on the guest's clock; the absent-timestamp answers measure the
+window, which is not a pass: it is the exposure of a freshness that rests on the guest's clock, which the guest's root
+and the host that serves the guest its time can set (docs/limits.md, "Time"). scripts/verdict.py judges the answers.
+
+    hwcheck/scripts/preplay.py prepare RUN_DIR [--home BENCH_HOME]    before the guest's step
+    hwcheck/scripts/preplay.py present RUN_DIR [--home BENCH_HOME]    after it, as soon as its Evidence is back
+
+prepare mints the Handles through the EST server (attest-initiate) and writes RUN_DIR/preplay/handles.json,
+ca-targets.json and vault-targets.json, for the guest. present reads RUN_DIR/preplay/{ahead,behind} and
+rrp-clock-window.txt (this machine's clock around the guest's step) and the live policies (BENCH_HOME/config), and
+writes RUN_DIR/preplay.json.
 """
 
 import argparse
@@ -28,14 +37,16 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 PROFILE = "application/vnd.veraison.tsm-report+cbor"
-# the guest's directory, its case, the Target, the gateway whose policy applies, the credential type, the request's
-# subject field and the resource's media type
-PRESENTED = [
-    ("ca", "enroll-absent-timestamp", "https://db-time.tacra.example", "ca-gateway", "x509", "csr",
-     "application/est-attest-enroll+json"),
-    ("vault", "retrieve-absent-timestamp", "https://ledger-time.tacra.example", "vault-gateway", "api-key", "cek_pub",
-     "application/est-attest-retrieve+json"),
-]  # fmt: skip
+KINDS = ("present-nonce", "present-epoch", "absent-epoch", "absent-timestamp", "absent-none")
+SHORT = {"present-nonce": "nonce", "present-epoch": "epoch", "absent-epoch": "lepoch", "absent-timestamp": "time",
+         "absent-none": "none"}  # fmt: skip
+# per guest directory: the mode, the Targets' prefix, the gateway whose policy applies, the credential type, the
+# request's subject field and the resource's media type
+SIDES = {
+    "ca": ("enroll", "db", "ca-gateway", "x509", "csr", "application/est-attest-enroll+json"),
+    "vault": ("retrieve", "ledger", "vault-gateway", "api-key", "cek_pub", "application/est-attest-retrieve+json"),
+}
+MARGIN = 2  # seconds inside or outside a window edge, by this machine's clock, which is the RRPs'
 
 
 def b64u(raw):
@@ -44,6 +55,10 @@ def b64u(raw):
 
 def unb64u(text):
     return base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))
+
+
+def target(side, kind):
+    return f"https://{SIDES[side][1]}-{SHORT[kind]}.tacra.example"
 
 
 class EST:
@@ -65,71 +80,124 @@ class EST:
         finally:
             conn.close()
 
+    def initiate(self, tgt, ctype):
+        return self.call("GET", "/attest-initiate?" + urlencode({"target": tgt, "credential_type": ctype}))
 
-def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("run", type=Path, help="the attack run's directory")
-    ap.add_argument("--home", default=os.environ.get("BENCH_HOME", str(Path.home() / ".attestation-bench")))
-    a = ap.parse_args(argv)
-    pre = a.run / "preplay"
+
+def prepare(run, home):
+    """The Handles the live RRPs mint for the ahead set: present-nonce, one per mode; the epoch, which present-epoch and
+    absent-epoch both take and both RRPs share."""
+    est, pre = EST(home), run / "preplay"
+    pre.mkdir(parents=True, exist_ok=True)
+    answers, handles, epochs = {}, {}, set()
+    for side, (mode, _, _, ctype, _, _) in SIDES.items():
+        for kind in ("present-nonce", "present-epoch"):
+            st, answer = est.initiate(target(side, kind), ctype)
+            answers[target(side, kind)] = {"status": st, "answer": answer[:400]}
+            if st != 200:
+                sys.exit(f"attest-initiate {target(side, kind)}: HTTP {st}: {answer[:200]}")
+            handle = unb64u(json.loads(answer)["handle"])
+            if kind == "present-nonce":
+                handles[f"nonce_{mode}"] = base64.b64encode(handle).decode()
+            else:
+                epochs.add(handle)
+    if len(epochs) != 1:
+        sys.exit(f"the RRPs answered {len(epochs)} different epochs; the guest's Evidence takes one")
+    handles["epoch"] = base64.b64encode(epochs.pop()).decode()
+    handles["minted_at"] = int(time.time())
+    (pre / "handles.json").write_text(json.dumps(handles) + "\n")
+    (pre / "initiate.json").write_text(json.dumps(answers, indent=1) + "\n")
+    for side in SIDES:
+        (pre / f"{side}-targets.json").write_text(json.dumps({k: target(side, k) for k in KINDS}) + "\n")
+    print(f"Handles minted through the EST server for {', '.join(answers)}")
+
+
+def entries_of(pre, home, set_name):
+    """The Evidence of one set, with what each request carries and the policy that judges it."""
+    out = []
+    for side, (mode, _, gateway, ctype, field, media) in SIDES.items():
+        d = pre / set_name / side
+        if not d.exists():
+            continue
+        for case_dir in sorted(p for p in d.iterdir() if p.is_dir()):
+            meta = json.loads((case_dir / "meta.json").read_text())
+            kind, tgt = meta["freshness_kind"], meta["target"]
+            policy = json.loads(Path(home, "config", f"{gateway}.json").read_text())["targets"][tgt]
+            # the Credential Hint, as the bench's workload sends it: the Target's one identity (a Credential Authority)
+            # or credential group (a Secret Vault)
+            names = list(policy.get("identities") or policy.get("groups") or {})
+            if len(names) != 1:
+                sys.exit(f"{tgt}: {len(names)} identities or credential groups in the policy; the check needs one")
+            element = unb64u(meta.get("freshness_element_b64") or "")
+            body = {"target": tgt, "credential_type": ctype, "freshness_kind": kind,
+                    field: b64u((case_dir / "subject.der").read_bytes()),
+                    "evidence": b64u((case_dir / "evidence.tsm.cbor").read_bytes()),
+                    "binding": {"method": "binding-input", "hash": "sha512"}, "profile": PROFILE,
+                    "credential_hint": names[0]}  # fmt: skip
+            if element:
+                body["handle"] = b64u(element)
+            e = {"set": set_name, "target": tgt, "rrp": gateway, "mode": mode, "kind": kind, "case": meta["case"],
+                 "body": json.dumps(body).encode(), "media": media}  # fmt: skip
+            if kind == "absent-timestamp":
+                e |= {"timestamp": int.from_bytes(element, "big"), "max_age_s": policy["max_age"],
+                      "clock_skew_s": policy["clock_skew"]}  # fmt: skip
+            out.append(e)
+    return out
+
+
+def present(run, home):
+    pre = run / "preplay"
     made_from, made_to = (int(x) for x in (pre / "rrp-clock-window.txt").read_text().split())
-    est = EST(a.home)
-    # first every presentation at once, then, when the RRPs' clock has reached every timestamp, every one again: one
-    # Target's wait must not make another's first presentation a late one
-    entries = []
-    for guest_dir, case, target, gateway, ctype_, field, media in PRESENTED:
-        d = pre / guest_dir / case
-        meta = json.loads((d / "meta.json").read_text())
-        element = unb64u(meta["freshness_element_b64"])
-        policy = json.loads(Path(a.home, "config", f"{gateway}.json").read_text())["targets"][target]
-        # the Credential Hint, as the bench's workload sends it: the Target's one identity (a Credential Authority) or
-        # credential group (a Secret Vault)
-        names = list(policy.get("identities") or policy.get("groups") or {})
-        if len(names) != 1:
-            sys.exit(f"{target}: {len(names)} identities or credential groups in the policy; the check needs one")
-        body = json.dumps({"target": target, "credential_type": ctype_, "freshness_kind": "absent-timestamp",
-                           "handle": b64u(element), field: b64u((d / "subject.der").read_bytes()),
-                           "evidence": b64u((d / "evidence.tsm.cbor").read_bytes()),
-                           "binding": {"method": "binding-input", "hash": "sha512"},
-                           "profile": PROFILE, "credential_hint": names[0]}).encode()  # fmt: skip
-        st, answer = est.call("GET", "/attest-initiate?" + urlencode({"target": target, "credential_type": ctype_}))
-        entries.append({"target": target, "rrp": gateway, "mode": meta["mode"], "case": case,
-                        "timestamp": int.from_bytes(element, "big"), "max_age_s": policy["max_age"],
-                        "clock_skew_s": policy["clock_skew"], "initiate": {"status": st, "answer": answer[:300]},
-                        "body": body, "media": media})  # fmt: skip
-
-    # the RRPs' own record of what they did with the Evidence: their log lines from now on (BENCH_HOME/<rrp>.log), the
-    # platform rule's waivers among them
-    logs = {e["rrp"]: Path(a.home, f"{e['rrp']}.log") for e in entries}
+    est = EST(home)
+    entries = entries_of(pre, home, "ahead") + entries_of(pre, home, "behind")
+    if not entries:
+        sys.exit(f"no Evidence in {pre}/ahead or {pre}/behind")
+    # the RRPs' own record of what they did with the Evidence: their log lines from now on (BENCH_HOME/<rrp>.log),
+    # the platform rule's waivers among them
+    logs = {r: Path(home, f"{r}.log") for r in {e["rrp"] for e in entries}}
     marks = {r: len(f.read_bytes().splitlines()) if f.exists() else 0 for r, f in logs.items()}
 
-    def present(e):
+    def offer(e, name):
         at = time.time()
         st, answer = est.call("POST", f"/attest-{e['mode']}", e["body"], e["media"])
-        return {"at": round(at, 3), "status": st, "answer": answer[:300]}
+        e[name] = {"at": round(at, 3), "status": st, "answer": answer[:300]}
+        print(f"{e['set']:6} {e['case']:26} {name:12} {st} {max(0, at - made_to):5.0f} s after it was made", flush=True)
 
+    def wait_until(t):
+        if (d := t - time.time()) > 0:
+            print(f"waiting {d:.0f} s", flush=True)
+            time.sleep(d)
+
+    for e in entries:  # every one at once: a present-nonce Handle lives expires_in seconds from its minting
+        offer(e, "at_once")
+    windows = [e for e in entries if e["set"] == "ahead" and e["kind"] == "absent-timestamp"]
+    for edge, at in (("opened", lambda e: e["timestamp"] - e["clock_skew_s"] + MARGIN),
+                     ("before_close", lambda e: e["timestamp"] + e["max_age_s"] - MARGIN),
+                     ("after_close", lambda e: e["timestamp"] + e["max_age_s"] + MARGIN)):  # fmt: skip
+        for e in sorted(windows, key=at):
+            wait_until(at(e))
+            offer(e, edge)
     for e in entries:
-        e["at_once"] = present(e)
-        print(f"{e['target']}: timestamp {e['timestamp']}; at once {e['at_once']['status']}", flush=True)
-    # two seconds into every window, by this machine's clock: the RRPs'
-    wait = max(e["timestamp"] - e["clock_skew_s"] + 2 for e in entries) - time.time()
-    if wait > 0:
-        print(f"waiting {wait:.0f} s for the RRPs' clock to reach the timestamps", flush=True)
-        time.sleep(wait)
-    for e in entries:
-        e["later"] = present(e)
-        print(f"{e['target']}: at {e['later']['at']:.0f} {e['later']['status']}: "
-              f"{max(0, e['later']['at'] - made_to):.0f} s or more after the Evidence was made "
-              f"(max_age {e['max_age_s']} s)")  # fmt: skip
+        if e["set"] == "behind":
+            offer(e, "again")
     for e in entries:
         f = logs[e["rrp"]]
         lines = f.read_text(errors="replace").splitlines()[marks[e["rrp"]] :] if f.exists() else []
         e["rrp_log"] = [x for x in lines if f"target={e['target']}" in x]
-    results = [{k: v for k, v in e.items() if k not in ("body", "media")} for e in entries]
-    ahead = (pre / "clock-ahead.txt").read_text()
-    out = {"made": {"not_before": made_from, "not_after": made_to}, "guest_clock": ahead, "results": results}
-    (a.run / "preplay.json").write_text(json.dumps(out, indent=1) + "\n")
+    clock = {s: (pre / s / "clock-offset-set.txt").read_text() for s in ("ahead", "behind") if (pre / s).exists()}
+    out = {"made": {"not_before": made_from, "not_after": made_to}, "guest_clock": clock,
+           "results": [{k: v for k, v in e.items() if k not in ("body", "media")} for e in entries]}  # fmt: skip
+    (run / "preplay.json").write_text(json.dumps(out, indent=1) + "\n")
     return 0
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("step", choices=("prepare", "present"))
+    ap.add_argument("run", type=Path, help="the attack run's directory")
+    ap.add_argument("--home", default=os.environ.get("BENCH_HOME", str(Path.home() / ".attestation-bench")))
+    a = ap.parse_args(argv)
+    return prepare(a.run, a.home) if a.step == "prepare" else present(a.run, a.home)
 
 
 if __name__ == "__main__":

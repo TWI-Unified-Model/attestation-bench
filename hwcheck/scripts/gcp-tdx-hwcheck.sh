@@ -2,9 +2,10 @@
 # Runs hwrun in a live Intel TDX Trust Domain on Google Cloud and verifies what it wrote with rrpverify (TDX quotes
 # are checked with go-tdx-guest against Intel PCS collateral: the veraison-services fork has no TDX scheme). Creates
 # the VM, mints the Freshness Handles (RRP side), copies hwrun and the handles in, runs it as root (configfs-tsm),
-# records what the guest's clock rests on and its offset from this machine's, makes absent-timestamp Evidence with the
-# guest's clock set ahead (the pre-play check), copies the output back, deletes the VM and checks that it is gone. Then
-# the RRP's checks, through the bench's live TDX verifier too, and the pre-play Evidence presented to the live RRPs
+# records what the guest's clock rests on and its offset from this machine's, makes Evidence with the guest's clock
+# moved (the pre-play check: ahead, every Freshness Kind, the Handles minted by the live RRPs; behind,
+# absent-timestamp), copies the output back, deletes the VM and checks that it is gone. Then the RRP's checks, through
+# the bench's live TDX verifier too, and, beside them, the pre-play Evidence presented to the live RRPs
 # (hwcheck/scripts/preplay.py).
 #
 #   hwcheck/scripts/gcp-tdx-hwcheck.sh        (make attacks PLATFORM=gcp-tdx)
@@ -90,11 +91,15 @@ echo "$NB $NA" > "$OUT/rrp-clock-window.txt"
 bench_clock_offset "$OUT/clock-offset.txt" gcloud compute ssh "$NAME" --project="$PROJECT" --zone="$ZONE" --command
 cat "$OUT/clock-offset.txt"
 
-echo "== pre-play: absent-timestamp Evidence made with the guest's clock $AHEAD s ahead"
+echo "== pre-play: Evidence made with the guest's clock $AHEAD s ahead (every kind) and $AHEAD s behind (absent-timestamp)"
+python3 "$HW/scripts/preplay.py" prepare "$OUT" # the Handles the live RRPs mint for it: they live expires_in seconds
+for f in handles ca-targets vault-targets; do cp "$OUT/preplay/$f.json" "$BIN/preplay-$f.json"; done
+bench_retry "$OUT/run-ssh.stderr" gcloud compute scp "$BIN"/preplay-*.json "$NAME:~/" --project="$PROJECT" --zone="$ZONE" >/dev/null
 PB="$(date -u +%s)"
 bench_guest_run "$OUT/run-ssh.stderr" "
 set -e
-sudo bash ~/preplay-guest.sh $AHEAD /root/preplay tdx https://db-time.tacra.example https://ledger-time.tacra.example 2>&1
+sudo bash ~/preplay-guest.sh $AHEAD /root/preplay/ahead tdx all 2>&1
+sudo bash ~/preplay-guest.sh -$AHEAD /root/preplay/behind tdx absent-timestamp 2>&1
 sudo chmod -R a+rX /root/preplay; rm -rf ~/preplay; sudo cp -r /root/preplay ~/preplay; sudo chown -R \$(id -u):\$(id -g) ~/preplay
 " gcloud compute ssh "$NAME" --project="$PROJECT" --zone="$ZONE" --command | tee "$OUT/preplay-stdout.txt"
 PA="$(date -u +%s)"
@@ -106,6 +111,9 @@ mkdir -p "$OUT/preplay"
 bench_retry "$OUT/run-ssh.stderr" gcloud compute scp --recurse "$NAME:~/preplay/*" "$OUT/preplay/" --project="$PROJECT" \
   --zone="$ZONE" >/dev/null
 echo "$PB $PA" > "$OUT/preplay/rrp-clock-window.txt"
+echo "== pre-play: its Evidence offered to the live RRPs now, then at the absent-timestamp window's edges"
+python3 "$HW/scripts/preplay.py" present "$OUT" >"$OUT/preplay.txt" 2>&1 &
+PREPLAY=$!
 trap 'rm -rf "$BIN"' EXIT
 cleanup
 
@@ -124,8 +132,9 @@ python3 -c "import json,sys; json.dump(json.load(open(sys.argv[1])).get('platfor
   "$BENCH_HOME/config/vault-gateway.json" > "$OUT/platform-rule.json"
 "$BIN/platform-check" -ears "$OUT/ears" -rule "$OUT/platform-rule.json" -submod TDX \
   -out "$OUT/rrpverify-platform.json" | tee "$OUT/rrpverify-platform.txt"
-echo "== pre-play: the Evidence presented to the live RRPs, at once and when their clock reaches it"
-python3 "$HW/scripts/preplay.py" "$OUT" | tee "$OUT/preplay.txt" || true # verdict.py judges what it wrote
+echo "== pre-play: its last answers (an absent-timestamp window closes max_age seconds after its timestamp)"
+wait "$PREPLAY" || true # verdict.py judges what it wrote
+cat "$OUT/preplay.txt"
 rc=0
 python3 "$BENCH_REPO/scripts/verdict.py" attacks "$OUT" --out "$OUT/verdict.txt" || rc=$?
 bench_seal "$OUT"
