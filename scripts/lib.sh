@@ -69,9 +69,10 @@ bench_now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 # seconds (default 1800).
 #
 # BENCH_CHAOS_SSH=1 tests this on a real VM, by breaking SSH sessions on purpose from the VM's side: the call that
-# starts the script breaks its own session a second after the script started, as when that call's answer is lost,
-# and from the script's 20th second to its 35th the VM breaks every SSH session of the bench's user to it. The run
-# must end as it would have without; LOG says the test was on.
+# starts the script breaks its own session a second after the script started, as when that call's answer is lost;
+# from the script's 20th second to its 35th the VM breaks every SSH session of the bench's user to it; and the
+# script's status is held back until its 40th second, so that the calls asking for it fall in that window however
+# short the script. The run must end as it would have without; LOG says the test was on.
 bench_guest_run() {
   local log=$1 script=$2 b64 d off=0 rc="" deadline chunk out last="" LC_ALL=C # C: lengths in octets, as tail -c counts
   shift 2
@@ -79,12 +80,13 @@ bench_guest_run() {
   # a call takes at least one 3 s turn, so the second of two calls never starts in the same second as the first
   d="bench-run-$(date -u +%Y%m%dT%H%M%SZ)-$RANDOM"
   # setsid where there is one (every Linux VM): a session of its own, which the SSH session's end does not reach
-  local chaos=""
+  local chaos="" wrap="bash ~/$d/run.sh > ~/$d/out 2>&1; echo \$? > ~/$d/rc"
   if [ "${BENCH_CHAOS_SSH:-}" = 1 ]; then
+    wrap="t0=\$(date +%s); bash ~/$d/run.sh > ~/$d/out 2>&1; r=\$?; w=\$((t0 + 40 - \$(date +%s))); [ \$w -le 0 ] || sleep \$w; echo \$r > ~/$d/rc"
     echo "$(bench_now) BENCH_CHAOS_SSH=1: the VM breaks this call's session once the script started, and every SSH session to it from the script's 20th second to its 35th" >>"$log"
     chaos=" && { \$s nohup bash -c 'sleep 20; e=\$((\$(date +%s) + 15)); while [ \$(date +%s) -lt \$e ]; do pkill -KILL -u \$(id -u) -x \"sshd|sshd-session\"; sleep 0.1; done' > /dev/null 2>&1 < /dev/null & } && sleep 1 && pkill -KILL -u \$(id -u) -x 'sshd|sshd-session'"
   fi
-  bench_retry "$log" "$@" "mkdir ~/$d 2>/dev/null || exit 0; echo $b64 | base64 -d > ~/$d/run.sh && { s=; command -v setsid >/dev/null 2>&1 && s=setsid; \$s nohup bash -c 'bash ~/$d/run.sh > ~/$d/out 2>&1; echo \$? > ~/$d/rc' > /dev/null 2>&1 < /dev/null & }$chaos" ||
+  bench_retry "$log" "$@" "mkdir ~/$d 2>/dev/null || exit 0; echo $b64 | base64 -d > ~/$d/run.sh && { s=; command -v setsid >/dev/null 2>&1 && s=setsid; \$s nohup bash -c '$wrap' > /dev/null 2>&1 < /dev/null & }$chaos" ||
     return 255
   deadline=$(($(date +%s) + ${BENCH_GUEST_TIMEOUT:-1800}))
   while [ -z "$rc" ] && [ "$(date +%s)" -lt "$deadline" ]; do
