@@ -313,3 +313,60 @@ func serviceVerify(args []string) {
 	}
 	fmt.Printf("%d checks, %d not as expected; written %s\n", len(results), bad, *out)
 }
+
+// earsForCases is `rrpverify ears`: for each case of one mode hwrun wrote, the Attestation Results the deployed
+// verifier issues for its Evidence when asked with the binding value the Attester bound (cases.json,
+// binding_value_hex). That is what an honest CAS gets in Passport for the RRP the Evidence was made for, and what the
+// #20 experiment then offers to a second RRP (hwcheck/scripts/redirect.sh). Each EAR is kept only when it verifies
+// under the service's key, answers that value and is affirming; anything else stops the run.
+func earsForCases(args []string) {
+	fs := flag.NewFlagSet("ears", flag.ExitOnError)
+	in := fs.String("in", "hwrun-out", "hwrun output directory")
+	mode := fs.String("mode", "enroll", "the cases of this mode: enroll or retrieve")
+	base := fs.String("url", "https://localhost:8443", "verification service (the bench's Veraison)")
+	submod := fs.String("submod", "SEVSNP", "the EAR submodule to read (SEVSNP for Veraison)")
+	caPath := fs.String("ca", filepath.Join(veraisonDeployment(), "certs", "rootCA.crt"), "CA of the service's TLS certificate")
+	certPath := fs.String("cert", filepath.Join(benchHome(), "tls", "clients", "est-server.crt"), "the conduit's client certificate (mutual TLS)")
+	keyPath := fs.String("key", filepath.Join(benchHome(), "tls", "clients", "est-server.key"), "its private key")
+	out := fs.String("out", "", "where to write <case>.ear.jws and verifier-key.jwk")
+	must(fs.Parse(args))
+	if *out == "" {
+		must(errors.New("ears: -out is required"))
+	}
+	v, err := newVeraisonService(*base, *caPath, *certPath, *keyPath)
+	must(err)
+	v.submod = *submod
+	must(os.MkdirAll(*out, 0o755))
+	must(os.WriteFile(filepath.Join(*out, "verifier-key.jwk"), append(v.jwk, '\n'), 0o644))
+	var metas []caseMeta
+	b, err := os.ReadFile(filepath.Join(*in, "cases.json"))
+	must(err)
+	must(json.Unmarshal(b, &metas))
+	n := 0
+	for _, m := range metas {
+		if m.Mode != *mode {
+			continue
+		}
+		bv, err := hex.DecodeString(m.BindingValueHex)
+		if err != nil || len(bv) != 64 {
+			must(fmt.Errorf("ears: %s: no 64-octet binding value in cases.json", m.Case))
+		}
+		token, err := os.ReadFile(filepath.Join(*in, m.Case, "evidence.tsm.cbor"))
+		must(err)
+		start := time.Now()
+		r, err := v.verify(token, bv)
+		if err != nil {
+			must(fmt.Errorf("ears: %s: %w", m.Case, err))
+		}
+		if r.Status != "affirming" || !bytes.Equal(r.Nonce, bv) {
+			must(fmt.Errorf("ears: %s: the verifier answered %q for nonce %x", m.Case, r.Status, r.Nonce))
+		}
+		must(os.WriteFile(filepath.Join(*out, m.Case+".ear.jws"), []byte(r.JWS+"\n"), 0o644))
+		fmt.Printf("ok  %-26s %s, %.1f ms\n", m.Case, r.Status, float64(time.Since(start).Microseconds())/1000)
+		n++
+	}
+	if n == 0 {
+		must(fmt.Errorf("ears: no %s case in %s", *mode, *in))
+	}
+	fmt.Printf("%d Attestation Results kept in %s\n", n, *out)
+}

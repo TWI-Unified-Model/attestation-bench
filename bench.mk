@@ -73,7 +73,8 @@ demo:
 attacks:
 	@scripts/run.sh attacks $(PLATFORM)
 
-## redirect: the #20 redirection experiment, in Background Check; puts the bench back as it was   [PLATFORM=...]
+## redirect: the #20 redirection and the conduit's #19 rewrites, in Background Check (PASSPORT=1: in Passport);
+##           puts the bench back as it was   [PLATFORM=...]
 redirect:
 	@scripts/run.sh redirect $(PLATFORM)
 

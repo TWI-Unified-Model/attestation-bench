@@ -43,7 +43,7 @@ E2E = re.compile(
     r"(?:-(?P<scen>cas-outside|unapproved|other-platform))?"
 )
 ATTACKS = re.compile(r"(?P<hw>gcp-sev-snp|gcp-tdx|aws-sev-snp)")
-REDIRECT = re.compile(r"(?P<plat>gcp-snp|gcp-tdx|aws-snp)-redirect")
+REDIRECT = re.compile(r"(?P<plat>gcp-snp|gcp-tdx|aws-snp)-redirect(?:-passport)?")
 STAMP = re.compile(r"\d{8}T\d{6}Z-(?P<name>.+)")
 # the attack results of the current format: the bench's own checks, and the builds of Veraison it compares with
 OWN_CHECKS = ("rrpverify-veraison-v015", "rrpverify-tdx")
@@ -124,7 +124,7 @@ def rows(run):
             run.name,
             "#20 redirection",
             plat,
-            "Background Check",
+            recorded_model(run, "Passport" if name.endswith("-passport") else "Background Check"),
             *judged(run, lambda: verdict.redirect(run), ["results.jsonl"]),
         )
     else:

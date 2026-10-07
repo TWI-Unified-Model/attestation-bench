@@ -7,9 +7,10 @@
 //	rrp-issue mint   -url https://127.0.0.1:9101 -target T -ctype x509
 //	rrp-issue enroll -url https://127.0.0.1:9103 -target T -ctype x509 -kind present-nonce -handle B64 -evidence E.cbor -csr C.der
 //
-// mint prints the attest-initiate answer (handle, freshness_kind, rrp_id). enroll posts a Background Check second leg
-// (the Evidence, as the Attester produced it) and prints whether the gateway issued, the status and the reason. Both
-// print one JSON object.
+// mint prints the attest-initiate answer (handle, freshness_kind, rrp_id). enroll posts a second leg, in Background
+// Check the Evidence as the Attester produced it (-evidence), in Passport the Attestation Results a verifier issued
+// for it (-ear), with any field as the conduit chooses to send it (the #19 rewrites), and prints whether the gateway
+// issued, the status and the reason. Both print one JSON object.
 package main
 
 import (
@@ -110,20 +111,32 @@ func main() {
 		url, target, ctype, ca, cert, key := commonFlags(fs)
 		kind := fs.String("kind", "present-nonce", "freshness kind")
 		handle := fs.String("handle", "", "the freshness handle (base64url, as mint returned it)")
-		evidence := fs.String("evidence", "", "the Evidence file (TSM report, CBOR)")
+		evidence := fs.String("evidence", "", "Background Check: the Evidence file (TSM report, CBOR)")
+		earPath := fs.String("ear", "", "Passport: the Attestation Results file (compact JWS)")
 		csr := fs.String("csr", "", "the CSR file (DER)")
 		profile := fs.String("profile", "application/vnd.veraison.tsm-report+cbor", "the Evidence media type")
+		hint := fs.String("hint", "", "the Credential Hint to send (none by default)")
 		if err := fs.Parse(os.Args[2:]); err != nil {
 			die("%v", err)
 		}
-		if *evidence == "" || *csr == "" {
-			die("enroll needs -evidence and -csr")
+		if (*evidence == "") == (*earPath == "") || *csr == "" {
+			die("enroll needs -csr and one of -evidence (Background Check) and -ear (Passport)")
 		}
-		// a Background Check second leg: the Evidence as the Attester produced it; the RRP asks the verifier itself
-		leg := map[string]string{"freshness_kind": *kind, "target": *target, "credential_type": *ctype,
-			"evidence": b64(*evidence), "profile": *profile, "csr": b64(*csr)}
+		leg := map[string]string{"freshness_kind": *kind, "target": *target, "credential_type": *ctype, "csr": b64(*csr)}
+		if *evidence != "" { // Background Check: the Evidence as the Attester produced it; the RRP asks the verifier itself
+			leg["evidence"], leg["profile"] = b64(*evidence), *profile
+		} else { // Passport: the Attestation Results, which the RRP checks against the binding value it recomputes
+			jws, err := os.ReadFile(*earPath)
+			if err != nil {
+				die("read %s: %v", *earPath, err)
+			}
+			leg["ear"] = strings.TrimSpace(string(jws))
+		}
 		if *handle != "" {
 			leg["handle"] = *handle
+		}
+		if *hint != "" {
+			leg["credential_hint"] = *hint
 		}
 		c := client(*ca, *cert, *key)
 		st, raw := post(c, strings.TrimRight(*url, "/")+"/tacra/v1/enroll", leg)

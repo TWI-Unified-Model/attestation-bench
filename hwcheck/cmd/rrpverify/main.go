@@ -51,6 +51,7 @@ type caseMeta struct {
 	Mode             string `json:"mode"`
 	FreshnessKind    string `json:"freshness_kind"`
 	FreshnessElement string `json:"freshness_element_b64,omitempty"`
+	BindingValueHex  string `json:"binding_value_hex,omitempty"` // what the Attester bound (hwrun)
 	Error            string `json:"error,omitempty"`
 }
 
@@ -81,6 +82,8 @@ func main() {
 		tdxPreflight(os.Args[2:])
 	case "service":
 		serviceVerify(os.Args[2:])
+	case "ears":
+		earsForCases(os.Args[2:])
 	default:
 		fmt.Fprintln(os.Stderr, "usage: rrpverify mint|verify ...")
 		os.Exit(2)

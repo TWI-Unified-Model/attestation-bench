@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
-# The #19/#20 redirection experiment on real hardware, through the deployed gateways. In a confidential guest, the
-# Attester produces one Evidence for a Target that the honest EST server routes to ca1. The conduit (rrp-issue) then
-# offers that same Evidence to ca1 and to a second Credential Authority, ca2, and we record which issues. Two passes:
-# with the RRP identifier in the binding (both CAs bind their own), and without it (OMIT_RRP_ID=1, both bind none).
-# This measures, per Freshness Kind, what the RRP identifier prevents.
+# The #19/#20 conduit experiment on real hardware, through the deployed gateways. In a confidential guest, the
+# Attester produces Evidence for a Target that the honest EST server routes to ca1. The conduit (rrp-issue) then offers
+# it to ca1 and to a second Credential Authority, ca2, and we record which issues. Two passes: with the RRP identifier
+# in the binding (both CAs bind their own), and without it (OMIT_RRP_ID=1, both bind none). This measures, per
+# Freshness Kind, what the RRP identifier prevents (#20). Then the conduit rewrites, one at a time, what it relays to
+# ca1 on Evidence made for ca1 (#19): a made-up Handle, the Freshness Kind, a credential type the Target does not
+# offer, another workload's Credential Hint, and the other credential type the Target offers; each outcome is recorded.
 #
 #   hwcheck/scripts/redirect.sh gcp-snp|gcp-tdx|aws-snp      (make redirect PLATFORM=...)
+#   PASSPORT=1: the same in Passport: the conduit gets the Attestation Results for each Evidence from the verifier, as an
+#   honest CAS does for ca1 (rrpverify ears), and offers those.
 #
 # The guest only runs hwrun (offline); all gateway interaction is on this machine, where the bench runs. The bench runs
-# both passes in Background Check, reconfigured between them (OMIT_RRP_ID), and is put back as it was however the run
-# ends: its RATS model, the RRP identifier in the binding.
+# every pass in Background Check (or Passport), reconfigured between them (OMIT_RRP_ID), and is put back as it was
+# however the run ends: its RATS model, the RRP identifier in the binding.
 #
 # GCP_PROJECT, GCP_ZONE, AWS_REGION, AWS_AZ: where the VM goes (scripts/lib.sh). RUNS_DIR: where the run directory
 # goes (default BENCH_HOME/runs). The run ends with its verdict (scripts/verdict.py) and exits 1 unless every outcome
@@ -32,12 +36,15 @@ HW="$(cd "$(dirname "$0")/.." && pwd)"; REPO="$(cd "$HW/.." && pwd)"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 NAME="tacra-redir-$(echo "$STAMP" | tr -d 'TZ' | cut -c3-12)"
 RUNS_DIR="${RUNS_DIR:-$BENCH_HOME/runs}"
-OUT="$RUNS_DIR/${STAMP}-${CLOUD}-redirect"; BIN="$(mktemp -d)"
+MODEL=background-check; [ -n "${PASSPORT:-}" ] && MODEL=passport
+OUT="$RUNS_DIR/${STAMP}-${CLOUD}-redirect"; [ "$MODEL" = passport ] && OUT="$OUT-passport"
+BIN="$(mktemp -d)"
 CA1=https://127.0.0.1:9101; CA2=https://127.0.0.1:9103
 CA1_ID=https://ca1.tacra.example   # the RRP identifier the honest EST server's Credential Authority binds
 B="$BENCH_HOME"; CERT="$B/tls/clients/est-server.crt"; KEY_C="$B/tls/clients/est-server.key"; ROOT="$B/tls/root.crt"
 mkdir -p "$OUT"
 git -C "$REPO" rev-parse --short=12 HEAD > "$OUT/code-rev.txt"
+echo "$MODEL" > "$OUT/rats-model.txt"
 MODEL_BEFORE="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("rats_model") or "passport")' \
   "$B/config/vault-gateway.json")"
 RECONFIGURED=""
@@ -52,10 +59,19 @@ restore_bench() { # the bench as it was before the experiment; nothing to do unt
 ORDER=(nonce epoch lepoch time none)  # short name of each Target; fresh_of maps it to the Freshness Kind (bash 3.2: no associative arrays)
 fresh_of() { case "$1" in nonce) echo present-nonce;; epoch) echo present-epoch;; lepoch) echo absent-epoch;; time) echo absent-timestamp;; none) echo absent-none;; esac; }
 
-echo "== build hwrun and rrp-issue"
+echo "== build hwrun, rrp-issue and rrpverify"
 (cd "$HW" && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -o "$BIN/hwrun" ./cmd/hwrun)
 shasum -a 256 "$BIN/hwrun" | awk '{print $1"  hwrun (linux/amd64)"}' > "$OUT/binaries.sha256"
-(cd "$HW" && go build -o "$BIN/rrp-issue" ./cmd/rrp-issue)
+(cd "$HW" && go build -o "$BIN/rrp-issue" ./cmd/rrp-issue && go build -o "$BIN/rrpverify" ./cmd/rrpverify)
+# in Passport, the verifier an honest CAS asks: the deployed Veraison for SEV-SNP (rrpverify's default), the bench's
+# TDX verifier for TDX
+VERIFIER=()
+if [ "$TEE" = tdx ]; then
+  read -r TDX_URL TDX_CA < <(python3 -c 'import json, sys
+v = json.load(open(sys.argv[1]))["tacra"]["verifiers"]["tdx"]
+print(v["url"], v["ca"])' "$B/config/est-server.json")
+  VERIFIER=(-url "$TDX_URL" -submod TDX -ca "$TDX_CA")
+fi
 
 # --- cloud glue: GUEST_SSH "<cmd>", GUEST_SCP_IN <files...> dst, GUEST_SCP_OUT src dst, vm_create, vm_delete ---
 if [ "${CLOUD#gcp}" != "$CLOUD" ]; then
@@ -122,8 +138,9 @@ mint_nonce() {
     | python3 -c "import sys,json;print(json.load(sys.stdin)['handle'])"
 }
 
-# run_pass PASS RRPCA : mint, make Evidence in the guest bound to RRPCA, then offer each case to ca1 and ca2
-run_pass() {
+# make_evidence PASS RRPCA : mint a present-nonce Handle at ca1, make Evidence in the guest bound to RRPCA and copy it
+# back; in Passport, also the Attestation Results the verifier issues for each case, as an honest CAS gets them
+make_evidence() {
   local PASS="$1" RRPCA="$2" d="$OUT/$1"; mkdir -p "$d"
   local nonce epoch; nonce="$(mint_nonce)"; epoch="$(tr -d '[:space:]' < "$B/epoch.hex")"
   python3 - "$nonce" "$epoch" "$d" <<'PY'
@@ -145,19 +162,67 @@ sudo chmod -R a+rX /root/redir; rm -rf ~/redir; sudo cp -r /root/redir ~/redir; 
     guest_ssh | tee -a "$OUT/hwrun-stdout.txt"
   [ -f "$OUT/clock-offset.txt" ] || bench_clock_offset "$OUT/clock-offset.txt" guest_ssh
   guest_out redir "$d/"
-  local k fresh tgt ev subj handle res
+  if [ "$MODEL" = passport ]; then
+    "$BIN/rrpverify" ears -in "$d/redir" -mode enroll -out "$d/ears" ${VERIFIER[@]+"${VERIFIER[@]}"} | tee "$d/ears.txt"
+  fi
+}
+
+# post_case DIR KIND RRP [rrp-issue flags]: the conduit offers the case of KIND, as made in DIR, to RRP (ca1 or ca2);
+# later flags replace the honest ones (the #19 rewrites). Prints rrp-issue's JSON.
+post_case() {
+  local d="$1" fresh="$2" rrp="$3"; shift 3
+  local url="$CA1" c="$d/redir/enroll-$fresh" k handle
+  [ "$rrp" = ca2 ] && url="$CA2"
+  for k in "${ORDER[@]}"; do [ "$(fresh_of "$k")" = "$fresh" ] && break; done
+  handle="$(python3 -c "import json;print(json.load(open('$c/meta.json')).get('freshness_element_b64',''))")"
+  local leg=(-evidence "$c/evidence.tsm.cbor")
+  [ "$MODEL" = passport ] && leg=(-ear "$d/ears/enroll-$fresh.ear.jws")
+  "$BIN/rrp-issue" enroll -url "$url" -target "https://db-$k.tacra.example" -ctype x509 -kind "$fresh" \
+    ${handle:+-handle "$handle"} "${leg[@]}" -csr "$c/subject.der" -ca "$ROOT" -cert "$CERT" -key "$KEY_C" "$@"
+}
+
+said() { python3 -c "import sys,json;d=json.load(sys.stdin);print('ISSUED' if d['issued'] else 'refused', d.get('reason',d.get('cert_subject','')))"; }
+
+# offer_redirect PASS: every case to ca1 and to ca2, as made
+offer_redirect() {
+  local PASS="$1" d="$OUT/$1" k fresh rrp res
   : > "$d/results.jsonl"
   for k in "${ORDER[@]}"; do
-    fresh="$(fresh_of "$k")"; tgt="https://db-${k}.tacra.example"
-    ev="$d/redir/enroll-${fresh}/evidence.tsm.cbor"; subj="$d/redir/enroll-${fresh}/subject.der"
-    handle="$(python3 -c "import json;print(json.load(open('$d/redir/enroll-${fresh}/meta.json')).get('freshness_element_b64',''))")"
+    fresh="$(fresh_of "$k")"
     for rrp in ca1 ca2; do
-      url="$CA1"; [ "$rrp" = ca2 ] && url="$CA2"
-      res="$("$BIN/rrp-issue" enroll -url "$url" -target "$tgt" -ctype x509 -kind "$fresh" \
-        ${handle:+-handle "$handle"} -evidence "$ev" -csr "$subj" -ca "$ROOT" -cert "$CERT" -key "$KEY_C")"
+      res="$(post_case "$d" "$fresh" "$rrp")"
       echo "{\"pass\":\"$PASS\",\"kind\":\"$fresh\",\"rrp\":\"$rrp\",\"result\":$res}" >> "$d/results.jsonl"
-      echo "  $PASS $fresh -> $rrp : $(echo "$res" | python3 -c "import sys,json;d=json.load(sys.stdin);print('ISSUED' if d['issued'] else 'refused', d.get('reason',d.get('cert_serial','')))")"
+      echo "  $PASS $fresh -> $rrp : $(echo "$res" | said)"
     done
+  done
+}
+
+# rewrite DIR KIND NAME [rrp-issue flags]: one rewrite by the conduit, offered to ca1
+rewrite() {
+  local d="$1" fresh="$2" name="$3" res; shift 3
+  res="$(post_case "$d" "$fresh" ca1 "$@")"
+  echo "{\"pass\":\"$(basename "$d")\",\"kind\":\"$fresh\",\"rrp\":\"ca1\",\"rewrite\":\"$name\",\"result\":$res}" >> "$d/results.jsonl"
+  echo "  $(basename "$d") $fresh, $name -> ca1 : $(echo "$res" | said)"
+}
+
+# offer_rewrites PASS: the #19 rewrites on Evidence made for ca1. In "rewrites" those a gateway refuses before it
+# spends the freshness element come first, the Credential Hint last; "type-offered" sends the other credential type
+# the Target offers.
+offer_rewrites() {
+  local PASS="$1" d="$OUT/$1" k fresh
+  : > "$d/results.jsonl"
+  for k in "${ORDER[@]}"; do
+    fresh="$(fresh_of "$k")"
+    if [ "$PASS" = rewrites ]; then
+      if [ "$fresh" = present-nonce ]; then
+        rewrite "$d" "$fresh" "made-up Handle" -handle "$(python3 -c 'import base64,secrets;print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode().rstrip("="))')"
+      fi
+      [ "$fresh" = absent-none ] || rewrite "$d" "$fresh" "Freshness Kind absent-none" -kind absent-none -handle ""
+      rewrite "$d" "$fresh" "credential type not offered" -ctype wit
+      rewrite "$d" "$fresh" "Credential Hint of another workload" -hint other.workload.tacra.example
+    else
+      rewrite "$d" "$fresh" "the other credential type offered" -ctype api-key
+    fi
   done
 }
 
@@ -165,20 +230,23 @@ reconfigure() { # $1 = "omit" or "normal"
   local omit=""; [ "$1" = omit ] && omit=1
   RECONFIGURED=1
   bash "$REPO/e2e/scripts/bench.sh" stop >/dev/null 2>&1 || true
-  RATS_MODEL=background-check OMIT_RRP_ID="$omit" bash "$REPO/e2e/scripts/bench.sh" config >/dev/null 2>&1
+  RATS_MODEL="$MODEL" OMIT_RRP_ID="$omit" bash "$REPO/e2e/scripts/bench.sh" config >/dev/null 2>&1
   bash "$REPO/e2e/scripts/bench.sh" start >/dev/null 2>&1
 }
 
-echo "== bench: background-check, RRP identifier IN the binding"
+echo "== bench: $MODEL, RRP identifier IN the binding"
 reconfigure normal
 vm_create
 wait_ssh || { echo "ssh never came up" >&2; exit 1; }
 guest_ssh "$PROVISION" 2>>"$OUT/run-ssh.stderr"
-run_pass with-rrp-id "$CA1_ID"
+make_evidence with-rrp-id "$CA1_ID"; offer_redirect with-rrp-id
+echo "== the conduit's rewrites (#19), at ca1, on Evidence made for ca1"
+make_evidence rewrites "$CA1_ID"; offer_rewrites rewrites
+make_evidence type-offered "$CA1_ID"; offer_rewrites type-offered
 
-echo "== bench: background-check, NO RRP identifier in the binding"
+echo "== bench: $MODEL, NO RRP identifier in the binding"
 reconfigure omit
-run_pass no-rrp-id ""
+make_evidence no-rrp-id ""; offer_redirect no-rrp-id
 
 vm_delete; trap 'restore_bench; rm -rf "$BIN"' EXIT
 echo "== bench: back as it was ($MODEL_BEFORE, the RRP identifier in the binding)"

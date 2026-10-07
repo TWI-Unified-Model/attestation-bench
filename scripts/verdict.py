@@ -41,6 +41,15 @@ from pathlib import Path
 
 FRESHNESS_KINDS = ("present-nonce", "present-epoch", "absent-epoch", "absent-timestamp", "absent-none")
 REDIRECT_PASSES = ("with-rrp-id", "no-rrp-id")
+# the conduit's rewrites at ca1 (#19), on Evidence made for ca1, and what each gets by the gateways' code
+# (rrp/internal/gateway, rrp/cmd/ca-gateway): a refusal and its code, or an issuance
+REWRITES = {
+    "made-up Handle": ("refused", "freshness"),  # present-nonce only: the RRP knows its Handles
+    "Freshness Kind absent-none": ("refused", "freshness-kind-mismatch"),  # the kind is the Target's, by policy
+    "credential type not offered": ("refused", "unsupported-credential-type"),
+    "Credential Hint of another workload": ("refused", "credential-hint"),  # the CA names the attested workload
+    "the other credential type offered": ("issued", None),  # nothing binds it, but a present-nonce Handle: below
+}
 COMPARED_BUILDS = ("rrpverify-veraison-fork", "rrpverify-veraison-fixed")
 
 
@@ -151,8 +160,50 @@ def attacks(run):
     return lines, True, summary
 
 
+def rewrite_expected(name, kind):
+    """What a rewrite at ca1 must get: a present-nonce Handle is minted for one Target and credential type, so the other
+    credential type is refused there for freshness; elsewhere no check covers it, and the CA issues its X.509."""
+    if name == "the other credential type offered" and kind == "present-nonce":
+        return "refused", "freshness"
+    return REWRITES[name]
+
+
+def rewrites_wanted():
+    """The rewrites the experiment makes: (name, kind), in the order it makes them."""
+    out = []
+    for k in FRESHNESS_KINDS:
+        if k == "present-nonce":
+            out.append(("made-up Handle", k))
+        if k != "absent-none":
+            out.append(("Freshness Kind absent-none", k))
+        out += [("credential type not offered", k), ("Credential Hint of another workload", k)]
+    return out + [("the other credential type offered", k) for k in FRESHNESS_KINDS]
+
+
+def rewrite_lines(rows):
+    """The conduit's rewrites (runs from 7 October 2026 on): a table, and each one not as expected."""
+    got = {(r["rewrite"], r["kind"]): r["result"] for r in rows}
+    lines, wrong = [f"{'rewrite at ca1':38} {'kind':18} outcome"], []
+    for name, kind in rewrites_wanted():
+        res, (want, code) = got.get((name, kind)), rewrite_expected(name, kind)
+        if res is None:
+            lines.append(f"{name:38} {kind:18} missing")
+            wrong.append(f"rewrite {name}, {kind}: missing")
+            continue
+        reason = res.get("reason", "")
+        issued = "issued" if res["issued"] else "refused"
+        lines.append(
+            f"{name:38} {kind:18} {'ISSUED ' + res.get('cert_subject', '') if res['issued'] else 'refused ' + reason[:70]}"
+        )
+        if issued != want or (code and not reason.startswith(code + " ")):
+            wrong.append(f"rewrite {name}, {kind}: {issued} ({reason[:70]}), expected {want} {code or ''}".rstrip())
+    return lines, wrong
+
+
 def redirect(run):
     rows = [json.loads(x) for x in (run / "results.jsonl").read_text().splitlines() if x.strip()]
+    rewrites = [r for r in rows if "rewrite" in r]
+    rows = [r for r in rows if "rewrite" not in r]
     got = {(r["pass"], r["kind"], r["rrp"]): r["result"]["issued"] for r in rows}
     lines, wrong = [f"{'pass':12} {'kind':18} {'ca1':8} ca2"], []
     for p in REDIRECT_PASSES:
@@ -165,11 +216,21 @@ def redirect(run):
                 if issued is not want[rrp]:
                     wrong.append(f"{p} {k} {rrp}: {cells[-1]}, expected {'ISSUED' if want[rrp] else 'refused'}")
             lines.append(f"{p:12} {k:18} {cells[0]:8} {cells[1]}")
+    outcomes = len(REDIRECT_PASSES) * len(FRESHNESS_KINDS) * 2
+    if rewrites:
+        more, bad = rewrite_lines(rewrites)
+        lines += more
+        wrong += bad
+        outcomes += len(rewrites_wanted())
     lines += clock_lines(run)
     if wrong:
-        outcomes = len(REDIRECT_PASSES) * len(FRESHNESS_KINDS) * 2
         return lines + wrong, False, f"{len(wrong)} of {outcomes} outcomes not as expected"
     summary = "with the RRP identifier, ca2 refused all 5 Freshness Kinds; without it, all but present-nonce"
+    if rewrites:
+        summary += (
+            f"; of the conduit's {len(rewrites_wanted())} rewrites at ca1, the other credential type the Target "
+            "offers was issued for every kind but present-nonce, and every other was refused for its own reason"
+        )
     return lines, True, summary
 
 
