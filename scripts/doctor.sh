@@ -80,7 +80,7 @@ else
 fi
 
 echo
-echo "For hardware runs (make demo, attacks, redirect with PLATFORM=gcp-snp, gcp-tdx or aws-snp; not needed locally):"
+echo "For hardware runs (make demo, attacks, redirect with PLATFORM=gcp-snp, gcp-tdx or aws-snp; make setup needs none):"
 for c in gcloud aws ssh; do
   if command -v "$c" >/dev/null 2>&1; then ok "$c" ""; else
     case "$c" in

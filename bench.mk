@@ -31,7 +31,7 @@ status:
 config:
 	@e2e/scripts/bench.sh config
 
-## check-mtls: mutual TLS between the components (N23), locally, no hardware
+## check-mtls: mutual TLS between the components (N23), on this machine, no hardware
 check-mtls:
 	@scripts/check-mtls.sh
 
