@@ -180,6 +180,8 @@ if os.path.isdir(rv):
         "(SHA-256 e876bc69…f18c, fetched from https://pki.goog/cloud_integrity/GCE-cc-tcb-root_1.crt).\n"
     )
     w("| technology | measurement | endorsed | firmware built | SVN | launch | note |\n|---|---|---|---|---|---|---|")
+    # a launch approved from its provider's published firmware (AWS's), measured again at start (trust/firmware-check.sh)
+    measured_again = read("refvals", "initial-firmware.txt")
     for f in sorted(os.listdir(rv)):
         if not f.endswith(".json"):
             continue
@@ -187,11 +189,19 @@ if os.path.isdir(rv):
         launch = f"{j['launch_vmsas']} vCPUs" if j.get("launch_vmsas") else ""
         note = "approved during the run" if not f.startswith("initial-") else "approved at start"
         if not j["endorsed"]:
-            note = j.get("reason", "") + (
-                "; approved at start on an earlier run's observation (trust on first use)"
-                if f.startswith("initial-")
-                else ""
-            )
+            m = j["measurement"][:16]
+            if not f.startswith("initial-"):
+                again = ""
+            elif f"ok   the approved launch {m}... is the measurement of" in measured_again:
+                again = (
+                    "; approved at start as the measurement of its provider's published firmware, measured again "
+                    "from that firmware at start (refvals/initial-firmware.txt)"
+                )
+            elif f"not the approved {m}..." in measured_again or "FAIL" in measured_again:
+                again = "; approved at start, but measuring its published firmware again failed (refvals/initial-firmware.txt)"
+            else:
+                again = "; approved at start on an earlier run's observation (trust on first use)"
+            note = j.get("reason", "") + again
         w(
             f"| {j['technology']} | `{j['measurement'][:16]}…` | {'yes' if j['endorsed'] else 'no'} | {j.get('timestamp', '')} | "
             f"{j.get('svn', '')} | {launch} | {note} |"
@@ -217,9 +227,10 @@ w(
 )
 w("## Limits of this demonstration\n")
 w(
-    "- GCP reference values are Google-endorsed (above); the AWS launch measurement is still the value observed in an "
-    "earlier run (trust on first use): Google does not endorse AWS firmware, and AWS's own firmware measurements were "
-    "not computed here.\n"
+    "- GCP reference values are Google-endorsed (above). AWS signs no endorsement of its launch: the approved AWS "
+    "measurement is that of AWS's published EC2 SEV-SNP firmware, measured again at start when "
+    "refvals/initial-firmware.txt says so (above); a rebuild of that firmware from AWS's source did not give the "
+    "published binary (trust/README.md), so the value rests on AWS's binary, not on a build of the bench's own.\n"
     "- Approving a newly endorsed firmware is an operator step (`demo-bank.sh approve`); the verifier does not yet "
     "consult the endorsements by itself.\n"
     "- The TDX path uses our own verifier (go-tdx-guest against Intel PCS); Veraison in the SIG's fork has no TDX scheme.\n"

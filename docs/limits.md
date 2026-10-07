@@ -40,10 +40,13 @@ shows nothing about isolation, since anyone with the file can make the stand-in'
 
 ## Reference values
 
-- **The AWS SEV-SNP launch is trusted on first use.** Its measurement was taken from the first hardware run. Google
-  signs endorsements for its own firmware, and each Google launch was approved only after its endorsement checked out
-  (the Demo Bank checks them again at start); for AWS's firmware the bench has no endorsement
-  and has not established the value independently, for example by a reproducible build
+- **The AWS SEV-SNP launch rests on AWS's published binary, not on a reproduced build.** Google signs endorsements
+  for its own firmware, and each Google launch was approved only after its endorsement checked out (the Demo Bank
+  checks them again at start). AWS signs none. The approved AWS value is the measurement of AWS's published EC2
+  SEV-SNP firmware (release 20260814), which `make trust-check` and the Demo Bank compute again from that binary. A
+  rebuild from AWS's source, as AWS's README says, gives a different binary and a different measurement, and the
+  bench has not found why. So the reports show that EC2 runs the binary AWS published; that this binary is what AWS's
+  published source builds rests on AWS's word, which the bench could not check
   ([../trust/README.md](../trust/README.md)).
 - **New firmware needs an operator.** When a cloud deploys a new firmware build, its VMs are refused until someone
   checks the endorsement and approves the build. The verifiers do not consult endorsements by themselves.

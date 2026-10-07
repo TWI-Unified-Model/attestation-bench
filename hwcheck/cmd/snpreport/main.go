@@ -1,6 +1,7 @@
-// Command snpreport prints the platform fields of the SEV-SNP attestation reports a hardware run kept, as
-// go-sev-guest parses them: the report's version, POLICY, PLATFORM_INFO, the reported, committed and launch TCBs, the
-// CPUID, whether a CHIP_ID is present, and the launch and current mitigation vectors with the bits each sets. It reads
+// Command snpreport prints the launch measurement and the platform fields of the SEV-SNP attestation reports a hardware
+// run kept, as go-sev-guest parses them: the report's version, POLICY, MEASUREMENT, PLATFORM_INFO, the reported,
+// committed and launch TCBs, the CPUID, whether a CHIP_ID is present, and the launch and current mitigation vectors
+// with the bits each sets. It reads
 // every <step>/evidence.tsm.cbor of each run directory given (the TSM reports hwrun wrote); identical reports are
 // printed once, with their count.
 //
@@ -106,6 +107,7 @@ func describe(r *pb.Report) string {
 	return strings.Join([]string{
 		fmt.Sprintf("version %d", r.GetVersion()),
 		fmt.Sprintf("POLICY %#x", r.GetPolicy()),
+		fmt.Sprintf("MEASUREMENT %x", r.GetMeasurement()),
 		fmt.Sprintf("PLATFORM_INFO %#x", r.GetPlatformInfo()),
 		"REPORTED_TCB " + tcb(r.GetReportedTcb(), family),
 		"COMMITTED_TCB " + tcb(r.GetCommittedTcb(), family),

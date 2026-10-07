@@ -1,4 +1,5 @@
-# Python packages the bench's scripts use (client certificates, configuration, CBOR evidence), installed by
-# scripts/setup.sh into BENCH_HOME/venv.
+# Python packages the bench's scripts use (client certificates, configuration, CBOR evidence, the SEV-SNP launch
+# measurement of a published firmware), installed by scripts/setup.sh into BENCH_HOME/venv.
 cryptography==50.0.2
 cbor2==6.1.4
+sev-snp-measure==0.0.13

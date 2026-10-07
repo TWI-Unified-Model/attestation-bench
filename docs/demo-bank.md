@@ -39,7 +39,8 @@ database transaction, logged in with the certificate.
 
 ## What to expect
 
-`make bank-up` builds the programs, checks Google's endorsement of each approved launch, creates the two VMs, builds
+`make bank-up` builds the programs, checks Google's endorsement of each approved launch and measures the AWS launch
+again from AWS's published firmware (`refvals/`), creates the two VMs, builds
 Veraison on the trust zone and starts everything. From `bank-up`'s start to the first payment, as the names of the
 bank's directory and of its first payment's record them: 7 min 20 s on 7 October 2026
 (`e2e/evidence/20261007T015626Z-demo-bank`), 11 min 48 s on 6 October (`…20261006T230714Z-demo-bank`) and 13 min 43 s

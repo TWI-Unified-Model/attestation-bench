@@ -9,8 +9,14 @@
   {
    "measurement": "7a89cceaaba0bbdddc4f775acca3ef15d1f9bf8abccdc6115cfad7fb8eae113df3ee0bb50efa34db9c53ae065b1dc766",
    "launch": "AWS EC2 c6a.large (AMD Milan, 2 vCPUs), AmdSevSnp enabled",
-   "endorsement": "none: trust on first use, from the AWS hardware runs; Google does not endorse AWS firmware and we have not established it independently",
-   "checked": "e2e/evidence/20260928T212732Z-demo-bank/refvals/initial-snp-7a89cceaaba0bbdddc4f775acca3ef15d1f9bf8abccdc6115cfad7fb8eae113df3ee0bb50efa34db9c53ae065b1dc766.json"
+   "endorsement": "none from AWS, which signs no launch endorsement; the measurement of AWS's published EC2 SEV-SNP UEFI, release 20260814, computed again from the binary (firmware): trust/check.sh repeats it",
+   "checked": "e2e/evidence/20260928T212732Z-demo-bank/refvals/initial-snp-7a89cceaaba0bbdddc4f775acca3ef15d1f9bf8abccdc6115cfad7fb8eae113df3ee0bb50efa34db9c53ae065b1dc766.json",
+   "firmware": {
+    "release": "https://github.com/aws/uefi/releases/tag/20260814",
+    "binary": "https://github.com/aws/uefi/releases/download/20260814/ovmf_img.fd",
+    "sha256": "67aaae01a6f4245cc071e008859b00ea2b5c05824362c41d165c3b4751372bc9",
+    "measure": "sev-snp-measure 0.0.13 --mode snp --vcpus 2 --vmm-type ec2"
+   }
   }
  ],
  "tdx": [

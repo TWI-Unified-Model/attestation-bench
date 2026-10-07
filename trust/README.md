@@ -2,11 +2,12 @@
 
 Every file here is an input that the verifiers and the Relying Parties' policies trust. None is a secret. Each has a
 source you can check again: `trust/check.sh` (or `make trust-check`) downloads the online ones, compares them byte for
-byte, and checks that the approved SEV-SNP launches and Veraison's CoRIM agree.
+byte, checks that the approved SEV-SNP launches and Veraison's CoRIM agree, and computes the AWS launch's measurement
+again from AWS's published firmware (`trust/firmware-check.sh`).
 
 | File | What it is | Source | Used by |
 |---|---|---|---|
-| `approved-launches.json` | The launches the packs approve: SEV-SNP launch measurements and TDX MRTDs. Each entry names its launch, its endorsement and the record of the check. | This repository's evidence, linked from each entry | `scripts/trustzone.py`: the policy of every Target, the TDX verifier's reference MRTDs |
+| `approved-launches.json` | The launches the packs approve: SEV-SNP launch measurements and TDX MRTDs. Each entry names its launch, its endorsement and the record of the check; the AWS entry also pins the published firmware its measurement is computed from (`firmware`). | This repository's evidence, linked from each entry; for AWS, AWS's published firmware | `scripts/trustzone.py`: the policy of every Target, the TDX verifier's reference MRTDs |
 | `amd-kds-milan-cert_chain.pem` | AMD's ASK (`SEV-Milan`) and ARK (`ARK-Milan`) | `https://kdsintf.amd.com/vcek/v1/Milan/cert_chain` | `hwcheck` (`rrpverify -ark`) |
 | `veraison-corim-milan.cbor` | The CoRIM Veraison is provisioned with: the `ARK-Milan` trust anchor and a reference value for each approved SEV-SNP launch | Made with `hwcheck/cmd/mkcorim` from the AMD chain and SEV-SNP reports of the two launches (commit `d278459`, 28.09.2026) | `scripts/setup.sh`, the Demo Bank's trust zone |
 | `platform-policy.json` | The platform rule every RRP applies besides the verifier's verdict: the SEV-SNP product lines and minimum TCB, SMT, the refused TD attributes. `sources` says where each value comes from. | AMD's and Google's security bulletins, cited in the file; the hosts the hardware runs met | `scripts/trustzone.py`: the `platform` of every gateway |
@@ -26,11 +27,36 @@ e876bc6978bf4f3da445f98a0a82363c8c0bae5a1fc033c6df65846a6cb0f18c  GCE-cc-tcb-roo
 | Platform | Value | Endorsement |
 |---|---|---|
 | Google Cloud SEV-SNP, n2d-standard-2 | `ccdc5cf0…26fa` | Google's signature, checked 28.09.2026 |
-| AWS SEV-SNP, c6a.large | `7a89ccea…c766` | **None.** Trust on first use, from the AWS hardware runs. Google does not endorse AWS firmware, and we have not yet established this value independently. |
+| AWS SEV-SNP, c6a.large | `7a89ccea…c766` | **None signed: AWS signs no launch endorsement.** The value is the measurement of AWS's published EC2 SEV-SNP firmware, release 20260814, as `sev-snp-measure` computes it for a c6a.large; `make trust-check` and the Demo Bank at start compute it again. Not reproduced from source (below). |
 | Google Cloud TDX, firmware build 1 | `c1ee9c16…70a5` | Google's signature, checked 28.09 and 06.10.2026 |
 | Google Cloud TDX, firmware build 2 | `f21e6b48…e5d3` | Google's signature, checked 28.09 and 06.10.2026 |
 
 A new Google Cloud VM may get either TDX firmware build; both were met on 06.10.2026.
+
+### The AWS launch: AWS's published firmware, and a rebuild that does not match it
+
+AWS publishes its EC2 SEV-SNP firmware (github.com/aws/uefi): the source, the binary of each release
+(`ovmf_img.fd`), and a README saying that Nix builds the binaries reproducibly, so that customers can match their
+running firmware with the released binaries and reproduce them, and that `sev-snp-measure` generates the launch
+measurement. The bench checked both: the measurement of the released binary, and a rebuild.
+
+- **The published binary gives the approved launch.** `sev-snp-measure` 0.0.13 (`--mode snp --vcpus 2
+  --vmm-type ec2`, a c6a.large) on release 20260814's `ovmf_img.fd` (SHA-256 `67aaae01…72bc9`) gives `7a89ccea…c766`,
+  the MEASUREMENT of every report of the nine AWS attack runs, 28.09 to 07.10.2026 (90 reports;
+  `hwcheck/cmd/snpreport`). `approved-launches.json` pins that binary and those options,
+  and `trust/firmware-check.sh` repeats the computation. With `--vcpus 4` it gives another value, and the check
+  fails, as it must.
+- **A rebuild from AWS's source is not the published binary.** `trust/aws-uefi-rebuild.sh` builds a release as AWS's
+  README says (`nix-build --pure`, Nix 2.35.2) on a fresh Google Cloud VM and compares. For release 20260814 the
+  rebuild's SHA-256 is `f10bd4d6…24fd` and the published binary's `67aaae01…72bc9`: 1,246,788 of their 4,194,304
+  octets differ, the first at octet 540,809, and the rebuild measures to `58451e56…0847`, not the approved value.
+  Release 20240809 differs the same way (1,246,729 octets, the first at the same octet). Where the difference comes
+  from, between AWS's build environment and this one, the bench has not found.
+
+So the reports show that EC2 runs the binary AWS published, and the approved AWS launch rests on that binary,
+downloaded from AWS's release and measured again, not on a build of the bench's own: that the binary is what AWS's
+published source builds is AWS's word, and nobody should call the launch reproduced. What would change that: a
+rebuild that gives the published binary, octet for octet.
 
 ## The platform rule
 
@@ -57,7 +83,9 @@ floor is refused, and the refusal names the component, its value and the floor.
 1. Establish where the value comes from. For Google Cloud, Google's signed endorsement must verify to the pinned
    root:
    `(cd rrp && GOWORK=off go run ./cmd/gce-endorsement -root ../trust/GCE-cc-tcb-root_1.crt -tdx <MRTD>)` (or
-   `-snp <MEASUREMENT>`).
+   `-snp <MEASUREMENT>`). For AWS, a new release of its firmware: its binary's measurement for the instance type's
+   vCPUs, with the `firmware` fields of the entry (release, binary, SHA-256, the options), so that
+   `trust/firmware-check.sh` repeats it.
 2. Add it to `approved-launches.json` with its launch, its endorsement and the record of the check.
 3. For SEV-SNP, Veraison needs a reference value for it as well: make a new `veraison-corim-milan.cbor` with
    `hwcheck/cmd/mkcorim`. `trust/check.sh` and `scripts/trustzone.py` refuse an approved SEV-SNP launch that the

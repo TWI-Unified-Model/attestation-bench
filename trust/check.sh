@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Compares each file in trust/ that has an online source with a fresh download, then checks that every SEV-SNP launch
-# in approved-launches.json has a reference value in the CoRIM Veraison is provisioned with. Prints every SHA-256.
+# Compares each file in trust/ that has an online source with a fresh download, checks that every SEV-SNP launch in
+# approved-launches.json has a reference value in the CoRIM Veraison is provisioned with, and computes again the
+# measurement of each launch approved from its provider's published firmware. Prints every SHA-256.
 #
 #   trust/check.sh        (make trust-check)
 set -euo pipefail
@@ -30,6 +31,8 @@ if not missing:
     print(f"ok   the CoRIM holds a reference value for each of the {len(approved['sev-snp'])} approved SEV-SNP launches")
 sys.exit(1 if missing else 0)
 PY
+# each launch approved from its provider's published firmware (AWS's): the pinned binary, measured again
+"$BENCH_REPO/trust/firmware-check.sh" "$T/approved-launches.json" || bad=1
 echo
 (cd "$T" && for f in *; do [ -f "$f" ] && printf '%s  %s\n' "$(bench_sha256 "$f")" "$f"; done)
 exit "$bad"

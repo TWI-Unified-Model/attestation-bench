@@ -39,6 +39,8 @@ roots for both VCEK and VLEK (`third_party/veraison-services`).
 
 ## Note
 
-AWS publishes no signed endorsement of this launch measurement that the bench checks, and the approved value was
-taken from the first hardware run (trust on first use): see [../limits.md](../limits.md) and
-[../../trust/README.md](../../trust/README.md).
+AWS signs no endorsement of this launch measurement. The approved value is the measurement of AWS's published EC2
+SEV-SNP firmware, release 20260814, for a c6a.large's two vCPUs; `make trust-check` computes it again from that
+binary. A rebuild of the firmware from AWS's source did not give the published binary, so the value rests on AWS's
+binary, not on a reproduced build: see [../../trust/README.md](../../trust/README.md) and
+[../limits.md](../limits.md).

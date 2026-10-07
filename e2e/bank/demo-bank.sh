@@ -92,7 +92,9 @@ stage_text() { # dir
 }
 
 # Google's signed endorsement of each launch the bank approves at start, checked again and kept with the run
-# (rrp/cmd/gce-endorsement against the pinned root); a launch Google does not endorse, AWS's, is recorded as such.
+# (rrp/cmd/gce-endorsement against the pinned root); a launch Google does not endorse, AWS's, is recorded as such,
+# and a launch approved from its provider's published firmware, AWS's, is measured again from that firmware
+# (trust/firmware-check.sh, kept in refvals/initial-firmware.txt).
 initial_endorsements() {
   (cd "$HERE/rrp" && go build -o "$ST/gce-endorsement" ./cmd/gce-endorsement)
   log "Google's endorsements of the approved launches, verified to the pinned GCE TCB root"
@@ -107,6 +109,9 @@ initial_endorsements() {
     echo "   $tech ${v:0:16}...: $said" | tee -a "$OUT/console.log"
   done < "$ST/approved.list"
   rm -f "$ST/approved.list"
+  log "the launches approved from their provider's published firmware, measured again from it"
+  "$HERE/trust/firmware-check.sh" "$APPROVED" > "$OUT/refvals/initial-firmware.txt" 2>&1 || true
+  sed 's/^/   /' "$OUT/refvals/initial-firmware.txt" | tee -a "$OUT/console.log"
 }
 
 create_gcp() { # name machine-args...

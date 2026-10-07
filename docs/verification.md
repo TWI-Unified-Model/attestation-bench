@@ -128,7 +128,7 @@ The repository went up on GitHub, private, on 7 October 2026 at `3aaeede`. Then:
 | Veraison affirmed a debuggable SEV-SNP guest and never checked AMD's intermediate for revocation | patch 0005 (`6e9e98f`): our earlier `6bbeaf9`, ported onto the chain check up to AMD's roots; its tests run in `make test`. The hardware runs on that commit, added in `43b4505`, are identical to gate 7's, check by check |
 | The RRPs had no platform policy: no minimum TCB, no rule on the product line | `trust/platform-policy.json` (`4e5e699`), with the source of each value; each `make demo` run keeps the rule it ran under |
 | `absent-timestamp` rests on the guest's clock | said in [concepts.md](concepts.md) and [limits.md](limits.md) (`e074285`) |
-| The AWS launch is trusted on first use | said in [limits.md](limits.md) and [../trust/README.md](../trust/README.md); open |
+| The AWS launch is trusted on first use | the approved value is the measurement of AWS's published firmware, which `make trust-check` and the Demo Bank compute again (`trust/firmware-check.sh`); a rebuild from AWS's source does not give that binary (`trust/aws-uefi-rebuild.sh`), so the launch is not called reproduced ([../trust/README.md](../trust/README.md)) |
 | The trust zone's keys are files on its disk | said in [limits.md](limits.md), "Keys and secrets"; unchanged on a bench |
 | Known vulnerabilities in the pinned dependencies | the bench's own modules on fixed releases (`d2c9712`); Veraison's own pins listed in [limits.md](limits.md), to change with a release that repeats the hardware runs |
 | Test coverage | `make test` runs the tests of the packages our third-party patches change (`6e9e98f`); the platform rule is tested on the committed policy file and real results (`4e5e699`) |

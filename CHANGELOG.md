@@ -31,8 +31,9 @@ release's code; the hardware runs identical to gate 5's, check by check).
   SEV-SNP the product line, the minimum TCB from AMD's bulletins (on REPORTED_TCB and COMMITTED_TCB) and SMT only
   with the microcode floor met; on TDX a TD under debug, profiled or migratable is refused. Each `make demo` run keeps
   the rule it ran under (`platform-rule.json`).
-- **`hwcheck/cmd/snpreport`**: the platform fields of the SEV-SNP reports a hardware run kept, as go-sev-guest reads
-  them: the TCBs, the CPUID, the CHIP_ID and the mitigation vectors ([docs/results.md](docs/results.md)).
+- **`hwcheck/cmd/snpreport`**: the launch measurement and the platform fields of the SEV-SNP reports a hardware run
+  kept, as go-sev-guest reads them: the MEASUREMENT, the TCBs, the CPUID, the CHIP_ID and the mitigation vectors
+  ([docs/results.md](docs/results.md)).
 - **The mitigation vectors reach the RRP.** go-gen-ref patch 0002 annotates LAUNCH_MIT_VECTOR and CURRENT_MIT_VECTOR
   of a version 5 report (measurement keys 4032 and 4096, by AMD's CoRIM profile's bit-position rule; the profile names
   none for them), Veraison patch 0006 leaves them out of its reference-value matching, and the platform rule can
@@ -65,6 +66,12 @@ release's code; the hardware runs identical to gate 5's, check by check).
   fails or is interrupted; it used to leave the bench in Background Check.
 - `make test` (and so `make check` and CI) also runs, in each third-party component, the tests of the Go packages
   our patches change.
+- **The approved AWS launch rests on AWS's published firmware**, no longer on trust on first use:
+  `approved-launches.json` pins the binary of AWS's EC2 SEV-SNP UEFI, release 20260814 (its SHA-256), and how
+  `sev-snp-measure` 0.0.13 measures it for a c6a.large; `make trust-check` and the Demo Bank at start download it and
+  compute the measurement again (`trust/firmware-check.sh`). `trust/aws-uefi-rebuild.sh` rebuilds that firmware from
+  AWS's source as AWS's README says (Nix) and compares: the rebuild is not the published binary, for release 20240809
+  either, so the launch is not called reproduced ([trust/README.md](trust/README.md)).
 
 ### Fixed
 

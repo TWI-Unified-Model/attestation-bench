@@ -126,9 +126,9 @@ change by nature are not compared.
 ## Reading the SEV-SNP reports of a run
 
 The Attestation Results carry only some of the report's fields. For the rest, the reports an SEV-SNP hardware run
-kept (`<step>/evidence.tsm.cbor`) can be read as go-sev-guest parses them: the report's version, POLICY,
-PLATFORM_INFO, the reported, committed and launch TCBs, the CPUID, whether a CHIP_ID is present, and the mitigation
-vectors with the bits each sets. Identical reports are printed once, with their count. (`GOWORK=off`: the
+kept (`<step>/evidence.tsm.cbor`) can be read as go-sev-guest parses them: the report's version, POLICY, the launch
+MEASUREMENT, PLATFORM_INFO, the reported, committed and launch TCBs, the CPUID, whether a CHIP_ID is present, and the
+mitigation vectors with the bits each sets. Identical reports are printed once, with their count. (`GOWORK=off`: the
 repository's `go.work` lists the proof of concept's modules, not `hwcheck`.)
 
 ```bash
