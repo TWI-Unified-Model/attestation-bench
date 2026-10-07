@@ -74,14 +74,14 @@ def main(argv=None):
     pre = a.run / "preplay"
     made_from, made_to = (int(x) for x in (pre / "rrp-clock-window.txt").read_text().split())
     est = EST(a.home)
-    results = []
+    # first every presentation at once, then, when the RRPs' clock has reached every timestamp, every one again: one
+    # Target's wait must not make another's first presentation a late one
+    entries = []
     for guest_dir, case, target, gateway, ctype_, field, media in PRESENTED:
         d = pre / guest_dir / case
         meta = json.loads((d / "meta.json").read_text())
         element = unb64u(meta["freshness_element_b64"])
-        ts = int.from_bytes(element, "big")
         policy = json.loads(Path(a.home, "config", f"{gateway}.json").read_text())["targets"][target]
-        max_age, skew = policy["max_age"], policy["clock_skew"]
         # the Credential Hint, as the bench's workload sends it: the Target's one identity (a Credential Authority) or
         # credential group (a Secret Vault)
         names = list(policy.get("identities") or policy.get("groups") or {})
@@ -93,27 +93,30 @@ def main(argv=None):
                            "binding": {"method": "binding-input", "hash": "sha512"},
                            "profile": PROFILE, "credential_hint": names[0]}).encode()  # fmt: skip
         st, answer = est.call("GET", "/attest-initiate?" + urlencode({"target": target, "credential_type": ctype_}))
-        initiate = {"status": st, "answer": answer[:300]}
+        entries.append({"target": target, "rrp": gateway, "mode": meta["mode"], "case": case,
+                        "timestamp": int.from_bytes(element, "big"), "max_age_s": policy["max_age"],
+                        "clock_skew_s": policy["clock_skew"], "initiate": {"status": st, "answer": answer[:300]},
+                        "body": body, "media": media})  # fmt: skip
 
-        def present(body=body, media=media, mode=meta["mode"]):
-            at = time.time()
-            st, answer = est.call("POST", f"/attest-{mode}", body, media)
-            return {"at": round(at, 3), "status": st, "answer": answer[:300]}
+    def present(e):
+        at = time.time()
+        st, answer = est.call("POST", f"/attest-{e['mode']}", e["body"], e["media"])
+        return {"at": round(at, 3), "status": st, "answer": answer[:300]}
 
-        at_once = present()
-        wait = ts - skew + 2 - time.time()  # two seconds into the window, by this machine's clock: the RRP's
-        if wait > 0:
-            print(
-                f"{target}: refused at once ({at_once['status']}); waiting {wait:.0f} s for the RRP's clock", flush=True
-            )
-            time.sleep(wait)
-        later = present()
-        results.append({"target": target, "rrp": gateway, "mode": meta["mode"], "case": case, "timestamp": ts,
-                        "max_age_s": max_age, "clock_skew_s": skew, "initiate": initiate, "at_once": at_once,
-                        "later": later})  # fmt: skip
-        print(f"{target}: timestamp {ts}; at once {at_once['status']}, at {later['at']:.0f} {later['status']}: "
-              f"{max(0, later['at'] - made_to):.0f} s or more after the Evidence was made "
-              f"(max_age {max_age} s)")  # fmt: skip
+    for e in entries:
+        e["at_once"] = present(e)
+        print(f"{e['target']}: timestamp {e['timestamp']}; at once {e['at_once']['status']}", flush=True)
+    # two seconds into every window, by this machine's clock: the RRPs'
+    wait = max(e["timestamp"] - e["clock_skew_s"] + 2 for e in entries) - time.time()
+    if wait > 0:
+        print(f"waiting {wait:.0f} s for the RRPs' clock to reach the timestamps", flush=True)
+        time.sleep(wait)
+    for e in entries:
+        e["later"] = present(e)
+        print(f"{e['target']}: at {e['later']['at']:.0f} {e['later']['status']}: "
+              f"{max(0, e['later']['at'] - made_to):.0f} s or more after the Evidence was made "
+              f"(max_age {e['max_age_s']} s)")  # fmt: skip
+    results = [{k: v for k, v in e.items() if k not in ("body", "media")} for e in entries]
     ahead = (pre / "clock-ahead.txt").read_text()
     out = {"made": {"not_before": made_from, "not_after": made_to}, "guest_clock": ahead, "results": results}
     (a.run / "preplay.json").write_text(json.dumps(out, indent=1) + "\n")
