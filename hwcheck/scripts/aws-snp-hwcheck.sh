@@ -11,6 +11,7 @@
 # AWS_REGION, AWS_AZ: where the instance goes (scripts/lib.sh). RUNS_DIR: where the run directory goes (default
 # BENCH_HOME/runs). Env: TYPE (default c6a.large), AMI_PARAM (SSM parameter of the image; default Ubuntu 24.04),
 # SSH_USER. Cost: one c6a.large for ~10 minutes.
+# The run ends with its verdict (scripts/verdict.py) and exits 1 unless every check came out as expected.
 set -euo pipefail
 # shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
@@ -138,5 +139,8 @@ if curl -sf --cacert "$VERAISON_DEPLOYMENT/certs/rootCA.crt" --cert "$BENCH_HOME
   "$BIN/rrpverify-fixed" service -in "$OUT" -handles "$OUT/handles.json" -not-before "$NB" -not-after "$NA" \
     -out "$OUT/rrpverify-service.json" | tee "$OUT/rrpverify-service.txt"
 fi
+rc=0
+python3 "$BENCH_REPO/scripts/verdict.py" attacks "$OUT" --out "$OUT/verdict.txt" || rc=$?
 bench_seal "$OUT"
 echo "== run directory: $OUT"
+exit "$rc"

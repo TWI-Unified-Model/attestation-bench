@@ -32,8 +32,9 @@ request with one input changed, as the attacker could change it:
 | Unapproved launch | a launch whose measurement (SEV-SNP `MEASUREMENT`, TDX `MRTD`) differs by one byte | the approved launches (`trust/`) | refused |
 
 Each attack must be refused **for its own reason**. A refusal that also refuses the honest request proves nothing and
-is counted as "inconclusive", never as a pass. The run ends with `every attack refused for its own reason, every
-honest check passed`, and keeps every check in `rrpverify-*.json` ([results.md](results.md)).
+is counted as "inconclusive", never as a pass. The run ends with its verdict, on the stand-in
+`VERDICT PASS: 132 checks: the honest Evidence passed, every attack refused for its own reason`, and keeps every
+check in `rrpverify-*.json` ([results.md](results.md)).
 
 | Platform | Checks in process | Checks through the verifier service |
 |---|---|---|
@@ -74,8 +75,8 @@ Only the right component over TLS 1.3 gets through: 47 of 47 checks as expected
 
 | Attempt | How to run it | Expected result |
 |---|---|---|
-| a debuggable instance (its memory can be read from outside) | `SIM_DEBUG=1 make demo` | 0 of 10: refused, "the instance is debuggable" |
-| a workload that is not the approved one | `SIM_LABEL="other workload" make demo` | 0 of 10: refused, its measurement matches no reference value |
+| a debuggable instance (its memory can be read from outside) | `SIM_DEBUG=1 make demo` | 0 of 10: each refused, `not affirming: SIM is "contraindicated"`; the stand-in's verifier: "the instance is debuggable" |
+| a workload that is not the approved one | `SIM_LABEL="other workload" make demo` | 0 of 10: each refused, `contraindicated`; the stand-in's verifier: the measurement "matches no reference value" |
 | an ordinary VM, no TEE | `make bank-pay PLATFORM=ordinary` | no attestation, no credential; the ledger and the fraud service refuse it |
 | genuine SEV-SNP hardware, a launch the bank has not approved | `make bank-pay PLATFORM=unapproved` | Veraison `contraindicated`: no credential |
 

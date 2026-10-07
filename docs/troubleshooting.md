@@ -28,6 +28,11 @@ yet. `make setup` retries for a while; if it still fails, run `make setup` again
 **`!! port 50061 (the CAS Client) is taken on this machine`.** A previous `make demo` was interrupted and left its CAS
 Client running, or another program uses the port. Find it with `lsof -i :50061` and stop it.
 
+**A run ends with `VERDICT FAIL: …` and `make` reports an error.** The run did not come out as its experiment
+expects. The lines above the verdict say which Target, check or outcome differs, and the run directory keeps them in
+`verdict.txt` next to everything the run recorded ([results.md](results.md)). Judge a run again at any time:
+`python3 scripts/verdict.py demo|attacks|redirect <run directory>`.
+
 **The run directory is named `…-background-check` and you expected Passport.** `make redirect` leaves the bench in
 Background Check. Switch back: `RATS_MODEL=passport make config`, then `make stop start`.
 

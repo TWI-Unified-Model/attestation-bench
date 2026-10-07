@@ -42,8 +42,11 @@ directory saying what it shows, and commit the directory as the run left it. Nev
 - **Go**: `gofmt`, and golangci-lint with `.golangci.yml`. Errors are returned with context, never ignored without a
   comment saying why.
 - **Shell**: bash, `set -euo pipefail`, ShellCheck clean; source `scripts/lib.sh` for the shared settings and
-  helpers; a run directory ends with `bench_seal`.
-- **Python**: ruff with `ruff.toml` (format and check); files opened with `with` or `pathlib`.
+  helpers. A run judges itself with `scripts/verdict.py` (its `verdict.txt`), then seals its directory with
+  `bench_seal`, prints `== run directory: <path>` and exits 1 unless the verdict is PASS. A new kind of run gets its
+  expectation in `scripts/verdict.py` and a test in `scripts/tests/`.
+- **Python**: ruff with `ruff.toml` (format and check); files opened with `with` or `pathlib`; tests with `unittest`
+  (`make test` runs them).
 - **Comments and documentation**: say what the code is for and why, not what each line does; plain English; no
   claim without its source (a file and line, a run directory, a URL).
 

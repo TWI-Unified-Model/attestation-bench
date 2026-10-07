@@ -126,12 +126,16 @@ the stand-in TEE, gets the credential through the EST server, and presents it to
 
 ```
 10 of 10 Targets: credential acquired and admitted by the relying party
-ok  https://db-nonce.tacra.example         x509         33.1 ms 200
-ok  https://db-epoch.tacra.example         x509          8.5 ms 200
+ok  https://db-nonce.tacra.example         x509         89.9 ms 200
+ok  https://db-epoch.tacra.example         x509          8.1 ms 200
 ...
-ok  https://ledger-none.tacra.example      api-key       6.4 ms 200
-== run directory: /Users/you/.attestation-bench/runs/20261006T215154Z-local-sim-e2e-passport
+ok  https://ledger-none.tacra.example      api-key       9.1 ms 200
+VERDICT PASS: all 10 Targets: credential acquired and admitted by the relying party
+== run directory: /Users/you/.attestation-bench/runs/20261007T005245Z-local-sim-e2e-passport
 ```
+
+Every run ends this way: its verdict, then the directory that holds everything it recorded. A run whose verdict is
+`FAIL` makes `make` fail too.
 
 ## 8. Attack it
 
@@ -145,9 +149,10 @@ the platform's, an unapproved launch, a timestamp an hour off. Each must be refu
 checks twice: inside one program, and through the bench's verifier as an RRP would ask it.
 
 ```
-82 checks, 0 not as expected
-50 checks, 0 not as expected
-every attack refused for its own reason, every honest check passed
+rrpverify-service: 50 checks, 0 not as expected
+rrpverify-sim: 82 checks, 0 not as expected
+VERDICT PASS: 132 checks: the honest Evidence passed, every attack refused for its own reason
+== run directory: /Users/you/.attestation-bench/runs/20261007T005635Z-local-sim-attacks
 ```
 
 The catalogue of attacks and what stops each: [attacks.md](attacks.md).
@@ -164,16 +169,18 @@ without it. It ends with:
 
 ```
 pass         kind               ca1      ca2
-no-rrp-id    present-nonce      ISSUED   refused
-no-rrp-id    present-epoch      ISSUED   ISSUED
-no-rrp-id    absent-epoch       ISSUED   ISSUED
-no-rrp-id    absent-timestamp   ISSUED   ISSUED
-no-rrp-id    absent-none        ISSUED   ISSUED
 with-rrp-id  present-nonce      ISSUED   refused
 with-rrp-id  present-epoch      ISSUED   refused
 with-rrp-id  absent-epoch       ISSUED   refused
 with-rrp-id  absent-timestamp   ISSUED   refused
 with-rrp-id  absent-none        ISSUED   refused
+no-rrp-id    present-nonce      ISSUED   refused
+no-rrp-id    present-epoch      ISSUED   ISSUED
+no-rrp-id    absent-epoch       ISSUED   ISSUED
+no-rrp-id    absent-timestamp   ISSUED   ISSUED
+no-rrp-id    absent-none        ISSUED   ISSUED
+VERDICT PASS: with the RRP identifier, ca2 refused all 5 Freshness Kinds; without it, all but present-nonce
+== run directory: /Users/you/.attestation-bench/runs/20261007T005429Z-local-redirect
 ```
 
 With the RRP identifier in the binding, `ca2` refuses every Freshness Kind. Without it, only a nonce `ca2` never

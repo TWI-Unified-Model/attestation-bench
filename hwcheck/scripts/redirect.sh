@@ -12,7 +12,8 @@
 # reconfigured between passes (OMIT_RRP_ID) and left in background-check mode, no omit, at the end.
 #
 # GCP_PROJECT, GCP_ZONE, AWS_REGION, AWS_AZ: where the VM goes (scripts/lib.sh). RUNS_DIR: where the run directory
-# goes (default BENCH_HOME/runs).
+# goes (default BENCH_HOME/runs). The run ends with its verdict (scripts/verdict.py) and exits 1 unless every outcome
+# is the one the experiment expects.
 set -euo pipefail
 # shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
@@ -188,17 +189,8 @@ echo "== bench: back to background-check, no omit"
 reconfigure normal
 
 cat "$OUT"/*/results.jsonl > "$OUT/results.jsonl"
+rc=0
+python3 "$REPO/scripts/verdict.py" redirect "$OUT" --out "$OUT/verdict.txt" || rc=$?
 bench_seal "$OUT"
 echo "== run directory: $OUT"
-python3 - "$OUT/results.jsonl" <<'PY'
-import sys, json
-rows = [json.loads(l) for l in open(sys.argv[1])]
-print(f"{'pass':12} {'kind':18} {'ca1':8} {'ca2':8}")
-by = {}
-for r in rows: by[(r['pass'], r['kind'], r['rrp'])] = r['result']['issued']
-seen = []
-for (p, k, _) in by:
-    if (p, k) in seen: continue
-    seen.append((p, k))
-    print(f"{p:12} {k:18} {'ISSUED' if by[(p,k,'ca1')] else 'refused':8} {'ISSUED' if by[(p,k,'ca2')] else 'refused':8}")
-PY
+exit "$rc"

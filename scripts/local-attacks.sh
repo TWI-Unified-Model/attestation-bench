@@ -13,6 +13,7 @@
 #
 #   scripts/local-attacks.sh        (make attacks)
 #
+# The run ends with its verdict (scripts/verdict.py) and exits 1 unless every check came out as expected.
 # RUNS_DIR: where run directories go (default BENCH_HOME/runs).
 set -euo pipefail
 # shellcheck source=SCRIPTDIR/lib.sh
@@ -43,18 +44,13 @@ echo "$NB $NA" >"$OUT/rrp-clock-window.txt"
 echo "== the RRP's checks, in process"
 "$BIN/rrpverify" verify -in "$OUT" -handles "$OUT/handles.json" -sim-key "$B/gateways/sim-tee-ak.pub.jwk" \
   -sim-measurement "$M" -not-before "$NB" -not-after "$NA" -out "$OUT/rrpverify-sim.json" >"$OUT/rrpverify-sim.txt"
-tail -1 "$OUT/rrpverify-sim.txt"
 
 echo "== the same checks through the bench's sim-verifier (https://localhost:8463)"
 "$BIN/rrpverify" service -in "$OUT" -handles "$OUT/handles.json" -url https://localhost:8463 -ca "$B/tls/root.crt" \
   -submod SIM -not-before "$NB" -not-after "$NA" -out "$OUT/rrpverify-service.json" >"$OUT/rrpverify-service.txt"
-tail -1 "$OUT/rrpverify-service.txt"
 
+rc=0
+python3 "$BENCH_REPO/scripts/verdict.py" attacks "$OUT" --out "$OUT/verdict.txt" || rc=$?
 bench_seal "$OUT"
 echo "== run directory: $OUT"
-if grep -q ' 0 not as expected' "$OUT/rrpverify-sim.txt" && grep -q ' 0 not as expected' "$OUT/rrpverify-service.txt"; then
-  echo "every attack refused for its own reason, every honest check passed"
-else
-  echo "!! some checks were not as expected: see rrpverify-sim.txt and rrpverify-service.txt" >&2
-  exit 1
-fi
+exit "$rc"

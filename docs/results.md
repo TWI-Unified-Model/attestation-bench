@@ -16,6 +16,22 @@ shasum -a 256 -c sha256sums.txt        # or: sha256sum -c sha256sums.txt
 Every line must end in `OK`. A file changed or removed since the run shows `FAILED`. (A `README.md` or a
 `compare-with-*.txt` added after the run, as the reference runs have, is not in the list.)
 
+## Did it come out as expected?
+
+Before it seals its directory, a run judges itself: `verdict.txt` holds what the run did and a last line,
+`VERDICT PASS: …` or `VERDICT FAIL: …`. On FAIL the run exits with an error, so `make` and CI fail too.
+`scripts/verdict.py` judges any run again from its directory alone, the reference runs included:
+
+```bash
+python3 scripts/verdict.py demo e2e/evidence/20261006T222601Z-gcp-sev-snp-e2e-passport
+python3 scripts/verdict.py attacks hwcheck/evidence/20261006T225040Z-gcp-tdx
+python3 scripts/verdict.py redirect hwcheck/evidence/20261006T225552Z-gcp-snp-redirect
+```
+
+What each kind of run must show is at the top of `scripts/verdict.py`; its tests judge every reference run of
+6 October 2026 and runs changed in one place (`scripts/tests/`). The reference runs made before the verdict existed
+have no `verdict.txt`; the program judges them all the same.
+
 ## Files every run has
 
 | File | Holds |
@@ -24,6 +40,7 @@ Every line must end in `OK`. A file changed or removed since the run shows `FAIL
 | `binaries.sha256` | the SHA-256 of the programs the run built and ran |
 | `rats-model.txt` | `passport` or `background-check` |
 | `platform.txt` | on the stand-in TEE only: a reminder that it gives no security |
+| `verdict.txt` | the run's verdict (above) |
 | `sha256sums.txt` | the seal (above) |
 
 ## `make demo`: `…-e2e-<model>`

@@ -8,10 +8,11 @@
 #
 #   scripts/local-e2e.sh        (make demo)
 #
-# Refusal scenarios, where every Target must be refused:
+# Refusal scenarios, one at a time, where every Target must be refused for the scenario's own reason:
 #   SIM_DEBUG=1                 the stand-in reports a debuggable instance
 #   SIM_LABEL="other workload"  the stand-in reports the launch measurement of another workload (not approved)
 #
+# The run ends with its verdict (scripts/verdict.py) and exits 1 unless the run came out as expected.
 # RUNS_DIR: where run directories go (default BENCH_HOME/runs).
 set -euo pipefail
 # shellcheck source=SCRIPTDIR/lib.sh
@@ -22,16 +23,31 @@ RUNS_DIR="${RUNS_DIR:-$B/runs}"
 SIM_DEBUG="${SIM_DEBUG:-}"
 SIM_LABEL="${SIM_LABEL:-}"
 MODEL="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('rats_model') or 'passport')" "$B/config/vault-gateway.json")"
+# What the run must show (scripts/verdict.py): every Target admitted; or, in a refusal scenario, every Target refused,
+# with the RRP's reason and, where the verifier refuses, the cause the stand-in's verifier found.
 SCENARIO=""
-[ -n "$SIM_DEBUG" ] && SCENARIO="$SCENARIO-debug"
-[ -n "$SIM_LABEL" ] && SCENARIO="$SCENARIO-unapproved"
+EXPECT=(--expect admitted)
+CONTRAINDICATED='not affirming: SIM is "contraindicated"'
+if [ -n "$SIM_DEBUG" ]; then
+  SCENARIO="$SCENARIO-debug"
+  EXPECT=(--expect refused --reason "$CONTRAINDICATED" --cause "the instance is debuggable")
+fi
+if [ -n "$SIM_LABEL" ]; then
+  SCENARIO="$SCENARIO-unapproved"
+  EXPECT=(--expect refused --reason "$CONTRAINDICATED" --cause "matches no reference value")
+fi
+case "$SCENARIO" in
+  "" | -debug | -unapproved) ;;
+  *) bench_die "one refusal scenario at a time: SIM_DEBUG or SIM_LABEL" ;;
+esac
 OUT="$RUNS_DIR/$(date -u +%Y%m%dT%H%M%SZ)-local-sim-e2e-${MODEL}${SCENARIO}"
 BIN="$(mktemp -d)"
 CAS_PID=""
-cleanup() {
+cleanup() { # the CAS Client and the programs built for the run: once the workload is done, and on any exit
   if [ -n "$CAS_PID" ]; then
     kill "$CAS_PID" 2>/dev/null || true
     wait "$CAS_PID" 2>/dev/null || true # reaped here, so bash reports no "Terminated"
+    CAS_PID=""
   fi
   rm -rf "${BIN:?}"
 }
@@ -80,6 +96,7 @@ NB="$(date -u +%s)"
 "$BIN/e2e-attester" -config "$BIN/e2e-attester.json" -out "$OUT/results.json" 2>&1 | tee "$OUT/e2e-attester-stdout.txt"
 NA="$(date -u +%s)"
 echo "$NB $NA" >"$OUT/run-window.txt"
+cleanup # the CAS Client stops before the run directory is sealed, so its log is complete
 
 echo "== bench logs for the run"
 for f in est-server ca-gateway vault-gateway rup tdx-verifier sim-verifier; do
@@ -89,13 +106,8 @@ tail -n +"$(($(cat "$OUT/bench-logs/.vts.start") + 1))" "$VERAISON_DEPLOYMENT/lo
 tail -n +"$(($(cat "$OUT/bench-logs/.verification.start") + 1))" "$VERAISON_DEPLOYMENT/logs/verification.log" | grep -v DEBUG \
   >"$OUT/bench-logs/veraison-verification.log" || true
 rm -f "$OUT"/bench-logs/.*.start
+rc=0
+python3 "$HERE/scripts/verdict.py" demo "$OUT" "${EXPECT[@]}" --out "$OUT/verdict.txt" || rc=$?
 bench_seal "$OUT"
-python3 - "$OUT/results.json" <<'PY'
-import json, sys
-r = json.load(open(sys.argv[1]))
-ok = sum(1 for x in r if x["ok"])
-print(f"{ok} of {len(r)} Targets: credential acquired and admitted by the relying party")
-for x in r:
-    print(("ok " if x["ok"] else "BAD"), x["target"].ljust(38), x["type"].ljust(8), f'{x["acquire_ms"]:8.1f} ms', x["rup_status"], x.get("error", "")[:120])
-PY
 echo "== run directory: $OUT"
+exit "$rc"

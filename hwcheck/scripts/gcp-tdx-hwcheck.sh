@@ -8,6 +8,7 @@
 #
 # GCP_PROJECT, GCP_ZONE: where the VM goes (scripts/lib.sh). RUNS_DIR: where the run directory goes (default
 # BENCH_HOME/runs). Cost: one c3-standard-4 confidential VM for ~10 minutes.
+# The run ends with its verdict (scripts/verdict.py) and exits 1 unless every check came out as expected.
 set -euo pipefail
 # shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, pinned tools, cloud settings
@@ -86,6 +87,8 @@ cleanup
 echo "== RRP verification (go-tdx-guest, Intel PCS collateral)"
 "$BIN/rrpverify" verify -in "$OUT" -handles "$OUT/handles.json" -not-before "$NB" -not-after "$NA" \
   -out "$OUT/rrpverify-tdx.json" > "$OUT/rrpverify-tdx.txt" 2> "$OUT/rrpverify-tdx.stderr.log"
-tail -1 "$OUT/rrpverify-tdx.txt"
+rc=0
+python3 "$BENCH_REPO/scripts/verdict.py" attacks "$OUT" --out "$OUT/verdict.txt" || rc=$?
 bench_seal "$OUT"
 echo "== run directory: $OUT"
+exit "$rc"

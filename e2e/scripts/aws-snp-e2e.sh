@@ -9,6 +9,7 @@
 #
 # AWS_REGION, AWS_AZ: where the instance goes (scripts/lib.sh). RUNS_DIR: where the run directory goes (default
 # BENCH_HOME/runs). Env: TYPE (default c6a.large), AMI_PARAM (SSM parameter of the image; default Ubuntu 24.04).
+# The run ends with its verdict (scripts/verdict.py) and exits 1 unless every Target was admitted.
 set -euo pipefail
 # shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
@@ -134,13 +135,8 @@ tail -n +"$(( $(cat "$OUT/bench-logs/.vts.start") + 1 ))" "$VERAISON_DEPLOYMENT/
 tail -n +"$(( $(cat "$OUT/bench-logs/.verification.start") + 1 ))" "$VERAISON_DEPLOYMENT/logs/verification.log" | grep -v DEBUG \
   > "$OUT/bench-logs/veraison-verification.log" || true
 rm -f "$OUT"/bench-logs/.*.start
-python3 - "$OUT/results.json" <<'PY'
-import json, sys
-r = json.load(open(sys.argv[1]))
-ok = sum(1 for x in r if x["ok"])
-print(f"{ok} of {len(r)} Targets: credential acquired and admitted by the relying party")
-for x in r:
-    print(("ok " if x["ok"] else "BAD"), x["target"].ljust(38), x["type"].ljust(8), f'{x["acquire_ms"]:8.1f} ms', x["rup_status"], x.get("error", "")[:120])
-PY
+rc=0
+python3 "$HERE/scripts/verdict.py" demo "$OUT" --out "$OUT/verdict.txt" || rc=$?
 bench_seal "$OUT"
 echo "== run directory: $OUT"
+exit "$rc"

@@ -29,12 +29,13 @@ install what is missing.
 ```bash
 make doctor     # checks this machine; ends with "Ready for make setup."
 make setup      # builds and starts the bench in ~/.attestation-bench; ends with "The bench is up in ..."
-make demo       # prints "10 of 10 Targets: credential acquired and admitted by the relying party"
-make attacks    # ends with "every attack refused for its own reason, every honest check passed"
-make redirect   # ends with the #20 table: which Credential Authority issued, with and without the RRP identifier
+make demo       # VERDICT PASS: all 10 Targets: credential acquired and admitted by the relying party
+make attacks    # VERDICT PASS: 132 checks: the honest Evidence passed, every attack refused for its own reason
+make redirect   # the #20 table: which Credential Authority issued, with and without the RRP identifier
 ```
 
-Locally, the workload's "hardware" is a software stand-in TEE: it signs its reports with a key in a file and gives
+Every run judges itself against what its experiment expects and ends with `VERDICT PASS` or `VERDICT FAIL`; on FAIL,
+`make` fails. Locally, the workload's "hardware" is a software stand-in TEE: it signs its reports with a key in a file and gives
 **no security at all**. It exists so that every flow and every check can run anywhere. The gateways accept it only
 because the bench's own configuration allows it; a real deployment never does. Step by step, with what each step
 prints: [docs/getting-started.md](docs/getting-started.md).

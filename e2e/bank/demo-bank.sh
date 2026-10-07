@@ -251,28 +251,11 @@ uname -a > ~/kernel.txt
 kill \"\$(cat ~/caapi-est.pid)\" || true"
 }
 
-verdict() { # run dir, expect
-  python3 - "$1" "$2" <<'PY' | tee "$1/verdict.txt"
-import json, sys
-run, expect = sys.argv[1], sys.argv[2]
-r = json.load(open(f"{run}/report.json"))
-steps = {s["step"]: s for s in r["steps"]}
-for s in r["steps"]:
-    print(("ok " if s["ok"] else "NO ") + s["step"].ljust(38) + f'{s["ms"]:9.1f} ms  ' + (s.get("note") or "") + " " + (s.get("error") or ""))
-paid = "ledger: transfer" in steps and steps["ledger: transfer"]["ok"] and r.get("receipt")
-got_cred = any(s["ok"] for n, s in steps.items() if n.startswith("TACRA:"))
-if expect == "pay":
-    ok = bool(paid)
-    print("VERDICT", "PASS: the payment went through, with credentials acquired by attestation" if ok else "FAIL: no payment")
-elif expect == "ordinary":
-    ok = not paid and not got_cred and all(steps.get(n, {}).get("ok") for n in ("ledger: login without a certificate", "fraud service: call without the key"))
-    print("VERDICT", "PASS: no attestation, no credential; the ledger and the fraud service refused it" if ok else "FAIL")
-else:  # unapproved: genuine hardware evidence, from a launch the bank has not approved
-    hw = steps.get("attestation plug-in and CAI", {}).get("ok") is True
-    ok = hw and not paid and not got_cred
-    print("VERDICT", "PASS: genuine hardware evidence, unapproved launch: no credential issued" if ok else "FAIL")
-sys.exit(0 if ok else 1)
-PY
+finish_run() { # run dir, expect: the run's verdict (scripts/verdict.py, kept in verdict.txt), then its seal
+  local rc=0
+  python3 "$HERE/scripts/verdict.py" bank-pay "$1" --expect "$2" --out "$1/verdict.txt" || rc=$?
+  bench_seal "$1"
+  return "$rc"
 }
 
 pay() {
@@ -313,8 +296,7 @@ pay() {
   [ -z "$(gcloud compute instances list --project="$PROJECT" --filter="name=$name" --format='value(name)')" ] \
     && echo "$name is gone" > "$R/vm-deleted.txt"
   slice_logs "$R"
-  bench_seal "$R"
-  verdict "$R" "$EXPECT"
+  finish_run "$R" "$EXPECT"
 }
 
 pay_aws() { # run dir
@@ -362,8 +344,7 @@ pay_aws() { # run dir
   log "aws-snp: terminate, delete the security group, key pair and firewall rule"
   aws_cleanup; trap - EXIT
   slice_logs "$R"
-  bench_seal "$R"
-  verdict "$R" pay
+  finish_run "$R" pay
 }
 
 # approve a launch measurement on Google's signed firmware endorsement, then have the trust zone apply the policy

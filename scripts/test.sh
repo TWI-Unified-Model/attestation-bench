@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# The repository's unit tests: go test in every Go module of BENCH_GO_MODULES (scripts/lib.sh). Exits non-zero on
-# any failure.
+# The repository's unit tests: go test in every Go module of BENCH_GO_MODULES (scripts/lib.sh), and the Python
+# scripts' tests (scripts/tests: the run verdicts, judged on the committed reference runs). Exits non-zero on any
+# failure.
 #
 #   scripts/test.sh        (make test)
 #
@@ -25,5 +26,13 @@ for m in $BENCH_GO_MODULES; do
     failed="$failed $m"
   fi
 done
+bench_say "Python, scripts/tests"
+if out="$(python3 -m unittest discover -s scripts/tests 2>&1)"; then
+  printf '  ok    %-18s %s\n' scripts/tests "$(grep -E '^Ran [0-9]+ tests?' <<<"$out")"
+else
+  printf '  FAIL  scripts/tests\n'
+  printf '%s\n' "$out" | sed 's/^/        /'
+  failed="$failed scripts/tests"
+fi
 if [ -n "$failed" ]; then bench_die "tests failed in:$failed"; fi
-echo "test: every module passes"
+echo "test: every Go module and the Python tests pass"
