@@ -64,6 +64,9 @@ ends without a verdict only if the guest stays out of reach for the whole run (3
 own logs on this machine (`~/.attestation-bench/ca-gateway.log`, `vault-gateway.log`) show what the guest was
 served, and `make report` lists the run as not judged. Before this was fixed, one run lost its session this way:
 [e2e/evidence/20261007T045819Z-gcp-sev-snp-e2e-background-check](../e2e/evidence/20261007T045819Z-gcp-sev-snp-e2e-background-check/README.md).
+To see it handled on a real VM, run with `BENCH_CHAOS_SSH=1` (any hardware run): the VM breaks the call that starts
+the workload once it has started, and every SSH session to it for 15 seconds after; the run must end as it would
+have without, and `ssh.stderr` shows each break.
 
 **GCP TDX: every Target refused, `contraindicated`, and the TDX verifier logs an MRTD that matches no reference
 value.** The VM started on a TDX firmware build the bench has not approved. Check Google's endorsement of that MRTD and
