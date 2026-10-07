@@ -1,0 +1,4 @@
+2026-10-07 18:48:14.212 UTC [4754] [unknown]@[unknown] 10.128.15.231(50366) LOG:  connection received: host=10.128.15.231 port=50366
+2026-10-07 18:48:14.217 UTC [4754] payments@bank 10.128.15.231(50366) LOG:  connection authenticated: identity="CN=payments.workload.demobank.example" method=cert (/etc/postgresql/16/main/pg_hba.conf:2)
+2026-10-07 18:48:14.217 UTC [4754] payments@bank 10.128.15.231(50366) LOG:  connection authorized: user=payments database=bank SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)
+2026-10-07 18:48:14.228 UTC [4754] payments@bank 10.128.15.231(50366) LOG:  disconnection: session time: 0:00:00.016 user=payments database=bank host=10.128.15.231 port=50366

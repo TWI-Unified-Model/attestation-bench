@@ -2,12 +2,14 @@
 
 What changed, newest first. Dates are UTC.
 
-## Unreleased: the first private release
+## 0.1.0 (7 October 2026): the release for the group
 
 The bench as a repository of its own, with the TACRA proof of concept's history. Everything below was added on
 6 and 7 October 2026 and checked on real hardware: gate 5 (every earlier hardware run repeated from a bench set up
 from zero, all identical), gate 6 (the Demo Bank) and gate 7 (every command in the docs run as written, on the
-release's code; the hardware runs identical to gate 5's, check by check).
+release's code; the hardware runs identical to gate 5's, check by check). The release itself was checked from a
+fresh clone of the repository: the whole hardware matrix and the Demo Bank, 25 runs, 25 PASS, each identical to the
+run of its kind before it, check by check ([docs/verification.md](docs/verification.md), "v0.1.0").
 
 ### Added
 
@@ -140,6 +142,9 @@ release's code; the hardware runs identical to gate 5's, check by check).
   tested live: with `BENCH_CHAOS_SSH=1` a real VM breaks the bench's SSH sessions on purpose
   ([docs/troubleshooting.md](docs/troubleshooting.md)). The SEV-SNP hardware checks also keep what the checker
   logged (`rrpverify-*.stderr.log`) and the EAR of each honest check (`ears/`).
+- The verdict of a Demo Bank payment refused by the platform rule ended with the gateway's line break, so its
+  `VERDICT` line was followed by an empty one (`scripts/verdict.py`); found in the release check, tested on its
+  runs.
 
 ### Removed
 

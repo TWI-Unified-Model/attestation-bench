@@ -32,6 +32,10 @@ DEMO_RUNS = [
 ATTACK_RUNS = ["20261006T224346Z-gcp-sev-snp", "20261006T225040Z-gcp-tdx", "20261006T225323Z-aws-sev-snp"]
 # the attack runs of plan R3: the guest's clock recorded, and the pre-play check
 PREPLAY_RUNS = ["20261007T165412Z-gcp-sev-snp", "20261007T170259Z-aws-sev-snp", "20261007T170913Z-gcp-tdx"]
+# the attack runs of the release check R6: the RRPs' platform rule on the honest Attestation Results
+# (rrpverify-platform.json), under the rule the run kept (platform-rule.json)
+PLATFORM_RULE_RUNS = ["20261007T180531Z-gcp-sev-snp", "20261007T181406Z-aws-sev-snp", "20261007T182023Z-gcp-tdx"]
+WAIVER = "the honest Evidence admitted under the bench's waiver: Milan bit 4: admitted without bit 4, AMD-SB-3034"
 REDIRECT_RUNS = [
     "20261006T225552Z-gcp-snp-redirect",
     "20261006T225943Z-gcp-tdx-redirect",
@@ -50,6 +54,16 @@ UNAPPROVED = "20261007T140959Z-gcp-sev-snp-e2e-passport-unapproved"
 OTHER_PLATFORM = "20261007T012220Z-gcp-sev-snp-e2e-passport-other-platform"
 # the run whose SSH session broke on 7 October 2026: it stopped before it wrote its results (its README)
 STOPPED = "20261007T045819Z-gcp-sev-snp-e2e-background-check"
+# the Demo Bank of the release check R6 (7 October 2026): its pack waives no mitigation bit, so it refuses the SEV-SNP
+# hosts for AMD-SB-3034's bit 4 and pays from TDX only
+BANK_R6 = E2E / "20261007T183914Z-demo-bank" / "runs"
+BANK_R6_RUNS = {
+    "20261007T184709Z-gcp-tdx": "pay",
+    "20261007T184927Z-gcp-snp": "platform",
+    "20261007T185218Z-aws-snp": "platform",
+    "20261007T185428Z-ordinary": "ordinary",
+    "20261007T185700Z-unapproved": "unapproved",
+}
 BANK_RUNS = {
     "20261006T231902Z-gcp-snp": "pay",
     "20261006T232202Z-gcp-tdx": "pay",
@@ -59,10 +73,16 @@ BANK_RUNS = {
 }
 
 
+def verdict_lines(*args):
+    """Runs verdict.py; returns its exit status and every line it printed."""
+    p = subprocess.run([sys.executable, str(VERDICT), *map(str, args)], capture_output=True, text=True, check=False)
+    return p.returncode, p.stdout.splitlines()
+
+
 def verdict(*args):
     """Runs verdict.py; returns its exit status and its last line."""
-    p = subprocess.run([sys.executable, str(VERDICT), *map(str, args)], capture_output=True, text=True, check=False)
-    return p.returncode, p.stdout.splitlines()[-1]
+    code, lines = verdict_lines(*args)
+    return code, lines[-1]
 
 
 class CommittedRuns(unittest.TestCase):
@@ -101,6 +121,18 @@ class CommittedRuns(unittest.TestCase):
                     r"\(max_age 120 s\); https://ledger-time.tacra.example accepted Evidence 29\d s old or more",
                 )
 
+    def test_attacks_with_the_platform_rule(self):
+        for run in PLATFORM_RULE_RUNS:
+            with self.subTest(run=run):
+                code, lines = verdict_lines("attacks", HW / run)
+                self.assertEqual(code, 0, lines[-1])
+                n = len(json.loads((HW / run / "rrpverify-platform.json").read_text())["results"])
+                self.assertIn(f"rrpverify-platform: {n} checks, 0 not as expected", lines)
+                if "sev-snp" in run:  # SEV-SNP Milan, admitted only under the bench's waiver: the verdict says so
+                    self.assertIn(WAIVER, lines[-1])
+                else:
+                    self.assertNotIn("waiver", lines[-1])
+
     def test_redirect(self):
         for run in REDIRECT_RUNS:
             with self.subTest(run=run):
@@ -113,6 +145,18 @@ class CommittedRuns(unittest.TestCase):
                 code, last = verdict("bank-pay", BANK / run, "--expect", expect)
                 self.assertEqual(code, 0, last)
                 self.assertTrue(last.startswith("VERDICT PASS: "), last)
+
+    def test_bank_pay_release(self):
+        for run, expect in BANK_R6_RUNS.items():
+            with self.subTest(run=run):
+                code, last = verdict("bank-pay", BANK_R6 / run, "--expect", expect)
+                self.assertEqual(code, 0, last)
+                if expect == "platform":  # the bank's rule names the bit and its bulletin, and the line ends there
+                    self.assertRegex(
+                        last,
+                        r"refused by the bank's platform rule: mitigation bit 4 \(AMD-SB-3034 \(CVE-2025-54510\)\) "
+                        r"is not set in LAUNCH_MIT_VECTOR 0x[0-9a-f]+$",
+                    )
 
 
 class ChangedRuns(unittest.TestCase):
@@ -190,6 +234,20 @@ class ChangedRuns(unittest.TestCase):
         self.edit_json("rrpverify-veraison-v015.json", lambda d: d["results"][1].update(got="pass", ok=False))
         self.assertEqual(verdict("attacks", run), (1, "VERDICT FAIL: 1 of 212 checks not as expected"))
 
+    def test_platform_rule_check_not_as_expected(self):
+        # a bank's rule that admitted Evidence the bench admits only under its waiver: the run fails
+        run = self.copy(HW / PLATFORM_RULE_RUNS[0], "rrpverify-platform.json", "rrpverify-service.json")
+
+        def admitted(d):
+            next(r for r in d["results"] if r["check"] == "a bank's rule, no waiver").update(got="pass", ok=False)
+
+        self.edit_json("rrpverify-platform.json", admitted)
+        n = sum(
+            len(json.loads((run / f).read_text())["results"])
+            for f in ("rrpverify-platform.json", "rrpverify-service.json")
+        )
+        self.assertEqual(verdict("attacks", run), (1, f"VERDICT FAIL: 1 of {n} checks not as expected"))
+
     def test_compared_build_is_not_judged(self):
         run = self.copy(HW / ATTACK_RUNS[0], "rrpverify-veraison-fork.json", "rrpverify-veraison-v015.json")
         self.edit_json("rrpverify-veraison-fork.json", lambda d: d["results"][0].update(ok=False))
@@ -255,6 +313,26 @@ class ChangedRuns(unittest.TestCase):
 
     def test_bank_payment_is_not_ordinary(self):
         code, last = verdict("bank-pay", BANK / "20261006T231902Z-gcp-snp", "--expect", "ordinary")
+        self.assertEqual(code, 1)
+        self.assertTrue(last.startswith("VERDICT FAIL: the payment went through; a credential was issued"), last)
+
+    def test_bank_refused_for_another_reason(self):
+        # an SEV-SNP payment refused, but not by the platform rule: not the refusal the bank expects of SEV-SNP
+        run = self.copy(BANK_R6 / "20261007T184927Z-gcp-snp", "report.json")
+        self.edit_json(
+            "report.json",
+            lambda r: [
+                s.update(error="cai: EnrollCredential: 403 RRP ca: attestation: ear: not affirming")
+                for s in r["steps"]
+                if s["step"].startswith("TACRA:")
+            ],
+        )
+        code, last = verdict("bank-pay", run, "--expect", "platform")
+        self.assertEqual(code, 1)
+        self.assertTrue(last.startswith("VERDICT FAIL: not every credential refused by the platform rule"), last)
+
+    def test_bank_payment_is_not_a_platform_refusal(self):
+        code, last = verdict("bank-pay", BANK_R6 / "20261007T184709Z-gcp-tdx", "--expect", "platform")
         self.assertEqual(code, 1)
         self.assertTrue(last.startswith("VERDICT FAIL: the payment went through; a credential was issued"), last)
 

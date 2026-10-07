@@ -1,0 +1,13 @@
+pass         kind               ca1      ca2
+with-rrp-id  present-nonce      ISSUED   refused
+with-rrp-id  present-epoch      ISSUED   refused
+with-rrp-id  absent-epoch       ISSUED   refused
+with-rrp-id  absent-timestamp   ISSUED   refused
+with-rrp-id  absent-none        ISSUED   refused
+no-rrp-id    present-nonce      ISSUED   refused
+no-rrp-id    present-epoch      ISSUED   ISSUED
+no-rrp-id    absent-epoch       ISSUED   ISSUED
+no-rrp-id    absent-timestamp   ISSUED   ISSUED
+no-rrp-id    absent-none        ISSUED   ISSUED
+guest minus RRP: +0.397 s, within 0.398 s
+VERDICT PASS: with the RRP identifier, ca2 refused all 5 Freshness Kinds; without it, all but present-nonce

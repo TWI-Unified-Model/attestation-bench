@@ -1,0 +1,7 @@
+INFO	session requested	{"caller": ["est-server.trust.demobank.example"]}
+INFO	gin	[GIN] 2026/10/07 - 18:53:30 | 201 |    5.346101ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=lVnVO4i8nXV9YoZ5KCB2-G6xQz9XYVhLvfA8wIeGEXVoT38PWNuOG3cVWeP147lwm_cUma3pxQ8WS4mSQPSxJA%3D%3D"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/07 - 18:53:30 | 200 |   174.92881ms |       127.0.0.1 | POST     "/challenge-response/v1/session/639b2ba1-c280-11f1-b307-626335613130"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/07 - 18:53:30 | 204 |        6.55µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/639b2ba1-c280-11f1-b307-626335613130"
+INFO	gin	

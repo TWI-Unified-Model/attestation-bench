@@ -1,0 +1,18 @@
+{
+ "mode": "payment",
+ "tee": "sev-snp",
+ "steps": [
+  {
+   "step": "attestation plug-in and CAI",
+   "ok": true,
+   "ms": 10.132,
+   "note": "sev-snp"
+  },
+  {
+   "step": "TACRA: ledger certificate",
+   "ok": false,
+   "ms": 254.051,
+   "error": "cai: EnrollCredential: 403 RRP ca: platform-policy: the platform is not one this RRP accepts: mitigation bit 4 (AMD-SB-3034 (CVE-2025-54510)) is not set in LAUNCH_MIT_VECTOR 0xb\n"
+  }
+ ]
+}

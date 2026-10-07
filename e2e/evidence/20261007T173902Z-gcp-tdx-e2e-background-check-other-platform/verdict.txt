@@ -1,0 +1,4 @@
+0 of 1 Targets: credential acquired and admitted by the relying party
+no  https://db-snp-only.tacra.example      x509        576.5 ms 0 cai: EnrollCredential: 403 RRP ca: verifier: none of the verifiers this RRP takes for the Target (veraison) appraises Ev
+guest minus RRP: +1.679 s, within 1.844 s
+VERDICT PASS: 1 of 1 Targets refused, no credential issued, each with 'none of the verifiers this RRP takes for the Target'

@@ -1,0 +1,92 @@
+[
+ {
+  "target": "https://db-nonce.tacra.example",
+  "type": "x509",
+  "ok": false,
+  "error": "cai: EnrollCredential: 403 RRP ca: attestation: ear: not affirming: SEVSNP is \"contraindicated\"\n",
+  "attempts": 1,
+  "acquire_ms": 744.23,
+  "rup_status": 0
+ },
+ {
+  "target": "https://db-epoch.tacra.example",
+  "type": "x509",
+  "ok": false,
+  "error": "cai: EnrollCredential: 403 RRP ca: attestation: ear: not affirming: SEVSNP is \"contraindicated\"\n",
+  "attempts": 1,
+  "acquire_ms": 662.854,
+  "rup_status": 0
+ },
+ {
+  "target": "https://db-lepoch.tacra.example",
+  "type": "x509",
+  "ok": false,
+  "error": "cai: EnrollCredential: 403 RRP ca: attestation: ear: not affirming: SEVSNP is \"contraindicated\"\n",
+  "attempts": 1,
+  "acquire_ms": 624.926,
+  "rup_status": 0
+ },
+ {
+  "target": "https://db-time.tacra.example",
+  "type": "x509",
+  "ok": false,
+  "error": "cai: EnrollCredential: 403 RRP ca: attestation: ear: not affirming: SEVSNP is \"contraindicated\"\n",
+  "attempts": 1,
+  "acquire_ms": 748.099,
+  "rup_status": 0
+ },
+ {
+  "target": "https://db-none.tacra.example",
+  "type": "x509",
+  "ok": false,
+  "error": "cai: EnrollCredential: 403 RRP ca: attestation: ear: not affirming: SEVSNP is \"contraindicated\"\n",
+  "attempts": 1,
+  "acquire_ms": 691.852,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-nonce.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: RetrieveCredential: 403 RRP vault: attestation: ear: not affirming: SEVSNP is \"contraindicated\"\n",
+  "attempts": 1,
+  "acquire_ms": 645.395,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-epoch.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: RetrieveCredential: 403 RRP vault: attestation: ear: not affirming: SEVSNP is \"contraindicated\"\n",
+  "attempts": 1,
+  "acquire_ms": 619.444,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-lepoch.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: RetrieveCredential: 403 RRP vault: attestation: ear: not affirming: SEVSNP is \"contraindicated\"\n",
+  "attempts": 1,
+  "acquire_ms": 708.205,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-time.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: RetrieveCredential: 403 RRP vault: attestation: ear: not affirming: SEVSNP is \"contraindicated\"\n",
+  "attempts": 1,
+  "acquire_ms": 573.758,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-none.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: RetrieveCredential: 403 RRP vault: attestation: ear: not affirming: SEVSNP is \"contraindicated\"\n",
+  "attempts": 1,
+  "acquire_ms": 673.115,
+  "rup_status": 0
+ }
+]

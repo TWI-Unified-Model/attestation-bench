@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -110,5 +111,49 @@ func TestChecksOnRealEARs(t *testing.T) {
 	items[0].bv[0] ^= 1
 	if r := checkAll(key, items, "SEVSNP", bench); len(r) != 1 || r[0].Check != "the EAR verifies" || r[0].OK {
 		t.Errorf("an EAR checked against another binding value: %+v", r)
+	}
+}
+
+// TestRunsAgain gives the checks of the release's attack runs (7 October 2026, the three platforms) again from each
+// run's own files: the EARs and the key it kept (ears/) and the rule it ran under (platform-rule.json). They must be
+// the checks the run wrote (rrpverify-platform.json), field by field.
+func TestRunsAgain(t *testing.T) {
+	for _, run := range []string{"20261007T180531Z-gcp-sev-snp", "20261007T181406Z-aws-sev-snp", "20261007T182023Z-gcp-tdx"} {
+		dir := filepath.Join("../../../hwcheck/evidence", run)
+		raw, err := os.ReadFile(filepath.Join(dir, "platform-rule.json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		rule, err := parseRule(raw)
+		if err != nil {
+			t.Fatalf("%s: %v", run, err)
+		}
+		key, items, err := readKept(filepath.Join(dir, "ears"))
+		if err != nil {
+			t.Fatalf("%s: %v", run, err)
+		}
+		b, err := os.ReadFile(filepath.Join(dir, "rrpverify-platform.json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var written struct {
+			Submod  string   `json:"submod"`
+			Results []result `json:"results"`
+		}
+		if err := json.Unmarshal(b, &written); err != nil {
+			t.Fatal(err)
+		}
+		got := checkAll(key, items, written.Submod, rule)
+		if len(got) != len(written.Results) || len(got) == 0 {
+			t.Fatalf("%s: %d checks, the run wrote %d", run, len(got), len(written.Results))
+		}
+		for i := range got {
+			if got[i] != written.Results[i] {
+				t.Errorf("%s: check %d: %+v, the run wrote %+v", run, i, got[i], written.Results[i])
+			}
+			if !got[i].OK {
+				t.Errorf("%s: %s: %s: want %s, got %s", run, got[i].Case, got[i].Check, got[i].Want, got[i].Got)
+			}
+		}
 	}
 }

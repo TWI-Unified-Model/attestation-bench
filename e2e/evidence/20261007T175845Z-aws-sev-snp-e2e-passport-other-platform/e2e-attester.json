@@ -1,0 +1,33 @@
+{
+ "tee": "sev-snp",
+ "caapi": "127.0.0.1:50061",
+ "hint": "payments.workload.tacra.example",
+ "targets": [
+  {
+   "target": "https://db-tdx-only.tacra.example",
+   "type": "x509"
+  }
+ ],
+ "relying_parties": {
+  "https://db-tdx-only.tacra.example": {
+   "enroll": "https://ca1.tacra.example"
+  }
+ },
+ "vault_origins": {
+  "https://vault1.tacra.example": {
+   "DHKEM(P-256, HKDF-SHA256)": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE2jdc22H1fzWBUBYcfSjNGWYQmOPHvq5O4oHMSV3Zo5neVXIlQihcdJGFfxXx8spDoLAQbuNzuaxaZ5SXPGkJLA",
+   "DHKEM(X25519, HKDF-SHA256)": "MCowBQYDK2VuAyEAF0HNTXx9tv3-Hh-eUc0mCIBwi-L7dU5AvtzfTvu1oXQ"
+  }
+ },
+ "vault_signers": {
+  "https://vault1.tacra.example": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEMDuypITUa88d6Bbg6epiUMrlBa-0LW38u5iY4W4t8Tu7NTjWbhcsEijGgLbqbMD6m-RZDGurb8aun2E7ohfX1w"
+ },
+ "ca_anchors": {
+  "https://ca1.tacra.example": "-----BEGIN CERTIFICATE-----\nMIIB4DCCAYagAwIBAgIQK6/itJPKa+u984wRwrGGhTAKBggqhkjOPQQDAjA6MRcw\nFQYDVQQKEw5UQUNSQSBiZW5jaCBDQTEfMB0GA1UEAxMWVEFDUkEgYmVuY2ggQ0Eg\nUm9vdCBDQTAeFw0yNjEwMDcxNzI0MzlaFw0zNjEwMDQxNzI0MzlaMEIxFzAVBgNV\nBAoTDlRBQ1JBIGJlbmNoIENBMScwJQYDVQQDEx5UQUNSQSBiZW5jaCBDQSBJbnRl\ncm1lZGlhdGUgQ0EwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQ5AkeaQqp/nq3Y\n2IBMNphMzmM3hGxZBDBZpivNgvbBLi9Mk0/+MjpWd1V+vz28Hwql0hlRP8VI9sOX\n5x169GsGo2YwZDAOBgNVHQ8BAf8EBAMCAQYwEgYDVR0TAQH/BAgwBgEB/wIBADAd\nBgNVHQ4EFgQUfZdwCDQo0LbvrVVZOlj8h8kvtzwwHwYDVR0jBBgwFoAUBsCp5YDj\nMHeVjA+22AeRsbW+W4MwCgYIKoZIzj0EAwIDSAAwRQIgNzDxGVawlz0lSIlYq3G9\n8VHP2FDrzYJgRMNz/jr/t9wCIQC4nc6T3Lv6gLIHNBj1MY+MYQ5dLjgvPPZvmCGh\nuXM6cA==\n-----END CERTIFICATE-----\n"
+ },
+ "local_epoch_hex": "733dccb5e1cf9fdabc48aaad47e2cd77a286b4e2ba5c041791a8882584033b45",
+ "rup": {
+  "url": "https://localhost:19443",
+  "anchor_pem": "-----BEGIN CERTIFICATE-----\nMIIBgjCCASigAwIBAgIRAKJ6msM0kn2TW/66qMDwYOYwCgYIKoZIzj0EAwIwHzEd\nMBsGA1UEAxMUVEFDUkEgYmVuY2ggVExTIHJvb3QwHhcNMjYxMDA3MTcyNDM4WhcN\nMjcxMDA3MTcyNDM4WjAfMR0wGwYDVQQDExRUQUNSQSBiZW5jaCBUTFMgcm9vdDBZ\nMBMGByqGSM49AgEGCCqGSM49AwEHA0IABMMEP6rUXXPDvl0JN5I/aQrsZ3QDHcs2\nqkpZKatZJR6cRa6N2bHd2+GtBMVsxBVSe+2BZl8p4ebumfD0rRhuOV+jRTBDMA4G\nA1UdDwEB/wQEAwIBBjASBgNVHRMBAf8ECDAGAQH/AgEBMB0GA1UdDgQWBBSPBxa7\nO+CXh+KSSBbpkh3c7MiXPjAKBggqhkjOPQQDAgNIADBFAiEApxukcsbjOapa9Uf2\nLvtlwUlOOwp1EjJUAmzSSsIqbz8CICxSDCMnKvXVgMSW1V8fcqflSFf9o6uNJEA7\nBXL3T3h+\n-----END CERTIFICATE-----\n"
+ }
+}

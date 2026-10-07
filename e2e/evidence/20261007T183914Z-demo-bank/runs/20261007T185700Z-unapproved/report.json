@@ -1,0 +1,18 @@
+{
+ "mode": "payment",
+ "tee": "sev-snp",
+ "steps": [
+  {
+   "step": "attestation plug-in and CAI",
+   "ok": true,
+   "ms": 9.527,
+   "note": "sev-snp"
+  },
+  {
+   "step": "TACRA: ledger certificate",
+   "ok": false,
+   "ms": 43.641,
+   "error": "cai: EnrollCredential: 403 RRP ca: attestation: ear: not affirming: SEVSNP is \"contraindicated\"\n"
+  }
+ ]
+}

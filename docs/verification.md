@@ -4,6 +4,11 @@ How this release was checked before it was published, on 6 and 7 October 2026, w
 followed publishing (below). Every result names its evidence: a run directory in this repository, a command anyone
 can run again, or a commit.
 
+The bench changed after it: nothing in it is simulated any more, and the review's points are closed or written down.
+The last section, [v0.1.0: the release for the group](#v010-the-release-for-the-group-7-october-2026), records how
+that release was checked. The sections before it are the first release's record; the local mode of section 4 has
+gone since.
+
 | # | Gate | Checked | Result |
 |---|---|---|---|
 | 1 | Build and lint | every Go module; ShellCheck, gofmt, go vet, golangci-lint, ruff, Markdown links, actionlint and gitleaks, each at its pinned version (`make lint`) | clean, on macOS and on a fresh Ubuntu 24.04 |
@@ -168,3 +173,70 @@ Each was found by one of the checks above and fixed before the release:
 | No scan for secrets | `e5f8fc3` |
 | The guide, on a fresh machine: git and make; `MISSING`; the disk | `7b36b6a`, `41c379c`, `8b73a49` |
 | The known vulnerabilities of the pinned dependencies were not written down | `403913c` |
+
+## v0.1.0: the release for the group (7 October 2026)
+
+After the review, two plans changed the bench before anyone else is invited to it: nothing in it is simulated any
+more, and each point of the review is closed or written down. The release check, R6, then made everything again from
+a fresh clone of the GitHub repository.
+
+### What changed
+
+| Step | What | Commits |
+|---|---|---|
+| N1 | the proof of concept's simulated stack out of the tree | `15a58e0` |
+| N2 | no stand-in TEE: the protocol runs on real hardware only; the local mode of section 4 is gone | `355156d`, `de93417`; runs `bc894a6` |
+| N3 | the Go tests on real data and live services only; the EAR forger out of the gateways | `475cdf4` |
+| N4 | the tests of our third-party patches on real data and live services; the EST server without a mock CA | `220e75c`; runs `936729a` |
+| N6 | the verdict tests judge real runs only | `7755d18` |
+| N7 | the EST library without the proof of concept's mock TEE; no program the bench builds links a mock; `make test-live` | `43189d1`, `e1bcdcf`; runs `11795fc` |
+| R1 | AMD's mitigation vectors reach the RRP, and the platform rule requires the bits AMD's bulletins name; the bench admits Milan hosts without bit 4 under a named waiver, a bank's rule does not; every attack run checks the rule on the Attestation Results it got | `c516408`, `98a0ed3`, `be0a45f` |
+| R2 | the AWS launch rests on AWS's published firmware, measured again; a rebuild from AWS's source does not give that binary | `692dbd7` |
+| R3 | the guest's clock in every hardware run; absent-timestamp Evidence made with the clock ahead, accepted older than `max_age` | `794ea61`, `124eb90`, `8da994c`; runs `dee791f` |
+| R4 | no known vulnerability reached in the pinned dependencies | `076a595` |
+| R5 | hardware runs survive a broken SSH session, tested on a VM that breaks them on purpose | `3e073d6`, `033c88f`, `c973f3a`, `e5d2d88`; runs `03d3f51` |
+
+Not in this release: a debuggable SEV-SNP guest refused live (no cloud the bench uses launches one; it needs a
+bare-metal AMD server), and the trust zone's keys in a KMS or HSM ([limits.md](limits.md)).
+
+### R6: everything again, from a fresh clone
+
+`git clone` of the repository at `dee791f` into an empty directory, with a bench home of its own (`BENCH_HOME`); the
+machine's own bench was stopped, as the ports are fixed.
+
+| Step | Result |
+|---|---|
+| `make doctor` | `Ready for make setup`; its line "not needed locally", left from the local mode, was reworded (`ebcc810`) |
+| `make setup` | ok, 10/10, in about 3 minutes (Go's caches were on this machine) |
+| `make check` | clean: every linter; the tests of every Go module and of our third-party patches; the Python tests; 38 programs built, none links a mock |
+| `make check-mtls` and `make test-live`, in Passport and in Background Check | 40 of 40 checks in each model ([Passport](../e2e/evidence/20261007T172815Z-bench-mtls-passport), [Background Check](../e2e/evidence/20261007T172900Z-bench-mtls-background-check)); the EST wire format as expected, and the 26 committed attack runs appraised again by the live verifiers, 1300 checks, in each |
+
+Then the hardware, every run into the clone. Before the attacks, the platform rule's checks of attack runs were
+added (`be0a45f`, the reviewer's "limits that became refusals"); the clone took that commit (`git pull`, then
+`make setup`, which restarted what changed). Phases A and B ran at `dee791f`: the commits after it change nothing a
+demo runs, as the gateways' platform package only gains two functions they do not call (`git diff dee791f be0a45f`).
+
+| Phase | Commit | Runs | Result |
+|---|---|---|---|
+| A, Background Check | `dee791f` | `make demo` on the three platforms; `OTHER_PLATFORM=1` on GCP TDX | 4 PASS; the SEV-SNP verdicts name the waiver of Milan's bit 4 |
+| B, Passport | `dee791f` | `make demo` on the three platforms; `UNAPPROVED=1` on GCP and AWS SEV-SNP; `OTHER_PLATFORM=1` on the three | 8 PASS |
+| C, attacks | `be0a45f` | `make attacks` on the three platforms | 3 PASS: 262, 262 and 162 checks, the platform rule's 50, 50 and 30 among them; absent-timestamp Evidence accepted 296, 293 and 291 s old with `max_age` 120 s, reported as an exposure |
+| D, redirect | `be0a45f` | `make redirect` on the three platforms | 3 PASS: with the RRP identifier `ca2` refused all five Freshness Kinds; without it, all but present-nonce |
+| E, the Demo Bank | `be0a45f` | `bank-up`; `bank-pay` gcp-tdx, gcp-snp, aws-snp, ordinary, unapproved; `bank-audit`; `bank-down` | 5 PASS: the TDX payment went through; the bank refused GCP and AWS SEV-SNP for bit 4 (LAUNCH_MIT_VECTOR 0xb and 0xfef); the ordinary VM and the unapproved launch got no credential ([the bank's run](../e2e/evidence/20261007T183914Z-demo-bank)) |
+
+```bash
+make report RUNS="e2e/evidence/20261007T17* e2e/evidence/20261007T18* hwcheck/evidence/20261007T18*"   # 25 runs, 25 PASS
+```
+
+Each run was compared, check by check, with the run of its kind before it, and keeps the comparison
+(`compare-with-<run>.txt`): 20 runs, no difference. The platform rule's checks of attack runs are new, with nothing
+before them to compare; [platform-check's test](../rrp/cmd/platform-check/main_test.go) gives them again from each
+run's own files, field by field. The Demo Bank's SEV-SNP payments, which went through before R1 (on 6 October and on the morning of
+7 October), are refused now, as R1 intends. Every run deleted its VMs and recorded when; `make cloud-check` found both clouds empty at the end.
+
+Found by the check and fixed before the release: a Demo Bank payment refused by the platform rule had an empty line
+after its `VERDICT` line, from the gateway's error (`scripts/verdict.py`; its runs keep the verdict as written, and
+the tests judge them again). Once, CI's job that sets the trust zone up from zero waited 40 minutes on Ubuntu's
+packages, before any of the bench's steps; run again, the step took 23 s.
+
+The tag `v0.1.0` is set on the release's commit once CI has passed on it.

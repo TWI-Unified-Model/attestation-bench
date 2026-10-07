@@ -1,0 +1,5 @@
+with-rrp-id  ca1: present-nonce=ISSUED  present-epoch=ISSUED  absent-epoch=ISSUED  absent-timestamp=ISSUED  absent-none=ISSUED
+with-rrp-id  ca2: present-nonce=refused  present-epoch=refused  absent-epoch=refused  absent-timestamp=refused  absent-none=refused
+no-rrp-id    ca1: present-nonce=ISSUED  present-epoch=ISSUED  absent-epoch=ISSUED  absent-timestamp=ISSUED  absent-none=ISSUED
+no-rrp-id    ca2: present-nonce=refused  present-epoch=ISSUED  absent-epoch=ISSUED  absent-timestamp=ISSUED  absent-none=ISSUED
+20 cases before, 20 after, 0 differ

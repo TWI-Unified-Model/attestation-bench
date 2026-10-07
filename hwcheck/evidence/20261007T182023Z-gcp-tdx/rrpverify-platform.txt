@@ -1,0 +1,31 @@
+ok  enroll-absent-epoch        the bench's rule                         want pass got pass  
+ok  enroll-absent-epoch        a bank's rule, no waiver                 want pass got pass  
+ok  enroll-absent-epoch        the TD's ATTRIBUTES refused              want fail got fail  the platform is not one this RRP accepts: TD ATTRIBUTES bits 10000000 are refused
+ok  enroll-absent-none         the bench's rule                         want pass got pass  
+ok  enroll-absent-none         a bank's rule, no waiver                 want pass got pass  
+ok  enroll-absent-none         the TD's ATTRIBUTES refused              want fail got fail  the platform is not one this RRP accepts: TD ATTRIBUTES bits 10000000 are refused
+ok  enroll-absent-timestamp    the bench's rule                         want pass got pass  
+ok  enroll-absent-timestamp    a bank's rule, no waiver                 want pass got pass  
+ok  enroll-absent-timestamp    the TD's ATTRIBUTES refused              want fail got fail  the platform is not one this RRP accepts: TD ATTRIBUTES bits 10000000 are refused
+ok  enroll-present-epoch       the bench's rule                         want pass got pass  
+ok  enroll-present-epoch       a bank's rule, no waiver                 want pass got pass  
+ok  enroll-present-epoch       the TD's ATTRIBUTES refused              want fail got fail  the platform is not one this RRP accepts: TD ATTRIBUTES bits 10000000 are refused
+ok  enroll-present-nonce       the bench's rule                         want pass got pass  
+ok  enroll-present-nonce       a bank's rule, no waiver                 want pass got pass  
+ok  enroll-present-nonce       the TD's ATTRIBUTES refused              want fail got fail  the platform is not one this RRP accepts: TD ATTRIBUTES bits 10000000 are refused
+ok  retrieve-absent-epoch      the bench's rule                         want pass got pass  
+ok  retrieve-absent-epoch      a bank's rule, no waiver                 want pass got pass  
+ok  retrieve-absent-epoch      the TD's ATTRIBUTES refused              want fail got fail  the platform is not one this RRP accepts: TD ATTRIBUTES bits 10000000 are refused
+ok  retrieve-absent-none       the bench's rule                         want pass got pass  
+ok  retrieve-absent-none       a bank's rule, no waiver                 want pass got pass  
+ok  retrieve-absent-none       the TD's ATTRIBUTES refused              want fail got fail  the platform is not one this RRP accepts: TD ATTRIBUTES bits 10000000 are refused
+ok  retrieve-absent-timestamp  the bench's rule                         want pass got pass  
+ok  retrieve-absent-timestamp  a bank's rule, no waiver                 want pass got pass  
+ok  retrieve-absent-timestamp  the TD's ATTRIBUTES refused              want fail got fail  the platform is not one this RRP accepts: TD ATTRIBUTES bits 10000000 are refused
+ok  retrieve-present-epoch     the bench's rule                         want pass got pass  
+ok  retrieve-present-epoch     a bank's rule, no waiver                 want pass got pass  
+ok  retrieve-present-epoch     the TD's ATTRIBUTES refused              want fail got fail  the platform is not one this RRP accepts: TD ATTRIBUTES bits 10000000 are refused
+ok  retrieve-present-nonce     the bench's rule                         want pass got pass  
+ok  retrieve-present-nonce     a bank's rule, no waiver                 want pass got pass  
+ok  retrieve-present-nonce     the TD's ATTRIBUTES refused              want fail got fail  the platform is not one this RRP accepts: TD ATTRIBUTES bits 10000000 are refused
+30 checks, 0 not as expected; written /Users/serhiinikolaichuk/dev/attestation-bench-r6/hwcheck/evidence/20261007T182023Z-gcp-tdx/rrpverify-platform.json

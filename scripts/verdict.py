@@ -199,7 +199,7 @@ def bank_pay(run, expect):
         why = [s.get("error") or "" for s in tacra.values()]
         if not tacra or not all("platform-policy" in e for e in why):
             wrong.append("not every credential refused by the platform rule: " + "; ".join(e[:120] for e in why))
-        reason = why[0].split("accepts: ", 1)[-1] if why else ""
+        reason = why[0].split("accepts: ", 1)[-1].strip() if why else ""
         summary = f"genuine hardware evidence, refused by the bank's platform rule: {reason[:160]}"
     else:
         if steps.get("attestation plug-in and CAI", {}).get("ok") is not True:

@@ -1,0 +1,5 @@
+https://db-time.tacra.example: timestamp 1791397222; at once 409
+https://ledger-time.tacra.example: timestamp 1791397222; at once 409
+waiting 234 s for the RRPs' clock to reach the timestamps
+https://db-time.tacra.example: at 1791397219 200: 293 s or more after the Evidence was made (max_age 120 s)
+https://ledger-time.tacra.example: at 1791397219 200: 293 s or more after the Evidence was made (max_age 120 s)

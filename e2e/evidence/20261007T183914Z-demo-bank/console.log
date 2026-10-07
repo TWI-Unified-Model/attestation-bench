@@ -1,0 +1,34 @@
+== build (linux/amd64)
+== Google's endorsements of the approved launches, verified to the pinned GCE TCB root
+   snp ccdc5cf01ba25526...: endorsed by Google
+   snp 7a89cceaaba0bbdd...: not endorsed: Google publishes no endorsement for this measurement
+   tdx c1ee9c16e3afc506...: endorsed by Google
+   tdx f21e6b48743fe14c...: endorsed by Google
+== the launches approved from their provider's published firmware, measured again from it
+   ok   the approved launch 7a89cceaaba0bbdd... is the measurement of https://github.com/aws/uefi/releases/download/20260814/ovmf_img.fd (sev-snp-measure 0.0.13 --mode snp --vcpus 2 --vmm-type ec2)
+== create demobank-trust-2610071839 (SEV-SNP n2d-standard-4) and demobank-core-2610071839 (e2-standard-2) in us-central1-c
+== copy programs and sources
+== install both (Veraison builds on the trust zone)
+== trust zone: TLS, the workload CA, the configuration (RATS model: passport)
+== core: the ledger trusts the bank's workload CA for client logins
+== the fraud service's API key goes to the bank's Vault (piped machine to machine, never written here)
+== trust zone: start
+== up: demobank-trust-2610071839, demobank-core-2610071839
+== gcp-tdx: create demobank-pay-071847-gcp-tdx (--machine-type=c3-standard-4 --confidential-compute-type=TDX --maintenance-policy=TERMINATE)
+== gcp-tdx: run the payment service
+== gcp-tdx: delete demobank-pay-071847-gcp-tdx
+== gcp-snp: create demobank-pay-071849-gcp-snp (--machine-type=n2d-standard-2 --min-cpu-platform=AMD Milan --confidential-compute-type=SEV_SNP --maintenance-policy=TERMINATE)
+== gcp-snp: run the payment service
+== gcp-snp: delete demobank-pay-071849-gcp-snp
+== aws-snp: key pair, security group (SSH from this address only), c6a.large with AmdSevSnp=enabled
+== aws-snp: GCP firewall rule demobank-aws-185218 admits 3.148.170.208 to the EST server, the ledger and the fraud service only
+== aws-snp: run the payment service (over the internet to the bank in GCP)
+== aws-snp: terminate, delete the security group, key pair and firewall rule
+== ordinary: create demobank-pay-071854-ordinary (--machine-type=e2-small)
+== ordinary: run the payment service
+== ordinary: delete demobank-pay-071854-ordinary
+== unapproved: create demobank-pay-071857-unapproved (--machine-type=n2d-standard-4 --min-cpu-platform=AMD Milan --confidential-compute-type=SEV_SNP --maintenance-policy=TERMINATE)
+== unapproved: run the payment service
+== unapproved: delete demobank-pay-071857-unapproved
+== delete demobank-core-2610071839 (us-central1-c)
+== delete demobank-trust-2610071839 (us-central1-c)

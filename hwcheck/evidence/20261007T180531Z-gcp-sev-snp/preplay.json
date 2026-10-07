@@ -1,0 +1,63 @@
+{
+ "made": {
+  "not_before": 1791396539,
+  "not_after": 1791396547
+ },
+ "guest_clock": "the time service stopped: chrony; the clock set at 1791396542 (guest), to 1791396842, 300 s ahead\nthe clock set back at 1791396846 (guest), to 1791396546; the time service started again: chrony\n",
+ "results": [
+  {
+   "target": "https://db-time.tacra.example",
+   "rrp": "ca-gateway",
+   "mode": "enroll",
+   "case": "enroll-absent-timestamp",
+   "timestamp": 1791396842,
+   "max_age_s": 120,
+   "clock_skew_s": 5,
+   "initiate": {
+    "status": 200,
+    "answer": "{\"freshness_kind\":\"absent-timestamp\",\"rrp_id\":\"https://ca1.tacra.example\",\"max_age\":120,\"acceptable_evidence\":[\"application/vnd.veraison.tsm-report+cbor\"],\"required_bindings\":[\"binding-input\"],\"acceptable_csk\":[\"ecdsa-p256-sha256\"],\"mode\":\"enroll\"}"
+   },
+   "at_once": {
+    "at": 1791396627.756,
+    "status": 409,
+    "answer": "409 RRP ca: freshness: fresh: freshness element is not valid now: timestamp 2026-10-07T18:14:02Z outside [now-2m0s, now+5s]"
+   },
+   "later": {
+    "at": 1791396843.01,
+    "status": 200,
+    "answer": "MIICtAYJKoZIhvcNAQcCoIICpTCCAqECAQExADALBgkqhkiG9w0BBwGgggKHMIICgzCCAimgAwIB\r\nAgIRAOoQkPS2UWSj9djwdm4VYJQwCgYIKoZIzj0EAwIwQjEXMBUGA1UEChMOVEFDUkEgYmVuY2gg\r\nQ0ExJzAlBgNVBAMTHlRBQ1JBIGJlbmNoIENBIEludGVybWVkaWF0ZSBDQTAeFw0yNjEwMDcxODEz\r\nMDNaFw0yNjEwMDcxOTE0MDNaMCoxKDAmBgNVBAMTH3BheW1lbnRzLndvcmtsb2FkLn"
+   },
+   "rrp_log": [
+    "2026/10/07 13:10:27 enroll refused: target=https://db-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-07T18:14:02Z outside [now-2m0s, now+5s]",
+    "2026/10/07 13:14:03 enrolled: target=https://db-time.tacra.example kind=absent-timestamp hint=\"payments.workload.tacra.example\" caller=[est-server.bench.tacra.example]; under the platform rule's waiver: admitted without bit 4, AMD-SB-3034: Milan mitigation bit 4 (AMD-SB-3034 (CVE-2025-54510)) is not set (LAUNCH_MIT_VECTOR 0xb, CURRENT_MIT_VECTOR 0xb)"
+   ]
+  },
+  {
+   "target": "https://ledger-time.tacra.example",
+   "rrp": "vault-gateway",
+   "mode": "retrieve",
+   "case": "retrieve-absent-timestamp",
+   "timestamp": 1791396846,
+   "max_age_s": 120,
+   "clock_skew_s": 5,
+   "initiate": {
+    "status": 200,
+    "answer": "{\"freshness_kind\":\"absent-timestamp\",\"rrp_id\":\"https://vault1.tacra.example\",\"max_age\":120,\"acceptable_evidence\":[\"application/vnd.veraison.tsm-report+cbor\"],\"required_bindings\":[\"binding-input\"],\"acceptable_cek\":[\"MLKEM768-P256+HKDF-SHA256+AES-256-GCM\"],\"mode\":\"retrieve\"}"
+   },
+   "at_once": {
+    "at": 1791396627.792,
+    "status": 409,
+    "answer": "409 RRP vault: freshness: fresh: freshness element is not valid now: timestamp 2026-10-07T18:14:06Z outside [now-2m0s, now+5s]"
+   },
+   "later": {
+    "at": 1791396843.07,
+    "status": 200,
+    "answer": "{\"container\":\"hpke-base-signed\",\"suite\":{\"kem\":\"MLKEM768-P256\",\"kdf\":\"HKDF-SHA256\",\"aead\":\"AES-256-GCM\",\"sig\":\"ECDSA-P256-SHA256\"},\"enc\":\"qWjoR5Y1q0fJ90uCFIZtv7Q0FxFbdzlvUVDNCEWaconlxQXuLYVS54uo6_mGiRVu-SMkmNVfVcXIah3z9hh-iXMb5XcKRb5J-7RqrxqOskEDf7GeS5If9-Eer4gouDIyc40E7KHgi6-VuYqDuKtUf-n3hubeRLi2Qy"
+   },
+   "rrp_log": [
+    "2026/10/07 13:10:27 retrieve refused: target=https://ledger-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-07T18:14:06Z outside [now-2m0s, now+5s]",
+    "2026/10/07 13:14:03 released: target=https://ledger-time.tacra.example kind=absent-timestamp group=382d3dd37ac63185 container=hpke-base-signed kem=MLKEM768-P256 caller=[est-server.bench.tacra.example]; under the platform rule's waiver: admitted without bit 4, AMD-SB-3034: Milan mitigation bit 4 (AMD-SB-3034 (CVE-2025-54510)) is not set (LAUNCH_MIT_VECTOR 0xb, CURRENT_MIT_VECTOR 0xb)"
+   ]
+  }
+ ]
+}
