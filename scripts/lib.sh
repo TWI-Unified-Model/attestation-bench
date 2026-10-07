@@ -33,8 +33,9 @@ export BENCH_OS BENCH_ARCH
 BENCH_PORTS="8200 8443 8453 8463 9000 9101 9102 9103 9443 10443 18443 19443 50051"
 export BENCH_PORTS
 
-# The Go modules that make lint and make test cover: all but the proof of concept's est module, whose test does not
-# build against the current est code (reported to the group).
+# The Go modules that make lint and make test cover: all but the proof of concept's est module, kept as the SIG wrote
+# it: its go.mod takes the EST server from a checkout beside the repository (../../globalsign-est), and its test does
+# not build against the current EST code.
 BENCH_GO_MODULES="bundle cai client e2e gen/go hwcheck hwcheck/vlekcheck platform rrp server"
 export BENCH_GO_MODULES
 

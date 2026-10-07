@@ -13,8 +13,9 @@
 #   gitleaks       no secret in the git history: the whole history on a full clone, the tracked files on CI's
 #                  one-commit clone (.gitleaks.toml: what it allows, and why)
 #
-# Not linted, kept as upstream has them: the TACRA proof of concept's deploy/ scripts, and its est module, whose test
-# does not build against the current est code (reported to the group).
+# Not linted, kept as upstream has them: the TACRA proof of concept's deploy/ scripts, and its est module, whose go.mod
+# takes the EST server from a checkout beside the repository and whose test does not build against the current EST
+# code (scripts/lib.sh, BENCH_GO_MODULES).
 set -euo pipefail
 # shellcheck source=SCRIPTDIR/lib.sh
 . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
