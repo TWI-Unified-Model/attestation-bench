@@ -4,7 +4,7 @@
 # BENCH_HOME (default ~/.attestation-bench) holds the running bench; RUNS_DIR (default BENCH_HOME/runs) the run
 # directories. See scripts/lib.sh.
 
-.PHONY: doctor setup start stop status config check-mtls trust-check third-party demo attacks redirect \
+.PHONY: doctor setup start stop status config check-mtls trust-check third-party demo attacks redirect report \
 	bank-new bank-up bank-pay bank-audit bank-down lint test check cloud-check
 
 ## doctor: checks this machine for what the bench needs: tools and versions, ports, disk
@@ -71,6 +71,10 @@ attacks:
 ## redirect: the #20 redirection experiment, in Background Check; puts the bench back as it was   [PLATFORM=...]
 redirect:
 	@scripts/run.sh redirect $(PLATFORM)
+
+## report: a table of your runs, each with what it tested and its verdict   [RUNS="dir ..."; default: RUNS_DIR]
+report:
+	@python3 scripts/report.py $(RUNS)
 
 ## cloud-check: checks that no VM, disk, firewall rule, key pair or security group of the bench is left in your clouds
 cloud-check:

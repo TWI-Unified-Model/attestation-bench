@@ -110,8 +110,8 @@ certificate at all, and an allowed component limited to TLS 1.2. Only the allowe
 through.
 
 ```
-47 of 47 checks as expected
-== run directory: /Users/you/.attestation-bench/runs/20261006T235843Z-bench-mtls-passport
+VERDICT PASS: 47 of 47 checks as expected: only the allowed components, over TLS 1.3
+== run directory: /Users/you/.attestation-bench/runs/20261007T020029Z-bench-mtls-passport
 ```
 
 ## 7. Run TACRA end to end
@@ -200,7 +200,11 @@ shasum -a 256 -c sha256sums.txt
 ```
 
 The last command checks that nothing in the directory has changed since the run sealed it: every line ends in `OK`.
-What each file holds: [results.md](results.md).
+What each file holds: [results.md](results.md). All your runs, one row each with its verdict:
+
+```bash
+make report
+```
 
 ## 11. Passport and Background Check
 

@@ -5,6 +5,7 @@
     python3 scripts/verdict.py attacks RUN_DIR [--out FILE]
     python3 scripts/verdict.py redirect RUN_DIR [--out FILE]
     python3 scripts/verdict.py bank-pay RUN_DIR --expect pay|ordinary|unapproved [--out FILE]
+    python3 scripts/verdict.py mtls RUN_DIR [--out FILE]
 
 Every run script calls it before it seals its run directory, with --out RUN_DIR/verdict.txt. It prints what the run
 did and a last line, "VERDICT PASS: ..." or "VERDICT FAIL: ...", writes the same to FILE if given, and exits 1 on
@@ -23,6 +24,8 @@ hwcheck/evidence included.
   bank-pay  report.json, from the Demo Bank's payment service. pay: the payment went through. ordinary: no
             attestation, no credential, and the ledger and the fraud service refused the workload. unapproved:
             genuine hardware Evidence, and no credential.
+  mtls      mtls.json (checks.json in the runs of 1 October 2026), from make check-mtls. Every check as expected: on
+            each channel only the allowed components, over TLS 1.3, got through.
 """
 
 import argparse
@@ -140,10 +143,34 @@ def bank_pay(run, expect):
     return lines, True, summary
 
 
+def mtls(run):
+    results = json.loads((run / "mtls.json" if (run / "mtls.json").exists() else run / "checks.json").read_text())
+    bad = [r for r in results if not r["ok"]]
+    lines = [
+        f"not as expected: {r['channel']}, {r['caller']} over TLS {r['tls']}: want {r['expected']}, got {r['got']}"
+        for r in bad
+    ]
+    if not results:
+        return lines, False, "no check ran"
+    if bad:
+        return lines, False, f"{len(bad)} of {len(results)} checks not as expected"
+    summary = f"{len(results)} of {len(results)} checks as expected: only the allowed components, over TLS 1.3"
+    return lines, True, summary
+
+
+JUDGES = {
+    "demo": lambda a: demo(a.run, a.expect, a.reason, a.cause),
+    "attacks": lambda a: attacks(a.run),
+    "redirect": lambda a: redirect(a.run),
+    "bank-pay": lambda a: bank_pay(a.run, a.expect),
+    "mtls": lambda a: mtls(a.run),
+}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Says whether a run came out as its experiment expects.")
     kinds = parser.add_subparsers(dest="kind", required=True)
-    for kind in ("demo", "attacks", "redirect", "bank-pay"):
+    for kind in JUDGES:
         p = kinds.add_parser(kind)
         p.add_argument("run", type=Path, help="the run directory")
         p.add_argument("--out", type=Path, help="also write the verdict to this file")
@@ -155,14 +182,7 @@ def main(argv=None):
             p.add_argument("--expect", choices=("pay", "ordinary", "unapproved"), required=True)
     args = parser.parse_args(argv)
     try:
-        if args.kind == "demo":
-            lines, ok, summary = demo(args.run, args.expect, args.reason, args.cause)
-        elif args.kind == "attacks":
-            lines, ok, summary = attacks(args.run)
-        elif args.kind == "redirect":
-            lines, ok, summary = redirect(args.run)
-        else:
-            lines, ok, summary = bank_pay(args.run, args.expect)
+        lines, ok, summary = JUDGES[args.kind](args)
     except (OSError, ValueError, KeyError, TypeError) as e:
         lines, ok, summary = [], False, f"cannot read the run in {args.run}: {e!r}"
     text = "\n".join([*lines, f"VERDICT {'PASS' if ok else 'FAIL'}: {summary}"]) + "\n"

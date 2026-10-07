@@ -5,6 +5,7 @@
 #
 #   scripts/check-mtls.sh        (make check-mtls)
 #
+# The run ends with its verdict (scripts/verdict.py) and exits 1 unless every check came out as expected.
 # RUNS_DIR: where run directories go (default BENCH_HOME/runs).
 set -euo pipefail
 # shellcheck source=SCRIPTDIR/lib.sh
@@ -18,7 +19,7 @@ git -C "$BENCH_REPO" rev-parse --short=12 HEAD >"$OUT/code-rev.txt"
 "$BENCH_REPO/e2e/scripts/veraison-build-info.sh" >"$OUT/veraison-build.txt"
 echo "$MODEL" >"$OUT/rats-model.txt"
 if python3 "$BENCH_REPO/e2e/scripts/bench-mtls-check.py" "$OUT/mtls.json" >"$OUT/run.log" 2>&1; then rc=0; else rc=$?; fi
+python3 "$BENCH_REPO/scripts/verdict.py" mtls "$OUT" --out "$OUT/verdict.txt" || rc=1
 bench_seal "$OUT"
-tail -1 "$OUT/run.log"
 echo "== run directory: $OUT"
 exit "$rc"

@@ -14,7 +14,9 @@ shasum -a 256 -c sha256sums.txt        # or: sha256sum -c sha256sums.txt
 ```
 
 Every line must end in `OK`. A file changed or removed since the run shows `FAILED`. (A `README.md` or a
-`compare-with-*.txt` added after the run, as the reference runs have, is not in the list.)
+`compare-with-*.txt` added after the run, as the reference runs have, is not in the list. The runs of
+`make check-mtls` among the reference runs, all made before 7 October 2026, have no seal: the check did not write one
+yet.)
 
 ## Did it come out as expected?
 
@@ -31,6 +33,19 @@ python3 scripts/verdict.py redirect hwcheck/evidence/20261006T225552Z-gcp-snp-re
 What each kind of run must show is at the top of `scripts/verdict.py`; its tests judge every reference run of
 6 October 2026 and runs changed in one place (`scripts/tests/`). The reference runs made before the verdict existed
 have no `verdict.txt`; the program judges them all the same.
+
+## All your runs at a glance
+
+```bash
+make report                                              # every run in ~/.attestation-bench/runs (or RUNS_DIR)
+make report RUNS="e2e/evidence/* hwcheck/evidence/*"     # or any run directories, the reference runs too
+```
+
+One row per run (per payment, for a bank): what it tested, the platform, the RATS model and the verdict, then how
+many passed and failed. A run made before runs kept their verdict is judged again from its files and marked `*`; one
+whose files are of an earlier format is listed as not judged, and its `README.md` says what it showed. Among the
+reference runs, six fail: each found a fault in its day, which its README or the results file that cites it
+(`e2e/RESULTS-*.md`) describes, and a later run shows fixed.
 
 ## Files every run has
 
