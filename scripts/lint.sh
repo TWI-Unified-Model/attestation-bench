@@ -11,8 +11,8 @@
 #   check-links    every relative link in the Markdown resolves
 #   actionlint     the CI workflows, and that their Go is GO_VERSION
 #   gitleaks       no secret in the git history: the whole history on a full clone, the tracked files on CI's
-#                  one-commit clone; and none in the changes not yet committed, staged or not, so that a secret is
-#                  found before it is committed (.gitleaks.toml: what it allows, and why)
+#                  one-commit clone; and none in the changes not yet committed, staged or not, or in the files not yet
+#                  tracked, so that a secret is found before it is committed (.gitleaks.toml: what it allows, and why)
 set -euo pipefail
 # shellcheck source=SCRIPTDIR/lib.sh
 . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
@@ -74,9 +74,17 @@ hwcheck_vet() {
   local mf
   for mf in go.mod go.patched.mod go.v015.mod; do (cd hwcheck && go vet -modfile="$mf" ./...) || return 1; done
 }
-gitleaks_uncommitted() { # the changes git diff shows (not yet staged), then those git diff --staged shows
+gitleaks_uncommitted() { # the changes git diff shows (not yet staged), those git diff --staged shows, and the files
+  # git does not track yet and does not ignore, new run directories among them, copied with their paths
+  local tmp rc=0
   "$T/gitleaks" git . --pre-commit --config .gitleaks.toml --redact --verbose --no-banner --log-level warn &&
-    "$T/gitleaks" git . --pre-commit --staged --config .gitleaks.toml --redact --verbose --no-banner --log-level warn
+    "$T/gitleaks" git . --pre-commit --staged --config .gitleaks.toml --redact --verbose --no-banner --log-level warn ||
+    return 1
+  tmp="$(mktemp -d)"
+  git ls-files -z --others --exclude-standard | tar --null -T - -cf - | tar -C "$tmp" -xf -
+  "$T/gitleaks" dir "$tmp" --config .gitleaks.toml --redact --verbose --no-banner --log-level warn || rc=1
+  rm -rf "${tmp:?}"
+  return "$rc"
 }
 
 bench_say "third-party sources: the Go modules build against them (third_party/fetch.sh)"
