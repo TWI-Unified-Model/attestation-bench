@@ -11,8 +11,9 @@ every check can run anywhere, and the gateways accept it only because the local 
 ([concepts.md](concepts.md), the software stand-in TEE).
 
 **What does a hardware run cost?**
-One small VM for a few minutes: between 118 and 395 seconds in the reference runs of 6 October 2026, at the cloud's
-price for that machine ([hardware/](hardware/README.md)). The Demo Bank keeps two VMs for as long as it is up.
+One small VM for a few minutes: between 108 and 272 seconds in the fourteen hardware runs of 7 October 2026, at the
+cloud's price for that machine ([hardware/](hardware/README.md)). The Demo Bank keeps two VMs for as long as it is
+up.
 
 **Can a run leave something running in my cloud?**
 Every run deletes what it created and checks; if a run is interrupted, `make cloud-check` lists what is left.

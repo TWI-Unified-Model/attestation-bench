@@ -1,0 +1,33 @@
+{
+ "tee": "sev-snp",
+ "caapi": "127.0.0.1:50061",
+ "hint": "payments.workload.tacra.example",
+ "targets": [
+  {
+   "target": "https://db-tdx-only.tacra.example",
+   "type": "x509"
+  }
+ ],
+ "relying_parties": {
+  "https://db-tdx-only.tacra.example": {
+   "enroll": "https://ca1.tacra.example"
+  }
+ },
+ "vault_origins": {
+  "https://vault1.tacra.example": {
+   "DHKEM(P-256, HKDF-SHA256)": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgsM8lq7S7SnIbwB9uDUcUvkQIxXRyHKS5m7ZaGVZjAZq-NEolRE6DP3CDJ8TKuqpTDxfveaukAnsYo-miDm1yA",
+   "DHKEM(X25519, HKDF-SHA256)": "MCowBQYDK2VuAyEAgrL58j5P6EoJzRk4MMHOo6r9aTt8Gw1HTGZx6IbVjzU"
+  }
+ },
+ "vault_signers": {
+  "https://vault1.tacra.example": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDTVZw2i9mK6M3yMsfS9HOLghGYlSpQ6M1jMvBqdq6BSt-evBqiG5GS2PsMCM2Lc9DCyA-Vh5Gut8lHbv7Lv_MA"
+ },
+ "ca_anchors": {
+  "https://ca1.tacra.example": "-----BEGIN CERTIFICATE-----\nMIIB4TCCAYagAwIBAgIQQBOSJ9zGVHKlG2/6qCR+OTAKBggqhkjOPQQDAjA6MRcw\nFQYDVQQKEw5UQUNSQSBiZW5jaCBDQTEfMB0GA1UEAxMWVEFDUkEgYmVuY2ggQ0Eg\nUm9vdCBDQTAeFw0yNjEwMDYyMjI0NDhaFw0zNjEwMDMyMjI0NDhaMEIxFzAVBgNV\nBAoTDlRBQ1JBIGJlbmNoIENBMScwJQYDVQQDEx5UQUNSQSBiZW5jaCBDQSBJbnRl\ncm1lZGlhdGUgQ0EwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAATGhJFSRv5goTDb\nVTKto9TJTFZEzMN9GMVrV1QC1R1SjXoCsnCb1FfyAV9PsdfxF/pP7jMyVoKkHulS\nz4LHhY+7o2YwZDAOBgNVHQ8BAf8EBAMCAQYwEgYDVR0TAQH/BAgwBgEB/wIBADAd\nBgNVHQ4EFgQUN7yv1WLLNtjoZlK3W8xngSiF3J0wHwYDVR0jBBgwFoAUSeOs5IUW\n7cQZGJXSw/obMC2T+FkwCgYIKoZIzj0EAwIDSQAwRgIhAPk7D7zWvKS/E/yZBioI\nBKk5PO3oFq8wdUoYgTPKniXwAiEAlweSzIn9316lYWhS87iV1UGHXNpkM5gEairr\nuG3451I=\n-----END CERTIFICATE-----\n"
+ },
+ "local_epoch_hex": "2f98616a3e3dd565afe35ef6736bb67542ca0247b2afb2f7b98fd4c0ff39bbcf",
+ "rup": {
+  "url": "https://localhost:19443",
+  "anchor_pem": "-----BEGIN CERTIFICATE-----\nMIIBgDCCASegAwIBAgIQQbFARwxprSmYiWFyNz8/RjAKBggqhkjOPQQDAjAfMR0w\nGwYDVQQDExRUQUNSQSBiZW5jaCBUTFMgcm9vdDAeFw0yNjEwMDYyMjI0NDZaFw0y\nNzEwMDYyMjI0NDZaMB8xHTAbBgNVBAMTFFRBQ1JBIGJlbmNoIFRMUyByb290MFkw\nEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEhMENPGmbJMGBe8T5axoX9SZ6gwem/xpd\nXbbENxVT9u9s16JTyg5eDP6Jmj3nieeY0Ou9NOkVrZ1umh+PA2Ha6qNFMEMwDgYD\nVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYBAf8CAQEwHQYDVR0OBBYEFLDMMVvE\nhnsOWRwKSw24EGuKqObdMAoGCCqGSM49BAMCA0cAMEQCIHa8OAjhm7vDP9TtyFpl\nM10eAytnrrWU5xvFxkMVb/RiAiBW+C2zmUWxuuPNkgAWO2hGaeQXdVvCUQaNR1rH\n8QJc/A==\n-----END CERTIFICATE-----\n"
+ }
+}

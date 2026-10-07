@@ -1,0 +1,7 @@
+INFO	session requested	{"caller": ["est-server.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/10/06 - 20:24:08 | 201 |      38.458ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=vj_jJ6Idr_ZV6gHGToNgz9sIRTw8Xsx5JeMls3yjQHX2dtNA6JQF_n4SpaMga-edGe_-nziQHNm_guEPj9GucQ%3D%3D"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/06 - 20:24:08 | 200 |   10.210791ms |       127.0.0.1 | POST     "/challenge-response/v1/session/cb4eae12-c1ed-11f1-8f4a-313543423532"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/06 - 20:24:08 | 204 |       3.375µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/cb4eae12-c1ed-11f1-8f4a-313543423532"
+INFO	gin	

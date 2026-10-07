@@ -1,0 +1,34 @@
+drwxr-xr-x 2 root root 0 Oct  7 02:10 /sys/kernel/config/tsm/report
+2026/10/07 02:10:35 ok  attestation plug-in and CAI             9.5 ms  sev-snp 
+2026/10/07 02:10:35 ok  TACRA: ledger certificate             295.4 ms  [payments.workload.demobank.example] serial 989bd649df7187da802f2788c3642af5 until 2026-10-07T03:10:35Z 
+2026/10/07 02:10:35 ok  TACRA: fraud-service API key          267.7 ms  sealed to this VM's CEK, opened in the guest 
+2026/10/07 02:10:36 ok  fraud service: score                   70.2 ms  approve FRD-2056C4E5107C 
+2026/10/07 02:10:36 ok  ledger: transfer                      346.7 ms  one transaction, client-certificate login 
+2026/10/07 02:10:36 receipt:
+{
+ "amount": "125.50",
+ "at": "2026-10-07T02:10:36Z",
+ "balance_after": {
+  "ACC-1001": "4623.50",
+  "ACC-2002": "1376.50"
+ },
+ "balance_before": {
+  "ACC-1001": "4749.00",
+  "ACC-2002": "1251.00"
+ },
+ "certificate": {
+  "not_after": "2026-10-07T03:10:35Z",
+  "serial_hex": "989bd649df7187da802f2788c3642af5"
+ },
+ "db_user": "payments",
+ "fraud_ref": "FRD-2056C4E5107C",
+ "from": "ACC-1001",
+ "recorded_by_ledger": {
+  "client_cert_issuer": "Demo Bank workload CA Intermediate CA",
+  "client_cert_serial": "202851807660843563320446712856386480885",
+  "client_cn": "payments.workload.demobank.example",
+  "tls": "TLSv1.3"
+ },
+ "to": "ACC-2002",
+ "transfer_id": 3
+}

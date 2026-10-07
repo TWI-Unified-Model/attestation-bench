@@ -1,0 +1,7 @@
+attestation-bench 31be7049807f
+globalsign-est/src upstream 04ffa468b167 + 6 patch(es), tree b08ded935cf2: tested tree
+veraison-services/src upstream f997c5275c30 + 4 patch(es), tree a742260c3d8b: tested tree
+go-gen-ref/src upstream aa3740de6b00 + 1 patch(es), tree 5bedeba1cc44: tested tree
+veraison verification-service rev f997c5275c30 modified true go-sev-guest - sha256 bcf5927939232e37
+veraison vts-service rev f997c5275c30 modified true go-sev-guest v0.15.0 sha256 64afd6067facd0e4
+veraison scheme-sevsnp.plugin rev f997c5275c30 modified true go-sev-guest v0.15.0 sha256 a7036dbf5a34c06f

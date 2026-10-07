@@ -44,9 +44,10 @@ AWS_REGION=us-east-2 make attacks PLATFORM=aws-snp
 
 ## Cost and time
 
-Each run keeps one small VM, billed by the cloud at that machine's price for as long as it exists. In the reference
-runs of 6 October 2026 a run took between 118 and 395 seconds from its start to the VM's deletion (each run
-directory's name holds its start, and `vm-deleted.txt` was written at the deletion). Nothing else is left running.
+Each run keeps one small VM, billed by the cloud at that machine's price for as long as it exists. In the fourteen
+hardware runs of `make demo`, `attacks` and `redirect` on 7 October 2026 (under `e2e/evidence/` and
+`hwcheck/evidence/`), a run took between 108 and 272 seconds from its start to the VM's deletion: the start is in
+the run directory's name, the time the VM was found gone in its `vm-deleted.txt`. Nothing else is left running.
 
 ## Cleanup
 

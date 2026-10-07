@@ -1,0 +1,5 @@
+2026/10/06 20:14:00 enrolled: target=https://db-nonce.tacra.example kind=present-nonce hint="payments.workload.tacra.example" caller=[est-server.bench.tacra.example]
+2026/10/06 20:14:01 enrolled: target=https://db-epoch.tacra.example kind=present-epoch hint="payments.workload.tacra.example" caller=[est-server.bench.tacra.example]
+2026/10/06 20:14:02 enrolled: target=https://db-lepoch.tacra.example kind=absent-epoch hint="payments.workload.tacra.example" caller=[est-server.bench.tacra.example]
+2026/10/06 20:14:02 enrolled: target=https://db-time.tacra.example kind=absent-timestamp hint="payments.workload.tacra.example" caller=[est-server.bench.tacra.example]
+2026/10/06 20:14:03 enrolled: target=https://db-none.tacra.example kind=absent-none hint="payments.workload.tacra.example" caller=[est-server.bench.tacra.example]

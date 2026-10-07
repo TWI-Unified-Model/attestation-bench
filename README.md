@@ -84,18 +84,21 @@ signed result (an EAR) before it acts. Everything between the workload and the R
 network, the cloud. The ideas in plain words: [docs/concepts.md](docs/concepts.md); the components and ports:
 [docs/architecture.md](docs/architecture.md).
 
-## Status (6 October 2026)
+## Status (7 October 2026)
 
 | What | Result | Evidence |
 |---|---|---|
 | Local, `make check-mtls`: mutual TLS between all components | 47 of 47, in Passport and in Background Check | [Passport](e2e/evidence/20261006T222549Z-bench-mtls), [Background Check](e2e/evidence/20261006T223444Z-bench-mtls) |
 | Hardware, `make demo`, three platforms × two RATS models | 10 of 10 Targets in each of the six runs | e.g. [GCP SEV-SNP, Passport](e2e/evidence/20261006T222601Z-gcp-sev-snp-e2e-passport), [AWS SEV-SNP, Background Check](e2e/evidence/20261006T224133Z-aws-sev-snp-e2e-background-check) |
+| Hardware, `OTHER_PLATFORM=1 make demo` (tacra-est N24) | each platform's genuine Evidence refused at the Target of the other platform's verifier: in Passport after appraisal, in Background Check before it | [GCP SEV-SNP](e2e/evidence/20261007T012220Z-gcp-sev-snp-e2e-passport-other-platform), [AWS SEV-SNP](e2e/evidence/20261007T012516Z-aws-sev-snp-e2e-passport-other-platform), [GCP TDX](e2e/evidence/20261007T012715Z-gcp-tdx-e2e-passport-other-platform), [GCP TDX, Background Check](e2e/evidence/20261007T015243Z-gcp-tdx-e2e-background-check-other-platform) |
 | Hardware, `make attacks` | every attack refused for its own reason: 162 checks in process and 50 through Veraison on each SEV-SNP platform, 82 on TDX | [GCP SEV-SNP](hwcheck/evidence/20261006T224346Z-gcp-sev-snp), [GCP TDX](hwcheck/evidence/20261006T225040Z-gcp-tdx), [AWS SEV-SNP](hwcheck/evidence/20261006T225323Z-aws-sev-snp) |
 | Hardware, `make redirect` | 20 of 20 cases on each platform, as in the table above | [GCP SEV-SNP](hwcheck/evidence/20261006T225552Z-gcp-snp-redirect), [GCP TDX](hwcheck/evidence/20261006T225943Z-gcp-tdx-redirect), [AWS SEV-SNP](hwcheck/evidence/20261006T230316Z-aws-snp-redirect) |
-| The Demo Bank in the cloud | three payments from confidential VMs went through; an ordinary VM and an unapproved launch were refused | [run](e2e/evidence/20261006T230714Z-demo-bank) |
+| The Demo Bank in the cloud | three payments from confidential VMs went through; an ordinary VM and an unapproved launch were refused; in Passport and in Background Check | [Passport](e2e/evidence/20261006T230714Z-demo-bank), [Background Check](e2e/evidence/20261007T015626Z-demo-bank) |
 
-Every hardware result above was compared check by check with the previous runs and found identical. What a run does
-**not** prove: [docs/limits.md](docs/limits.md).
+Every hardware result above was compared check by check with the previous runs and found identical. On 7 October
+2026 every command in the docs was run again as written, on the release's code: the hardware runs were identical
+once more, check by check (`make report RUNS="e2e/evidence/20261007* hwcheck/evidence/20261007*"` lists them). What a
+run does **not** prove: [docs/limits.md](docs/limits.md).
 
 ## Documentation
 

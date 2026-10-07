@@ -1,0 +1,13 @@
+{
+ "technology": "tdx",
+ "measurement": "c1ee9c16e3afc506cfe042c5b846a368528f3b37618eafb27469bc114cf914e9222c91618470e7f2b28ac360968270a5",
+ "endorsed": true,
+ "object": "ovmf_x64_csm/tdx/c1ee9c16e3afc506cfe042c5b846a368528f3b37618eafb27469bc114cf914e9222c91618470e7f2b28ac360968270a5.binarypb",
+ "uefi_sha384": "53c558fe06714203d7428484c46ee7c0b9df748a9789e173421c28d097115b30efb8476304617532488ab40c3122db88",
+ "svn": 2,
+ "timestamp": "2026-05-21T23:52:45Z",
+ "cl_spec": 919307640,
+ "signer": "SERIALNUMBER=30,CN=GCE-uefi-signer,OU=Engineering,O=Google,L=Kirkland,ST=WA,C=USA",
+ "root_sha256": "e876bc6978bf4f3da445f98a0a82363c8c0bae5a1fc033c6df65846a6cb0f18c",
+ "checked_at": "2026-10-07T01:56:40Z"
+}

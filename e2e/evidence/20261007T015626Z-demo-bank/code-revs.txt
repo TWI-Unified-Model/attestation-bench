@@ -1,0 +1,5 @@
+attestation-bench 297cf662bbfd
+globalsign-est/src upstream 04ffa468b167 + 6 patch(es), tree b08ded935cf2: tested tree
+veraison-services/src upstream f997c5275c30 + 4 patch(es), tree a742260c3d8b: tested tree
+go-gen-ref/src upstream aa3740de6b00 + 1 patch(es), tree 5bedeba1cc44: tested tree
+step-ca v0.30.2, step v0.30.2 (built from their release modules); vault 2.1.1, go 1.27.0 (official releases, SHA-256 checked on the VM against scripts/versions.env)

@@ -1,0 +1,10 @@
+# e2e on GCP TDX, Background Check, Targets of another platform (2026-10-07, 01:52Z): gate 7
+
+Gate 7 of the attestation-bench plan: every command in the docs run as they write it, at the release's code. The command: `RATS_MODEL=background-check make config; make stop start; RUNS_DIR="$PWD/e2e/evidence" OTHER_PLATFORM=1 make demo PLATFORM=gcp-tdx`. Code: attestation-bench `83dea653cf72`.
+
+**VERDICT PASS: 1 of 1 Targets refused, no credential issued, each with 'none of the verifiers this RRP takes for the Target'** (`verdict.txt`).
+
+The Target takes another platform's verifier alone (`packs/tacra-bench/pack.json`), so the RRP must refuse this platform's genuine Evidence (tacra-est N24). The refusal, from `results.json`: `RRP ca: verifier: none of the verifiers this RRP takes for the Target (veraison) appraises Evidence of provider "tdx_guest"`. Before this `make` command existed, the same refusal came from the reference implementation's client on 1 October 2026 (`e2e/RESULTS-mutual-tls-verifier-choice.md`).
+
+- Machine: `c3-standard-4` (`machine-type.txt`).
+- The VM was deleted and the deletion checked: `tacra-e2e-2610070152 is gone at 2026-10-07T01:55:00Z` (`vm-deleted.txt`), 137 s after the run started.

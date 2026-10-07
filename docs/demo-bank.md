@@ -40,8 +40,10 @@ database transaction, logged in with the certificate.
 ## What to expect
 
 `make bank-up` builds the programs, checks Google's endorsement of each approved launch, creates the two VMs, builds
-Veraison on the trust zone and starts everything. In the reference run of 28 September 2026 the first payment began
-14 minutes after `bank-up` started (`e2e/evidence/20260928T212732Z-demo-bank`).
+Veraison on the trust zone and starts everything. From `bank-up`'s start to the first payment, as the names of the
+bank's directory and of its first payment's record them: 7 min 20 s on 7 October 2026
+(`e2e/evidence/20261007T015626Z-demo-bank`), 11 min 48 s on 6 October (`…20261006T230714Z-demo-bank`) and 13 min 43 s
+on 28 September (`…20260928T212732Z-demo-bank`), each with the wait before the first `bank-pay` was typed.
 
 Each `make bank-pay` creates its VM, runs the payment service, deletes the VM and prints a verdict:
 

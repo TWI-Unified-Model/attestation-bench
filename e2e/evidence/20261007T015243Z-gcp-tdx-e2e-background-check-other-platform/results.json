@@ -1,0 +1,11 @@
+[
+ {
+  "target": "https://db-snp-only.tacra.example",
+  "type": "x509",
+  "ok": false,
+  "error": "cai: EnrollCredential: 403 RRP ca: verifier: none of the verifiers this RRP takes for the Target (veraison) appraises Evidence of provider \"tdx_guest\"\n",
+  "attempts": 1,
+  "acquire_ms": 521.462,
+  "rup_status": 0
+ }
+]

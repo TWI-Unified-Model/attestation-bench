@@ -1,0 +1,14 @@
+{
+ "case": "retrieve-present-nonce",
+ "mode": "retrieve",
+ "freshness_kind": "present-nonce",
+ "target": "https://db.tacra.example",
+ "relying_party": "https://vault1.tacra.example",
+ "freshness_element_b64": "ABL6RbGcdHj7AiFwsHxb5vVswFE2Oe2gW9uIvVqKAhk",
+ "binding_value_hex": "b931da646031c9cc81c21334d4364f5c194a700a5d220f4790374b59069d40846adc8acbf62fe4eb4fcd5b3d4eb50d735236f886f0908658e0d053a18accdc48",
+ "evidence_ms": 41.299,
+ "token_bytes": 4966,
+ "report_sha256": "ab6bdd7c37940f4cf28558b8b084b8d205fc3ddb08adb3a7518008c90271659e",
+ "signing_key": "TDX quote",
+ "chip_id_prefix": "MRTD f21e6b48743fe14c"
+}
