@@ -105,7 +105,7 @@ fi
 
 echo
 avail_kb="$(df -Pk "$(dirname "$BENCH_HOME")" | awk 'NR==2 {print $4}')"
-if [ "${avail_kb:-0}" -lt 5000000 ]; then note disk "$((avail_kb / 1024)) MB free; setup needs about 5 GB"; else ok disk "$((avail_kb / 1024 / 1024)) GB free"; fi
+if [ "${avail_kb:-0}" -lt 8000000 ]; then note disk "$((avail_kb / 1024)) MB free; setup needs about 8 GB"; else ok disk "$((avail_kb / 1024 / 1024)) GB free"; fi
 
 echo
 if [ "$missing" -gt 0 ]; then
