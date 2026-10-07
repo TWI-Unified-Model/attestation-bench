@@ -2,17 +2,14 @@
 PROTO_DIR := proto
 OUT_DIR   := gen/go
 BIN_DIR   := bin
-CLIENT_BIN := $(BIN_DIR)/client
-SERVER_BIN := $(BIN_DIR)/server
-CAI_BIN    := $(BIN_DIR)/cai
 
 # Find all .proto files inside the PROTO_DIR directory
 PROTO_FILES := $(shell find $(PROTO_DIR) -name '*.proto')
 PROTO_SRCS  := $(patsubst $(PROTO_DIR)/%,%,$(PROTO_FILES))
 
-.PHONY: all proto install-tools clean help client server platform cai
+.PHONY: all proto install-tools clean help platform cai
 
-all: proto platform cai client server
+all: proto platform cai
 
 ## proto: Compiles all .proto files into Go code
 proto:
@@ -31,24 +28,10 @@ platform:
 	cd platform && go build ./...
 	@echo "Successfully built platform library"
 
-## cai: Builds the CAI library and sidecar binary
+## cai: Builds the CAI library
 cai: proto
 	cd cai && go build ./...
-	@mkdir -p $(BIN_DIR)
-	go build -o $(CAI_BIN) ./cai/cmd/sidecar
-	@echo "Successfully built cai library and sidecar to $(CAI_BIN)"
-
-## client: Compiles the HTTP client (talks to the CAI sidecar)
-client: proto
-	@mkdir -p $(BIN_DIR)
-	go build -o $(CLIENT_BIN) ./client
-	@echo "Successfully compiled client to $(CLIENT_BIN)"
-
-## server: Compiles the HTTPS mTLS server and PoC CAAPI
-server: cai
-	@mkdir -p $(BIN_DIR)
-	go build -o $(SERVER_BIN) ./server
-	@echo "Successfully compiled server to $(SERVER_BIN)"
+	@echo "Successfully built the cai library"
 
 ## install-tools: Installs necessary protoc Go plugins
 install-tools:

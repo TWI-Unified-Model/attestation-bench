@@ -83,9 +83,15 @@ the trees at each `make bank-up`.
 
 ## The TACRA proof of concept's code
 
-`cai/`, `platform/`, `proto/`, `gen/`, `client/`, `server/`, `deploy/` and `est/` are the TWI SIG's proof of concept.
-A change there is a change to the SIG's code: propose it to the SIG as well (github.com/TWI-Unified-Model/tacra), and
-keep this repository's copy the same as what the SIG merges.
+`cai/`, `platform/`, `proto/` and `gen/` are the parts of the TWI SIG's proof of concept that the bench runs. A change
+there is a change to the SIG's code: propose it to the SIG as well (github.com/TWI-Unified-Model/tacra), and keep
+this repository's copy of those parts the same as what the SIG merges.
+
+The bench runs nothing that stands in for the real thing, so the proof of concept's simulated parts are not in this
+tree: its Simulated plug-in (`platform/sim.go`) and EAT reader, the CAI sidecar, the HTTP client and the PoC's CAAPI
+server with their Docker deployment, the `deploy/` scripts and the `est/` module with their mock CA, the PoC's guides,
+and the CAI's and the plug-in interface's tests, which ran on the Simulated plug-in and on stand-ins for the CAAPI and
+the CA. `git log` keeps them. The CAI and the SEV-SNP and TDX plug-ins run in every hardware run.
 
 ## Secrets and private material
 

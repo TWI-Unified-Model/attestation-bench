@@ -13,10 +13,6 @@
 #   gitleaks       no secret in the git history: the whole history on a full clone, the tracked files on CI's
 #                  one-commit clone; and none in the changes not yet committed, staged or not, so that a secret is
 #                  found before it is committed (.gitleaks.toml: what it allows, and why)
-#
-# Not linted, kept as upstream has them: the TACRA proof of concept's deploy/ scripts, and its est module, whose go.mod
-# takes the EST server from a checkout beside the repository and whose test does not build against the current EST
-# code (scripts/lib.sh, BENCH_GO_MODULES).
 set -euo pipefail
 # shellcheck source=SCRIPTDIR/lib.sh
 . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
@@ -88,7 +84,7 @@ bench_say "third-party sources: the Go modules build against them (third_party/f
 
 bench_say "linters"
 sh_files=()
-while IFS= read -r f; do sh_files+=("$f"); done < <(git ls-files '*.sh' | grep -v -e '^deploy/' -e '^third_party/.*/src')
+while IFS= read -r f; do sh_files+=("$f"); done < <(git ls-files '*.sh' | grep -v -e '^third_party/.*/src')
 py_files=()
 while IFS= read -r f; do py_files+=("$f"); done < <(git ls-files '*.py' | grep -v -e '^third_party/' -e '/evidence/')
 check "shellcheck (${#sh_files[@]} scripts)" "$T/shellcheck" -x "${sh_files[@]}"

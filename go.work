@@ -3,9 +3,6 @@ go 1.26.5
 use (
 	./bundle
 	./cai
-	./client
-	./est
 	./gen/go
 	./platform
-	./server
 )

@@ -61,7 +61,8 @@ release's code; the hardware runs identical to gate 5's, check by check).
 - P-256 keys are read and written strictly with the standard library (`rrp/internal/jwk`): full-length coordinates,
   the point on the curve, a private key matching its public key.
 - Every run directory is sealed the same way (`sha256sums.txt`) and ends with `== run directory: <path>`.
-- The TACRA proof of concept's own guides moved from the repository root to [docs/tacra-poc/](docs/tacra-poc/README.md).
+- The TACRA proof of concept's own guides moved from the repository root to `docs/tacra-poc/`, and later left the
+  tree (Removed, below).
 - `make redirect` puts the bench back as it was (its RATS model, the RRP identifier in the binding) when it ends,
   fails or is interrupted; it used to leave the bench in Background Check.
 - `make test` (and so `make check` and CI) also runs, in each third-party component, the tests of the Go packages
@@ -110,6 +111,15 @@ release's code; the hardware runs identical to gate 5's, check by check).
   tested live: with `BENCH_CHAOS_SSH=1` a real VM breaks the bench's SSH sessions on purpose
   ([docs/troubleshooting.md](docs/troubleshooting.md)). The SEV-SNP hardware checks also keep what the checker
   logged (`rrpverify-*.stderr.log`) and the EAR of each honest check (`ears/`).
+
+### Removed
+
+- **The proof of concept's simulated parts**, as the bench runs nothing that stands in for the real thing: the
+  Simulated plug-in (`platform/sim.go`) and its EAT reader, the CAI sidecar, the HTTP client and the PoC's CAAPI
+  server with their Docker deployment, the `deploy/` scripts and the `est/` module with their mock CA, the PoC's
+  guides, and the CAI's and the plug-in interface's tests, which ran on the Simulated plug-in and on stand-ins for
+  the CAAPI and the CA ([CONTRIBUTING.md](CONTRIBUTING.md)). The CAI and the SEV-SNP and TDX plug-ins run in every
+  hardware run. `git log` keeps what was removed.
 
 ## Before: the TACRA proof of concept and the bench's first stages
 

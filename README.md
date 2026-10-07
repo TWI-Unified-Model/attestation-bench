@@ -20,8 +20,8 @@ With this repository you can:
 > [draft-novak-rats-tacra](https://datatracker.ietf.org/doc/draft-novak-rats-tacra/) and its EST profile,
 > [draft-novak-lamps-tacra-est](https://github.com/TheBankster/lamps-tacra-est), whose reference implementation is
 > [tacra-est](https://github.com/nikolaichuk7/tacra-est). The TACRA proof of concept this bench builds on is the
-> SIG's: [docs/tacra-poc/](docs/tacra-poc/README.md). How this release was checked:
-> [docs/verification.md](docs/verification.md).
+> SIG's; the bench keeps the parts of it that it runs ([CONTRIBUTING.md](CONTRIBUTING.md)). How this release was
+> checked: [docs/verification.md](docs/verification.md).
 
 ## Quick start: on your laptop, no cloud, no cost
 
@@ -132,7 +132,7 @@ What a run does **not** prove: [docs/limits.md](docs/limits.md).
 
 | Path | What | From |
 |---|---|---|
-| `cai/`, `platform/`, `proto/`, `gen/`, `client/`, `server/`, `deploy/`, `est/` | the TACRA proof of concept: the Credential Acquisition Interface, the platform plug-ins, the CAAPI | the TWI SIG, with our merged contributions |
+| `cai/`, `platform/`, `proto/`, `gen/` | the TACRA proof of concept's code the bench runs: the Credential Acquisition Interface, the platform plug-ins, the CAAPI's definitions | the TWI SIG, with our merged contributions |
 | `rrp/` | the RRP gateways (Credential Authority, Secret Vault), the TDX verifier and the stand-in's verifier | the bench |
 | `bundle/` | the signed container that carries a released secret | the bench |
 | `e2e/` | the end-to-end runs, the workload and CAS Client programs, the Demo Bank | the bench |

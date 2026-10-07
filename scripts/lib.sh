@@ -36,7 +36,7 @@ export BENCH_PORTS
 # The Go modules that make lint and make test cover: all but the proof of concept's est module, kept as the SIG wrote
 # it: its go.mod takes the EST server from a checkout beside the repository (../../globalsign-est), and its test does
 # not build against the current EST code.
-BENCH_GO_MODULES="bundle cai client e2e gen/go hwcheck hwcheck/vlekcheck platform rrp server"
+BENCH_GO_MODULES="bundle cai e2e gen/go hwcheck hwcheck/vlekcheck platform rrp"
 export BENCH_GO_MODULES
 
 bench_say() { printf '== %s\n' "$*"; }

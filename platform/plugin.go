@@ -12,7 +12,7 @@ import (
 // Plugin is the TACRA Platform Plug-In. It runs inside the Attester TEE and
 // is the only component that talks to the platform ABI (quote, RNG, keys).
 type Plugin interface {
-	// Name identifies the backend (for example "simulated").
+	// Name identifies the backend ("sev-snp", "tdx").
 	Name() string
 
 	// GenerateCEK creates an asymmetric Credential Encryption Key used in
@@ -27,10 +27,10 @@ type Plugin interface {
 	// Evidence; the private half signs the CSR.
 	GenerateCSK(alg SigningAlgorithm) (*KeyPair, error)
 
-	// GenerateEvidence produces RATS Evidence as a CBOR-encoded tagged
-	// COSE_Sign1 EAT covering the bound key (CEKpub or CSKpub) and, when
-	// FreshnessHandle is set, that handle as eat_nonce. CSR, when present,
-	// is included as a profile claim so Evidence and CSR are bound together.
+	// GenerateEvidence produces RATS Evidence: a hardware report whose
+	// report data is the binding value (binding.go) over the freshness
+	// element, the Target, the Relying Party and the subject (the CSR, or
+	// CEKpub), so that Evidence, CSR and key are bound together.
 	GenerateEvidence(req EvidenceRequest) (*Evidence, error)
 
 	// LocalEpoch is an epoch identifier already held by the Attester.
@@ -165,14 +165,14 @@ type EvidenceRequest struct {
 	// Handle from Initiate-Credential-Acquisition.
 	FreshnessKind FreshnessKind
 
-	// FreshnessHandle is the nonce or epoch marker bound as eat_nonce.
+	// FreshnessHandle is the nonce or epoch marker the binding covers.
 	// Empty for absent-* freshness kinds (no Handle from
-	// Initiate-Credential-Acquisition). RFC 9711 requires 8–64 bytes when
-	// the claim is present.
+	// Initiate-Credential-Acquisition). 8 to 64 octets when present, the
+	// bounds RFC 9711 sets for eat_nonce.
 	FreshnessHandle []byte
 
-	// BoundKey is CEKpub (Retrieval) or CSKpub (Enrollment). It is placed
-	// in the EAT cnf claim so the Verifier can confirm possession.
+	// BoundKey is CEKpub (Retrieval) or CSKpub (Enrollment); the binding
+	// covers it, as CEKpub itself or inside the CSR.
 	BoundKey crypto.PublicKey
 
 	// CSR is the PKCS#10 request for Enrollment. Empty for Retrieval.
@@ -182,27 +182,28 @@ type EvidenceRequest struct {
 	// inferred from a non-empty CSR and Retrieval otherwise.
 	BoundKeyUse BoundKeyUse
 
-	// Target is the Target of Initiate-Credential-Acquisition. Hardware
+	// Target is the Target of Initiate-Credential-Acquisition. The
 	// back-ends bind it into Evidence (the binding input of the EST profile,
-	// draft-novak-lamps-tacra-est); the simulated back-end ignores it.
+	// draft-novak-lamps-tacra-est).
 	Target string
 
 	// RelyingParty identifies the RATS Relying Party that will rely on the
-	// Evidence (the Credential Authority or the Secret Vault). Hardware
+	// Evidence (the Credential Authority or the Secret Vault). The
 	// back-ends bind it; empty when the CAI holds none.
 	RelyingParty string
 }
 
 // Evidence is RATS Evidence ready to send over CAAPI.
 type Evidence struct {
-	// Token is the CBOR-encoded tagged COSE_Sign1 EAT (CBOR tag 18).
+	// Token is the Evidence: the configfs-tsm report with the host's
+	// certificates, CBOR-encoded (TSMReportMediaTypeCBOR).
 	Token []byte
 
-	// MediaType is the IANA type a Veraison-class verifier uses to dispatch
-	// the token to an EAT/CWT scheme.
+	// MediaType is the type a verifier dispatches the token on.
 	MediaType string
 
-	// Claims is the unsigned CBOR claims map (the COSE_Sign1 payload).
+	// Claims is a CBOR map, unsigned, of what the Relying Party needs to
+	// recompute the binding value (the TSMClaim keys).
 	Claims []byte
 }
 

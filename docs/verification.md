@@ -106,8 +106,9 @@ not run here: `git clone` from GitHub, as the repository did not exist yet; it i
 `rm -rf ~/.attestation-bench`, ran in both tests of section 4 on the test's own home. One command, in
 `trust/README.md`, did not run as written in a plain shell; it was found after publishing (below).
 
-The proof of concept's own guides ([tacra-poc/](tacra-poc/README.md), `est/readme.md`, `deploy/`) are the TWI SIG's
-and describe its own deployment; they were not part of this check.
+The proof of concept's own guides (then in `docs/tacra-poc/`, `est/readme.md` and `deploy/`) were the TWI SIG's and
+described its own deployment; they were not part of this check. They have left the tree since, with the proof of
+concept's simulated parts ([../CONTRIBUTING.md](../CONTRIBUTING.md)).
 
 ## After publishing
 

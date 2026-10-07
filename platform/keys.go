@@ -8,13 +8,6 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"fmt"
-
-	"github.com/veraison/eat"
-)
-
-const (
-	ueidRANDLen = 32 // EAT RAND UEID payload: 16, 24, or 32 bytes
-	bootSeedLen = 32
 )
 
 func generateP256() (*KeyPair, error) {
@@ -31,28 +24,6 @@ func generateRSA2048() (*KeyPair, error) {
 		return nil, fmt.Errorf("platform: generate RSA-2048 key: %w", err)
 	}
 	return &KeyPair{Private: priv}, nil
-}
-
-func generateUEID() (eat.UEID, error) {
-	payload := make([]byte, ueidRANDLen)
-	if _, err := rand.Read(payload); err != nil {
-		return nil, fmt.Errorf("platform: UEID: %w", err)
-	}
-	ueid := make(eat.UEID, 1+ueidRANDLen)
-	ueid[0] = eat.UEIDTypeRAND
-	copy(ueid[1:], payload)
-	if err := ueid.Validate(); err != nil {
-		return nil, fmt.Errorf("platform: UEID: %w", err)
-	}
-	return ueid, nil
-}
-
-func generateBootSeed() ([]byte, error) {
-	seed := make([]byte, bootSeedLen)
-	if _, err := rand.Read(seed); err != nil {
-		return nil, fmt.Errorf("platform: boot seed: %w", err)
-	}
-	return seed, nil
 }
 
 func kidFromPublic(pub *ecdsa.PublicKey) []byte {
