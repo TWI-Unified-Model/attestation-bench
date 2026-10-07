@@ -2,9 +2,10 @@
 # (branch sudar_feature_01), with our patches: 0001-0006 the TACRA backend and the attest-* wire format,
 #   0007 dependencies without a reached vulnerability, 0008 no tests on stand-ins, 0009 the server without the
 #   fork's mock CA (the TACRA backend alone, a strict configuration), 0010 the reference-vector tests in a package of
-#   their own, apart from the upstream tests' mock CA, 0011 the fork's mock TEE and mock attested CA out of the tree.
+#   their own, apart from the upstream tests' mock CA, 0011 the fork's mock TEE and mock attested CA out of the tree,
+#   0012 a session per Target for a present-epoch Handle, which every Target shares.
 NAME=globalsign-est
 REPO=https://github.com/TWI-Unified-Model/globalsign-est.git
 BASE=04ffa468b167eb36d8b1af0e354c4af41427a02e   # sudar_feature_01, sudarsh4495, 2026-09-27
 LICENSE=MIT
-VARIANTS="src:11:3628224cb69831489d4206f6fcd7657908bdb683"
+VARIANTS="src:12:99378f4287d8a81277a62bd2de260ea79fc99cf2"
