@@ -37,7 +37,7 @@ release's code; the hardware runs identical to gate 5's, check by check).
   none for them), Veraison patch 0006 leaves them out of its reference-value matching, and the platform rule can
   require bits of them (`required_mitigation_bits`, in both vectors) and of PLATFORM_INFO
   (`required_platform_info_bits`). The bench's rule requires PLATFORM_INFO bit 5 (BadRAM, AMD-SB-3015) for Milan and
-  Genoa, and none of the mitigation bits yet ([docs/limits.md](docs/limits.md)). `rrpverify service -save-ears DIR`
+  Genoa, and the mitigation bits AMD names (Changed, below). `rrpverify service -save-ears DIR`
   keeps the EAR of each honest check.
 - **`trust/`**: the approved launches, each with its endorsement and the record of the check, and the vendor roots
   and CoRIM the verifiers trust, each with its source; `make trust-check` compares them with their origins.
@@ -55,11 +55,26 @@ release's code; the hardware runs identical to gate 5's, check by check).
   the live Veraison and TDX verifier with each run's own records: the honest Evidence passes and every changed binding
   fails, as when the run was made (23 runs, 1150 checks). It fails, never skips, when the bench is not up; CI runs it
   in both RATS models.
+- **The guest's clock, recorded and attacked.** Every attack run records what the guest's clock rests on
+  (`clock.txt`: the clocksource, the boot lines on SEV, TDX and the TSC, the time service and how its sources are
+  authenticated) and its offset from the RRP's (`clock-offset.txt`). And it pre-plays absent-timestamp Evidence: made
+  in the guest with its clock set 300 s ahead (`hwcheck/scripts/preplay-guest.sh`), presented to the live RRPs through
+  the EST server at once, refused (409, freshness), and again when their clock reaches the timestamp, accepted, older
+  than the Target's `max_age`. `verdict.py` reports that as an exposure, not a pass ([docs/limits.md](docs/limits.md),
+  "Time").
 - **Documentation**: [README.md](README.md) and [docs/](docs/getting-started.md), with how the release was checked:
   [docs/verification.md](docs/verification.md).
 
 ### Changed
 
+- **The platform rule requires the mitigation bits AMD's bulletins name**, in both vectors: Milan bits 1 (AMD-SB-3020)
+  and 4 (AMD-SB-3034), Genoa bit 1, Turin bit 0. A pack can admit hosts without a required bit under a named waiver
+  (`platform_waivers`), which the RRP writes in its log line of each issuance and release and each SEV-SNP demo's
+  verdict names. The bench's own pack waives Milan's bit 4, which no Google Cloud or AWS host sets; the Demo Bank's
+  waives nothing, so its SEV-SNP payments are refused for bit 4 and only its TDX payment goes through
+  ([docs/limits.md](docs/limits.md)).
+- The attack runs need the running bench: their checks through the live Veraison no longer skip when it is down, and
+  TDX attack runs check through the live TDX verifier too. `hwrun` takes `-kinds`, `-modes` and `-cek`.
 - The Demo Bank runs on the bench's configuration: mutual TLS between its components, the verifiers' keys given to
   the gateways as files, the API key in the signed container, pinned and checked tool versions.
 - P-256 keys are read and written strictly with the standard library (`rrp/internal/jwk`): full-length coordinates,

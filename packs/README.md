@@ -21,10 +21,18 @@ brings it up ([../docs/demo-bank.md](../docs/demo-bank.md)).
  "infra_domain": "bench.tacra.example",          // client certificates are named <component>.<infra_domain>
  "workload": {"hint": "...", "sans": ["..."]},    // the workload's name, and the SANs of its certificate
  "ear": {"max_age": 120, "skew": 5},              // how old an EAR may be, and the clock skew allowed (seconds)
+ "platform_waivers": {...},                       // optional: required mitigation bits the RRPs admit hosts without
  "rrps": [ ... ],
  "targets": [ ... ]
 }
 ```
+
+**Platform waivers** (`platform_waivers`, optional) name required SEV-SNP mitigation bits of the platform rule
+([../trust/platform-policy.json](../trust/platform-policy.json)) that the pack's RRPs admit hosts without:
+`{"sevsnp": {"mitigation_waivers": {"Milan": {"4": "admitted without bit 4, AMD-SB-3034"}}}}`. Each waiver is a bit
+the rule requires, with its name, which the RRP writes in its log line whenever it admits a request under it, and
+which each SEV-SNP demo's verdict repeats. A pack can waive a required mitigation bit and nothing else
+(`scripts/trustzone.py` refuses any other key). The bench's pack names one; a bank's, as the Demo Bank's, names none.
 
 **An RRP** is a Credential Authority gateway (issues X.509 certificates through step-ca) or a Secret Vault gateway
 (releases secrets from HashiCorp Vault, in the signed container).

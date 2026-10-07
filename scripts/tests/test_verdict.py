@@ -128,6 +128,26 @@ class ChangedRuns(unittest.TestCase):
         self.edit_json("results.json", lambda r: r.clear())
         self.assertEqual(verdict("demo", run), (1, "VERDICT FAIL: the workload asked for no Target"))
 
+    def test_demo_under_a_waiver(self):
+        # real runs, their platform rule with the waiver the bench's pack names, as scripts/trustzone.py writes it: a
+        # SEV-SNP run's verdict names it, a TDX run's does not (the waiver is the SEV-SNP rule's)
+        waived = {"Milan": {"4": "admitted without bit 4, AMD-SB-3034"}}
+        all10 = "VERDICT PASS: all 10 Targets: credential acquired and admitted by the relying party"
+        for src, want in [
+            ("20261007T151521Z-gcp-sev-snp-e2e-passport",
+             all10 + "; admitted under the bench's waiver: Milan bit 4: admitted without bit 4, AMD-SB-3034"),
+            ("20261007T154450Z-gcp-tdx-e2e-passport", all10),
+        ]:  # fmt: skip
+            with self.subTest(src):
+                run = self.tmp / src
+                run.mkdir()
+                for name in ("results.json", "platform-rule.json"):
+                    shutil.copy(E2E / src / name, run / name)
+                rule = json.loads((run / "platform-rule.json").read_text())
+                rule["sevsnp"]["mitigation_waivers"] = waived
+                (run / "platform-rule.json").write_text(json.dumps(rule))
+                self.assertEqual(verdict("demo", run), (0, want))
+
     def test_refusal_run_is_not_a_demo(self):
         self.assertEqual(verdict("demo", E2E / UNAPPROVED), (1, "VERDICT FAIL: 10 of 10 Targets not admitted"))
 

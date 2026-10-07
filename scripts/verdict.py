@@ -4,7 +4,7 @@
     python3 scripts/verdict.py demo RUN_DIR [--expect admitted|refused] [--reason TEXT] [--out FILE]
     python3 scripts/verdict.py attacks RUN_DIR [--out FILE]
     python3 scripts/verdict.py redirect RUN_DIR [--out FILE]
-    python3 scripts/verdict.py bank-pay RUN_DIR --expect pay|ordinary|unapproved [--out FILE]
+    python3 scripts/verdict.py bank-pay RUN_DIR --expect pay|ordinary|unapproved|platform [--out FILE]
     python3 scripts/verdict.py mtls RUN_DIR [--out FILE]
 
 Every run script calls it before it seals its run directory, with --out RUN_DIR/verdict.txt. It prints what the run
@@ -14,7 +14,8 @@ hwcheck/evidence included.
 
   demo      results.json. admitted (the default): every Target's credential acquired and admitted by the RATS-unaware
             Relying Party. refused: no credential issued for any Target, and each refusal's error contains the
-            --reason TEXT.
+            --reason TEXT. A SEV-SNP run whose platform rule (platform-rule.json) admits hosts under a named waiver
+            says so in its verdict.
   attacks   rrpverify-*.json. Every check as expected: the honest Evidence passed, each attack refused for its own
             reason. The builds of Veraison the bench compares with (rrpverify-veraison-fork and -fixed) are reported,
             not judged: what they get wrong is the reason the bench runs its own build. And, in a run that made it,
@@ -25,7 +26,8 @@ hwcheck/evidence included.
             ca2 refuses every kind; without it, ca2 refuses present-nonce alone.
   bank-pay  report.json, from the Demo Bank's payment service. pay: the payment went through. ordinary: no
             attestation, no credential, and the ledger and the fraud service refused the workload. unapproved:
-            genuine hardware Evidence, and no credential.
+            genuine hardware Evidence, and no credential. platform: genuine hardware Evidence, no credential, each
+            refused by the bank's platform rule (an SEV-SNP host without a mitigation bit the bank requires).
   mtls      mtls.json (checks.json in the runs of 1 October 2026), from make check-mtls. Every check as expected: on
             each channel only the allowed components, over TLS 1.3, got through.
 """
@@ -40,6 +42,18 @@ REDIRECT_PASSES = ("with-rrp-id", "no-rrp-id")
 COMPARED_BUILDS = ("rrpverify-veraison-fork", "rrpverify-veraison-fixed")
 
 
+def waivers_in_force(run):
+    """The named waivers of the platform rule a SEV-SNP run ran under (platform-rule.json, as the RRPs applied it):
+    the mitigation bits the bench's own pack admits hosts without."""
+    rule = run / "platform-rule.json"
+    if "sev-snp" not in run.name or not rule.exists():
+        return []
+    named = ((json.loads(rule.read_text()) or {}).get("sevsnp") or {}).get("mitigation_waivers") or {}
+    return [
+        f"{product} bit {bit}: {name}" for product, bits in sorted(named.items()) for bit, name in sorted(bits.items())
+    ]
+
+
 def demo(run, expect, reason):
     results = json.loads((run / "results.json").read_text())
     admitted = [r for r in results if r["ok"]]
@@ -49,10 +63,13 @@ def demo(run, expect, reason):
         lines.append(" ".join([*cells, str(r["rup_status"]), r.get("error", "")[:120]]).rstrip())
     if not results:
         return lines, False, "the workload asked for no Target"
+    waivers = waivers_in_force(run)
+    lines += [f"the platform rule's waiver: {w}" for w in waivers]
+    under = f"; admitted under the bench's waiver: {'; '.join(waivers)}" if waivers else ""
     if expect == "admitted":
         if len(admitted) < len(results):
             return lines, False, f"{len(results) - len(admitted)} of {len(results)} Targets not admitted"
-        return lines, True, f"all {len(results)} Targets: credential acquired and admitted by the relying party"
+        return lines, True, f"all {len(results)} Targets: credential acquired and admitted by the relying party{under}"
     issued = [r["target"] for r in results if r.get("cert_serial") or r.get("secret_sha256")]
     if issued:
         return lines, False, f"a credential was issued for {', '.join(issued)}"
@@ -165,6 +182,15 @@ def bank_pay(run, expect):
         refusals = ("ledger: login without a certificate", "fraud service: call without the key")
         wrong += [f"not refused: {n}" for n in refusals if not steps.get(n, {}).get("ok")]
         summary = "no attestation, no credential; the ledger and the fraud service refused it"
+    elif expect == "platform":
+        if steps.get("attestation plug-in and CAI", {}).get("ok") is not True:
+            wrong.append("no hardware Evidence (the attestation plug-in and CAI step failed)")
+        tacra = {n: s for n, s in steps.items() if n.startswith("TACRA:")}
+        why = [s.get("error") or "" for s in tacra.values()]
+        if not tacra or not all("platform-policy" in e for e in why):
+            wrong.append("not every credential refused by the platform rule: " + "; ".join(e[:120] for e in why))
+        reason = why[0].split("accepts: ", 1)[-1] if why else ""
+        summary = f"genuine hardware evidence, refused by the bank's platform rule: {reason[:160]}"
     else:
         if steps.get("attestation plug-in and CAI", {}).get("ok") is not True:
             wrong.append("no hardware Evidence (the attestation plug-in and CAI step failed)")
@@ -209,7 +235,7 @@ def main(argv=None):
             p.add_argument("--expect", choices=("admitted", "refused"), default="admitted")
             p.add_argument("--reason", default="", help="refused: the text every refusal's error must contain")
         if kind == "bank-pay":
-            p.add_argument("--expect", choices=("pay", "ordinary", "unapproved"), required=True)
+            p.add_argument("--expect", choices=("pay", "ordinary", "unapproved", "platform"), required=True)
     args = parser.parse_args(argv)
     try:
         lines, ok, summary = JUDGES[args.kind](args)

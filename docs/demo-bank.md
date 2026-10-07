@@ -6,7 +6,8 @@ then moves money. Two controls show what happens without that. Every name, accou
 
 ```bash
 make bank-up                          # the trust zone and the core, in your Google Cloud project
-make bank-pay PLATFORM=gcp-snp        # a payment from a confidential VM; also gcp-tdx, aws-snp
+make bank-pay PLATFORM=gcp-tdx        # a payment from a confidential VM: the transfer goes through
+make bank-pay PLATFORM=gcp-snp        # SEV-SNP: genuine Evidence, refused for AMD-SB-3034's bit 4; also aws-snp
 make bank-pay PLATFORM=ordinary       # the same service on an ordinary VM: refused
 make bank-pay PLATFORM=unapproved     # a genuine SEV-SNP VM of a launch the bank has not approved: refused
 make bank-audit                       # the ledger's own record of who moved money
@@ -50,12 +51,19 @@ Each `make bank-pay` creates its VM, runs the payment service, deletes the VM an
 
 | `PLATFORM` | Verdict when everything works |
 |---|---|
-| `gcp-snp`, `gcp-tdx`, `aws-snp` | `PASS: the payment went through, with credentials acquired by attestation` |
+| `gcp-tdx` | `PASS: the payment went through, with credentials acquired by attestation` |
+| `gcp-snp`, `aws-snp` | `PASS: genuine hardware evidence, refused by the bank's platform rule: mitigation bit 4 (AMD-SB-3034 (CVE-2025-54510)) is not set in LAUNCH_MIT_VECTOR …` |
 | `ordinary` | `PASS: no attestation, no credential; the ledger and the fraud service refused it` |
 | `unapproved` | `PASS: genuine hardware evidence, unapproved launch: no credential issued` |
 
-The reference run of 6 October 2026 had all five ([e2e/evidence/20261006T230714Z-demo-bank](../e2e/evidence/20261006T230714Z-demo-bank/README.md)):
-three transfers, each logged in with its own certificate, and both controls refused.
+The bank requires the mitigation bits AMD's bulletins name as the attestation of their fixes, and waives none, as a
+bank would: no SEV-SNP host on Google Cloud or AWS sets AMD-SB-3034's bit 4, so the bank refuses them all, and only
+the TDX payment goes through ([limits.md](limits.md)). The bench's own trust zone admits those hosts under a named
+waiver, which every run records ([../packs/README.md](../packs/README.md)).
+
+The reference run of 6 October 2026, before the bank required those bits, had three transfers, each logged in with its
+own certificate, and both controls refused
+([e2e/evidence/20261006T230714Z-demo-bank](../e2e/evidence/20261006T230714Z-demo-bank/README.md)).
 
 `make bank-down` deletes every VM labelled `purpose=demo-bank` and every `demobank-*` firewall rule, counts what is left
 in both clouds, and writes the bank's report, `README.md` in its run directory.

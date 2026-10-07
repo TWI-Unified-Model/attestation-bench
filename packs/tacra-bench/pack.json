@@ -6,6 +6,9 @@
   "sans": ["payments.workload.tacra.example", "spiffe://tacra.example/payments"]
  },
  "ear": {"max_age": 120, "skew": 5},
+ "platform_waivers": {
+  "sevsnp": {"mitigation_waivers": {"Milan": {"4": "admitted without bit 4, AMD-SB-3034"}}}
+ },
  "rrps": [
   {"name": "ca", "kind": "credential-authority", "rrp_id": "https://ca1.tacra.example", "listen": "127.0.0.1:9101"},
   {

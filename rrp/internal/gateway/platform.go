@@ -43,6 +43,11 @@ type SNPPolicy struct {
 	// with the reason the refusal gives, e.g. {"Milan": {"4": "AMD-SB-3034"}}. A report without the vectors is refused
 	// when its product line requires a bit.
 	RequiredMitigationBits map[string]map[string]string `json:"required_mitigation_bits,omitempty"`
+	// Per product line, required mitigation bits this RRP admits Evidence without, each under a named waiver that the
+	// RRP records whenever it applies it, e.g. {"Milan": {"4": "admitted without bit 4, AMD-SB-3034"}}. A bit waived
+	// must be one required. The bench's own pack names one (packs/tacra-bench: no Google Cloud or AWS host sets bit
+	// 4); a bank names none, and refuses.
+	MitigationWaivers map[string]map[string]string `json:"mitigation_waivers,omitempty"`
 	// Per product line, the PLATFORM_INFO bits that must be set, each with its reason, e.g.
 	// {"Milan": {"5": "AMD-SB-3015: ALIAS_CHECK_COMPLETE"}}.
 	RequiredPlatformInfoBits map[string]map[string]string `json:"required_platform_info_bits,omitempty"`
@@ -94,6 +99,17 @@ func (p *PlatformPolicy) Validate() error {
 				}
 			}
 		}
+		for product, bits := range s.MitigationWaivers {
+			waived, err := bitsOf(bits)
+			if err != nil {
+				return fmt.Errorf("platform.sevsnp.mitigation_waivers[%s]: %w", product, err)
+			}
+			for _, b := range waived {
+				if _, ok := s.RequiredMitigationBits[product][strconv.Itoa(b)]; !ok {
+					return fmt.Errorf("platform.sevsnp.mitigation_waivers[%s]: bit %d is waived but not required", product, b)
+				}
+			}
+		}
 		for _, c := range s.AllowedChipIDs {
 			if b, err := hex.DecodeString(c); err != nil || len(b) != 64 {
 				return fmt.Errorf("platform.sevsnp.allowed_chip_ids: %q is not 64 octets of hex", c)
@@ -133,33 +149,43 @@ func parseMask(s string) (uint64, error) {
 	return m, nil
 }
 
+// WaiverNote is the RRP's record, for its log line of an issuance or a release, of the waivers the platform rule
+// admitted the request under: empty when there were none.
+func WaiverNote(waived []string) string {
+	if len(waived) == 0 {
+		return ""
+	}
+	return "; under the platform rule's waiver: " + strings.Join(waived, "; ")
+}
+
 // ErrPlatform is wrapped by every refusal of the platform policy.
 var ErrPlatform = errors.New("the platform is not one this RRP accepts")
 
-// Check applies the policy to verified Attestation Results.
-func (p *PlatformPolicy) Check(res *ear.Result) error {
+// Check applies the policy to verified Attestation Results. When it admits them, it returns what it admitted them
+// without: one line per waiver applied, naming it and what it waived.
+func (p *PlatformPolicy) Check(res *ear.Result) ([]string, error) {
 	switch res.Submod {
 	case "SEVSNP":
 		if p.SEVSNP == nil {
-			return nil
+			return nil, nil
 		}
 		if res.SNP == nil {
-			return fmt.Errorf("%w: no SEV-SNP claims in the Attestation Results: %v", ErrPlatform, res.SNPErr)
+			return nil, fmt.Errorf("%w: no SEV-SNP claims in the Attestation Results: %v", ErrPlatform, res.SNPErr)
 		}
 		return p.SEVSNP.check(res.SNP)
 	case "TDX":
 		if p.TDX == nil {
-			return nil
+			return nil, nil
 		}
-		return p.TDX.check(res.TDX)
+		return nil, p.TDX.check(res.TDX)
 	}
 	// a submodule this policy has no rule for is refused, not passed
-	return fmt.Errorf("%w: no platform rule for submodule %q", ErrPlatform, res.Submod)
+	return nil, fmt.Errorf("%w: no platform rule for submodule %q", ErrPlatform, res.Submod)
 }
 
-func (s *SNPPolicy) check(c *ear.SNPClaims) error {
-	fail := func(format string, a ...any) error {
-		return fmt.Errorf("%w: "+format, append([]any{ErrPlatform}, a...)...)
+func (s *SNPPolicy) check(c *ear.SNPClaims) (waived []string, err error) {
+	fail := func(format string, a ...any) ([]string, error) {
+		return nil, fmt.Errorf("%w: "+format, append([]any{ErrPlatform}, a...)...)
 	}
 	// The guest policy (AMD 56860 Table 12)
 	if c.Policy>>19&1 == 1 {
@@ -212,14 +238,21 @@ func (s *SNPPolicy) check(c *ear.SNPClaims) error {
 				product, bits)
 		}
 		for _, b := range bits {
-			if c.LaunchMitVector>>b&1 == 0 {
+			launch, current := c.LaunchMitVector>>b&1 == 1, c.CurrentMitVector>>b&1 == 1
+			if launch && current {
+				continue
+			}
+			if w, ok := s.MitigationWaivers[product][strconv.Itoa(b)]; ok {
+				waived = append(waived, fmt.Sprintf("%s: %s mitigation bit %d (%s) is not set (LAUNCH_MIT_VECTOR %#x, "+
+					"CURRENT_MIT_VECTOR %#x)", w, product, b, required[strconv.Itoa(b)], c.LaunchMitVector, c.CurrentMitVector))
+				continue
+			}
+			if !launch {
 				return fail("mitigation bit %d (%s) is not set in LAUNCH_MIT_VECTOR %#x", b, required[strconv.Itoa(b)],
 					c.LaunchMitVector)
 			}
-			if c.CurrentMitVector>>b&1 == 0 {
-				return fail("mitigation bit %d (%s) is not set in CURRENT_MIT_VECTOR %#x", b, required[strconv.Itoa(b)],
-					c.CurrentMitVector)
-			}
+			return fail("mitigation bit %d (%s) is not set in CURRENT_MIT_VECTOR %#x", b, required[strconv.Itoa(b)],
+				c.CurrentMitVector)
 		}
 	}
 	if required := s.RequiredPlatformInfoBits[product]; len(required) > 0 {
@@ -239,7 +272,7 @@ func (s *SNPPolicy) check(c *ear.SNPClaims) error {
 			return fail("SMT is enabled and no microcode floor is met")
 		}
 	}
-	return nil
+	return waived, nil
 }
 
 func (t *TDXPolicy) check(ann map[string]string) error {

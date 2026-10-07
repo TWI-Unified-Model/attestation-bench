@@ -275,7 +275,9 @@ pay() {
   rs="$(date -u +%Y%m%dT%H%M%SZ)"; name="demobank-pay-$(echo "$rs" | tr -d 'TZ' | cut -c7-12)-$kind"
   R="$OUT/runs/${rs}-$kind"; mkdir -p "$R"
   case "$kind" in
-    gcp-snp)    MACHINE=(--machine-type=n2d-standard-2 --min-cpu-platform="AMD Milan" --confidential-compute-type=SEV_SNP --maintenance-policy=TERMINATE) ;;
+    # the bank's platform rule requires AMD-SB-3034's mitigation bit 4, which no Google Cloud or AWS SEV-SNP host sets,
+    # and the bank waives nothing: genuine Evidence, refused (trust/platform-policy.json, docs/demo-bank.md)
+    gcp-snp)    MACHINE=(--machine-type=n2d-standard-2 --min-cpu-platform="AMD Milan" --confidential-compute-type=SEV_SNP --maintenance-policy=TERMINATE); EXPECT=platform ;;
     unapproved) MACHINE=(--machine-type=n2d-standard-4 --min-cpu-platform="AMD Milan" --confidential-compute-type=SEV_SNP --maintenance-policy=TERMINATE); EXPECT=unapproved ;;
     gcp-tdx)    MACHINE=(--machine-type=c3-standard-4 --confidential-compute-type=TDX --maintenance-policy=TERMINATE); TEE=tdx ;;
     ordinary)   MACHINE=(--machine-type=e2-small); FLAGS=-imposter; EXPECT=ordinary ;;
@@ -349,7 +351,7 @@ pay_aws() { # run dir
   log "aws-snp: terminate, delete the security group, key pair and firewall rule"
   aws_cleanup; trap - EXIT
   slice_logs "$R"
-  finish_run "$R" pay
+  finish_run "$R" platform # the bank's platform rule refuses an SEV-SNP host without bit 4, as for gcp-snp
 }
 
 # approve a launch measurement on Google's signed firmware endorsement, then have the trust zone apply the policy

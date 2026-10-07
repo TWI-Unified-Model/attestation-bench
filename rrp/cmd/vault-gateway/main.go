@@ -71,30 +71,30 @@ func groupID(measurement []byte, platform, target, hint, policyVersion string) s
 	return hex.EncodeToString(s[:])
 }
 
-func (s *server) retrieve(req *RetrieveRequest) (*bundle.Bundle, error) {
+func (s *server) retrieve(req *RetrieveRequest) (*bundle.Bundle, []string, error) {
 	res, t, err := s.g.Check(&req.SecondLeg, req.CEKPub)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	grp, ok := t.Groups[req.CredentialHint]
 	if !ok {
-		return nil, &gateway.Error{Status: http.StatusForbidden, Code: "credential-hint",
+		return nil, nil, &gateway.Error{Status: http.StatusForbidden, Code: "credential-hint",
 			Err: errors.New("no credential group for this Credential Hint at this Target")}
 	}
 	if !gateway.Allowed(res.Measurement, grp.Measurements) {
-		return nil, &gateway.Error{Status: http.StatusForbidden, Code: "group",
+		return nil, nil, &gateway.Error{Status: http.StatusForbidden, Code: "group",
 			Err: errors.New("the attested launch may not receive this group's credential")}
 	}
 	secret, version, err := s.kv.read(grp.SecretPath)
 	if err != nil {
-		return nil, &gateway.Error{Status: http.StatusBadGateway, Code: "secret-vault", Err: err}
+		return nil, nil, &gateway.Error{Status: http.StatusBadGateway, Code: "secret-vault", Err: err}
 	}
 	gid := groupID(res.Measurement, gateway.Platform(res.Submod), req.Target, req.CredentialHint, grp.PolicyVersion)
 	// The item carries its key-block attributes from the group's policy and never leaves the TEE; a private key is
 	// shared by the group's instances, which the bank profile allows only for a declared replicated service.
 	shared := secret["type"] == "private-key"
 	if shared && !grp.Replicated && s.g.Config.Profile == "bank" {
-		return nil, &gateway.Error{Status: http.StatusForbidden, Code: "group",
+		return nil, nil, &gateway.Error{Status: http.StatusForbidden, Code: "group",
 			Err: errors.New("bank profile: a shared private key only for a group declared a replicated service")}
 	}
 	no := false
@@ -109,29 +109,29 @@ func (s *server) retrieve(req *RetrieveRequest) (*bundle.Bundle, error) {
 	var b *bundle.Bundle
 	if bundle.IsSignedCEK(req.CEKPub) {
 		if !slices.Contains(t.Acceptable, bundle.AcceptableSigned) {
-			return nil, &gateway.Error{Status: http.StatusBadRequest, Code: "cek",
+			return nil, nil, &gateway.Error{Status: http.StatusBadRequest, Code: "cek",
 				Err: errors.New("the Target does not accept the hpke-base-signed container")}
 		}
 		if s.signer == nil {
-			return nil, &gateway.Error{Status: http.StatusInternalServerError, Code: "internal",
+			return nil, nil, &gateway.Error{Status: http.StatusInternalServerError, Code: "internal",
 				Err: errors.New("no signature key for the hpke-base-signed container")}
 		}
 		b, err = bundle.SealSigned(s.signer, req.CEKPub, aad, content)
 	} else {
 		if s.g.Config.Profile == "bank" {
-			return nil, &gateway.Error{Status: http.StatusBadRequest, Code: "cek",
+			return nil, nil, &gateway.Error{Status: http.StatusBadRequest, Code: "cek",
 				Err: errors.New("bank profile: only the hpke-base-signed container, to an MLKEM768-P256 CEK")}
 		}
 		if !slices.ContainsFunc(t.Acceptable, func(a string) bool { return strings.HasPrefix(a, "DHKEM(") }) {
-			return nil, &gateway.Error{Status: http.StatusBadRequest, Code: "cek",
+			return nil, nil, &gateway.Error{Status: http.StatusBadRequest, Code: "cek",
 				Err: errors.New("the Target accepts no hpke-auth suite: an MLKEM768-P256 CEK and the signed container only")}
 		}
 		b, err = bundle.Seal(s.sender, req.CEKPub, aad, content)
 	}
 	if err != nil {
-		return nil, &gateway.Error{Status: http.StatusBadRequest, Code: "cek", Err: err}
+		return nil, nil, &gateway.Error{Status: http.StatusBadRequest, Code: "cek", Err: err}
 	}
-	return b, nil
+	return b, res.Waived, nil
 }
 
 // loadOrCreateSignKey keeps the Vault's ECDSA P-256 signature key across restarts (PKCS#8, base64url): the
@@ -217,14 +217,14 @@ func (s *server) routes() http.Handler {
 			gateway.WriteError(w, err)
 			return
 		}
-		b, err := s.retrieve(&req)
+		b, waived, err := s.retrieve(&req)
 		if err != nil {
 			log.Printf("retrieve refused: target=%s kind=%s caller=%v: %v", req.Target, req.FreshnessKind, mtls.Names(r), err)
 			gateway.WriteError(w, err)
 			return
 		}
-		log.Printf("released: target=%s kind=%s group=%s container=%s kem=%s caller=%v", req.Target, req.FreshnessKind,
-			b.AAD.GroupID[:16], b.Container, b.Suite.KEM, mtls.Names(r))
+		log.Printf("released: target=%s kind=%s group=%s container=%s kem=%s caller=%v%s", req.Target, req.FreshnessKind,
+			b.AAD.GroupID[:16], b.Container, b.Suite.KEM, mtls.Names(r), gateway.WaiverNote(waived))
 		gateway.WriteJSON(w, http.StatusOK, b)
 	})
 	// The Vault's origin keys, for provisioning Attesters' trust anchors out of band: its static KEM keys (hpke-auth)

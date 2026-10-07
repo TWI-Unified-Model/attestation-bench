@@ -45,31 +45,31 @@ type server struct {
 	ca *stepCA
 }
 
-func (s *server) enroll(req *EnrollRequest) (*EnrollResponse, error) {
+func (s *server) enroll(req *EnrollRequest) (*EnrollResponse, []string, error) {
 	csr, err := x509.ParseCertificateRequest(req.CSR)
 	if err != nil {
-		return nil, &gateway.Error{Status: http.StatusBadRequest, Code: "malformed", Err: err}
+		return nil, nil, &gateway.Error{Status: http.StatusBadRequest, Code: "malformed", Err: err}
 	}
 	if err := csr.CheckSignature(); err != nil {
-		return nil, &gateway.Error{Status: http.StatusForbidden, Code: "proof-of-possession", Err: gateway.ErrPoP}
+		return nil, nil, &gateway.Error{Status: http.StatusForbidden, Code: "proof-of-possession", Err: gateway.ErrPoP}
 	}
 	res, t, err := s.g.Check(&req.SecondLeg, req.CSR)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	name, id, err := assignIdentity(t, res.Measurement, csr, req.CredentialHint)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	chain, err := s.ca.sign(req.CSR, name, id.SANs, id.Validity)
 	if err != nil {
-		return nil, &gateway.Error{Status: http.StatusBadGateway, Code: "credential-authority", Err: err}
+		return nil, nil, &gateway.Error{Status: http.StatusBadGateway, Code: "credential-authority", Err: err}
 	}
 	out := &EnrollResponse{}
 	for _, c := range chain {
 		out.CertificateChain = append(out.CertificateChain, c)
 	}
-	return out, nil
+	return out, res.Waived, nil
 }
 
 // assignIdentity is where the CA assigns the name: an identity of the Target that the attested launch may hold,
@@ -135,13 +135,14 @@ func (s *server) routes() http.Handler {
 			gateway.WriteError(w, err)
 			return
 		}
-		resp, err := s.enroll(&req)
+		resp, waived, err := s.enroll(&req)
 		if err != nil {
 			log.Printf("enroll refused: target=%s kind=%s caller=%v: %v", req.Target, req.FreshnessKind, mtls.Names(r), err)
 			gateway.WriteError(w, err)
 			return
 		}
-		log.Printf("enrolled: target=%s kind=%s hint=%q caller=%v", req.Target, req.FreshnessKind, req.CredentialHint, mtls.Names(r))
+		log.Printf("enrolled: target=%s kind=%s hint=%q caller=%v%s", req.Target, req.FreshnessKind, req.CredentialHint,
+			mtls.Names(r), gateway.WaiverNote(waived))
 		gateway.WriteJSON(w, http.StatusOK, resp)
 	})
 	return mux

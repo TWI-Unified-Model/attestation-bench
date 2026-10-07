@@ -25,6 +25,18 @@
   },
   "check_committed_tcb": true,
   "smt": "allow-with-microcode-floor",
+  "required_mitigation_bits": {
+   "Milan": {
+    "1": "AMD-SB-3020 (CVE-2025-0033)",
+    "4": "AMD-SB-3034 (CVE-2025-54510)"
+   },
+   "Genoa": {
+    "1": "AMD-SB-3020 (CVE-2025-0033)"
+   },
+   "Turin": {
+    "0": "AMD-SB-3020 (CVE-2025-0033)"
+   }
+  },
   "required_platform_info_bits": {
    "Milan": {
     "5": "AMD-SB-3015 (BadRAM, CVE-2024-21944): ALIAS_CHECK_COMPLETE"
@@ -44,6 +56,6 @@
   "hosts": "What the hardware runs of 7 October 2026 reported, decoded from the Attestation Results in their Veraison logs (e2e/evidence/20261007T045034Z-gcp-sev-snp-e2e-passport, …045331Z-aws-sev-snp-e2e-passport): EPYC Milan (CPUID family 0x19, model 0x01), SMT enabled, ALIAS_CHECK_COMPLETE set. GCP, VCEK-signed with CHIP_ID: REPORTED_TCB and COMMITTED_TCB bl 4, tee 0, snp 29, ucode 222. AWS, VLEK-signed without CHIP_ID: REPORTED_TCB bl 4, tee 0, snp 29, ucode 222; COMMITTED_TCB bl 4, tee 0, snp 31, ucode 225. Their reports' mitigation vectors, 28 September to 7 October 2026: GCP 0xb; AWS 0xf, 0x10f or 0xfef; none sets bit 4, which AMD-SB-3034 names for Milan (docs/limits.md).",
   "tdx": "The TD ATTRIBUTES the bench's TDX verifier refuses by default (rrp/cmd/tdx-verifier/main.go): the TUP group, bits 15:4, and MIGRATABLE, bit 29; the gateways always refuse the TUD group, bits 3:0, a TD under debug. Checked again by the RRP, so that it does not rest on the verifier's configuration. The GCP TDs of the hardware runs have ATTRIBUTES 0x10000000, SEPT_VE_DISABLE only (rrp/cmd/tdx-verifier/main_test.go).",
   "platform_info_bits": "AMD-SB-3015 (CVE-2024-21944) gives, for Milan and Genoa, PLATFORM_INFO bit 5, ALIAS_CHECK_COMPLETE, as the attestation evidence that alias detection completed and found no aliasing addresses. https://www.amd.com/en/resources/product-security/bulletin/amd-sb-3015.html, as the Internet Archive kept it: https://web.archive.org/web/20260710223038id_/https://www.amd.com/en/resources/product-security/bulletin/amd-sb-3015.html",
-  "mitigation_bits": "AMD-SB-3020 (CVE-2025-0033) names 'SEV Mitigation Vector Bit' 1 for Milan and Genoa and 0 for Turin; AMD-SB-3034 (CVE-2025-54510) gives Milan's attestation value as 'TCB[SNP]>=0x1D mitigation bit = 4'. https://web.archive.org/web/20260710222907id_/https://www.amd.com/en/resources/product-security/bulletin/amd-sb-3020.html, https://web.archive.org/web/20260710223106id_/https://www.amd.com/en/resources/product-security/bulletin/amd-sb-3034.html. Not in required_mitigation_bits: no host the bench has met sets bit 4, so the rule would refuse every SEV-SNP run (docs/limits.md)."
+  "mitigation_bits": "AMD-SB-3020 (CVE-2025-0033) names 'SEV Mitigation Vector Bit' 1 for Milan and Genoa and 0 for Turin, in its table of fixes; AMD-SB-3034 (CVE-2025-54510) gives Milan's attestation value as 'TCB[SNP]>=0x1D mitigation bit = 4'. https://web.archive.org/web/20260710222907id_/https://www.amd.com/en/resources/product-security/bulletin/amd-sb-3020.html, https://web.archive.org/web/20260710223106id_/https://www.amd.com/en/resources/product-security/bulletin/amd-sb-3034.html. Every host the bench has met sets bit 1; none sets bit 4, so this rule refuses every SEV-SNP host the bench has met. The bench's own pack admits them under a named waiver that every run records (packs/tacra-bench, platform_waivers); the Demo Bank's pack, a bank's, names none and refuses them (docs/limits.md)."
  }
 }

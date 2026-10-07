@@ -65,7 +65,7 @@ func TestPlatformPolicyOnRealResults(t *testing.T) {
 	if err := milanPolicy(chip).Validate(); err != nil {
 		t.Fatal(err)
 	}
-	if err := milanPolicy(chip).Check(res); err != nil {
+	if _, err := milanPolicy(chip).Check(res); err != nil {
 		t.Fatalf("Milan admitted, chip listed, floor met: %v", err)
 	}
 	bank := &PlatformPolicy{SEVSNP: &SNPPolicy{RequireMachineIdentity: true, AllowedProducts: []string{"Genoa", "Turin"},
@@ -90,7 +90,7 @@ func TestPlatformPolicyOnRealResults(t *testing.T) {
 			return p
 		}(), "no microcode floor is met"},
 	} {
-		err := c.p.Check(res)
+		_, err := c.p.Check(res)
 		if err == nil || !errors.Is(err, ErrPlatform) || !strings.Contains(err.Error(), c.want) {
 			t.Errorf("%s: got %v, want %q", c.name, err, c.want)
 		}
@@ -116,7 +116,7 @@ func TestPlatformPolicyOnAlteredClaims(t *testing.T) {
 		claims := base
 		claims.ChipID = append([]byte(nil), base.ChipID...)
 		c.alter(&claims)
-		err := p.Check(&ear.Result{Submod: "SEVSNP", SNP: &claims})
+		_, err := p.Check(&ear.Result{Submod: "SEVSNP", SNP: &claims})
 		if err == nil || !strings.Contains(err.Error(), c.want) {
 			t.Errorf("%s: got %v, want %q", c.name, err, c.want)
 		}
@@ -128,11 +128,11 @@ func TestPlatformPolicyOnAlteredClaims(t *testing.T) {
 	tp := &PlatformPolicy{SEVSNP: &SNPPolicy{RequireMachineIdentity: true, AllowedProducts: []string{"Turin"},
 		TCBFloors:         map[string]map[string]int{"Turin": {"fmc": 2, "bl": 3, "tee": 4, "snp": 5, "ucode": 0x51}},
 		CheckCommittedTCB: true, SMT: "allow-with-microcode-floor"}}
-	if err := tp.Check(&ear.Result{Submod: "SEVSNP", SNP: &turin}); err != nil {
+	if _, err := tp.Check(&ear.Result{Submod: "SEVSNP", SNP: &turin}); err != nil {
 		t.Fatalf("Turin at its floor: %v", err)
 	}
 	tp.SEVSNP.TCBFloors["Turin"]["snp"] = 6
-	if err := tp.Check(&ear.Result{Submod: "SEVSNP", SNP: &turin}); err == nil || !strings.Contains(err.Error(), "snp 5 is below the floor 6") {
+	if _, err := tp.Check(&ear.Result{Submod: "SEVSNP", SNP: &turin}); err == nil || !strings.Contains(err.Error(), "snp 5 is below the floor 6") {
 		t.Fatalf("Turin below its SNP floor: %v", err)
 	}
 }
@@ -143,16 +143,16 @@ func TestTDXPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Google Cloud TDX of 29 September 2026: ATTRIBUTES 0x10000000, SEPT_VE_DISABLE only
-	if err := p.Check(&ear.Result{Submod: "TDX", TDX: map[string]string{"td_attributes": "0000000010000000"}}); err != nil {
+	if _, err := p.Check(&ear.Result{Submod: "TDX", TDX: map[string]string{"td_attributes": "0000000010000000"}}); err != nil {
 		t.Fatalf("recorded ATTRIBUTES: %v", err)
 	}
 	for attrs, want := range map[string]string{"0000000010000001": "under debug", "0000000010000020": "refused",
 		"0000000030000000": "refused"} {
-		if err := p.Check(&ear.Result{Submod: "TDX", TDX: map[string]string{"td_attributes": attrs}}); err == nil || !strings.Contains(err.Error(), want) {
+		if _, err := p.Check(&ear.Result{Submod: "TDX", TDX: map[string]string{"td_attributes": attrs}}); err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("ATTRIBUTES %s: got %v, want %q", attrs, err, want)
 		}
 	}
-	if err := p.Check(&ear.Result{Submod: "TDX", TDX: map[string]string{}}); err == nil {
+	if _, err := p.Check(&ear.Result{Submod: "TDX", TDX: map[string]string{}}); err == nil {
 		t.Error("no ATTRIBUTES annotated: accepted")
 	}
 }
@@ -185,28 +185,59 @@ func benchRule(t *testing.T) *PlatformPolicy {
 	return &p
 }
 
-// The bench's rule admits the hosts its hardware runs met (trust/platform-policy.json, "hosts"): the GCP host of the
-// real EAR, and an AWS host, VLEK-signed, without CHIP_ID, its COMMITTED_TCB above its REPORTED_TCB. A floor one above
-// the host's value refuses it, for that reason, whichever component it is.
-func TestBenchPlatformRule(t *testing.T) {
+// packRule is the platform rule a pack's RRPs apply, as scripts/trustzone.py writes it: trust/platform-policy.json
+// with the pack's named waivers (platform_waivers).
+func packRule(t *testing.T, pack string) *PlatformPolicy {
+	t.Helper()
 	p := benchRule(t)
-	res := realResult(t)
-	if err := p.Check(res); err != nil {
-		t.Fatalf("the GCP SEV-SNP host: %v", err)
+	raw, err := os.ReadFile("../../../packs/" + pack + "/pack.json")
+	if err != nil {
+		t.Fatal(err)
 	}
-	aws := *res.SNP
-	aws.Class, aws.ChipID = ear.ClassByCSP, nil
-	aws.Policy = 0x2030000                // PAGE_SWAP_DISABLE (bit 25), the reserved bit 17, SMT (bit 16)
-	aws.PlatformInfo = 0x27               // SMT_EN, TSME_EN, ECC_EN, ALIAS_CHECK_COMPLETE
-	aws.CommittedTCB = 0xE11F000000000004 // bl 4, tee 0, snp 31, ucode 225 (e2e/evidence/20261007T045331Z-aws-…)
-	if err := p.Check(&ear.Result{Submod: "SEVSNP", SNP: &aws}); err != nil {
-		t.Fatalf("the AWS SEV-SNP host: %v", err)
+	var file struct {
+		Waivers struct {
+			SEVSNP struct {
+				Mitigation map[string]map[string]string `json:"mitigation_waivers"`
+			} `json:"sevsnp"`
+		} `json:"platform_waivers"`
 	}
-	for comp, host := range map[string]int{"bl": 4, "snp": 29, "ucode": 222} {
-		q := benchRule(t)
+	if err := json.Unmarshal(raw, &file); err != nil {
+		t.Fatal(err)
+	}
+	p.SEVSNP.MitigationWaivers = file.Waivers.SEVSNP.Mitigation
+	if err := p.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+// The rule on the hosts the bench's hardware runs met, the real results of 7 October 2026: Google Cloud's (VCEK,
+// CHIP_ID) and AWS's (VLEK, no CHIP_ID). The shared rule requires AMD's mitigation bits, and neither host sets bit 4
+// (AMD-SB-3034). The bench's pack admits both under its named waiver, which the check returns for the RRP's record;
+// the Demo Bank's pack, a bank's, refuses both for bit 4. A TCB floor one above the host's value refuses it, for that
+// reason, whichever component it is.
+func TestBenchPlatformRule(t *testing.T) {
+	bench, bank := packRule(t, "tacra-bench"), packRule(t, "demo-bank")
+	for _, platform := range []string{"gcp", "aws"} {
+		res := realV5Result(t, platform)
+		launch, current := res.SNP.LaunchMitVector, res.SNP.CurrentMitVector
+		want := fmt.Sprintf("admitted without bit 4, AMD-SB-3034: Milan mitigation bit 4 (AMD-SB-3034 (CVE-2025-54510)) "+
+			"is not set (LAUNCH_MIT_VECTOR %#x, CURRENT_MIT_VECTOR %#x)", launch, current)
+		if waived, err := bench.Check(res); err != nil || len(waived) != 1 || waived[0] != want {
+			t.Errorf("%s, the bench's rule: got %q %v, want admitted under %q", platform, waived, err, want)
+		}
+		refusal := fmt.Sprintf("mitigation bit 4 (AMD-SB-3034 (CVE-2025-54510)) is not set in LAUNCH_MIT_VECTOR %#x", launch)
+		if _, err := bank.Check(res); err == nil || !errors.Is(err, ErrPlatform) || !strings.Contains(err.Error(), refusal) {
+			t.Errorf("%s, the Demo Bank's rule: got %v, want %q", platform, err, refusal)
+		}
+	}
+	res := realV5Result(t, "gcp")
+	for comp, at := range tcbLayouts["Milan"] {
+		host := int(res.SNP.ReportedTCB >> (8 * at) & 0xFF)
+		q := packRule(t, "tacra-bench")
 		q.SEVSNP.TCBFloors["Milan"][comp] = host + 1
 		want := fmt.Sprintf("REPORTED_TCB %s %d is below the floor %d", comp, host, host+1)
-		if err := q.Check(res); err == nil || !errors.Is(err, ErrPlatform) || !strings.Contains(err.Error(), want) {
+		if _, err := q.Check(res); err == nil || !errors.Is(err, ErrPlatform) || !strings.Contains(err.Error(), want) {
 			t.Errorf("a Milan %s floor of %d: got %v, want %q", comp, host+1, err, want)
 		}
 	}
@@ -217,7 +248,7 @@ func TestBenchPlatformRule(t *testing.T) {
 		"0000000010000010": "bits 10 are refused",
 		"0000000030000000": "bits 20000000 are refused",
 	} {
-		err := p.Check(&ear.Result{Submod: "TDX", TDX: map[string]string{"td_attributes": attrs}})
+		_, err := bench.Check(&ear.Result{Submod: "TDX", TDX: map[string]string{"td_attributes": attrs}})
 		if (want == "" && err != nil) || (want != "" && (err == nil || !strings.Contains(err.Error(), want))) {
 			t.Errorf("TD ATTRIBUTES %s: got %v, want %q", attrs, err, want)
 		}
@@ -279,30 +310,55 @@ func TestMitigationAndPlatformInfoBits(t *testing.T) {
 		vector   string
 	}{{"gcp", "0xb"}, {"aws", "0x10f"}} {
 		res := realV5Result(t, c.platform)
-		if err := rule(sb3020, badram).Check(res); err != nil {
+		if _, err := rule(sb3020, badram).Check(res); err != nil {
 			t.Errorf("%s, bit 1 and BadRAM: %v", c.platform, err)
 		}
 		want := "mitigation bit 4 (AMD-SB-3034) is not set in LAUNCH_MIT_VECTOR " + c.vector
-		if err := rule(amd, badram).Check(res); err == nil || !errors.Is(err, ErrPlatform) || !strings.Contains(err.Error(), want) {
+		if _, err := rule(amd, badram).Check(res); err == nil || !errors.Is(err, ErrPlatform) || !strings.Contains(err.Error(), want) {
 			t.Errorf("%s, AMD's bits: got %v, want %q", c.platform, err, want)
 		}
-		if err := rule(nil, map[string]string{"4": "a bit no host sets"}).Check(res); err == nil ||
+		if _, err := rule(nil, map[string]string{"4": "a bit no host sets"}).Check(res); err == nil ||
 			!strings.Contains(err.Error(), "PLATFORM_INFO bit 4 (a bit no host sets) is not set") {
 			t.Errorf("%s, PLATFORM_INFO bit 4: %v", c.platform, err)
 		}
 	}
 	gcp := *realV5Result(t, "gcp").SNP
 	gcp.LaunchMitVector |= 1 << 4
-	if err := rule(amd, nil).Check(&ear.Result{Submod: "SEVSNP", SNP: &gcp}); err == nil ||
+	if _, err := rule(amd, nil).Check(&ear.Result{Submod: "SEVSNP", SNP: &gcp}); err == nil ||
 		!strings.Contains(err.Error(), "mitigation bit 4 (AMD-SB-3034) is not set in CURRENT_MIT_VECTOR 0xb") {
 		t.Errorf("bit 4 at launch only: %v", err)
 	}
 	gcp.CurrentMitVector |= 1 << 4
-	if err := rule(amd, nil).Check(&ear.Result{Submod: "SEVSNP", SNP: &gcp}); err != nil {
+	if _, err := rule(amd, nil).Check(&ear.Result{Submod: "SEVSNP", SNP: &gcp}); err != nil {
 		t.Errorf("bit 4 at launch and now: %v", err)
 	}
-	if err := rule(sb3020, nil).Check(realResult(t)); err == nil || !strings.Contains(err.Error(), "carries no mitigation vector") {
+	if _, err := rule(sb3020, nil).Check(realResult(t)); err == nil || !strings.Contains(err.Error(), "carries no mitigation vector") {
 		t.Errorf("the EAR of 28 September, without vectors: %v", err)
+	}
+	// a waiver admits what it names and nothing else, and the check says which it applied
+	waive := func(p *PlatformPolicy, bits map[string]string) *PlatformPolicy {
+		p.SEVSNP.MitigationWaivers = map[string]map[string]string{"Milan": bits}
+		if err := p.Validate(); err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	res := realV5Result(t, "gcp")
+	if w, err := waive(rule(amd, badram), map[string]string{"4": "a waiver"}).Check(res); err != nil || len(w) != 1 ||
+		!strings.HasPrefix(w[0], "a waiver: Milan mitigation bit 4 (AMD-SB-3034) is not set (LAUNCH_MIT_VECTOR 0xb") {
+		t.Errorf("bit 4 waived: got %q %v", w, err)
+	}
+	if _, err := waive(rule(amd, badram), map[string]string{"1": "a waiver of another bit"}).Check(res); err == nil ||
+		!strings.Contains(err.Error(), "mitigation bit 4 (AMD-SB-3034) is not set") {
+		t.Errorf("bit 1 waived, bit 4 missing: %v", err)
+	}
+	if w, err := waive(rule(amd, nil), map[string]string{"4": "a waiver"}).Check(&ear.Result{Submod: "SEVSNP", SNP: &gcp}); err != nil || len(w) != 0 {
+		t.Errorf("bit 4 set at launch and now, under a waiver of it: got %q %v, want nothing waived", w, err)
+	}
+	notRequired := rule(sb3020, nil)
+	notRequired.SEVSNP.MitigationWaivers = map[string]map[string]string{"Milan": {"4": "a waiver"}}
+	if err := notRequired.Validate(); err == nil || !strings.Contains(err.Error(), "bit 4 is waived but not required") {
+		t.Errorf("a waiver of a bit not required: %v", err)
 	}
 	for _, bad := range []*PlatformPolicy{
 		{SEVSNP: &SNPPolicy{SMT: "forbid", RequiredMitigationBits: map[string]map[string]string{"Rome": sb3020}}},

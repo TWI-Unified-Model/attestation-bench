@@ -55,7 +55,7 @@ def main():
     vd = os.path.abspath(a.veraison)
     pack = load_pack(a.pack)
     approved = json.loads(Path(a.approved).read_text())
-    platform = load_platform(a.platform)
+    platform = with_waivers(load_platform(a.platform), pack)
     snp = [e["measurement"] for e in approved["sev-snp"]]
     tdx = [e["mrtd"] for e in approved["tdx"]]
     check_corim(snp, a.corim)
@@ -210,6 +210,29 @@ def load_platform(path):
     if not rule:
         sys.exit(f"{path}: neither a sevsnp nor a tdx rule")
     return rule
+
+
+def with_waivers(platform, pack):
+    """The platform rule with the pack's named waivers (platform_waivers): required SEV-SNP mitigation bits the pack's
+    RRPs admit Evidence without, each recorded by the RRP whenever it applies it. A pack can waive a required bit and
+    nothing else; a bank's pack names none (packs/README.md)."""
+    waivers = pack.get("platform_waivers") or {}
+    if set(waivers) - {"sevsnp"} or set(waivers.get("sevsnp") or {}) - {"mitigation_waivers"}:
+        raise PackError("platform_waivers: only sevsnp.mitigation_waivers can be waived")
+    named = (waivers.get("sevsnp") or {}).get("mitigation_waivers") or {}
+    required = (platform.get("sevsnp") or {}).get("required_mitigation_bits") or {}
+    for product, bits in named.items():
+        for bit, name in bits.items():
+            if bit not in (required.get(product) or {}):
+                raise PackError(
+                    f"platform_waivers: {product} bit {bit} is waived but the platform rule does not require it"
+                )
+            if not str(name).strip():
+                raise PackError(f"platform_waivers: {product} bit {bit} has no name")
+    if named:
+        platform = json.loads(json.dumps(platform))
+        platform["sevsnp"]["mitigation_waivers"] = named
+    return platform
 
 
 def load_pack(path):

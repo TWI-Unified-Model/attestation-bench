@@ -423,9 +423,11 @@ func (g *Gateway) Check(req *SecondLeg, subject []byte) (*ear.Result, *Target, e
 		return nil, nil, refuse(http.StatusForbidden, "attestation", err)
 	}
 	if g.Config.Platform != nil {
-		if err := g.Config.Platform.Check(res); err != nil {
+		waived, err := g.Config.Platform.Check(res)
+		if err != nil {
 			return nil, nil, refuse(http.StatusForbidden, "platform-policy", err)
 		}
+		res.Waived = waived
 	}
 	return res, t, nil
 }

@@ -80,6 +80,9 @@ type Result struct {
 	SNP    *SNPClaims
 	SNPErr error
 	TDX    map[string]string
+	// Waived is what the RRP's platform rule admitted these results without, one line per named waiver it applied
+	// (gateway.PlatformPolicy.Check), for the RRP's record of the issuance or release.
+	Waived []string
 }
 
 // KeyFromJWK parses an EC P-256 public JWK (strictly: internal/jwk).
