@@ -32,8 +32,14 @@ release's code; the hardware runs identical to gate 5's, check by check).
   with the microcode floor met; on TDX a TD under debug, profiled or migratable is refused. Each `make demo` run keeps
   the rule it ran under (`platform-rule.json`).
 - **`hwcheck/cmd/snpreport`**: the platform fields of the SEV-SNP reports a hardware run kept, as go-sev-guest reads
-  them: the TCBs, the CPUID, the CHIP_ID and the mitigation vectors, which the Attestation Results do not carry
-  ([docs/results.md](docs/results.md)).
+  them: the TCBs, the CPUID, the CHIP_ID and the mitigation vectors ([docs/results.md](docs/results.md)).
+- **The mitigation vectors reach the RRP.** go-gen-ref patch 0002 annotates LAUNCH_MIT_VECTOR and CURRENT_MIT_VECTOR
+  of a version 5 report (measurement keys 4032 and 4096, by AMD's CoRIM profile's bit-position rule; the profile names
+  none for them), Veraison patch 0006 leaves them out of its reference-value matching, and the platform rule can
+  require bits of them (`required_mitigation_bits`, in both vectors) and of PLATFORM_INFO
+  (`required_platform_info_bits`). The bench's rule requires PLATFORM_INFO bit 5 (BadRAM, AMD-SB-3015) for Milan and
+  Genoa, and none of the mitigation bits yet ([docs/limits.md](docs/limits.md)). `rrpverify service -save-ears DIR`
+  keeps the EAR of each honest check.
 - **`trust/`**: the approved launches, each with its endorsement and the record of the check, and the vendor roots
   and CoRIM the verifiers trust, each with its source; `make trust-check` compares them with their origins.
 - **`packs/` and `scripts/trustzone.py`**: a bank's Targets and policy as data, and one program that writes every
@@ -79,8 +85,8 @@ release's code; the hardware runs identical to gate 5's, check by check).
   plugin at INFO; Veraison's trust service records its plugins' INFO lines at debug level, so at the bench's log
   level (info) they are not in `vts.log`, and a run shows the check by the plugin's build in `code-revs.txt`.
 - `make setup` kept a Veraison built from older sources after a patch changed them. The deployment now records the
-  source tree it was built from, and `make setup` builds it again when the tree changes, keeping its keys,
-  certificates and stores.
+  source trees it was built from, Veraison's and go-gen-ref's, and `make setup` builds it again when either
+  changes, keeping its keys, certificates and stores.
 
 ## Before: the TACRA proof of concept and the bench's first stages
 

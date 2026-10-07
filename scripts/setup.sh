@@ -129,10 +129,13 @@ vdeploy() {
 
 veraison() {
   bench_say "6/10 Veraison ($V)"
-  # The tree of the sources, the pinned upstream with our patches (third_party/fetch.sh checks it). The deployment
-  # records the tree it was built from: when a patch changes it, the programs and plugins are built again.
-  local tree built="$V/built-from-tree"
-  tree="$(git -C "$BENCH_REPO/third_party/veraison-services/src" write-tree)" || fail "Veraison sources"
+  # The trees of the sources it is built from, each the pinned upstream with our patches (third_party/fetch.sh checks
+  # them): Veraison's and go-gen-ref's, which Veraison's SEV-SNP scheme builds in. The deployment records them: when a
+  # patch changes either, the programs and plugins are built again.
+  local vtree gtree tree built="$V/built-from-tree"
+  vtree="$(git -C "$BENCH_REPO/third_party/veraison-services/src" write-tree)" || fail "Veraison sources"
+  gtree="$(git -C "$BENCH_REPO/third_party/go-gen-ref/src" write-tree)" || fail "go-gen-ref sources"
+  tree="veraison-services $vtree go-gen-ref $gtree"
   if [ ! -x "$V/bin/vts-service" ]; then
     echo "  building and deploying (a few minutes; log: $LOG)"
     { vdeploy build && vdeploy deploy && vdeploy init-certs localhost && vdeploy init-clients && vdeploy init-stores; } \
@@ -141,12 +144,13 @@ veraison() {
   elif [ "$(cat "$built" 2>/dev/null)" != "$tree" ]; then
     # deploy replaces the programs, the plugins and the services' configuration (edited again below); the
     # certificates, keys, clients and stores stay. Veraison is stopped first and started again at step 9.
-    echo "  built from other sources: building again from tree ${tree:0:12} (a few minutes); keys and stores kept"
+    echo "  built from other sources: building again (Veraison ${vtree:0:12}, go-gen-ref ${gtree:0:12}; a few minutes);" \
+      "keys and stores kept"
     "$BENCH_REPO/e2e/scripts/veraison-local.sh" stop >>"$LOG" 2>&1 || true
     { vdeploy build && vdeploy deploy; } || fail "Veraison build"
     echo "$tree" >"$built"
   else
-    echo "  deployment present, built from tree ${tree:0:12}"
+    echo "  deployment present, built from Veraison ${vtree:0:12} and go-gen-ref ${gtree:0:12}"
   fi
   # the EAR signing key (and CoSERV's), generated here in the shape Veraison's own tool writes
   mkdir -p "$V/signing"

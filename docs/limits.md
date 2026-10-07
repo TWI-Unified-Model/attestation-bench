@@ -13,17 +13,22 @@ shows nothing about isolation, since anyone with the file can make the stand-in'
 
 - **The platform rule is the bench's, not a bank's.** Every RRP checks what the Attestation Results report about the
   platform ([../trust/README.md](../trust/README.md)): on SEV-SNP the product line, the minimum TCB from AMD's
-  bulletins and SMT only with the microcode floor met; on TDX a TD under debug, profiled or migratable is refused. A
+  bulletins, the BadRAM bit of PLATFORM_INFO and SMT only with the microcode floor met; on TDX a TD under debug,
+  profiled or migratable is refused. A
   bank would be stricter: the bench names no machine, since AWS's VLEK-signed reports carry no CHIP_ID, and it admits
   every product line it has floors for, EPYC Milan among them. Its floors are those of the bulletins read on
   7 October 2026: a new bulletin needs someone to raise them.
-- **A TCB floor is not every mitigation.** For EPYC Milan, AMD-SB-3034 gives the attestation value of the fix for
-  CVE-2025-54510 as TCB[SNP] 0x1D together with mitigation bit 4; AMD-SB-3020 names bit 1 for its own. The bits are in
-  the report's mitigation vector (report version 5), which Veraison's Attestation Results do not carry, so no RRP
-  rule can require them. The reports show them: no SEV-SNP host the bench has met sets bit 4 (0x10), though every one
-  has TCB[SNP] 0x1D or above; Google Cloud's vector was 0xb in every run, AWS's 0xf, 0x10f or 0xfef, from 28 September
-  to 7 October 2026 (the reports under `hwcheck/evidence/*-sev-snp/`, read by `hwcheck/cmd/snpreport`:
-  [results.md](results.md)). By AMD's value none of them attests that fix, and the bench admitted them all.
+- **A TCB floor is not every mitigation, and the bench does not yet require AMD's mitigation bits.** For EPYC Milan,
+  AMD-SB-3034 gives the attestation value of the fix for CVE-2025-54510 as TCB[SNP] 0x1D together with mitigation
+  bit 4; AMD-SB-3020 names bit 1 for its own. The bits are in the report's mitigation vectors (report version 5). The
+  Attestation Results carry both vectors (our go-gen-ref patch 0002), and the rule can require bits
+  (`required_mitigation_bits`), but the bench's rule requires none of these yet: no SEV-SNP host the bench has met sets
+  bit 4 (0x10), though every one has TCB[SNP] 0x1D or above. Google Cloud's vector was 0xb in every run, AWS's 0xf,
+  0x10f or 0xfef, from 28 September to 7 October 2026 (the reports under `hwcheck/evidence/*-sev-snp/`, read by
+  `hwcheck/cmd/snpreport`: [results.md](results.md)). By AMD's value none of them attests that fix. Under a rule that
+  asks for AMD's bits, every one is refused, naming bit 4 and its bulletin (tested on the real results of both clouds:
+  `TestMitigationAndPlatformInfoBits`, `rrp/internal/gateway`). The rule does require PLATFORM_INFO bit 5, the
+  evidence of the BadRAM fix (AMD-SB-3015), which every host sets.
 - **No hardware run shows a debuggable SEV-SNP guest refused.** Veraison, with our patch 0005, does not affirm a
   guest whose policy lets the hypervisor debug it or binds it to a migration agent, and it checks the AMD intermediate
   that signed the report's certificate (the ASK, or the ASVK for a VLEK) against AMD's revocation list. The clouds

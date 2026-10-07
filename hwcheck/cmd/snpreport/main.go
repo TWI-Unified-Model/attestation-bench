@@ -6,8 +6,8 @@
 //
 //	go run ./cmd/snpreport evidence/20261007T050654Z-gcp-sev-snp evidence/20261007T051142Z-aws-sev-snp
 //
-// It answers what the Attestation Results do not carry: Veraison's results hold neither mitigation vector, so a
-// relying party's rule cannot ask for one (docs/limits.md, "A TCB floor is not every mitigation").
+// It reads the reports themselves, all the fields the Attestation Results carry and a few more, for runs made before
+// the results carried the mitigation vectors (docs/limits.md, "A TCB floor is not every mitigation").
 package main
 
 import (

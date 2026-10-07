@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -83,6 +84,7 @@ func newVeraisonService(base, caPath, certPath, keyPath string) (*veraisonServic
 type earResult struct {
 	Status string
 	Nonce  []byte
+	JWS    string // the EAR as received
 }
 
 // verify runs one challenge-response session and returns the verified EAR's status for the scheme's submodule.
@@ -174,7 +176,7 @@ func (v *veraisonService) checkEAR(jws string) (*earResult, error) {
 	if err != nil {
 		return nil, errors.New("EAR eat_nonce is not base64url")
 	}
-	return &earResult{Status: sub.Status, Nonce: nonce}, nil
+	return &earResult{Status: sub.Status, Nonce: nonce, JWS: jws}, nil
 }
 
 // benchHome is the running bench's directory, as in scripts/lib.sh: BENCH_HOME, or TACRA_BENCH, or ~/.attestation-bench.
@@ -214,6 +216,8 @@ func serviceVerify(args []string) {
 	notAfter := fs.Int64("not-after", 0, "unix seconds: run ended (RRP clock)")
 	window := fs.Int64("window", 300, "absent-timestamp acceptance window, seconds")
 	out := fs.String("out", "", "results file (default DIR/rrpverify-service.json)")
+	saveEARs := fs.String("save-ears", "", "a directory to keep, for each honest check that passed, the EAR received "+
+		"(<case>.ear.jws) and the binding value it answers (<case>.bv.hex)")
 	must(fs.Parse(args))
 
 	v, err := newVeraisonService(*base, *caPath, *certPath, *keyPath)
@@ -273,6 +277,11 @@ func serviceVerify(args []string) {
 			}
 			if c.name == "honest" {
 				honestPassed = r.Got == "pass"
+				if honestPassed && *saveEARs != "" {
+					must(os.MkdirAll(*saveEARs, 0o755))
+					must(os.WriteFile(filepath.Join(*saveEARs, m.Case+".ear.jws"), []byte(ear.JWS+"\n"), 0o644))
+					must(os.WriteFile(filepath.Join(*saveEARs, m.Case+".bv.hex"), []byte(hex.EncodeToString(c.bv[:])+"\n"), 0o644))
+				}
 			} else if !honestPassed {
 				r.Got, r.Comment = "inconclusive", "the honest Evidence is refused too, so a refusal here proves nothing"
 			}

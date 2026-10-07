@@ -38,6 +38,14 @@ type SNPPolicy struct {
 	CheckCommittedTCB bool `json:"check_committed_tcb"`
 	// "forbid", or "allow-with-microcode-floor": SMT only when the product's floor names a microcode level, met.
 	SMT string `json:"smt"`
+	// Per product line, the mitigation bits that must be set in both mitigation vectors, the one verified at the
+	// guest's launch and the one verified now (report version 5; AMD names a fix's bit in its bulletin), each bit
+	// with the reason the refusal gives, e.g. {"Milan": {"4": "AMD-SB-3034"}}. A report without the vectors is refused
+	// when its product line requires a bit.
+	RequiredMitigationBits map[string]map[string]string `json:"required_mitigation_bits,omitempty"`
+	// Per product line, the PLATFORM_INFO bits that must be set, each with its reason, e.g.
+	// {"Milan": {"5": "AMD-SB-3015: ALIAS_CHECK_COMPLETE"}}.
+	RequiredPlatformInfoBits map[string]map[string]string `json:"required_platform_info_bits,omitempty"`
 }
 
 // TDXPolicy is the rule for TDX, on the TD ATTRIBUTES the bench's TDX verifier annotates.
@@ -75,6 +83,17 @@ func (p *PlatformPolicy) Validate() error {
 				}
 			}
 		}
+		for name, m := range map[string]map[string]map[string]string{"required_mitigation_bits": s.RequiredMitigationBits,
+			"required_platform_info_bits": s.RequiredPlatformInfoBits} {
+			for product, bits := range m {
+				if _, ok := tcbLayouts[product]; !ok {
+					return fmt.Errorf("platform.sevsnp.%s: unknown product line %q", name, product)
+				}
+				if _, err := bitsOf(bits); err != nil {
+					return fmt.Errorf("platform.sevsnp.%s[%s]: %w", name, product, err)
+				}
+			}
+		}
 		for _, c := range s.AllowedChipIDs {
 			if b, err := hex.DecodeString(c); err != nil || len(b) != 64 {
 				return fmt.Errorf("platform.sevsnp.allowed_chip_ids: %q is not 64 octets of hex", c)
@@ -87,6 +106,20 @@ func (p *PlatformPolicy) Validate() error {
 		}
 	}
 	return nil
+}
+
+// bitsOf returns the bit numbers of a map keyed by them ("0" to "63"), in ascending order.
+func bitsOf(m map[string]string) ([]int, error) {
+	bits := make([]int, 0, len(m))
+	for k := range m {
+		b, err := strconv.Atoi(k)
+		if err != nil || b < 0 || b > 63 || strconv.Itoa(b) != k {
+			return nil, fmt.Errorf("bit %q: a number from 0 to 63", k)
+		}
+		bits = append(bits, b)
+	}
+	slices.Sort(bits)
+	return bits, nil
 }
 
 func parseMask(s string) (uint64, error) {
@@ -172,6 +205,32 @@ func (s *SNPPolicy) check(c *ear.SNPClaims) error {
 		}
 		if s.CheckCommittedTCB && component(c.CommittedTCB, name) < min {
 			return fail("COMMITTED_TCB %s %d is below the floor %d", name, component(c.CommittedTCB, name), min)
+		}
+	}
+	// The mitigations AMD attests by a bit of the mitigation vectors: verified at launch and now
+	if required := s.RequiredMitigationBits[product]; len(required) > 0 {
+		bits, _ := bitsOf(required)
+		if !c.HasMitVectors {
+			return fail("the report carries no mitigation vector (version below 5), and %s requires mitigation bits %v",
+				product, bits)
+		}
+		for _, b := range bits {
+			if c.LaunchMitVector>>b&1 == 0 {
+				return fail("mitigation bit %d (%s) is not set in LAUNCH_MIT_VECTOR %#x", b, required[strconv.Itoa(b)],
+					c.LaunchMitVector)
+			}
+			if c.CurrentMitVector>>b&1 == 0 {
+				return fail("mitigation bit %d (%s) is not set in CURRENT_MIT_VECTOR %#x", b, required[strconv.Itoa(b)],
+					c.CurrentMitVector)
+			}
+		}
+	}
+	if required := s.RequiredPlatformInfoBits[product]; len(required) > 0 {
+		bits, _ := bitsOf(required)
+		for _, b := range bits {
+			if c.PlatformInfo>>b&1 == 0 {
+				return fail("PLATFORM_INFO bit %d (%s) is not set (%#x)", b, required[strconv.Itoa(b)], c.PlatformInfo)
+			}
 		}
 	}
 	// SMT (PLATFORM_INFO.SMT_EN, AMD 56860 Table 28)

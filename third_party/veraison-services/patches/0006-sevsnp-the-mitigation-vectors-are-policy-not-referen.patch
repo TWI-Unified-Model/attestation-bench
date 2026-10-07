@@ -1,0 +1,95 @@
+From 27077bb6f2ef40626d7534773aed671a3e3d324b Mon Sep 17 00:00:00 2001
+From: Serhii Nikolaichuk <nikolaichuk.s.f@gmail.com>
+Date: Wed, 7 Oct 2026 07:15:50 -0500
+Subject: [PATCH] sevsnp: the mitigation vectors are policy, not reference
+ values
+
+go-gen-ref annotates the mitigation vectors of a version 5 report as
+mkeys 4032 (LAUNCH_MIT_VECTOR) and 4096 (CURRENT_MIT_VECTOR). Reference
+values made from a report by the same converter would hold them too, and
+the matching would then demand that every later report carry exactly the
+vectors of that one: a host that verified one more mitigation would no
+longer match. Which mitigations a relying party requires is its policy,
+as with PLATFORM_INFO, so the matching skips both keys. The Attestation
+Results still carry them, in the annotated Evidence.
+---
+ scheme/sevsnp/p0_test.go | 28 ++++++++++++++++++++++++++++
+ scheme/sevsnp/scheme.go  |  8 +++++++-
+ 2 files changed, 35 insertions(+), 1 deletion(-)
+
+diff --git a/scheme/sevsnp/p0_test.go b/scheme/sevsnp/p0_test.go
+index e3dd91e..afed2c5 100644
+--- a/scheme/sevsnp/p0_test.go
++++ b/scheme/sevsnp/p0_test.go
+@@ -28,6 +28,7 @@ import (
+ 	"github.com/veraison/corim/comid"
+ 	"github.com/veraison/corim/corim"
+ 	"github.com/veraison/ear"
++	"github.com/veraison/services/log"
+ 	"github.com/veraison/services/vts/appraisal"
+ )
+ 
+@@ -230,3 +231,30 @@ func TestTrustedIssuerUnknownLeaf(t *testing.T) {
+ 	_, _, err = trustedIssuer(roots, leaf)
+ 	require.ErrorIs(t, err, ErrRevocation)
+ }
++
++// The mitigation vectors are the relying party's policy, not reference values: reference values that hold them (as a
++// CoRIM made from a report by go-gen-ref does) still match Evidence whose vectors differ, or that has none, while a
++// launch value still has to match.
++func TestMatchSkipsMitigationVectors(t *testing.T) {
++	raw := func(k uint64, b []byte) comid.Measurement {
++		m := comid.MustNewUintMeasurement(uint(k))
++		m.SetRawValueBytes(b, nil)
++		return *m
++	}
++	vec := func(v byte) []byte { return []byte{0, 0, 0, 0, 0, 0, 0, v} }
++	ref := map[uint64]comid.Measurement{
++		mKeyLaunchMitVector:  raw(mKeyLaunchMitVector, vec(0x1f)),
++		mKeyCurrentMitVector: raw(mKeyCurrentMitVector, vec(0x1f)),
++	}
++	logger := log.Named("test")
++	require.True(t, tryMatchEvidence(logger, map[uint64]comid.Measurement{
++		mKeyLaunchMitVector:  raw(mKeyLaunchMitVector, vec(0x0b)),
++		mKeyCurrentMitVector: raw(mKeyCurrentMitVector, vec(0x0b)),
++	}, ref), "other vectors")
++	require.True(t, tryMatchEvidence(logger, map[uint64]comid.Measurement{}, ref), "no vectors (report version 3)")
++
++	tcb := comid.MustNewUintMeasurement(uint(mKeyLaunchTcb))
++	tcb.SetSVN(0xde1d000000000004)
++	ref[mKeyLaunchTcb] = *tcb
++	require.False(t, tryMatchEvidence(logger, map[uint64]comid.Measurement{}, ref), "a launch value is still required")
++}
+diff --git a/scheme/sevsnp/scheme.go b/scheme/sevsnp/scheme.go
+index 3cfdfe3..c18b395 100644
+--- a/scheme/sevsnp/scheme.go
++++ b/scheme/sevsnp/scheme.go
+@@ -71,6 +71,8 @@ const (
+ 	mKeyCurrentVersion   = 3330
+ 	mKeyCommittedVersion = 3936
+ 	mKeyLaunchTcb        = 3968
++	mKeyLaunchMitVector  = 4032 // report version 5 (go-gen-ref): LAUNCH_MIT_VECTOR, 0x1F8
++	mKeyCurrentMitVector = 4096 // report version 5 (go-gen-ref): CURRENT_MIT_VECTOR, 0x200
+ )
+ 
+ var Descriptor = handler.SchemeDescriptor{
+@@ -540,6 +542,8 @@ func tryMatchEvidence(
+ 		//     ToDo: It is a good idea to test it anyway, but the Version type only tests for
+ 		//     equality, and this would trigger spurious failures
+ 		// - COMMITTED_TCB is informational, used by the host to advance REPORTED_TCB
++		// - The mitigation vectors say which mitigations the firmware has verified on this platform; which of them
++		//   a relying party requires is its policy, as with PLATFORM_INFO, not a value of the launch
+ 		if key == mKeyPolicy ||
+ 			key == mKeyCurrentTcb ||
+ 			key == mKeyPlatformInfo ||
+@@ -549,7 +553,9 @@ func tryMatchEvidence(
+ 			key == mKeyChipID ||
+ 			key == mKeyCommittedTcb ||
+ 			key == mKeyCurrentVersion ||
+-			key == mKeyCommittedVersion {
++			key == mKeyCommittedVersion ||
++			key == mKeyLaunchMitVector ||
++			key == mKeyCurrentMitVector {
+ 			continue
+ 		}
+ 

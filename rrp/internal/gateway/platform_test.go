@@ -223,3 +223,94 @@ func TestBenchPlatformRule(t *testing.T) {
 		}
 	}
 }
+
+// realV5Result verifies an EAR the bench's Veraison issued on 7 October 2026 with the mitigation vectors annotated
+// (../ear/testdata, "gcp" or "aws": the enroll-present-nonce case of the hardware runs 20261007T055700Z-gcp-sev-snp and
+// 20261007T060138Z-aws-sev-snp, replayed with rrpverify service -save-ears).
+func realV5Result(t *testing.T, platform string) *ear.Result {
+	t.Helper()
+	jwk, _ := os.ReadFile("../ear/testdata/veraison-ear-key-20261007.jwk")
+	key, err := ear.KeyFromJWK(jwk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	jwsB, _ := os.ReadFile("../ear/testdata/ear-" + platform + "-sevsnp-v5.jws")
+	bvHex, _ := os.ReadFile("../ear/testdata/binding-value-" + platform + "-v5.hex")
+	bv, _ := hex.DecodeString(strings.TrimSpace(string(bvHex)))
+	jws := strings.TrimSpace(string(jwsB))
+	var claims struct {
+		IAT int64 `json:"iat"`
+	}
+	payload, _ := base64.RawURLEncoding.DecodeString(strings.Split(jws, ".")[1])
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		t.Fatal(err)
+	}
+	v := &ear.Verifier{Keys: []ear.TrustedKey{{Key: key, Submods: []string{"SEVSNP"}}}, MaxAge: 2 * time.Minute,
+		Skew: 5 * time.Second, Now: func() time.Time { return time.Unix(claims.IAT, 0).Add(10 * time.Second) }}
+	res, err := v.Verify(jws, bv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.SNP == nil || !res.SNP.HasMitVectors {
+		t.Fatalf("%s: no mitigation vectors: %+v %v", platform, res.SNP, res.SNPErr)
+	}
+	return res
+}
+
+// The bits AMD attests a fix by, on the real results of both clouds: AMD-SB-3020 names bit 1 for Milan, which both
+// hosts set; AMD-SB-3034 names bit 4, which neither sets, so the rule that asks for it refuses both and names the
+// bit, its bulletin and the vector. A report without vectors is refused when a bit is required; a bit set at launch
+// but not now is refused for the current vector. PLATFORM_INFO bit 5 (BadRAM, AMD-SB-3015) is set on both hosts.
+func TestMitigationAndPlatformInfoBits(t *testing.T) {
+	sb3020 := map[string]string{"1": "AMD-SB-3020"}
+	amd := map[string]string{"1": "AMD-SB-3020", "4": "AMD-SB-3034"}
+	rule := func(mit, pinfo map[string]string) *PlatformPolicy {
+		p := benchRule(t)
+		p.SEVSNP.RequiredMitigationBits = map[string]map[string]string{"Milan": mit}
+		p.SEVSNP.RequiredPlatformInfoBits = map[string]map[string]string{"Milan": pinfo}
+		if err := p.Validate(); err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	badram := map[string]string{"5": "AMD-SB-3015: ALIAS_CHECK_COMPLETE"}
+	for _, c := range []struct {
+		platform string
+		vector   string
+	}{{"gcp", "0xb"}, {"aws", "0x10f"}} {
+		res := realV5Result(t, c.platform)
+		if err := rule(sb3020, badram).Check(res); err != nil {
+			t.Errorf("%s, bit 1 and BadRAM: %v", c.platform, err)
+		}
+		want := "mitigation bit 4 (AMD-SB-3034) is not set in LAUNCH_MIT_VECTOR " + c.vector
+		if err := rule(amd, badram).Check(res); err == nil || !errors.Is(err, ErrPlatform) || !strings.Contains(err.Error(), want) {
+			t.Errorf("%s, AMD's bits: got %v, want %q", c.platform, err, want)
+		}
+		if err := rule(nil, map[string]string{"4": "a bit no host sets"}).Check(res); err == nil ||
+			!strings.Contains(err.Error(), "PLATFORM_INFO bit 4 (a bit no host sets) is not set") {
+			t.Errorf("%s, PLATFORM_INFO bit 4: %v", c.platform, err)
+		}
+	}
+	gcp := *realV5Result(t, "gcp").SNP
+	gcp.LaunchMitVector |= 1 << 4
+	if err := rule(amd, nil).Check(&ear.Result{Submod: "SEVSNP", SNP: &gcp}); err == nil ||
+		!strings.Contains(err.Error(), "mitigation bit 4 (AMD-SB-3034) is not set in CURRENT_MIT_VECTOR 0xb") {
+		t.Errorf("bit 4 at launch only: %v", err)
+	}
+	gcp.CurrentMitVector |= 1 << 4
+	if err := rule(amd, nil).Check(&ear.Result{Submod: "SEVSNP", SNP: &gcp}); err != nil {
+		t.Errorf("bit 4 at launch and now: %v", err)
+	}
+	if err := rule(sb3020, nil).Check(realResult(t)); err == nil || !strings.Contains(err.Error(), "carries no mitigation vector") {
+		t.Errorf("the EAR of 28 September, without vectors: %v", err)
+	}
+	for _, bad := range []*PlatformPolicy{
+		{SEVSNP: &SNPPolicy{SMT: "forbid", RequiredMitigationBits: map[string]map[string]string{"Rome": sb3020}}},
+		{SEVSNP: &SNPPolicy{SMT: "forbid", RequiredMitigationBits: map[string]map[string]string{"Milan": {"64": "x"}}}},
+		{SEVSNP: &SNPPolicy{SMT: "forbid", RequiredPlatformInfoBits: map[string]map[string]string{"Milan": {"05": "x"}}}},
+	} {
+		if err := bad.Validate(); err == nil {
+			t.Errorf("accepted %+v", bad.SEVSNP)
+		}
+	}
+}

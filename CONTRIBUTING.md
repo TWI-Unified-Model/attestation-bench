@@ -78,7 +78,8 @@ third_party/fetch.sh veraison-services
 ```
 
 `make setup` then builds the bench's Veraison again from the new tree, keeping its keys, certificates and stores
-(the deployment records the tree it was built from); a Demo Bank builds its own from the tree at each `make bank-up`.
+(the deployment records the trees it was built from, Veraison's and go-gen-ref's); a Demo Bank builds its own from
+the trees at each `make bank-up`.
 
 ## The TACRA proof of concept's code
 

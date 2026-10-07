@@ -19,5 +19,5 @@ regexes = ['''"vault_signing_key_pkcs8"''']
 paths = ['''(^|/)bundle/testdata/(ref|go)-hpke-base-signed\.json$''']
 
 [[allowlists]]
-description = "a test fixture: an attestation result (EAR) from a GCP SEV-SNP run, a signed token, not a credential"
-paths = ['''(^|/)rrp/internal/ear/testdata/ear-gcp-sevsnp\.jws$''']
+description = "test fixtures: attestation results (EARs) from GCP and AWS SEV-SNP runs, signed tokens, not credentials"
+paths = ['''(^|/)rrp/internal/ear/testdata/ear-(gcp|aws)-sevsnp(-v5)?\.jws$''']

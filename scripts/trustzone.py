@@ -11,8 +11,8 @@ configuration with this program, so the two cannot drift apart.
 
 The pack says what the bank issues: its Targets, the RRPs that serve them, the workload's names and the EAR policy
 (packs/README.md). trust/approved-launches.json says which launches the bank admits, and trust/platform-policy.json
-which platforms: the product lines, the minimum TCB and SMT on SEV-SNP, the TD attributes on TDX, which every RRP
-checks in the Attestation Results besides the verifier's "affirming". The options say where the trust zone lives and
+which platforms: the product lines, the minimum TCB, the PLATFORM_INFO and mitigation bits and SMT on SEV-SNP, the
+TD attributes on TDX, which every RRP checks in the Attestation Results besides the verifier's "affirming". The options say where the trust zone lives and
 how it runs.
 
 Under --home it writes:

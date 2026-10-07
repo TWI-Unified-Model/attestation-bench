@@ -20,8 +20,9 @@ const (
 
 // SNPClaims are the fields of an SEV-SNP report that a Veraison verifier annotates in its EAR: go-gen-ref's parser
 // writes POLICY (MKey 2) and PLATFORM_INFO (7) as big-endian raw values, REPORTED_TCB (647) and COMMITTED_TCB (3329)
-// as SVNs, CPUID family, model and stepping (648-650) for report version 3 and later, and CHIP_ID (3328) when it is
-// not zero.
+// as SVNs, CPUID family, model and stepping (648-650) for report version 3 and later, CHIP_ID (3328) when it is not
+// zero, and, with the bench's patch to go-gen-ref, the mitigation vectors LAUNCH_MIT_VECTOR (4032) and
+// CURRENT_MIT_VECTOR (4096) as big-endian raw values for report version 5 and later.
 type SNPClaims struct {
 	Class        string
 	Policy       uint64
@@ -33,6 +34,11 @@ type SNPClaims struct {
 	Model        byte
 	Stepping     byte
 	ChipID       []byte
+	// The mitigations the firmware had verified at the guest's launch, and has verified now; HasMitVectors is false
+	// for a report before version 5, or a verifier that does not annotate them.
+	LaunchMitVector  uint64
+	CurrentMitVector uint64
+	HasMitVectors    bool
 }
 
 func snpClaims(raw json.RawMessage) (*SNPClaims, error) {
@@ -73,15 +79,20 @@ func snpClaims(raw json.RawMessage) (*SNPClaims, error) {
 			continue
 		}
 		switch k {
-		case 2, 7:
+		case 2, 7, 4032, 4096:
 			v, err := rawUint(m, 8)
 			if err != nil {
 				return nil, fmt.Errorf("ear: MKey %d: %w", k, err)
 			}
-			if k == 2 {
+			switch k {
+			case 2:
 				out.Policy = v
-			} else {
+			case 7:
 				out.PlatformInfo = v
+			case 4032:
+				out.LaunchMitVector = v
+			default:
+				out.CurrentMitVector = v
 			}
 		case 647, 3329:
 			v, err := svnUint(m)
@@ -124,6 +135,7 @@ func snpClaims(raw json.RawMessage) (*SNPClaims, error) {
 		}
 	}
 	out.HasCPUID = seen[648] && seen[649]
+	out.HasMitVectors = seen[4032] && seen[4096]
 	return out, nil
 }
 

@@ -1,0 +1,152 @@
+From b0d84e85c8f225c94d8a00f07f9ffe7dd3d1e18f Mon Sep 17 00:00:00 2001
+From: Serhii Nikolaichuk <nikolaichuk.s.f@gmail.com>
+Date: Wed, 7 Oct 2026 07:14:24 -0500
+Subject: [PATCH 2/2] sevsnp: the mitigation vectors of report version 5
+
+Report version 5 (SEV-SNP Firmware ABI 1.58) carries LAUNCH_MIT_VECTOR
+(0x1F8) and CURRENT_MIT_VECTOR (0x200): the mitigations the firmware has
+verified, at the guest's launch and now. A relying party needs them to
+tell whether a fix AMD attests by a mitigation bit is in place
+(AMD-SB-3034 gives Milan's as TCB[SNP] 0x1D with mitigation bit 4), and
+the CoMID did not carry them.
+
+They are added, for version 5 and later, as mkeys 4032 and 4096,
+big-endian raw values like POLICY and PLATFORM_INFO. The AMD SEV-SNP
+CoRIM profile (draft-deeglaze-amd-sev-snp-corim-profile-02) predates
+version 5 and names no mkey for them; these follow its rule for a field
+after reserved octets, the field's offset in bits. go-sev-guest moves to
+v0.15.0, the release Veraison's build uses; v0.12.1 has no field for the
+vectors.
+---
+ cmd/sevsnp/parser.go      | 20 +++++++++++++
+ cmd/sevsnp/parser_test.go | 59 +++++++++++++++++++++++++++++++++++++++
+ go.mod                    |  2 +-
+ go.sum                    |  4 +--
+ 4 files changed, 82 insertions(+), 3 deletions(-)
+
+diff --git a/cmd/sevsnp/parser.go b/cmd/sevsnp/parser.go
+index 5f8a6cc..a4fd38f 100644
+--- a/cmd/sevsnp/parser.go
++++ b/cmd/sevsnp/parser.go
+@@ -243,6 +243,26 @@ func ReportToComid(reportProto *sevsnp.Report, cpu int) (*comid.Comid, error) {
+ 	m3968.SetSVN(reportProto.GetLaunchTcb())
+ 	refVal.Measurements.Add(m3968)
+ 
++	// The mitigation vectors of report version 5 (SEV-SNP Firmware ABI 1.58): the mitigations the firmware has
++	// verified, at the guest's launch and now. Big-endian raw values, as POLICY and PLATFORM_INFO. The AMD SEV-SNP
++	// CoRIM profile (draft-deeglaze-amd-sev-snp-corim-profile-02) predates version 5 and names no mkey for them; they
++	// take its rule for a field after reserved octets, the field's offset in bits: 0x1F8 and 0x200.
++	if reportVersion >= 5 {
++		/* MKey 4032: LAUNCH_MIT_VECTOR */
++		m4032 := comid.MustNewUintMeasurement(uint(4032))
++		launchMit := make([]byte, 8)
++		binary.BigEndian.PutUint64(launchMit, reportProto.GetLaunchMitVector())
++		m4032.SetRawValueBytes(launchMit, nil)
++		refVal.Measurements.Add(m4032)
++
++		/* MKey 4096: CURRENT_MIT_VECTOR */
++		m4096 := comid.MustNewUintMeasurement(uint(4096))
++		currentMit := make([]byte, 8)
++		binary.BigEndian.PutUint64(currentMit, reportProto.GetCurrentMitVector())
++		m4096.SetRawValueBytes(currentMit, nil)
++		refVal.Measurements.Add(m4096)
++	}
++
+ 	refValComid.Triples.AddReferenceValue(&refVal)
+ 
+ 	err = refValComid.Valid()
+diff --git a/cmd/sevsnp/parser_test.go b/cmd/sevsnp/parser_test.go
+index 74120d1..e6c8fb1 100644
+--- a/cmd/sevsnp/parser_test.go
++++ b/cmd/sevsnp/parser_test.go
+@@ -47,3 +47,62 @@ func TestReportToComidSignerInfo(t *testing.T) {
+ 		})
+ 	}
+ }
++
++// Report version 5 carries the mitigation vectors; the CoMID holds them as mkeys 4032 (LAUNCH_MIT_VECTOR) and 4096
++// (CURRENT_MIT_VECTOR), big-endian raw values. An earlier version has neither. The values are those an AWS SEV-SNP
++// host reported on 7 October 2026 (0x10f) and a Google Cloud one (0xb).
++func TestReportToComidMitigationVectors(t *testing.T) {
++	raw := func(c interface {
++		GetBytes() ([]byte, error)
++	}) []byte {
++		b, err := c.GetBytes()
++		if err != nil {
++			t.Fatal(err)
++		}
++		return b
++	}
++	for _, tc := range []struct {
++		name            string
++		version         uint32
++		launch, current uint64
++		want            map[uint64][]byte // nil: neither mkey present
++	}{
++		{"version 5, AWS", 5, 0x10f, 0x10f, map[uint64][]byte{
++			4032: {0, 0, 0, 0, 0, 0, 0x01, 0x0f}, 4096: {0, 0, 0, 0, 0, 0, 0x01, 0x0f}}},
++		{"version 5, GCP, launch and current differ", 5, 0xb, 0x1b, map[uint64][]byte{
++			4032: {0, 0, 0, 0, 0, 0, 0, 0x0b}, 4096: {0, 0, 0, 0, 0, 0, 0, 0x1b}}},
++		{"version 3", 3, 0, 0, nil},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			report := &sevsnp.Report{
++				Version:          tc.version,
++				Measurement:      bytes.Repeat([]byte{0x11}, 48),
++				LaunchMitVector:  tc.launch,
++				CurrentMitVector: tc.current,
++			}
++			c, err := ReportToComid(report, 0)
++			if err != nil {
++				t.Fatal(err)
++			}
++			got := map[uint64][]byte{}
++			for _, m := range c.Triples.ReferenceValues.Values[0].Measurements.Values {
++				k, err := m.Key.GetKeyUint()
++				if err != nil || (k != 4032 && k != 4096) {
++					continue
++				}
++				got[k] = raw(m.Val.RawValue)
++			}
++			if tc.want == nil {
++				if len(got) != 0 {
++					t.Fatalf("version %d: mitigation mkeys %v, want none", tc.version, got)
++				}
++				return
++			}
++			for k, w := range tc.want {
++				if !bytes.Equal(got[k], w) {
++					t.Errorf("mkey %d: %x, want %x", k, got[k], w)
++				}
++			}
++		})
++	}
++}
+diff --git a/go.mod b/go.mod
+index 0c1747d..edc7a85 100644
+--- a/go.mod
++++ b/go.mod
+@@ -1,7 +1,7 @@
+ module github.com/jraman567/go-gen-ref
+ 
+ require (
+-	github.com/google/go-sev-guest v0.12.1
++	github.com/google/go-sev-guest v0.15.0
+ 	github.com/google/uuid v1.6.0
+ 	github.com/spf13/afero v1.12.0
+ 	github.com/spf13/cobra v1.8.1
+diff --git a/go.sum b/go.sum
+index 3da69ab..956fb1a 100644
+--- a/go.sum
++++ b/go.sum
+@@ -19,8 +19,8 @@ github.com/goccy/go-json v0.10.4 h1:JSwxQzIqKfmFX1swYPpUThQZp/Ka4wzJdK0LWVytLPM=
+ github.com/goccy/go-json v0.10.4/go.mod h1:oq7eo15ShAhp70Anwd5lgX2pLfOS3QCiwU/PULtXL6M=
+ github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
+ github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
+-github.com/google/go-sev-guest v0.12.1 h1:H4rFYnPIn8HtqEsNTmh56Zxcf9BI9n48ZSYCnpYLYvc=
+-github.com/google/go-sev-guest v0.12.1/go.mod h1:SK9vW+uyfuzYdVN0m8BShL3OQCtXZe/JPF7ZkpD3760=
++github.com/google/go-sev-guest v0.15.0 h1:Xzfut5mbhcVb7TyPiyc5PolLUzdai7VH3QpyvXwcW9Y=
++github.com/google/go-sev-guest v0.15.0/go.mod h1:SK9vW+uyfuzYdVN0m8BShL3OQCtXZe/JPF7ZkpD3760=
+ github.com/google/logger v1.1.1 h1:+6Z2geNxc9G+4D4oDO9njjjn2d0wN5d7uOo0vOIW1NQ=
+ github.com/google/logger v1.1.1/go.mod h1:BkeJZ+1FhQ+/d087r4dzojEg1u2ZX+ZqG1jTUrLM+zQ=
+ github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=

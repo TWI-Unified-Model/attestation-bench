@@ -18,7 +18,7 @@ SHA-256, as `trust/check.sh` prints them:
 22e62f8d2c21a156470145fc75f7b5a377cb053ced3e97f0bd3f8d8ca5941ce6  amd-kds-milan-cert_chain.pem
 77c4da9cec5c9213a8b5a8f9522cbafe7dc8c3cd762172dcc3d421040042166d  veraison-corim-milan.cbor
 e876bc6978bf4f3da445f98a0a82363c8c0bae5a1fc033c6df65846a6cb0f18c  GCE-cc-tcb-root_1.crt
-da3f78c271bc6ae8c0f4c46615d7bb8c3b5dfee1fd356939b0c17785cdaa3160  platform-policy.json
+45cca58880e3adf0ca0c036b5c5b3b09f8d9816a28dd22155043d89a510ff455  platform-policy.json
 ```
 
 ## Where the approved launches come from
@@ -43,7 +43,8 @@ A new Google Cloud VM may get either TDX firmware build; both were met on 06.10.
 | A named machine | not required | AWS signs its reports with its VLEK, which names no machine | required, from its own list of CHIP_IDs |
 | Minimum TCB, on REPORTED_TCB and COMMITTED_TCB | Milan: bootloader 4, SNP 0x1D, microcode 0xDE; Genoa: SNP 0x1C, microcode 0x56; Turin: SNP 0x5, microcode 0x51 | the highest values AMD-SB-3027 and AMD-SB-3034 print for each line; Google's GCP-2025-007 for Milan's bootloader | the same, kept current |
 | SMT | only with the microcode floor met | every host the bench has run on has SMT on | the same, or forbidden |
-| SEV mitigation vector bits | not checked | Veraison's Attestation Results do not carry the mitigation vector; no host the bench has met sets bit 4, which AMD-SB-3034 names for Milan ([../docs/limits.md](../docs/limits.md)) | the bits AMD-SB-3020 and AMD-SB-3034 name, once the results carry them |
+| SEV mitigation vector bits | carried in the results (go-gen-ref patch 0002), none required yet | no host the bench has met sets bit 4, which AMD-SB-3034 names for Milan: requiring it refuses every SEV-SNP run ([../docs/limits.md](../docs/limits.md)) | the bits AMD-SB-3020 and AMD-SB-3034 name, in both vectors |
+| PLATFORM_INFO bits | Milan and Genoa: bit 5, ALIAS_CHECK_COMPLETE | AMD-SB-3015's attestation evidence of the BadRAM fix; every host sets it | the same |
 | TDX | a TD under debug (bits 3:0), profiled (bits 15:4) or migratable (bit 29) is refused | what the bench's TDX verifier refuses by default, checked again by the RRP | the same |
 
 The hosts the hardware runs met on 7 October 2026 sit exactly at the Milan floors: REPORTED_TCB bootloader 4, TEE 0,
