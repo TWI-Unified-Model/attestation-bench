@@ -110,7 +110,8 @@ mountpoint -q /sys/kernel/config || sudo mount -t configfs none /sys/kernel/conf
 ls -ld /sys/kernel/config/tsm/report; uname -r' 2>>"$OUT/ssh.stderr" | tee "$OUT/provision.txt"
 
 echo "== copy the workload, the CAS Client and the public configuration"
-scp "${SSHO[@]}" "$BIN/e2e-attester" "$BIN/caapi-est" "$BIN/e2e-attester.json" "$BIN/bench-tls-root.crt" "ubuntu@$IP:~/" >/dev/null 2>>"$OUT/ssh.stderr"
+bench_retry "$OUT/ssh.stderr" scp "${SSHO[@]}" "$BIN/e2e-attester" "$BIN/caapi-est" "$BIN/e2e-attester.json" \
+  "$BIN/bench-tls-root.crt" "ubuntu@$IP:~/" >/dev/null
 
 echo "== reverse tunnel to the bench (EST server 18443, mTLS service 19443)"
 ssh "${SSHO[@]}" -N -o ExitOnForwardFailure=yes -R 18443:127.0.0.1:18443 -R 19443:127.0.0.1:19443 "ubuntu@$IP" 2>>"$OUT/ssh.stderr" &
@@ -130,7 +131,8 @@ sudo chown $(id -u):$(id -g) ~/results.json; uname -a > ~/kernel.txt
 kill "$(cat ~/caapi-est.pid)" || true' 2>>"$OUT/ssh.stderr" | tee "$OUT/e2e-attester-stdout.txt"
 NA="$(date -u +%s)"
 echo "$NB $NA" > "$OUT/run-window.txt"
-scp "${SSHO[@]}" "ubuntu@$IP:~/results.json" "ubuntu@$IP:~/caapi-est.log" "ubuntu@$IP:~/kernel.txt" "$OUT/" >/dev/null 2>>"$OUT/ssh.stderr"
+bench_retry "$OUT/ssh.stderr" scp "${SSHO[@]}" "ubuntu@$IP:~/results.json" "ubuntu@$IP:~/caapi-est.log" \
+  "ubuntu@$IP:~/kernel.txt" "$OUT/" >/dev/null
 trap 'rm -rf "$BIN"' EXIT
 cleanup
 

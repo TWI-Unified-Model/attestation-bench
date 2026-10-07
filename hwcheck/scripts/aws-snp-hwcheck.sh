@@ -110,7 +110,7 @@ uname -r
 ' | tee "$OUT/provision.txt"
 
 echo "== copy hwrun and the handles"
-"${SCP[@]}" "$BIN/hwrun" "$OUT/handles.json" "$SSH_USER@$IP:~/" >/dev/null
+bench_retry "$OUT/run-ssh.stderr" "${SCP[@]}" "$BIN/hwrun" "$OUT/handles.json" "$SSH_USER@$IP:~/" >/dev/null
 
 echo "== run hwrun as root"
 NB="$(date -u +%s)"
@@ -124,7 +124,7 @@ NA="$(date -u +%s)"
 echo "$NB $NA" > "$OUT/rrp-clock-window.txt"
 
 echo "== copy the output back"
-"${SCP[@]}" -r "$SSH_USER@$IP:~/hwrun-out/*" "$OUT/" >/dev/null
+bench_retry "$OUT/run-ssh.stderr" "${SCP[@]}" -r "$SSH_USER@$IP:~/hwrun-out/*" "$OUT/" >/dev/null
 trap 'rm -rf "$BIN"' EXIT
 cleanup
 

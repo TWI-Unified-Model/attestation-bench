@@ -104,7 +104,7 @@ ls -ld /sys/kernel/config/tsm/report; uname -r' 2>>"$OUT/ssh.stderr" | tee "$OUT
 echo "== copy the workload, the CAS Client and the public configuration"
 GUEST_FILES=("$BIN/e2e-attester" "$BIN/e2e-attester.json" "$BIN/bench-tls-root.crt")
 [ -n "$CAS_OUTSIDE" ] || GUEST_FILES+=("$BIN/caapi-est")
-gcloud compute scp "${GUEST_FILES[@]}" "$NAME:~/" --project="$PROJECT" --zone="$ZONE" >/dev/null 2>>"$OUT/ssh.stderr"
+bench_retry "$OUT/ssh.stderr" gcloud compute scp "${GUEST_FILES[@]}" "$NAME:~/" --project="$PROJECT" --zone="$ZONE" >/dev/null
 if [ -n "$CAS_OUTSIDE" ]; then
   echo "== the CAS Client outside the guest, on this machine (127.0.0.1:50061, through the tunnel to the guest)"
   "$BIN/caapi-est-local" -listen 127.0.0.1:50061 -est localhost:18443 -anchor "$B/tls/root.crt" > "$OUT/caapi-est-outside.log" 2>&1 &
@@ -141,8 +141,8 @@ sudo chown $(id -u):$(id -g) ~/results.json; uname -a > ~/kernel.txt
 [ "$(cat ~/caapi-est.pid)" = 0 ] || kill "$(cat ~/caapi-est.pid)" || true' 2>>"$OUT/ssh.stderr" | tee "$OUT/e2e-attester-stdout.txt"
 NA="$(date -u +%s)"
 echo "$NB $NA" > "$OUT/run-window.txt"
-gcloud compute scp "$NAME:~/results.json" "$NAME:~/caapi-est.log" "$NAME:~/kernel.txt" "$NAME:~/machine-type.txt" "$OUT/" \
-  --project="$PROJECT" --zone="$ZONE" >/dev/null 2>>"$OUT/ssh.stderr"
+bench_retry "$OUT/ssh.stderr" gcloud compute scp "$NAME:~/results.json" "$NAME:~/caapi-est.log" "$NAME:~/kernel.txt" \
+  "$NAME:~/machine-type.txt" "$OUT/" --project="$PROJECT" --zone="$ZONE" >/dev/null
 trap 'rm -rf "$BIN"' EXIT
 cleanup
 

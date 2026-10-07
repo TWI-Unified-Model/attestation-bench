@@ -43,6 +43,20 @@ bench_say() { printf '== %s\n' "$*"; }
 bench_die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
 # sha256 FILE: the hex digest, with whichever tool the system has
+# bench_retry LOG COMMAND...: a copy to or from a VM, tried up to three times, 10 s apart. Such a copy fails now and
+# then for a reason of the cloud's (a dropped connection, an SSH key the VM has not taken yet); each failure goes to
+# LOG with its time, so the run directory shows it. Returns the last try's status.
+bench_retry() {
+  local log=$1 rc=0 try
+  shift
+  for try in 1 2 3; do
+    if "$@" 2>>"$log"; then return 0; else rc=$?; fi
+    echo "$(bench_now) try $try of 3 failed, exit $rc: $1" >>"$log"
+    [ "$try" = 3 ] || sleep 10
+  done
+  return "$rc"
+}
+
 # The time now, UTC, as the run records write it (vm-deleted.txt: when the VM was found gone).
 bench_now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 

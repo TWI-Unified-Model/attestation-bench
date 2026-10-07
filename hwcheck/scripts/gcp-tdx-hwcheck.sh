@@ -66,7 +66,8 @@ uname -r
 '
 
 echo "== copy hwrun and the handles"
-gcloud compute scp "$BIN/hwrun" "$OUT/handles.json" "$NAME:~/" --project="$PROJECT" --zone="$ZONE" >/dev/null
+bench_retry "$OUT/run-ssh.stderr" gcloud compute scp "$BIN/hwrun" "$OUT/handles.json" "$NAME:~/" --project="$PROJECT" \
+  --zone="$ZONE" >/dev/null
 
 echo "== run hwrun as root"
 NB="$(date -u +%s)"
@@ -80,7 +81,8 @@ NA="$(date -u +%s)"
 echo "$NB $NA" > "$OUT/rrp-clock-window.txt"
 
 echo "== copy the output back"
-gcloud compute scp --recurse "$NAME:~/hwrun-out/*" "$OUT/" --project="$PROJECT" --zone="$ZONE" >/dev/null
+bench_retry "$OUT/run-ssh.stderr" gcloud compute scp --recurse "$NAME:~/hwrun-out/*" "$OUT/" --project="$PROJECT" \
+  --zone="$ZONE" >/dev/null
 trap 'rm -rf "$BIN"' EXIT
 cleanup
 

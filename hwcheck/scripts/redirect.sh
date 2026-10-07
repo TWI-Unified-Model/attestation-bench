@@ -84,8 +84,8 @@ elif [ "${CLOUD#gcp}" != "$CLOUD" ]; then
     [ -z "$left" ] && echo "$NAME is gone at $(bench_now)" | tee "$OUT/vm-deleted.txt" || echo "!! $NAME still exists"
   }
   guest_ssh() { "${GSSH[@]}" "$1" ; }
-  guest_in()  { gcloud compute scp "$@" "$NAME:~/" --project="$GCP_PROJECT" --zone="$ZONE" >/dev/null ; }
-  guest_out() { gcloud compute scp --recurse "$NAME:~/$1" "$2" --project="$GCP_PROJECT" --zone="$ZONE" >/dev/null ; }
+  guest_in()  { bench_retry "$OUT/run-ssh.stderr" gcloud compute scp "$@" "$NAME:~/" --project="$GCP_PROJECT" --zone="$ZONE" >/dev/null ; }
+  guest_out() { bench_retry "$OUT/run-ssh.stderr" gcloud compute scp --recurse "$NAME:~/$1" "$2" --project="$GCP_PROJECT" --zone="$ZONE" >/dev/null ; }
   wait_ssh()  { for _ in $(seq 1 30); do guest_ssh true >/dev/null 2>&1 && return 0; sleep 10; done; return 1; }
 else
   vm_create() {
@@ -115,8 +115,8 @@ else
     aws ec2 delete-key-pair --region "$REGION" --key-name "$NAME" >/dev/null 2>&1 && echo "key pair deleted" | tee -a "$OUT/vm-deleted.txt"
   }
   guest_ssh() { "${SSHC[@]}" "$1" ; }
-  guest_in()  { "${SCPC[@]}" "$@" "ubuntu@$IP:~/" >/dev/null ; }
-  guest_out() { "${SCPC[@]}" -r "ubuntu@$IP:~/$1" "$2" >/dev/null ; }
+  guest_in()  { bench_retry "$OUT/run-ssh.stderr" "${SCPC[@]}" "$@" "ubuntu@$IP:~/" >/dev/null ; }
+  guest_out() { bench_retry "$OUT/run-ssh.stderr" "${SCPC[@]}" -r "ubuntu@$IP:~/$1" "$2" >/dev/null ; }
   wait_ssh()  { for _ in $(seq 1 40); do guest_ssh true >/dev/null 2>&1 && return 0; sleep 10; done; return 1; }
 fi
 trap 'vm_delete; restore_bench; rm -rf "$BIN"' EXIT

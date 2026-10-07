@@ -47,7 +47,7 @@ pack_hint() { python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["w
 need_pack() { [ -f "$PACK" ] || bench_die "no bank $BANK: packs/$BANK/pack.json does not exist (make bank-new NAME=$BANK)"; }
 need_bank() { [ -n "${OUT:-}" ] && [ -n "${TRUST:-}" ] || bench_die "no Demo Bank is up (no state in $ST): make bank-up"; }
 gssh() { local vm="$1"; shift; gcloud compute ssh "$vm" --project="$PROJECT" --zone="$ZONE" --command="$*" 2>>"$OUT/ssh.stderr"; }
-gscp() { gcloud compute scp --project="$PROJECT" --zone="$ZONE" "$@" >/dev/null 2>>"$OUT/ssh.stderr"; }
+gscp() { bench_retry "$OUT/ssh.stderr" gcloud compute scp --project="$PROJECT" --zone="$ZONE" "$@" >/dev/null; }
 wait_ssh() { for _ in $(seq 1 40); do gssh "$1" true >/dev/null 2>&1 && return 0; sleep 8; done; echo "!! no ssh to $1"; return 1; }
 ip_of() { gcloud compute instances describe "$1" --project="$PROJECT" --zone="$ZONE" \
   --format="value(networkInterfaces[0].${2})"; }
