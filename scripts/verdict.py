@@ -26,7 +26,9 @@ hwcheck/evidence included.
             RRPs' platform rule on the honest Attestation Results is one of the files (rrpverify-platform.json); a
             SEV-SNP run that keeps the rule (platform-rule.json) names its waivers in the verdict, as a demo does.
   redirect  results.jsonl. ca1 issues for every Freshness Kind in both passes. With the RRP identifier in the binding,
-            ca2 refuses every kind; without it, ca2 refuses present-nonce alone.
+            ca2 refuses every kind; without it, ca2 refuses present-nonce alone. A run of a variant (variant.txt:
+            own-epochs, start-ca2; hwcheck/scripts/redirect.sh) is judged by that variant's table, each refusal for
+            its own reason: the Handle, the epoch marker or the binding (redirect_variant_expected).
   bank-pay  report.json, from the Demo Bank's payment service. pay: the payment went through. ordinary: no
             attestation, no credential, and the ledger and the fraud service refused the workload. unapproved:
             genuine hardware Evidence, and no credential. platform: genuine hardware Evidence, no credential, each
@@ -50,6 +52,36 @@ from pathlib import Path
 
 FRESHNESS_KINDS = ("present-nonce", "present-epoch", "absent-epoch", "absent-timestamp", "absent-none")
 REDIRECT_PASSES = ("with-rrp-id", "no-rrp-id")
+# Why a gateway refused, from its message: the code it begins with and a part of the detail (rrp/internal/fresh, the
+# verifier's verdict on the binding in Background Check, the RRP's own check of eat_nonce in Passport)
+REDIRECT_REFUSALS = {
+    "Handle": ("freshness ", ("unknown or already used Handle",)),  # a Handle the RRP never minted, or used
+    "epoch": ("freshness ", ("the epoch marker is not the current one",)),  # another RRP's epoch marker
+    "binding": ("attestation ", ('"contraindicated"', "eat_nonce is not the binding value")),  # another RRP's binding
+}
+
+
+def redirect_variant_expected(variant):
+    """What each RRP does in a variant of the redirection experiment (hwcheck/scripts/redirect.sh, REDIRECT_VARIANT):
+    {(pass, kind, rrp): True for an issuance, or the reason of the refusal (REDIRECT_REFUSALS)}. ca2 keeps an epoch
+    marker of its own in both. own-epochs: the Evidence is made for ca1, with ca1's Handles. start-ca2: the conduit
+    starts at ca2, whose present-* Handles the Evidence carries; the Attester holds the deployment's epoch marker
+    (absent-epoch), ca1's, and binds ca1 in the pass with the RRP identifier."""
+    want = {}
+    for p in REDIRECT_PASSES:
+        bound = p == "with-rrp-id"
+        for k in FRESHNESS_KINDS:
+            if variant == "own-epochs":
+                ca1 = True
+                ca2 = {"present-nonce": "Handle", "present-epoch": "epoch", "absent-epoch": "epoch"}.get(k)
+                ca2 = ca2 or ("binding" if bound else True)
+            else:  # start-ca2
+                ca1 = {"present-nonce": "Handle", "present-epoch": "epoch"}.get(k, True)
+                ca2 = "epoch" if k == "absent-epoch" else ("binding" if bound else True)
+            want[(p, k, "ca1")], want[(p, k, "ca2")] = ca1, ca2
+    return want
+
+
 # the conduit's rewrites at ca1 (#19), on Evidence made for ca1, and what each gets by the gateways' code
 # (rrp/internal/gateway, rrp/cmd/ca-gateway): a refusal and its code, or an issuance
 REWRITES = {
@@ -255,6 +287,10 @@ def rewrite_lines(rows):
 
 
 def redirect(run):
+    variant_file = run / "variant.txt"
+    variant = variant_file.read_text().strip() if variant_file.exists() else "default"
+    if variant != "default":
+        return redirect_variant(run, variant)
     rows = [json.loads(x) for x in (run / "results.jsonl").read_text().splitlines() if x.strip()]
     rewrites = [r for r in rows if "rewrite" in r]
     rows = [r for r in rows if "rewrite" not in r]
@@ -284,6 +320,58 @@ def redirect(run):
         summary += (
             f"; of the conduit's {len(rewrites_wanted())} rewrites at ca1, the other credential type the Target "
             "offers was issued for every kind but present-nonce, and every other was refused for its own reason"
+        )
+    return lines, True, summary
+
+
+def redirect_variant(run, variant):
+    """A variant of the redirection experiment: every outcome as redirect_variant_expected says, each refusal for its
+    own reason (REDIRECT_REFUSALS)."""
+    if variant not in ("own-epochs", "start-ca2"):
+        return [], False, f"unknown variant {variant!r} (variant.txt)"
+    rows = [json.loads(x) for x in (run / "results.jsonl").read_text().splitlines() if x.strip()]
+    got = {(r["pass"], r["kind"], r["rrp"]): r["result"] for r in rows if "rewrite" not in r}
+    want = redirect_variant_expected(variant)
+    lines, wrong = [f"variant {variant}", f"{'pass':12} {'kind':18} {'ca1':20} ca2"], []
+    extra = [f"a #19 rewrite, which a variant's run does not make: {r['rewrite']}" for r in rows if "rewrite" in r]
+    for p in REDIRECT_PASSES:
+        for k in FRESHNESS_KINDS:
+            cells = []
+            for rrp in ("ca1", "ca2"):
+                res, w = got.get((p, k, rrp)), want[(p, k, rrp)]
+                if res is None:
+                    cells.append("missing")
+                    wrong.append(f"{p} {k} {rrp}: missing")
+                    continue
+                reason = res.get("reason", "")
+                why = next(
+                    (n for n, (code, parts) in REDIRECT_REFUSALS.items()
+                     if reason.startswith(code) and any(x in reason for x in parts)),
+                    None,
+                )  # fmt: skip
+                cells.append("ISSUED" if res["issued"] else f"refused ({why or reason[:40]})")
+                if w is True and not res["issued"]:
+                    wrong.append(f"{p} {k} {rrp}: refused ({reason[:90]}), expected ISSUED")
+                elif w is not True and (res["issued"] or why != w):
+                    was = "ISSUED" if res["issued"] else f"refused ({reason[:90]})"
+                    wrong.append(f"{p} {k} {rrp}: {was}, expected refused for the {w}")
+            lines.append(f"{p:12} {k:18} {cells[0]:20} {cells[1]}")
+    lines += clock_lines(run)
+    if wrong or extra:
+        failed = [f"{len(wrong)} of {len(want)} outcomes not as expected"] if wrong else []
+        failed += [f"{len(extra)} #19 rewrites in a variant's run"] if extra else []
+        return lines + wrong + extra, False, "; ".join(failed)
+    if variant == "own-epochs":
+        summary = (
+            "ca2 with an epoch marker of its own: with the RRP identifier, ca2 refused all 5 Freshness Kinds; without "
+            "it, it issued for absent-timestamp and absent-none alone, refusing present-nonce for the Handle and "
+            "present-epoch and absent-epoch for the epoch marker"
+        )
+    else:
+        summary = (
+            "the conduit starting at ca2: with the RRP identifier, ca2 refused all 5 Freshness Kinds, the two whose "
+            "Handles it minted itself for the binding; without it, ca2 issued for every kind but absent-epoch, whose "
+            "marker the Attester holds, present-nonce included"
         )
     return lines, True, summary
 

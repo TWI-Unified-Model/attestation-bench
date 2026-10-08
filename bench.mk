@@ -74,7 +74,8 @@ attacks:
 	@scripts/run.sh attacks $(PLATFORM)
 
 ## redirect: the #20 redirection and the conduit's #19 rewrites, in Background Check (PASSPORT=1: in Passport);
-##           puts the bench back as it was   [PLATFORM=...]
+##           REDIRECT_VARIANT=own-epochs: the second CA keeps an epoch of its own; =start-ca2: and the conduit starts
+##           there; puts the bench back as it was   [PLATFORM=...]
 redirect:
 	@scripts/run.sh redirect $(PLATFORM)
 

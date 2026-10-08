@@ -129,10 +129,7 @@ def main():
     for r in pack["rrps"]:
         if "same_as" in r:
             rrps[r["name"]] = dict(rrps[r["same_as"]], rrp_id=r["rrp_id"], listen=r["listen"])
-    if a.omit_rrp_id:  # the variant #20 is about: the Credential Authorities bind no RRP identifier
-        for r in pack["rrps"]:
-            if rrp_kind(pack, r) == "credential-authority":
-                rrps[r["name"]]["omit_rrp_id_in_binding"] = True
+    redirection_variants(pack, rrps, omit_rrp_id=a.omit_rrp_id, own_epochs=a.own_epochs)
 
     est = est_server(home, logs, a.est_listen, vd, root, verifiers, est_rrps, est_targets)
     others = [infra["est-server"], infra["ca-gateway"], infra["vault-gateway"]]
@@ -198,6 +195,11 @@ def parse_args():
     )
     p.add_argument(
         "--omit-rrp-id", action="store_true", help="the #20 variant: the Credential Authorities bind no RRP identifier"
+    )
+    p.add_argument(
+        "--own-epochs",
+        action="store_true",
+        help="a redirection variant: each copy of an RRP (same_as) keeps an epoch marker of its own",
     )
     return p.parse_args()
 
@@ -295,6 +297,18 @@ def by_name(pack, name):
 
 def rrp_kind(pack, r):
     return by_name(pack, r["same_as"])["kind"] if "same_as" in r else r["kind"]
+
+
+def redirection_variants(pack, rrps, omit_rrp_id=False, own_epochs=False):
+    """The variants of the redirection experiment (hwcheck/scripts/redirect.sh), applied to the RRPs' configurations in
+    place. omit_rrp_id: the Credential Authorities bind no RRP identifier, the variant #20 is about. own_epochs: each
+    copy of an RRP ("same_as", another bank) keeps an epoch marker of its own, as a gateway does without an epoch file,
+    instead of the one the deployment's RRPs share."""
+    for r in pack["rrps"]:
+        if omit_rrp_id and rrp_kind(pack, r) == "credential-authority":
+            rrps[r["name"]]["omit_rrp_id_in_binding"] = True
+        if own_epochs and "same_as" in r:
+            rrps[r["name"]].pop("epoch_file", None)
 
 
 def check_corim(snp, corim_path):

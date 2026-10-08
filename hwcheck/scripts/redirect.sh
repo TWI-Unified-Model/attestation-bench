@@ -10,10 +10,17 @@
 #   hwcheck/scripts/redirect.sh gcp-snp|gcp-tdx|aws-snp      (make redirect PLATFORM=...)
 #   PASSPORT=1: the same in Passport: the conduit gets the Attestation Results for each Evidence from the verifier, as an
 #   honest CAS does for ca1 (rrpverify ears), and offers those.
+#   REDIRECT_VARIANT: what the second bank keeps of its own, and where the conduit starts (the two passes only, without
+#   the #19 rewrites; the run directory and variant.txt name the variant):
+#     own-epochs  ca2 keeps an epoch marker of its own (OWN_EPOCHS, e2e/scripts/bench.sh); the Evidence is made for
+#                 ca1 as in the default run, with ca1's Handles and the deployment's epoch marker
+#     start-ca2   ca2 keeps an epoch marker of its own, and the conduit starts the exchange there: the present-nonce and
+#                 present-epoch Handles are ca2's, from its attest-initiate; the Attester holds the deployment's epoch
+#                 marker (absent-epoch) and, in the pass with the RRP identifier, binds ca1's, the RRP it serves
 #
 # The guest only runs hwrun (offline); all gateway interaction is on this machine, where the bench runs. The bench runs
-# every pass in Background Check (or Passport), reconfigured between them (OMIT_RRP_ID), and is put back as it was
-# however the run ends: its RATS model, the RRP identifier in the binding.
+# every pass in Background Check (or Passport), reconfigured between them (OMIT_RRP_ID, and OWN_EPOCHS in a variant),
+# and is put back as it was however the run ends: its RATS model, the RRP identifier in the binding, one epoch marker.
 #
 # GCP_PROJECT, GCP_ZONE, AWS_REGION, AWS_AZ: where the VM goes (scripts/lib.sh). RUNS_DIR: where the run directory
 # goes (default BENCH_HOME/runs). The run ends with its verdict (scripts/verdict.py) and exits 1 unless every outcome
@@ -37,7 +44,14 @@ STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 NAME="tacra-redir-$(echo "$STAMP" | tr -d 'TZ' | cut -c3-12)"
 RUNS_DIR="${RUNS_DIR:-$BENCH_HOME/runs}"
 MODEL=background-check; [ -n "${PASSPORT:-}" ] && MODEL=passport
+VARIANT="${REDIRECT_VARIANT:-default}"
+case "$VARIANT" in
+  default) OWN="";;
+  own-epochs|start-ca2) OWN=1;;   # ca2 keeps an epoch marker of its own
+  *) echo "unknown REDIRECT_VARIANT $VARIANT: own-epochs or start-ca2" >&2; exit 2;;
+esac
 OUT="$RUNS_DIR/${STAMP}-${CLOUD}-redirect"; [ "$MODEL" = passport ] && OUT="$OUT-passport"
+if [ "$VARIANT" != default ]; then OUT="$OUT-$VARIANT"; fi
 BIN="$(mktemp -d)"
 CA1=https://127.0.0.1:9101; CA2=https://127.0.0.1:9103
 CA1_ID=https://ca1.tacra.example   # the RRP identifier the honest EST server's Credential Authority binds
@@ -45,13 +59,14 @@ B="$BENCH_HOME"; CERT="$B/tls/clients/est-server.crt"; KEY_C="$B/tls/clients/est
 mkdir -p "$OUT"
 git -C "$REPO" rev-parse --short=12 HEAD > "$OUT/code-rev.txt"
 echo "$MODEL" > "$OUT/rats-model.txt"
+echo "$VARIANT" > "$OUT/variant.txt"
 MODEL_BEFORE="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("rats_model") or "passport")' \
   "$B/config/vault-gateway.json")"
 RECONFIGURED=""
 restore_bench() { # the bench as it was before the experiment; nothing to do until reconfigure has run
   [ -n "$RECONFIGURED" ] || return 0
   bash "$REPO/e2e/scripts/bench.sh" stop >/dev/null 2>&1 || true
-  RATS_MODEL="$MODEL_BEFORE" OMIT_RRP_ID="" bash "$REPO/e2e/scripts/bench.sh" config >/dev/null 2>&1
+  RATS_MODEL="$MODEL_BEFORE" OMIT_RRP_ID="" OWN_EPOCHS="" bash "$REPO/e2e/scripts/bench.sh" config >/dev/null 2>&1
   bash "$REPO/e2e/scripts/bench.sh" start >/dev/null 2>&1
   RECONFIGURED=""
 }
@@ -131,25 +146,33 @@ if [ "'"$TEE"'" = tdx ]; then :; else sudo modprobe sev-guest 2>/dev/null || tru
 mountpoint -q /sys/kernel/config || sudo mount -t configfs none /sys/kernel/config
 ls -ld /sys/kernel/config/tsm/report; uname -r'
 
-# mint a present-nonce Handle from ca1 for db-nonce; print it (base64url, as ca1 returned it)
-mint_nonce() {
+# initiate URL TARGET: attest-initiate for TARGET at the Credential Authority at URL, as the conduit sends it; prints the
+# Handle it returned (base64url, as the RRP returned it)
+initiate() {
   curl -s --cacert "$ROOT" --cert "$CERT" --key "$KEY_C" -H 'Content-Type: application/json' \
-    -d '{"target":"https://db-nonce.tacra.example","credential_type":"x509"}' "$CA1/tacra/v1/initiate" \
+    -d "{\"target\":\"$2\",\"credential_type\":\"x509\"}" "$1/tacra/v1/initiate" \
     | python3 -c "import sys,json;print(json.load(sys.stdin)['handle'])"
 }
+START="$CA1"; [ "$VARIANT" = start-ca2 ] && START="$CA2"   # where the conduit starts the exchange
 
-# make_evidence PASS RRPCA : mint a present-nonce Handle at ca1, make Evidence in the guest bound to RRPCA and copy it
-# back; in Passport, also the Attestation Results the verifier issues for each case, as an honest CAS gets them
+# make_evidence PASS RRPCA : mint a present-nonce Handle where the conduit starts (ca1; ca2 in start-ca2), make Evidence
+# in the guest bound to RRPCA and copy it back; in Passport, also the Attestation Results the verifier issues for each
+# case, as an honest CAS gets them. In start-ca2 the present-epoch Handle is ca2's epoch marker, from its attest-initiate.
 make_evidence() {
   local PASS="$1" RRPCA="$2" d="$OUT/$1"; mkdir -p "$d"
-  local nonce epoch; nonce="$(mint_nonce)"; epoch="$(tr -d '[:space:]' < "$B/epoch.hex")"
-  python3 - "$nonce" "$epoch" "$d" <<'PY'
+  local nonce epoch epoch_handle=""
+  nonce="$(initiate "$START" https://db-nonce.tacra.example)"; epoch="$(tr -d '[:space:]' < "$B/epoch.hex")"
+  if [ "$VARIANT" = start-ca2 ]; then epoch_handle="$(initiate "$CA2" https://db-epoch.tacra.example)"; fi
+  python3 - "$nonce" "$epoch" "$d" "$epoch_handle" <<'PY'
 import sys, json, base64, os, secrets
-nonce_url, epoch_hex, d = sys.argv[1], sys.argv[2], sys.argv[3]
+nonce_url, epoch_hex, d, epoch_handle_url = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 std = lambda b: base64.b64encode(b).decode()
-nonce = base64.urlsafe_b64decode(nonce_url + "=" * (-len(nonce_url) % 4))
-json.dump({"nonce_enroll": std(nonce), "nonce_retrieve": std(secrets.token_bytes(32)),
-           "epoch": std(bytes.fromhex(epoch_hex))}, open(os.path.join(d, "handles.json"), "w"))
+url = lambda s: base64.urlsafe_b64decode(s + "=" * (-len(s) % 4))
+handles = {"nonce_enroll": std(url(nonce_url)), "nonce_retrieve": std(secrets.token_bytes(32)),
+           "epoch": std(bytes.fromhex(epoch_hex))}
+if epoch_handle_url:  # start-ca2: the present-epoch Handle is ca2's own epoch marker
+    handles["epoch_handle"] = std(url(epoch_handle_url))
+json.dump(handles, open(os.path.join(d, "handles.json"), "w"))
 json.dump({"present-nonce": "https://db-nonce.tacra.example", "present-epoch": "https://db-epoch.tacra.example",
            "absent-epoch": "https://db-lepoch.tacra.example", "absent-timestamp": "https://db-time.tacra.example",
            "absent-none": "https://db-none.tacra.example"}, open(os.path.join(d, "targets.json"), "w"))
@@ -230,21 +253,23 @@ reconfigure() { # $1 = "omit" or "normal"
   local omit=""; [ "$1" = omit ] && omit=1
   RECONFIGURED=1
   bash "$REPO/e2e/scripts/bench.sh" stop >/dev/null 2>&1 || true
-  RATS_MODEL="$MODEL" OMIT_RRP_ID="$omit" bash "$REPO/e2e/scripts/bench.sh" config >/dev/null 2>&1
+  RATS_MODEL="$MODEL" OMIT_RRP_ID="$omit" OWN_EPOCHS="$OWN" bash "$REPO/e2e/scripts/bench.sh" config >/dev/null 2>&1
   bash "$REPO/e2e/scripts/bench.sh" start >/dev/null 2>&1
 }
 
-echo "== bench: $MODEL, RRP identifier IN the binding"
+echo "== bench: $MODEL, RRP identifier IN the binding (variant: $VARIANT)"
 reconfigure normal
 vm_create
 wait_ssh || { echo "ssh never came up" >&2; exit 1; }
 guest_ssh "$PROVISION" 2>>"$OUT/run-ssh.stderr"
 make_evidence with-rrp-id "$CA1_ID"; offer_redirect with-rrp-id
-echo "== the conduit's rewrites (#19), at ca1, on Evidence made for ca1"
-make_evidence rewrites "$CA1_ID"; offer_rewrites rewrites
-make_evidence type-offered "$CA1_ID"; offer_rewrites type-offered
+if [ "$VARIANT" = default ]; then
+  echo "== the conduit's rewrites (#19), at ca1, on Evidence made for ca1"
+  make_evidence rewrites "$CA1_ID"; offer_rewrites rewrites
+  make_evidence type-offered "$CA1_ID"; offer_rewrites type-offered
+fi
 
-echo "== bench: $MODEL, NO RRP identifier in the binding"
+echo "== bench: $MODEL, NO RRP identifier in the binding (variant: $VARIANT)"
 reconfigure omit
 make_evidence no-rrp-id ""; offer_redirect no-rrp-id
 

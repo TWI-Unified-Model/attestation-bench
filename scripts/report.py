@@ -44,7 +44,10 @@ E2E = re.compile(
     r"(?:-conduit-(?P<attack>seal|swap|hint|hint-group))?"  # the conduit's drills (docs/attacks.md, section 6)
 )
 ATTACKS = re.compile(r"(?P<hw>gcp-sev-snp|gcp-tdx|aws-sev-snp)")
-REDIRECT = re.compile(r"(?P<plat>gcp-snp|gcp-tdx|aws-snp)-redirect(?:-passport)?")
+REDIRECT = re.compile(
+    r"(?P<plat>gcp-snp|gcp-tdx|aws-snp)-redirect(?P<passport>-passport)?"
+    r"(?:-(?P<variant>own-epochs|start-ca2))?"  # REDIRECT_VARIANT (hwcheck/scripts/redirect.sh)
+)
 STAMP = re.compile(r"\d{8}T\d{6}Z-(?P<name>.+)")
 # the attack results of the current format: the bench's own checks, and the builds of Veraison it compares with
 OWN_CHECKS = ("rrpverify-veraison-v015", "rrpverify-tdx")
@@ -127,9 +130,9 @@ def rows(run):
         plat = PLATFORMS[r.group("plat")]
         yield (
             run.name,
-            "#20 redirection",
+            "#20 redirection" + (f", {r.group('variant')}" if r.group("variant") else ""),
             plat,
-            recorded_model(run, "Passport" if name.endswith("-passport") else "Background Check"),
+            recorded_model(run, "Passport" if r.group("passport") else "Background Check"),
             *judged(run, lambda: verdict.redirect(run), ["results.jsonl"]),
         )
     else:

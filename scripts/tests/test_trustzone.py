@@ -1,6 +1,9 @@
-"""Tests of scripts/trustzone.py's platform waivers, on the bench's own files: trust/platform-policy.json and the two
-packs. The bench's pack admits SEV-SNP hosts without AMD-SB-3034's mitigation bit 4 under a named waiver; the Demo
-Bank's pack, a bank's, names none. A pack can waive a required mitigation bit and nothing else.
+"""Tests of scripts/trustzone.py on the bench's own files: trust/platform-policy.json and the two packs.
+
+The platform waivers: the bench's pack admits SEV-SNP hosts without AMD-SB-3034's mitigation bit 4 under a named
+waiver; the Demo Bank's pack, a bank's, names none. A pack can waive a required mitigation bit and nothing else. The
+redirection experiment's variants: the second Credential Authority with an epoch marker of its own, the Credential
+Authorities without the RRP identifier in the binding.
 
     python3 -m unittest discover -s scripts/tests        (make test)
 """
@@ -52,6 +55,42 @@ class Waivers(unittest.TestCase):
                 with self.assertRaises(trustzone.PackError) as e:
                     trustzone.with_waivers(self.rule, self.changed(change))
                 self.assertIn(want, str(e.exception))
+
+
+class RedirectionVariants(unittest.TestCase):
+    """The bench's pack has a copy of its Credential Authority, ca-2, another bank's, which the redirection experiment
+    offers Evidence made for ca to (hwcheck/scripts/redirect.sh). Each RRP starts with the deployment's epoch file."""
+
+    def configs(self, **variant):
+        p = pack("tacra-bench")
+        rrps = {r["name"]: {"rrp_id": r["rrp_id"], "epoch_file": "/bench/epoch.hex"} for r in p["rrps"]}
+        trustzone.redirection_variants(p, rrps, **variant)
+        return rrps
+
+    def test_as_configured(self):
+        for name, c in self.configs().items():
+            self.assertEqual(c["epoch_file"], "/bench/epoch.hex", name)
+            self.assertNotIn("omit_rrp_id_in_binding", c, name)
+
+    def test_own_epochs(self):
+        c = self.configs(own_epochs=True)
+        self.assertNotIn("epoch_file", c["ca-2"], "the copy keeps an epoch marker of its own")
+        self.assertEqual(c["ca"]["epoch_file"], "/bench/epoch.hex")
+        self.assertEqual(c["vault"]["epoch_file"], "/bench/epoch.hex")
+        self.assertFalse(any("omit_rrp_id_in_binding" in x for x in c.values()))
+
+    def test_omit_rrp_id(self):
+        c = self.configs(omit_rrp_id=True)
+        self.assertTrue(c["ca"]["omit_rrp_id_in_binding"])
+        self.assertTrue(c["ca-2"]["omit_rrp_id_in_binding"])
+        self.assertNotIn("omit_rrp_id_in_binding", c["vault"], "only the Credential Authorities")
+        self.assertTrue(all(x["epoch_file"] == "/bench/epoch.hex" for x in c.values()))
+
+    def test_both(self):
+        c = self.configs(omit_rrp_id=True, own_epochs=True)
+        self.assertNotIn("epoch_file", c["ca-2"])
+        self.assertTrue(c["ca-2"]["omit_rrp_id_in_binding"])
+        self.assertEqual(c["ca"]["epoch_file"], "/bench/epoch.hex")
 
 
 if __name__ == "__main__":

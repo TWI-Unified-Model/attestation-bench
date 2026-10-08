@@ -10,7 +10,9 @@
 #                                  (packs/tacra-bench) and the approved launches (trust/approved-launches.json), with
 #                                  scripts/trustzone.py, the program the Demo Bank's trust zone uses too.
 #                                  RATS_MODEL=background-check: the gateways ask the verifiers themselves;
-#                                  OMIT_RRP_ID=1: the Credential Authorities bind no RRP identifier (#20)
+#                                  OMIT_RRP_ID=1: the Credential Authorities bind no RRP identifier (#20);
+#                                  OWN_EPOCHS=1: the second Credential Authority (ca-2) keeps an epoch marker of its
+#                                  own (the redirection experiment, hwcheck/scripts/redirect.sh)
 #   e2e/scripts/bench.sh start|stop|status
 set -euo pipefail
 # BENCH_HOME (default ~/.attestation-bench) and VERAISON_DEPLOYMENT, the pinned tools on PATH: scripts/lib.sh
@@ -30,6 +32,7 @@ config() {
   [ -f "$B/epoch.hex" ] || (umask 077; openssl rand -hex 32 > "$B/epoch.hex")
   local flags=(--rats-model "${RATS_MODEL:-passport}")
   if [ "${OMIT_RRP_ID:-}" = 1 ]; then flags+=(--omit-rrp-id); fi
+  if [ "${OWN_EPOCHS:-}" = 1 ]; then flags+=(--own-epochs); fi
   python3 "$HERE/scripts/trustzone.py" --home "$B" --veraison "$VERAISON_DEPLOYMENT" --pack "$PACK" "${flags[@]}"
   (cd "$HERE/rrp" && GOWORK=off go build -o "$BIN/ca-gateway" ./cmd/ca-gateway && GOWORK=off go build -o "$BIN/vault-gateway" ./cmd/vault-gateway \
     && GOWORK=off go build -o "$BIN/tdx-verifier" ./cmd/tdx-verifier)

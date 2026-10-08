@@ -35,8 +35,11 @@ type backend interface {
 type handles struct {
 	NonceEnroll   []byte `json:"nonce_enroll"`
 	NonceRetrieve []byte `json:"nonce_retrieve"`
-	Epoch         []byte `json:"epoch"`
-	MintedAt      int64  `json:"minted_at"`
+	Epoch         []byte `json:"epoch"` // the epoch marker the Attester holds (absent-epoch)
+	// EpochHandle is the present-epoch Handle an RRP with an epoch of its own returned at Initiate
+	// (hwcheck/scripts/redirect.sh, REDIRECT_VARIANT=start-ca2); absent: Epoch, the marker the deployment's RRPs share
+	EpochHandle []byte `json:"epoch_handle,omitempty"`
+	MintedAt    int64  `json:"minted_at"`
 }
 
 type caseMeta struct {
@@ -159,6 +162,9 @@ func main() {
 				}
 			case platform.FreshnessKindPresentEpoch: // the current epoch marker, returned at Initiate
 				req.FreshnessHandle = epoch
+				if len(h.EpochHandle) > 0 {
+					req.FreshnessHandle = h.EpochHandle
+				}
 			case platform.FreshnessKindAbsentEpoch: // held locally; the CAI passes it as the handle
 				req.FreshnessHandle = p.LocalEpoch()
 			}
