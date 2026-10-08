@@ -42,7 +42,7 @@ attested-retrieval-request = {
 
 request-common = (
   target: text,
-  credential_type: text,
+  ? credential_type: text,
   evidence: text .b64u bytes,
   ? profile: text,
   binding: binding,

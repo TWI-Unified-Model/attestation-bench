@@ -1,6 +1,6 @@
-From 066b3ac3ca3e790dd21db557d66979b28d072230 Mon Sep 17 00:00:00 2001
+From 3047da12e81d63c51ae996014f332fe4fc83f5ae Mon Sep 17 00:00:00 2001
 From: Serhii Nikolaichuk <nikolaichuk.s.f@gmail.com>
-Date: Thu, 8 Oct 2026 08:34:52 -0500
+Date: Thu, 8 Oct 2026 10:28:24 -0500
 Subject: [PATCH] attest: a media type for each message, no rrp_id or
  endorsements, and the requests' syntax checked
 
@@ -22,44 +22,53 @@ RRP's identifier and mode against its configuration, and now passes on only the 
 CDDL gives its Freshness Kind and mode; it refuses (502) an answer with a Handle for an absent-* kind or without one for
 present-nonce or present-epoch.
 
-The requests. They no longer carry endorsements, which no draft defines; credential_type is required in both. A
-request is refused with 400, saying why, unless it is what the CDDL defines: one JSON object in UTF-8 and nothing
+The requests. They no longer carry endorsements, which no draft defines; credential_type stays optional, as the
+draft has it for Retrieval and this code had it in both (whether it travels is TheBankster/rats-tacra#19). A request
+is refused with 400, saying why, unless it is what the CDDL defines: one JSON object in UTF-8 and nothing
 after it; only the members the CDDL defines, each once, in its own case and of its own type, the required ones
 present; a handle with every Freshness Kind but absent-none, and none with absent-none; each byte string unpadded
 base64url as the control .b64u of RFC 9741 takes it (no padding, no line break, the bits that encode no octet zero).
 Go's decoder alone takes a member name in any case, a member twice, null for a member, invalid UTF-8, and data after
-the object: it took the first of two requests sent as one body. A body over the size limit is refused with 413.
+the object: it took the first of two requests sent as one body. A body over the size limit is refused with 413. A
+request refused for its Evidence format (415) no longer uses up its Handle: the server checks the format before it
+correlates the Handle, in the order of the draft's processing (syntax and media type first).
 
 Checked: go vet ./...; go test ./internal/tacra ./internal/refvectors ./cmd/estserver: ok, and no test binary links a
 mock. TestAttestMediaTypes and TestAttestRequestSyntax serve the reference implementation's real requests (a GCP
 SEV-SNP run) through the server's own router, with the CA label and without it: under eight media types, and as sent
-and in 29 alterations, each refused for its reason; what is taken (the requests as sent, with white space after them,
-and an enrollment as absent-none without its handle) reaches the backend, which serves no Target and refuses it with
-403.
+and in 28 alterations, each refused for its reason; what is taken (the requests as sent, with white space after them,
+an enrollment as absent-none without its handle, a retrieval without the optional credential_type) reaches the
+backend, which serves no Target and refuses it with 403.
 TestInitiationResponse makes the response of RRP answers as a run's gateways gave them, with members added that their
 kind or mode does not take. TestRefEnvelopesRoundTrip: the reference implementation's messages decode with no member
 unknown and encode back member for member, its attest-initiate responses once their rrp_id is taken out.
-TestB64URLStrict: written as unpadded base64url, read only as .b64u takes it. Each of eight checks of this patch,
-turned off in turn, makes a test fail.
+TestB64URLStrict: written as unpadded base64url, read only as .b64u takes it. TestUnreachable: an RRP that does not
+answer gets 502, a verifier that does not answer 503, each a real TCP port nothing listens on.
+TestFormatRefusalLeavesTheHandle: after a 415 for the Evidence format the Handle still serves its second leg. Each of
+the eight checks this patch adds, turned off in turn, makes a test fail; so do the old order of the format and Handle
+checks, and another status for an unreachable RRP or verifier.
 ---
- attest.go                                     |  55 ++---
+ attest.go                                     |  51 ++--
  attest_b64url.go                              |  37 ++-
  attest_client.go                              |  42 +++-
  attest_syntax.go                              | 178 +++++++++++++
  common.go                                     |  11 +-
  .../refvectors/attest_ref_interop_test.go     |  53 +++-
  internal/tacra/attestwire_test.go             | 233 ++++++++++++++++++
- internal/tacra/backend.go                     |  76 ++++--
+ internal/tacra/backend.go                     |  84 +++++--
  internal/tacra/initiation_test.go             |  75 ++++++
+ internal/tacra/session_test.go                |  19 ++
+ internal/tacra/unreachable_test.go            | 112 +++++++++
  internal/tacra/wirelog_test.go                |   5 +-
  server.go                                     |  43 ++--
- 11 files changed, 704 insertions(+), 104 deletions(-)
+ 13 files changed, 838 insertions(+), 105 deletions(-)
  create mode 100644 attest_syntax.go
  create mode 100644 internal/tacra/attestwire_test.go
  create mode 100644 internal/tacra/initiation_test.go
+ create mode 100644 internal/tacra/unreachable_test.go
 
 diff --git a/attest.go b/attest.go
-index d1d6004..723cb18 100644
+index d1d6004..f409812 100644
 --- a/attest.go
 +++ b/attest.go
 @@ -65,10 +65,11 @@ const (
@@ -102,13 +111,7 @@ index d1d6004..723cb18 100644
  	AcceptableCSK      []string `json:"acceptable_csk,omitempty"`
  	AcceptableCEK      []string `json:"acceptable_cek,omitempty"`
  	Mechanism          string   `json:"mode,omitempty"`
-@@ -146,12 +144,11 @@ type Binding struct {
- // AttestedEnrollmentRequest is the attest-enroll request body.
- type AttestedEnrollmentRequest struct {
- 	Target         string  `json:"target"`
--	CredentialType string  `json:"credential_type,omitempty"`
-+	CredentialType string  `json:"credential_type"`
- 	FreshnessKind  string  `json:"freshness_kind"`
+@@ -151,7 +149,6 @@ type AttestedEnrollmentRequest struct {
  	Handle         B64URL  `json:"handle,omitempty"`
  	CSR            B64URL  `json:"csr"`
  	Evidence       B64URL  `json:"evidence"`
@@ -116,13 +119,7 @@ index d1d6004..723cb18 100644
  	Binding        Binding `json:"binding"`
  	Profile        string  `json:"profile,omitempty"`
  	CredentialHint *string `json:"credential_hint,omitempty"`
-@@ -160,12 +157,11 @@ type AttestedEnrollmentRequest struct {
- // AttestedRetrievalRequest is the attest-retrieve request body.
- type AttestedRetrievalRequest struct {
- 	Target         string  `json:"target"`
--	CredentialType string  `json:"credential_type,omitempty"`
-+	CredentialType string  `json:"credential_type"`
- 	FreshnessKind  string  `json:"freshness_kind"`
+@@ -165,7 +162,6 @@ type AttestedRetrievalRequest struct {
  	Handle         B64URL  `json:"handle,omitempty"`
  	CEKPub         B64URL  `json:"cek_pub"`
  	Evidence       B64URL  `json:"evidence"`
@@ -390,7 +387,7 @@ index e5fa608..bfe7728 100644
 +}
 diff --git a/attest_syntax.go b/attest_syntax.go
 new file mode 100644
-index 0000000..37cdb8e
+index 0000000..14f124d
 --- /dev/null
 +++ b/attest_syntax.go
 @@ -0,0 +1,178 @@
@@ -412,7 +409,7 @@ index 0000000..37cdb8e
 +//
 +//	attested-enrollment-request = { request-common, request-freshness, csr: text .b64u bytes }
 +//	attested-retrieval-request  = { request-common, request-freshness, cek_pub: text .b64u bytes }
-+//	request-common = ( target: text, credential_type: text, evidence: text .b64u bytes, ? profile: text,
++//	request-common = ( target: text, ? credential_type: text, evidence: text .b64u bytes, ? profile: text,
 +//	                   binding: binding, ? credential_hint: text )
 +//	request-freshness = ( freshness_kind: "absent-none" //
 +//	                      freshness_kind: <the other four kinds>, handle: text .b64u bytes )
@@ -499,7 +496,7 @@ index 0000000..37cdb8e
 +	if _, err := dec.Token(); err != io.EOF {
 +		return errSyntax("data after the JSON object")
 +	}
-+	for _, m := range []string{"target", "credential_type", "freshness_kind", "evidence", "binding", subject} {
++	for _, m := range []string{"target", "freshness_kind", "evidence", "binding", subject} {
 +		if _, ok := got[m]; !ok {
 +			return errSyntax("no member %q", m)
 +		}
@@ -692,7 +689,7 @@ index 49d3ef4..bbec5b2 100644
 -// refCA is an attesting CA that records what the EST server hands it.
 diff --git a/internal/tacra/attestwire_test.go b/internal/tacra/attestwire_test.go
 new file mode 100644
-index 0000000..633fbf4
+index 0000000..476b0d7
 --- /dev/null
 +++ b/internal/tacra/attestwire_test.go
 @@ -0,0 +1,233 @@
@@ -882,8 +879,8 @@ index 0000000..633fbf4
 +			"400 malformed request: member \"handle\" is not unpadded base64url (RFC 4648, Section 5)\n"},
 +		{"no target", "attest-enroll", enrollType, alter(t, enroll, map[string]any{"target": nil}),
 +			"400 malformed request: no member \"target\"\n"},
-+		{"no credential_type", "attest-retrieve", retrieveType, alter(t, retrieve, map[string]any{"credential_type": nil}),
-+			"400 malformed request: no member \"credential_type\"\n"},
++		{"no credential_type, which is optional", "attest-retrieve", retrieveType,
++			alter(t, retrieve, map[string]any{"credential_type": nil}), unsupportedTarget},
 +		{"no binding", "attest-enroll", enrollType, alter(t, enroll, map[string]any{"binding": nil}),
 +			"400 malformed request: no member \"binding\"\n"},
 +		{"no csr", "attest-enroll", enrollType, alter(t, enroll, map[string]any{"csr": nil}),
@@ -930,7 +927,7 @@ index 0000000..633fbf4
 +	}
 +}
 diff --git a/internal/tacra/backend.go b/internal/tacra/backend.go
-index 5668267..c864c71 100644
+index 5668267..0077626 100644
 --- a/internal/tacra/backend.go
 +++ b/internal/tacra/backend.go
 @@ -235,40 +235,80 @@ func (b *Backend) route(target string) (string, RRP, error) {
@@ -1032,6 +1029,25 @@ index 5668267..c864c71 100644
  }
  
  // remember keeps the session of an attest-initiate under its Handle, in place of an earlier one for the same Target,
+@@ -435,13 +475,15 @@ func (b *Backend) forward(ctx context.Context, mode, kind, target, credentialTyp
+ 	if rrp.Mode != mode {
+ 		return "", RRP{}, secondLeg{}, fail(http.StatusForbidden, "the Target is provisioned by %s, not %s", rrp.Mode, mode)
+ 	}
+-	if err := b.correlate(kind, handle, target, credentialType); err != nil {
+-		return "", RRP{}, secondLeg{}, err
+-	}
++	// the Evidence format before the Handle: a request refused for its format (415) leaves the Handle to the next one,
++	// as the draft's processing validates the media type before it correlates the Handle
+ 	p, err := b.profile(profile)
+ 	if err != nil {
+ 		return "", RRP{}, secondLeg{}, err
+ 	}
++	if err := b.correlate(kind, handle, target, credentialType); err != nil {
++		return "", RRP{}, secondLeg{}, err
++	}
+ 	leg := secondLeg{FreshnessKind: kind, Target: target, CredentialType: credentialType, CredentialHint: hint(hintp)}
+ 	if rrp.RATSModel == backgroundCheck {
+ 		// the RRP asks the verifier, with the binding value it recomputes; this server does not
 diff --git a/internal/tacra/initiation_test.go b/internal/tacra/initiation_test.go
 new file mode 100644
 index 0000000..e7e451b
@@ -1111,6 +1127,151 @@ index 0000000..e7e451b
 +		if c.g.Handle != "" && string(m["handle"]) != `"`+c.g.Handle+`"` {
 +			t.Errorf("%s: handle %s, want the RRP's %q", c.name, m["handle"], c.g.Handle)
 +		}
++	}
++}
+diff --git a/internal/tacra/session_test.go b/internal/tacra/session_test.go
+index 140af1c..0e9cf77 100644
+--- a/internal/tacra/session_test.go
++++ b/internal/tacra/session_test.go
+@@ -76,3 +76,22 @@ func TestExpiredOrUnknown(t *testing.T) {
+ 		t.Fatalf("a kind without a Handle: %d, want 200 (the RRP checks it)", got)
+ 	}
+ }
++
++// A second leg refused for its Evidence format (415) leaves its Handle to the next request: the server checks the format
++// before it correlates the Handle, as the draft's processing validates the media type first.
++func TestFormatRefusalLeavesTheHandle(t *testing.T) {
++	const target = "https://db-nonce.tacra.example"
++	b := &Backend{sessions: map[string][]session{},
++		cfg: Config{RRPs: map[string]RRP{"ca": {RRPID: "https://ca1.tacra.example", Mode: est.MechanismEnroll}},
++			Targets: map[string]string{target: "ca"}, AcceptableEvidence: []string{"application/vnd.veraison.tsm-report+cbor"}}}
++	handle := []byte("a present-nonce Handle of 32 o.")
++	b.remember(hex.EncodeToString(handle), session{target, "x509", "ca", est.FreshnessPresentNonce, time.Now().Add(time.Minute)})
++	_, err := b.EnrollCredential(t.Context(), &est.AttestedEnrollmentRequest{Target: target, CredentialType: "x509",
++		FreshnessKind: est.FreshnessPresentNonce, Handle: handle, Profile: "application/vnd.example.unknown"}, "", nil)
++	if got := status(err); got != http.StatusUnsupportedMediaType {
++		t.Fatalf("an Evidence format not accepted: %d (%v), want 415", got, err)
++	}
++	if got := status(b.correlate(est.FreshnessPresentNonce, handle, target, "x509")); got != http.StatusOK {
++		t.Fatalf("the Handle after the 415: %d, want 200: the refusal used it up", got)
++	}
++}
+diff --git a/internal/tacra/unreachable_test.go b/internal/tacra/unreachable_test.go
+new file mode 100644
+index 0000000..5287995
+--- /dev/null
++++ b/internal/tacra/unreachable_test.go
+@@ -0,0 +1,112 @@
++package tacra
++
++import (
++	"bytes"
++	"crypto/ecdsa"
++	"crypto/elliptic"
++	"crypto/rand"
++	"crypto/x509"
++	"crypto/x509/pkix"
++	"encoding/base64"
++	"encoding/json"
++	"encoding/pem"
++	"math/big"
++	"net"
++	"net/http"
++	"net/http/httptest"
++	"os"
++	"path/filepath"
++	"testing"
++	"time"
++
++	"github.com/fxamacker/cbor/v2"
++	"github.com/globalsign/est"
++)
++
++// The EST server's answers when what stands behind it does not answer: an RRP it cannot reach (502, Bad Gateway) and,
++// in the Passport model, a verifier it cannot reach (503, Service Unavailable). Each is a real failure, a TCP port
++// that nothing listens on, reached through the TLS clients the server builds from its configuration.
++
++const caFileMode = 0o600 // owner read and write
++
++// closedPort is the address of a local TCP port that nothing listens on.
++func closedPort(t *testing.T) string {
++	t.Helper()
++	l, err := net.Listen("tcp", "127.0.0.1:0")
++	if err != nil {
++		t.Fatal(err)
++	}
++	addr := l.Addr().String()
++	if err := l.Close(); err != nil {
++		t.Fatal(err)
++	}
++	return addr
++}
++
++// caFile writes a self-signed CA certificate, the trust anchor the server's TLS clients are configured with.
++func caFile(t *testing.T) string {
++	t.Helper()
++	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
++	if err != nil {
++		t.Fatal(err)
++	}
++	tmpl := &x509.Certificate{SerialNumber: big.NewInt(1), Subject: pkix.Name{CommonName: "test CA"},
++		NotBefore: time.Now().Add(-time.Hour), NotAfter: time.Now().Add(time.Hour), IsCA: true,
++		BasicConstraintsValid: true, KeyUsage: x509.KeyUsageCertSign}
++	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
++	if err != nil {
++		t.Fatal(err)
++	}
++	path := filepath.Join(t.TempDir(), "ca.pem")
++	if err := os.WriteFile(path, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), caFileMode); err != nil {
++		t.Fatal(err)
++	}
++	return path
++}
++
++func TestUnreachable(t *testing.T) {
++	ca := caFile(t)
++	const target = "https://db-none.tacra.example"
++	b, err := New(Config{
++		Verifiers: map[string]Verifier{"veraison": {URL: "https://" + closedPort(t), CA: ca, Provider: "sev_guest"}},
++		RRPs: map[string]RRP{"ca": {URL: "https://" + closedPort(t), CA: ca, RRPID: "https://ca1.tacra.example",
++			Mode: est.MechanismEnroll, Verifiers: []string{"veraison"}}},
++		Targets:            map[string]string{target: "ca"},
++		AcceptableEvidence: []string{"application/vnd.veraison.tsm-report+cbor"},
++	})
++	if err != nil {
++		t.Fatal(err)
++	}
++	h, err := est.NewRouter(&est.ServerConfig{CA: b})
++	if err != nil {
++		t.Fatal(err)
++	}
++
++	rec := httptest.NewRecorder()
++	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet,
++		"/.well-known/est/attest-initiate?credential_type=x509&target=https%3A%2F%2Fdb-none.tacra.example", nil))
++	if got, want := rec.Body.String(), "502 RRP ca unreachable\n"; rec.Code != http.StatusBadGateway || got != want {
++		t.Errorf("attest-initiate with the RRP down: %d %q, want %q", rec.Code, got, want)
++	}
++
++	// An absent-none Enrollment, which needs no attest-initiate: the server reads the Evidence's TSM provider to choose
++	// the verifier (verifierFor), so the Evidence is a TSM report with that field and nothing else.
++	evidence, err := cbor.Marshal(map[string]string{"provider": "sev_guest"})
++	if err != nil {
++		t.Fatal(err)
++	}
++	body, err := json.Marshal(map[string]any{"target": target, "freshness_kind": est.FreshnessAbsentNone,
++		"csr":      base64.RawURLEncoding.EncodeToString([]byte("a CSR the server forwards unopened")),
++		"evidence": base64.RawURLEncoding.EncodeToString(evidence),
++		"binding":  map[string]string{"method": est.BindingInput, "hash": "sha512"}})
++	if err != nil {
++		t.Fatal(err)
++	}
++	req := httptest.NewRequest(http.MethodPost, "/.well-known/est/attest-enroll", bytes.NewReader(body))
++	req.Header.Set("Content-Type", "application/est-attest-enroll+json")
++	rec = httptest.NewRecorder()
++	h.ServeHTTP(rec, req)
++	if got, want := rec.Body.String(), "503 verifier unavailable\n"; rec.Code != http.StatusServiceUnavailable || got != want {
++		t.Errorf("attest-enroll with the verifier down: %d %q, want %q", rec.Code, got, want)
 +	}
 +}
 diff --git a/internal/tacra/wirelog_test.go b/internal/tacra/wirelog_test.go

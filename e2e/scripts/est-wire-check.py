@@ -11,7 +11,9 @@ For each of attest-enroll and attest-retrieve, as the wire format proposed for d
 - a request that is not of the CDDL's syntax is refused with 400, saying why: with a member the CDDL does not define
   (endorsements), sent twice in one body, with a member twice, with a byte string in standard base64;
 - none of these refusals uses up the Handle: the request as sent, under the resource's type and a CA label, reaches the
-  RRP, and the same Handle again is refused with 409.
+  RRP, and the same Handle again is refused with 409;
+- Evidence of a format the server does not accept is refused with 415 before the Handle is correlated: a new Handle
+  then still serves the request.
 
 The server's wire log (est-server.json, wire_log) holds each of these exchanges as it was sent and answered, octet for
 octet.
@@ -171,6 +173,23 @@ def main(argv=None):
               st == 403 and body.startswith(f"403 {rrp}: attestation:"), answer(st, body))  # fmt: skip
         st, _, _, body = est.call("POST", resource, sent, own)
         check(f"{resource}, the same Handle again", st == 409, answer(st, body))
+
+        # an Evidence format the server does not accept: 415, before the Handle is correlated, so a new Handle stays
+        # usable for the request that follows
+        st, _, _, body = est.call("GET", "/attest-initiate?" + urlencode({"target": target, "credential_type": ctype_}))
+        try:
+            fresh = json.loads(body)["handle"]
+        except (ValueError, KeyError, TypeError) as e:
+            check(f"attest-initiate {target}, a second Handle", False, f"{st}: {body[:160]} ({e!r})")
+            continue
+        unknown = "application/vnd.example.unknown"
+        retry = dict(req, handle=fresh)
+        st, _, _, body = est.call("POST", resource, json.dumps(dict(retry, profile=unknown)).encode(), own)
+        check(f"{resource} with Evidence of a format not accepted",
+              st == 415 and body == f'415 Evidence format "{unknown}" is not accepted', answer(st, body))  # fmt: skip
+        st, _, _, body = est.call("POST", resource, json.dumps(retry).encode(), own)
+        check(f"{resource}, the Handle the 415 left unused",
+              st == 403 and body.startswith(f"403 {rrp}: attestation:"), answer(st, body))  # fmt: skip
 
     with est.wire_log.open("rb") as f:
         f.seek(wire_from)
