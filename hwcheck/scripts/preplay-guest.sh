@@ -11,7 +11,8 @@
 # (preplay-ca-targets.json and preplay-vault-targets.json beside this script); so are the Handles, minted by the live
 # RRPs, which present-nonce and the epochs need (preplay-handles.json).
 set -euo pipefail
-offset=$1 out=$2 tee=$3 kinds=$4
+offset=$1 out=$2 tee=$3 kinds=$4 bind=${5:-}   # bind=no-rrp-id: the #20 variant, the Evidence binds no RRP identifier
+rrp=(); [ "$bind" = no-rrp-id ] && rrp=(-rrp-ca "" -rrp-vault "")
 here="$(cd "$(dirname "$0")" && pwd)"
 mkdir -p "$out"
 only=(); [ "$kinds" = all ] || only=(-kinds "$kinds")
@@ -37,6 +38,6 @@ trap restore EXIT
 echo "the time service stopped: ${stopped[*]:-none}; the clock set at $set_at (guest), to $((set_at + offset)), by $offset s" \
   >"$out/clock-offset-set.txt"
 "$here/hwrun" -tee "$tee" ${only[@]+"${only[@]}"} -modes enroll -targets "$here/preplay-ca-targets.json" \
-  ${handles[@]+"${handles[@]}"} -csr-cn payments.workload.tacra.example -out "$out/ca"
+  ${handles[@]+"${handles[@]}"} ${rrp[@]+"${rrp[@]}"} -csr-cn payments.workload.tacra.example -out "$out/ca"
 "$here/hwrun" -tee "$tee" ${only[@]+"${only[@]}"} -modes retrieve -targets "$here/preplay-vault-targets.json" \
-  ${handles[@]+"${handles[@]}"} -cek mlkem768-p256 -out "$out/vault"
+  ${handles[@]+"${handles[@]}"} ${rrp[@]+"${rrp[@]}"} -cek mlkem768-p256 -out "$out/vault"

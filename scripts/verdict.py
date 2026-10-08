@@ -403,24 +403,26 @@ def redirect_replay(run, variant):
     rrp, verb = REPLAY_RRP[variant]
     rows = [json.loads(x) for x in (run / "results.jsonl").read_text().splitlines() if x.strip()]
     got = {
-        (r["kind"], r.get("offer")): r["result"]
+        (r["pass"], r["kind"], r.get("offer")): r["result"]
         for r in rows
-        if "rewrite" not in r and r.get("pass") == "with-rrp-id" and r.get("rrp") == rrp
+        if "rewrite" not in r and r.get("pass") in REDIRECT_PASSES and r.get("rrp") == rrp
     }
     extra = [
         f"an outcome a replay run does not make: {r.get('pass')} {r.get('kind')} {r.get('rrp')} {r.get('rewrite', '')}"
         for r in rows
-        if "rewrite" in r or r.get("pass") != "with-rrp-id" or r.get("rrp") != rrp
+        if "rewrite" in r or r.get("pass") not in REDIRECT_PASSES or r.get("rrp") != rrp
     ]
+    # the runs of 8 October before 4a5c270 made the pass with the identifier alone; later ones both
+    passes = [p for p in REDIRECT_PASSES if p == "with-rrp-id" or any(key[0] == p for key in got)]
     served = verb.upper()
-    lines, wrong = [f"variant {variant}", f"{'kind':18} {'first offer':28} second offer at {rrp}"], []
-    for k in FRESHNESS_KINDS:
+    lines, wrong = [f"variant {variant}", f"{'pass':12} {'kind':18} {'first offer':28} second offer at {rrp}"], []
+    for p, k in ((p, k) for p in passes for k in FRESHNESS_KINDS):
         cells = []
         for n in (1, 2):
-            res = got.get((k, n))
+            res = got.get((p, k, n))
             if res is None:
                 cells.append("missing")
-                wrong.append(f"{k} offer {n}: missing")
+                wrong.append(f"{p} {k} offer {n}: missing")
                 continue
             reason = res.get("reason", "")
             why = next(
@@ -431,20 +433,22 @@ def redirect_replay(run, variant):
             cells.append(served if res["issued"] else f"refused ({why or reason[:40]})")
             want = "Handle" if n == 2 and k == "present-nonce" else True
             if want is True and not res["issued"]:
-                wrong.append(f"{k} offer {n}: refused ({reason[:90]}), expected {served}")
+                wrong.append(f"{p} {k} offer {n}: refused ({reason[:90]}), expected {served}")
             elif want is not True and (res["issued"] or why != want):
                 was = served if res["issued"] else f"refused ({reason[:90]})"
-                wrong.append(f"{k} offer {n}: {was}, expected refused for the {want}")
-        lines.append(f"{k:18} {cells[0]:28} {cells[1]}")
+                wrong.append(f"{p} {k} offer {n}: {was}, expected refused for the {want}")
+        lines.append(f"{p:12} {k:18} {cells[0]:28} {cells[1]}")
     lines += clock_lines(run)
     if wrong or extra:
-        failed = [f"{len(wrong)} of {len(FRESHNESS_KINDS) * 2} outcomes not as expected"] if wrong else []
+        failed = [f"{len(wrong)} of {len(passes) * len(FRESHNESS_KINDS) * 2} outcomes not as expected"] if wrong else []
         failed += [f"{len(extra)} outcomes a replay run does not make"] if extra else []
         return lines + wrong + extra, False, "; ".join(failed)
     summary = (
         f"the same request twice at {rrp}: the second offer with present-nonce refused for the Handle; with "
         f"present-epoch, absent-epoch, absent-timestamp and absent-none the credential {verb} twice"
     )
+    if len(passes) == 2:
+        summary += ", with the RRP identifier bound and without it alike"
     return lines, True, summary
 
 

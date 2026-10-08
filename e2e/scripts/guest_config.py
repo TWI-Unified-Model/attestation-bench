@@ -4,13 +4,14 @@
 hpke-base-signed container's trust anchor, from 01.10 on, so Retrieval on AWS failed (evidence
 20261006T160234Z-aws-sev-snp-e2e). Public material only: trust anchors, the Vault's public keys, the epoch marker.
 
-    TEE=sev-snp|tdx B=$BENCH_HOME BIN=<dir holding origin-keys.json> [TARGETS=all|other-platform] \
+    TEE=sev-snp|tdx B=$BENCH_HOME BIN=<dir holding origin-keys.json> [TARGETS=all|other-platform] [OMIT_RRP_ID=1] \
         python3 e2e/scripts/guest_config.py
 
 The Targets, the RRP identifiers and the workload's name come from the bench's pack (packs/tacra-bench/pack.json).
 TARGETS=all (the default): the Targets every platform's verifier serves. TARGETS=other-platform: the Targets that
 take other platforms' verifiers only, which must refuse this platform's Evidence (tacra-est N24). Each Target is
-asked for the credential its RRP issues.
+asked for the credential its RRP issues. OMIT_RRP_ID=1: the #20 variant, the workload's Evidence binds no RRP
+identifier (the bench's RRPs and EST server omit it too, e2e/scripts/bench.sh config).
 """
 
 import json
@@ -39,6 +40,7 @@ cfg = {
     "hint": pack["workload"]["hint"],
     "targets": targets,
     "relying_parties": rp,
+    "omit_rrp_id_binding": os.environ.get("OMIT_RRP_ID") == "1",
     "vault_origins": {vault: {k: v for k, v in keys.items() if k.startswith("DHKEM")}},
     # the hpke-base-signed container's trust anchor: the Vault's signature key, held for its RRP identifier
     "vault_signers": {vault: keys["ECDSA-P256-SHA256"]},

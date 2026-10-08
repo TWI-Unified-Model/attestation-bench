@@ -27,7 +27,11 @@ HW="$(cd "$(dirname "$0")/.." && pwd)"
 REPO="$(cd "$HW/.." && pwd)"
 CODE_REV="$(git -C "$REPO" rev-parse --short=12 HEAD)$(git -C "$REPO" diff --quiet HEAD -- platform cai hwcheck/cmd || echo -dirty)"
 RUNS_DIR="${RUNS_DIR:-$BENCH_HOME/runs}"
-OUT="$RUNS_DIR/${STAMP}-gcp-sev-snp"
+OUT="$RUNS_DIR/${STAMP}-gcp-sev-snp${OMIT_RRP_ID:+-no-rrp-id}"
+# OMIT_RRP_ID=1: the #20 variant, the guest binds no RRP identifier and rrpverify expects none (the bench's RRPs and
+# EST server must omit it too: OMIT_RRP_ID=1 e2e/scripts/bench.sh config)
+RRP_FLAGS=""; RRPV=(); PREPLAY_BIND=""
+if [ -n "${OMIT_RRP_ID:-}" ]; then RRP_FLAGS="-rrp-ca '' -rrp-vault ''"; RRPV=(-rrp-ca "" -rrp-vault ""); PREPLAY_BIND=no-rrp-id; fi
 BIN="$(mktemp -d)"
 mkdir -p "$OUT"
 echo "$CODE_REV" > "$OUT/code-rev.txt"
@@ -86,7 +90,7 @@ NB="$(date -u +%s)"
 # detached from the SSH session: one that breaks costs a call, not the run (scripts/lib.sh)
 bench_guest_run "$OUT/run-ssh.stderr" "
 set -e
-sudo ~/hwrun -handles ~/handles.json -out /root/hwrun-out -burst 100 2>&1
+sudo ~/hwrun -handles ~/handles.json -out /root/hwrun-out -burst 100 $RRP_FLAGS 2>&1
 sudo sh -c 'cd /root/hwrun-out && uname -a > kernel.txt && (dmesg 2>/dev/null | grep -i -E \"sev|snp|tsm\" > dmesg-sev.txt || true) && (curl -s -H Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/machine-type > machine-type.txt || true) && date -u +%s > guest-clock.txt'
 sudo bash ~/guest-clock.sh /root/hwrun-out
 sudo chmod -R a+rX /root/hwrun-out; rm -rf ~/hwrun-out; sudo cp -r /root/hwrun-out ~/hwrun-out; sudo chown -R \$(id -u):\$(id -g) ~/hwrun-out
@@ -103,8 +107,8 @@ bench_retry "$OUT/run-ssh.stderr" gcloud compute scp "$BIN"/preplay-*.json "$NAM
 PB="$(date -u +%s)"
 bench_guest_run "$OUT/run-ssh.stderr" "
 set -e
-sudo bash ~/preplay-guest.sh $AHEAD /root/preplay/ahead sev-snp all 2>&1
-sudo bash ~/preplay-guest.sh -$AHEAD /root/preplay/behind sev-snp absent-timestamp 2>&1
+sudo bash ~/preplay-guest.sh $AHEAD /root/preplay/ahead sev-snp all $PREPLAY_BIND 2>&1
+sudo bash ~/preplay-guest.sh -$AHEAD /root/preplay/behind sev-snp absent-timestamp $PREPLAY_BIND 2>&1
 sudo chmod -R a+rX /root/preplay; rm -rf ~/preplay; sudo cp -r /root/preplay ~/preplay; sudo chown -R \$(id -u):\$(id -g) ~/preplay
 " gcloud compute ssh "$NAME" --project="$PROJECT" --zone="$ZONE" --command | tee "$OUT/preplay-stdout.txt"
 PA="$(date -u +%s)"
@@ -126,12 +130,12 @@ echo "== RRP verification: Veraison fork as it is, with the DER and signer-info 
 cp "$REPO/trust/amd-kds-milan-cert_chain.pem" "$OUT/amd-kds-milan-cert_chain.pem"
 for v in fork fixed v015; do
   # its log (standard error) holds Veraison's own lines, the revocation check of each appraisal among them
-  "$BIN/rrpverify-$v" verify -in "$OUT" -handles "$OUT/handles.json" -ark "$OUT/amd-kds-milan-cert_chain.pem" \
+  "$BIN/rrpverify-$v" verify -in "$OUT" -handles "$OUT/handles.json" -ark "$OUT/amd-kds-milan-cert_chain.pem" ${RRPV[@]+"${RRPV[@]}"} \
     -not-before "$NB" -not-after "$NA" -out "$OUT/rrpverify-veraison-$v.json" 2>"$OUT/rrpverify-veraison-$v.stderr.log" \
     | tee "$OUT/rrpverify-veraison-$v.txt"
 done
 echo "== RRP verification through the deployed Veraison service (https://localhost:8443)"
-"$BIN/rrpverify-fixed" service -in "$OUT" -handles "$OUT/handles.json" -not-before "$NB" -not-after "$NA" \
+"$BIN/rrpverify-fixed" service -in "$OUT" -handles "$OUT/handles.json" -not-before "$NB" -not-after "$NA" ${RRPV[@]+"${RRPV[@]}"} \
   -out "$OUT/rrpverify-service.json" -save-ears "$OUT/ears" | tee "$OUT/rrpverify-service.txt"
 echo "== the RRPs' platform rule on the honest Attestation Results: the bench's, a bank's, one step stricter"
 # the platform rule the RRPs apply (trust/platform-policy.json, as scripts/trustzone.py gave it to them)

@@ -99,6 +99,10 @@ func mint(args []string) {
 	must(os.WriteFile(*out, b, 0o644))
 }
 
+// otherRRPCase is the substitution of the RRP identifier, which an RRP that binds none cannot refuse: that case is
+// left out when the run binds none (-rrp-ca and -rrp-vault empty, the #20 variant).
+const otherRRPCase = "other RRP identifier"
+
 func verify(args []string) {
 	fs := flag.NewFlagSet("verify", flag.ExitOnError)
 	in := fs.String("in", "hwrun-out", "hwrun output directory")
@@ -196,12 +200,15 @@ func verify(args []string) {
 			}{
 				{"honest", "pass", "", bv(elem, rrp, *target, subject), nil},
 				{"other Target", "fail", reportDataRefusal, bv(elem, rrp, "https://other.tacra.example", subject), nil},
-				{"other RRP identifier", "fail", reportDataRefusal, bv(elem, otherRRP, *target, subject), nil},
+				{otherRRPCase, "fail", reportDataRefusal, bv(elem, otherRRP, *target, subject), nil},
 				{"other CSR / CEKpub", "fail", reportDataRefusal, bv(elem, rrp, *target, flipped), nil},
 				{"other freshness element", "fail", reportDataRefusal, bv(otherElem, rrp, *target, subject), nil},
 				{"trust anchor = a root not Intel's", "fail", "certificate signed by unknown authority",
 					bv(elem, rrp, *target, subject), tdxOtherRoots},
 			} {
+				if c.name == otherRRPCase && rrp == otherRRP {
+					continue // no identifier bound (the #20 variant): the case would be the honest one again, and prove nothing
+				}
 				t0 := time.Now()
 				err := verifyTDX(token, c.bv, c.roots)
 				r := outcome(m.Case, "tdx-quote", c.name, c.want, err, float64(time.Since(t0).Microseconds())/1000)
@@ -260,7 +267,7 @@ func verify(args []string) {
 				{"honest", "pass", "", platform.BindingValue(elem, *target, rrp, subject), ta},
 				{"other Target", "fail", nonceRefusal,
 					platform.BindingValue(elem, "https://other.tacra.example", rrp, subject), ta},
-				{"other RRP identifier", "fail", nonceRefusal, platform.BindingValue(elem, *target, otherRRP, subject), ta},
+				{otherRRPCase, "fail", nonceRefusal, platform.BindingValue(elem, *target, otherRRP, subject), ta},
 				{"other CSR / CEKpub", "fail", nonceRefusal, platform.BindingValue(elem, *target, rrp, flipped), ta},
 				{"other freshness element", "fail", nonceRefusal,
 					platform.BindingValue(otherElem, *target, rrp, subject), ta},
@@ -269,6 +276,9 @@ func verify(args []string) {
 			}
 			honestPassed := false
 			for _, c := range checks {
+				if c.name == otherRRPCase && rrp == otherRRP {
+					continue // no identifier bound (the #20 variant): the case would be the honest one again, and prove nothing
+				}
 				ev := &appraisal.Evidence{Data: tok, MediaType: sevsnp.EvidenceMediaTypeTSMCbor, Nonce: c.bv[:]}
 				t0 := time.Now()
 				err := impl.ValidateEvidenceIntegrity(ev, c.ta, nil)

@@ -104,6 +104,9 @@ type Client struct {
 	// csrNamesHint makes the CSR name the Credential Hint instead of the
 	// Target, leaving the certificate's names to the CA's policy.
 	csrNamesHint bool
+	// omitRelyingPartyBinding makes the Evidence bind no RRP identifier (the #20 variant: TACRA as if Section 4.5
+	// carried none); the identifiers the CAI holds still name the trust anchors it checks a credential against.
+	omitRelyingPartyBinding bool
 	// caAnchors holds, per RRP identifier, the Credential Authority's certificates the CAI holds for Enrollment, and
 	// certMaxValidity the longest an issued certificate may remain valid (cert.go; tacra-est N15).
 	caAnchors       map[string]*x509.CertPool
@@ -114,6 +117,11 @@ type Client struct {
 // common name, for a Credential Authority that assigns the certificate's
 // names by policy (the test bench's CA gateway does).
 func WithCSRNamingHint() Option { return func(c *Client) { c.csrNamesHint = true } }
+
+// WithoutRelyingPartyBinding makes the Evidence bind no RRP identifier, the #20 variant of TACRA (as if Section
+// 4.5 carried none). The identifiers the CAI holds per Target and mode still name the Secret Vault's and the
+// Credential Authority's trust anchors; they are left out of the binding alone.
+func WithoutRelyingPartyBinding() Option { return func(c *Client) { c.omitRelyingPartyBinding = true } }
 
 // Option configures a Client.
 type Option func(*Client)
@@ -276,6 +284,14 @@ func (c *Client) heldRelyingParty(target string, mode Mode) (string, error) {
 	return held, nil
 }
 
+// boundRelyingParty is the identifier the Evidence binds: the one held, or none with WithoutRelyingPartyBinding.
+func (c *Client) boundRelyingParty(held string) string {
+	if c.omitRelyingPartyBinding {
+		return ""
+	}
+	return held
+}
+
 func (c *Client) retrieve(ctx context.Context, req AcquisitionRequest) (*Credential, error) {
 	cek, err := c.plugin.GenerateCEK(platform.EncryptionAlgorithm(req.EncryptionAlgorithm))
 	if err != nil {
@@ -287,7 +303,7 @@ func (c *Client) retrieve(ctx context.Context, req AcquisitionRequest) (*Credent
 		BoundKey:        cek.Public(),
 		BoundKeyUse:     platform.BoundKeyUseEncrypt,
 		Target:          req.Target,
-		RelyingParty:    req.RelyingParty,
+		RelyingParty:    c.boundRelyingParty(req.RelyingParty),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("cai: generate evidence: %w", err)
@@ -356,7 +372,7 @@ func (c *Client) enroll(ctx context.Context, req AcquisitionRequest) (*Credentia
 		CSR:             csr,
 		BoundKeyUse:     platform.BoundKeyUseSign,
 		Target:          req.Target,
-		RelyingParty:    req.RelyingParty,
+		RelyingParty:    c.boundRelyingParty(req.RelyingParty),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("cai: generate evidence: %w", err)

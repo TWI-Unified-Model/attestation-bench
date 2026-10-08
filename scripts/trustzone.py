@@ -129,7 +129,7 @@ def main():
     for r in pack["rrps"]:
         if "same_as" in r:
             rrps[r["name"]] = dict(rrps[r["same_as"]], rrp_id=r["rrp_id"], listen=r["listen"])
-    redirection_variants(pack, rrps, omit_rrp_id=a.omit_rrp_id, own_epochs=a.own_epochs)
+    redirection_variants(pack, rrps, omit_rrp_id=a.omit_rrp_id, own_epochs=a.own_epochs, est_rrps=est_rrps)
 
     est = est_server(home, logs, a.est_listen, vd, root, verifiers, est_rrps, est_targets)
     others = [infra["est-server"], infra["ca-gateway"], infra["vault-gateway"]]
@@ -297,16 +297,20 @@ def rrp_kind(pack, r):
     return by_name(pack, r["same_as"])["kind"] if "same_as" in r else r["kind"]
 
 
-def redirection_variants(pack, rrps, omit_rrp_id=False, own_epochs=False):
+def redirection_variants(pack, rrps, omit_rrp_id=False, own_epochs=False, est_rrps=None):
     """The variants of the redirection experiment (hwcheck/scripts/redirect.sh), applied to the RRPs' configurations in
     place. omit_rrp_id: the RRPs, Credential Authorities and Secret Vaults, bind no RRP identifier, the variant #20 is
     about. own_epochs: each copy of an RRP ("same_as", another bank) keeps an epoch marker of its own, as a gateway does
-    without an epoch file, instead of the one the deployment's RRPs share."""
+    without an epoch file, instead of the one the deployment's RRPs share. est_rrps: the EST server's view of the RRPs
+    (its tacra.rrps), whose Passport nonce must omit the identifier too, or the Verifier's session would not match."""
     for r in pack["rrps"]:
         if omit_rrp_id:
             rrps[r["name"]]["omit_rrp_id_in_binding"] = True
         if own_epochs and "same_as" in r:
             rrps[r["name"]].pop("epoch_file", None)
+    if omit_rrp_id and est_rrps:
+        for e in est_rrps.values():
+            e["omit_rrp_id_in_binding"] = True
 
 
 def check_corim(snp, corim_path):

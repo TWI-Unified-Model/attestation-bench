@@ -88,6 +88,16 @@ class RedirectionVariants(unittest.TestCase):
             self.assertTrue(x["omit_rrp_id_in_binding"], f"{name}: every RRP, Credential Authority and Secret Vault")
         self.assertTrue(all(x["epoch_file"] == "/bench/epoch.hex" for x in c.values()))
 
+    def test_omit_rrp_id_reaches_the_est_server(self):
+        p = pack("tacra-bench")
+        rrps = {r["name"]: {"rrp_id": r["rrp_id"], "epoch_file": "/bench/epoch.hex"} for r in p["rrps"]}
+        est = {"ca": {"rrp_id": "x"}, "vault": {"rrp_id": "y"}}
+        trustzone.redirection_variants(p, rrps, omit_rrp_id=True, est_rrps=est)
+        self.assertTrue(all(e["omit_rrp_id_in_binding"] for e in est.values()), "the EST server's Passport nonce")
+        kept = {"ca": {"rrp_id": "x"}}
+        trustzone.redirection_variants(p, rrps, est_rrps=kept)
+        self.assertNotIn("omit_rrp_id_in_binding", kept["ca"])
+
     def test_both(self):
         c = self.configs(omit_rrp_id=True, own_epochs=True)
         self.assertNotIn("epoch_file", c["ca-2"])

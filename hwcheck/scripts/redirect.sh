@@ -20,10 +20,10 @@
 #     vault       the default run on the Secret Vaults: Retrieval Evidence for a ledger Target of vault1, offered to
 #                 vault1 and to vault2, its copy with another RRP identifier (packs/tacra-bench); each asked for the
 #                 workload's group's key, in the hpke-base-signed container to an MLKEM768-P256 CEK
-#     replay      the same request twice at ca1, in the pass with the RRP identifier alone: what a conduit that holds a
-#                 request gets by offering it again. The RRP keeps no record of a CSR it served, so only the freshness
-#                 element can refuse the second offer: a present-nonce Handle serves once; an epoch marker serves while
-#                 it is current, a timestamp while its window holds, absent-none always
+#     replay      the same request twice at ca1, in both passes: what a conduit that holds a request gets by offering
+#                 it again. The RRP keeps no record of a CSR it served, so only the freshness element can refuse the
+#                 second offer: a present-nonce Handle serves once; an epoch marker serves while it is current, a
+#                 timestamp while its window holds, absent-none always; the RRP identifier has no bearing on it
 #     replay-vault  the same on the Secret Vaults: Retrieval twice at vault1
 #
 # The guest only runs hwrun (offline); all gateway interaction is on this machine, where the bench runs. The bench runs
@@ -312,13 +312,10 @@ if [ "$VARIANT" = default ]; then
   make_evidence type-offered "$ID1"; offer_rewrites type-offered
 fi
 
-case "$VARIANT" in
-  replay|replay-vault) ;;   # the RRP identifier has no bearing on a second offer at the same RRP: one pass
-  *)
-    echo "== bench: $MODEL, NO RRP identifier in the binding (variant: $VARIANT)"
-    reconfigure omit
-    make_evidence no-rrp-id ""; offer_redirect no-rrp-id;;
-esac
+echo "== bench: $MODEL, NO RRP identifier in the binding (variant: $VARIANT)"
+reconfigure omit
+make_evidence no-rrp-id ""
+case "$VARIANT" in replay|replay-vault) offer_replay no-rrp-id;; *) offer_redirect no-rrp-id;; esac
 
 vm_delete; trap 'restore_bench; rm -rf "$BIN"' EXIT
 echo "== bench: back as it was ($MODEL_BEFORE, the RRP identifier in the binding)"

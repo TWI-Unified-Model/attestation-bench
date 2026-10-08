@@ -43,11 +43,13 @@ type config struct {
 	Hint           string                       `json:"hint"`
 	Targets        []target                     `json:"targets"`
 	RelyingParties map[string]map[string]string `json:"relying_parties"` // Target -> mode -> RRP identifier held
-	VaultOrigins   map[string]map[string]string `json:"vault_origins"`   // RRP id -> DHKEM -> SPKI (base64url)
-	VaultSigners   map[string]string            `json:"vault_signers"`   // RRP id -> signature key SPKI (base64url), hpke-base-signed
-	CAAnchors      map[string]string            `json:"ca_anchors"`      // RRP id -> the Credential Authority's certificates (PEM): tacra-est N15
-	LocalEpochHex  string                       `json:"local_epoch_hex"`
-	RUP            struct {
+	// OmitRRPIDBinding: the #20 variant, the Evidence binds no RRP identifier (the held ones still name the trust anchors)
+	OmitRRPIDBinding bool                         `json:"omit_rrp_id_binding,omitempty"`
+	VaultOrigins     map[string]map[string]string `json:"vault_origins"` // RRP id -> DHKEM -> SPKI (base64url)
+	VaultSigners     map[string]string            `json:"vault_signers"` // RRP id -> signature key SPKI (base64url), hpke-base-signed
+	CAAnchors        map[string]string            `json:"ca_anchors"`    // RRP id -> the Credential Authority's certificates (PEM): tacra-est N15
+	LocalEpochHex    string                       `json:"local_epoch_hex"`
+	RUP              struct {
 		URL       string `json:"url"`
 		AnchorPEM string `json:"anchor_pem"`
 	} `json:"rup"`
@@ -153,6 +155,9 @@ func main() {
 	opts, err := cai.RelyingParties(cfg.RelyingParties)
 	if err != nil {
 		log.Fatal(err)
+	}
+	if cfg.OmitRRPIDBinding {
+		opts = append(opts, cai.WithoutRelyingPartyBinding())
 	}
 	for rrp, keys := range cfg.VaultOrigins {
 		for kem, b64 := range keys {
