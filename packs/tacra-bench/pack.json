@@ -104,6 +104,15 @@
     "purpose": ["authenticate"],
     "algorithm": "opaque-bearer",
     "validity_seconds": 3600
+   },
+   "other_groups": {
+    "audit.workload.tacra.example": {
+     "path": "tacra/audit",
+     "policy_version": "1",
+     "purpose": ["authenticate"],
+     "algorithm": "opaque-bearer",
+     "validity_seconds": 3600
+    }
    }
   },
   {
@@ -120,6 +129,15 @@
     "purpose": ["authenticate"],
     "algorithm": "opaque-bearer",
     "validity_seconds": 3600
+   },
+   "other_groups": {
+    "audit.workload.tacra.example": {
+     "path": "tacra/audit",
+     "policy_version": "1",
+     "purpose": ["authenticate"],
+     "algorithm": "opaque-bearer",
+     "validity_seconds": 3600
+    }
    }
   },
   {
@@ -135,6 +153,15 @@
     "purpose": ["authenticate"],
     "algorithm": "opaque-bearer",
     "validity_seconds": 3600
+   },
+   "other_groups": {
+    "audit.workload.tacra.example": {
+     "path": "tacra/audit",
+     "policy_version": "1",
+     "purpose": ["authenticate"],
+     "algorithm": "opaque-bearer",
+     "validity_seconds": 3600
+    }
    }
   },
   {
@@ -152,6 +179,15 @@
     "purpose": ["authenticate"],
     "algorithm": "opaque-bearer",
     "validity_seconds": 3600
+   },
+   "other_groups": {
+    "audit.workload.tacra.example": {
+     "path": "tacra/audit",
+     "policy_version": "1",
+     "purpose": ["authenticate"],
+     "algorithm": "opaque-bearer",
+     "validity_seconds": 3600
+    }
    }
   },
   {
@@ -167,6 +203,15 @@
     "purpose": ["authenticate"],
     "algorithm": "opaque-bearer",
     "validity_seconds": 3600
+   },
+   "other_groups": {
+    "audit.workload.tacra.example": {
+     "path": "tacra/audit",
+     "policy_version": "1",
+     "purpose": ["authenticate"],
+     "algorithm": "opaque-bearer",
+     "validity_seconds": 3600
+    }
    }
   }
  ]

@@ -19,6 +19,10 @@
 # UNAPPROVED=1 (SEV-SNP): the guest is an n2d-standard-4, whose launch (four vCPUs, four VMSAs in the measurement) is
 # not one the bench approves (trust/approved-launches.json): Veraison does not affirm it, and every Target must be
 # refused for it. A real VM, so the refusal is the hardware's measurement against the approved list.
+# CONDUIT_ATTACK=seal|swap|hint|hint-group: the CAS Client is the attacker of docs/attacks.md, section 6, in the
+# Retrieval container (caapi-est -attack): seal returns a container it sealed itself, swap the Vault's container of
+# the Retrieval before, hint and hint-group ask the Vault with another Credential Hint. The run is judged by what the CAI does with
+# it (scripts/verdict.py conduit): every Enrollment admitted, each Retrieval refused for the drill's reason.
 set -euo pipefail
 # shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
@@ -35,12 +39,17 @@ MODEL="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('ra
 CAS_OUTSIDE="${CAS_OUTSIDE:-}"
 OTHER_PLATFORM="${OTHER_PLATFORM:-}"
 UNAPPROVED="${UNAPPROVED:-}"
+CONDUIT_ATTACK="${CONDUIT_ATTACK:-}"
+case "$CONDUIT_ATTACK" in "" | seal | swap | hint | hint-group) ;; *) bench_die "CONDUIT_ATTACK=$CONDUIT_ATTACK: seal, swap, hint or hint-group" ;; esac
+[ -z "$CONDUIT_ATTACK" ] || [ -z "$OTHER_PLATFORM$UNAPPROVED" ] || bench_die "CONDUIT_ATTACK runs on its own, without OTHER_PLATFORM or UNAPPROVED"
+GUEST_ATTACK=""
+[ -z "$CONDUIT_ATTACK" ] || GUEST_ATTACK=" -attack $CONDUIT_ATTACK"
 [ -z "$UNAPPROVED" ] || [ "$TEE" = sev-snp ] || bench_die "UNAPPROVED is for SEV-SNP: a TDX launch's MRTD does not change with the machine size"
 EXPECT=(--expect admitted) # what the run must show (scripts/verdict.py)
 [ -z "$OTHER_PLATFORM" ] || EXPECT=(--expect refused --reason "none of the verifiers this RRP takes for the Target")
 [ -z "$UNAPPROVED" ] || EXPECT=(--expect refused --reason "ear: not affirming: SEVSNP is")
 RUNS_DIR="${RUNS_DIR:-$B/runs}"
-OUT="$RUNS_DIR/${STAMP}-gcp-${TEE}-e2e-${MODEL}${CAS_OUTSIDE:+-cas-outside}${OTHER_PLATFORM:+-other-platform}${UNAPPROVED:+-unapproved}"
+OUT="$RUNS_DIR/${STAMP}-gcp-${TEE}-e2e-${MODEL}${CAS_OUTSIDE:+-cas-outside}${OTHER_PLATFORM:+-other-platform}${UNAPPROVED:+-unapproved}${CONDUIT_ATTACK:+-conduit-$CONDUIT_ATTACK}"
 BIN="$(mktemp -d)"
 mkdir -p "$OUT/bench-logs"
 SSH=(gcloud compute ssh "$NAME" --project="$PROJECT" --zone="$ZONE")
@@ -120,7 +129,10 @@ GUEST_FILES=("$BIN/e2e-attester" "$BIN/e2e-attester.json" "$BIN/bench-tls-root.c
 bench_retry "$OUT/ssh.stderr" gcloud compute scp "${GUEST_FILES[@]}" "$NAME:~/" --project="$PROJECT" --zone="$ZONE" >/dev/null
 if [ -n "$CAS_OUTSIDE" ]; then
   echo "== the CAS Client outside the guest, on this machine (127.0.0.1:50061, through the tunnel to the guest)"
-  "$BIN/caapi-est-local" -listen 127.0.0.1:50061 -est localhost:18443 -anchor "$B/tls/root.crt" > "$OUT/caapi-est-outside.log" 2>&1 &
+  ATTACK_ARGS=()
+  [ -z "$CONDUIT_ATTACK" ] || ATTACK_ARGS=(-attack "$CONDUIT_ATTACK")
+  "$BIN/caapi-est-local" -listen 127.0.0.1:50061 -est localhost:18443 -anchor "$B/tls/root.crt" ${ATTACK_ARGS[@]+"${ATTACK_ARGS[@]}"} \
+    > "$OUT/caapi-est-outside.log" 2>&1 &
   CAS_PID=$!
   for _ in $(seq 1 20); do nc -z 127.0.0.1 50061 2>/dev/null && break; sleep 0.5; done
   echo "outside the guest: caapi-est on the bench machine, pid $CAS_PID, reached by the guest through ssh -R 50061" > "$OUT/cas-placement.txt"
@@ -140,9 +152,9 @@ NB="$(date -u +%s)"
 if [ -n "$CAS_OUTSIDE" ]; then
   START_CAS='echo "the CAS Client is outside this guest" > ~/caapi-est.log; echo 0 > ~/caapi-est.pid'
 else
-  START_CAS='nohup ~/caapi-est -listen 127.0.0.1:50061 -est localhost:18443 -anchor ~/bench-tls-root.crt > ~/caapi-est.log 2>&1 &
-echo $! > ~/caapi-est.pid
-sleep 1'
+  START_CAS="nohup ~/caapi-est -listen 127.0.0.1:50061 -est localhost:18443 -anchor ~/bench-tls-root.crt$GUEST_ATTACK > ~/caapi-est.log 2>&1 &
+echo \$! > ~/caapi-est.pid
+sleep 1"
 fi
 # detached from the SSH session: one that breaks costs a call, not the run (scripts/lib.sh)
 # shellcheck disable=SC2016  # the $ in the single-quoted script expands in the guest, not here
@@ -170,7 +182,11 @@ tail -n +"$(( $(cat "$OUT/bench-logs/.verification.start") + 1 ))" "$VERAISON_DE
   > "$OUT/bench-logs/veraison-verification.log" || true
 rm -f "$OUT"/bench-logs/.*.start
 rc=0
-python3 "$HERE/scripts/verdict.py" demo "$OUT" "${EXPECT[@]}" --out "$OUT/verdict.txt" || rc=$?
+if [ -n "$CONDUIT_ATTACK" ]; then
+  python3 "$HERE/scripts/verdict.py" conduit "$OUT" --attack "$CONDUIT_ATTACK" --out "$OUT/verdict.txt" || rc=$?
+else
+  python3 "$HERE/scripts/verdict.py" demo "$OUT" "${EXPECT[@]}" --out "$OUT/verdict.txt" || rc=$?
+fi
 bench_seal "$OUT"
 echo "== run directory: $OUT"
 exit "$rc"

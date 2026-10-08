@@ -234,6 +234,14 @@ vault_setup() {
       || fail "vault kv put"
     echo "  ledger API key stored at secret/tacra/payments"
   fi
+  # a second group at the ledger's Targets, under another Credential Hint (packs/tacra-bench, other_groups): the key
+  # the Vault would release for that hint; the ledger does not admit it (docs/attacks.md, section 6)
+  [ -s "$B/secrets/audit-api-key" ] || (umask 077; openssl rand -hex 32 >"$B/secrets/audit-api-key")
+  if ! quiet vault kv get -mount=secret tacra/audit; then
+    quiet vault kv put -mount=secret tacra/audit type=api-key format=text value="$(tr -d '\n' <"$B/secrets/audit-api-key")" \
+      || fail "vault kv put"
+    echo "  audit API key stored at secret/tacra/audit"
+  fi
   unset VAULT_TOKEN
 }
 

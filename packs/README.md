@@ -59,6 +59,7 @@ which each SEV-SNP demo's verdict repeats. A pack can waive a required mitigatio
 | `acceptable` | the algorithms it accepts: `ecdsa-p256-sha256` for a CSR; `MLKEM768-P256+HKDF-SHA256+AES-256-GCM` for the signed container |
 | `certificate_validity` | Credential Authority Targets: how long the certificate is valid, e.g. `1h` |
 | `secret` | Secret Vault Targets: `path` in Vault (mount `secret`), `policy_version`, and the key block's `purpose`, `algorithm`, `validity_seconds` |
+| `other_groups` | Secret Vault Targets, optional: other groups the Vault serves at the Target to the same launches, by Credential Hint, each a `secret` block (the bench's: `audit.workload.tacra.example`, for the conduit drill of [docs/attacks.md](../docs/attacks.md), section 6) |
 
 Every Target admits the workload only from an approved launch, the measurements in `trust/approved-launches.json`,
 and only on a platform the rule in `trust/platform-policy.json` admits, which applies to every pack.

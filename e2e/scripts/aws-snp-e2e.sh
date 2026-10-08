@@ -14,6 +14,10 @@
 # not approve (trust/approved-launches.json): Veraison does not affirm it, and every Target must be refused for it.
 # The run ends with its verdict (scripts/verdict.py) and exits 1 unless every Target was admitted (refused, with
 # OTHER_PLATFORM or UNAPPROVED).
+# CONDUIT_ATTACK=seal|swap|hint|hint-group: the CAS Client is the attacker of docs/attacks.md, section 6, in the
+# Retrieval container (caapi-est -attack): seal returns a container it sealed itself, swap the Vault's container of
+# the Retrieval before, hint and hint-group ask the Vault with another Credential Hint. The run is judged by what the CAI does with
+# it (scripts/verdict.py conduit): every Enrollment admitted, each Retrieval refused for the drill's reason.
 set -euo pipefail
 # shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"   # BENCH_HOME, VERAISON_DEPLOYMENT, pinned tools
@@ -31,12 +35,17 @@ B="$BENCH_HOME"
 MODEL="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('rats_model') or 'passport')" "$B/config/vault-gateway.json")"
 OTHER_PLATFORM="${OTHER_PLATFORM:-}"
 UNAPPROVED="${UNAPPROVED:-}"
+CONDUIT_ATTACK="${CONDUIT_ATTACK:-}"
+case "$CONDUIT_ATTACK" in "" | seal | swap | hint | hint-group) ;; *) bench_die "CONDUIT_ATTACK=$CONDUIT_ATTACK: seal, swap, hint or hint-group" ;; esac
+[ -z "$CONDUIT_ATTACK" ] || [ -z "$OTHER_PLATFORM$UNAPPROVED" ] || bench_die "CONDUIT_ATTACK runs on its own, without OTHER_PLATFORM or UNAPPROVED"
+GUEST_ATTACK=""
+[ -z "$CONDUIT_ATTACK" ] || GUEST_ATTACK=" -attack $CONDUIT_ATTACK"
 EXPECT=(--expect admitted) # what the run must show (scripts/verdict.py)
 [ -z "$OTHER_PLATFORM" ] || EXPECT=(--expect refused --reason "none of the verifiers this RRP takes for the Target")
 # UNAPPROVED=1: a c6a.xlarge, whose launch (four vCPUs) the bench does not approve; every Target must be refused for it
 [ -z "$UNAPPROVED" ] || { TYPE=c6a.xlarge; EXPECT=(--expect refused --reason "ear: not affirming: SEVSNP is"); }
 RUNS_DIR="${RUNS_DIR:-$B/runs}"
-OUT="$RUNS_DIR/${STAMP}-aws-${TEE}-e2e-${MODEL}${OTHER_PLATFORM:+-other-platform}${UNAPPROVED:+-unapproved}"
+OUT="$RUNS_DIR/${STAMP}-aws-${TEE}-e2e-${MODEL}${OTHER_PLATFORM:+-other-platform}${UNAPPROVED:+-unapproved}${CONDUIT_ATTACK:+-conduit-$CONDUIT_ATTACK}"
 BIN="$(mktemp -d)"
 mkdir -p "$OUT/bench-logs"
 ID="" SG="" KEY="$NAME"
@@ -134,7 +143,7 @@ NB="$(date -u +%s)"
 # shellcheck disable=SC2016  # the $ in the single-quoted script expands in the guest, not here
 bench_guest_run "$OUT/ssh.stderr" '
 set -e
-nohup ~/caapi-est -listen 127.0.0.1:50061 -est localhost:18443 -anchor ~/bench-tls-root.crt > ~/caapi-est.log 2>&1 &
+nohup ~/caapi-est -listen 127.0.0.1:50061 -est localhost:18443 -anchor ~/bench-tls-root.crt'"$GUEST_ATTACK"' > ~/caapi-est.log 2>&1 &
 echo $! > ~/caapi-est.pid
 sleep 1
 sudo ~/e2e-attester -config ~/e2e-attester.json -out ~/results.json 2>&1
@@ -157,7 +166,11 @@ tail -n +"$(( $(cat "$OUT/bench-logs/.verification.start") + 1 ))" "$VERAISON_DE
   > "$OUT/bench-logs/veraison-verification.log" || true
 rm -f "$OUT"/bench-logs/.*.start
 rc=0
-python3 "$HERE/scripts/verdict.py" demo "$OUT" "${EXPECT[@]}" --out "$OUT/verdict.txt" || rc=$?
+if [ -n "$CONDUIT_ATTACK" ]; then
+  python3 "$HERE/scripts/verdict.py" conduit "$OUT" --attack "$CONDUIT_ATTACK" --out "$OUT/verdict.txt" || rc=$?
+else
+  python3 "$HERE/scripts/verdict.py" demo "$OUT" "${EXPECT[@]}" --out "$OUT/verdict.txt" || rc=$?
+fi
 bench_seal "$OUT"
 echo "== run directory: $OUT"
 exit "$rc"

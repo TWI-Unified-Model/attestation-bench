@@ -6,6 +6,7 @@
     python3 scripts/verdict.py redirect RUN_DIR [--out FILE]
     python3 scripts/verdict.py bank-pay RUN_DIR --expect pay|ordinary|unapproved|platform [--out FILE]
     python3 scripts/verdict.py mtls RUN_DIR [--out FILE]
+    python3 scripts/verdict.py conduit RUN_DIR --attack seal|swap|hint|hint-group [--out FILE]
 
 Every run script calls it before it seals its run directory, with --out RUN_DIR/verdict.txt. It prints what the run
 did and a last line, "VERDICT PASS: ..." or "VERDICT FAIL: ...", writes the same to FILE if given, and exits 1 on
@@ -32,6 +33,14 @@ hwcheck/evidence included.
             refused by the bank's platform rule (an SEV-SNP host without a mitigation bit the bank requires).
   mtls      mtls.json (checks.json in the runs of 1 October 2026), from make check-mtls. Every check as expected: on
             each channel only the allowed components, over TLS 1.3, got through.
+  conduit   results.json and the conduit's log (caapi-est.log, or caapi-est-outside.log), from a demo run whose CAS
+            Client was the attacker of a drill (CONDUIT_ATTACK, docs/attacks.md, section 6). Every Target the conduit
+            did not act on admitted; each Retrieval it acted on refused by the CAI, or by the Vault, for the drill's
+            reason, and no secret taken from it. seal: the conduit's own container, refused for its origin. swap: the
+            first Retrieval, given its own container, admitted; each later one, given the container of the one
+            before, refused for its associated data. hint: asked with the hint of a workload the Target serves no
+            group to, refused by the Vault. hint-group: asked with the hint of another group the Target serves to the
+            same launches; the Vault releases that group's secret, refused by the CAI for its associated data.
 """
 
 import argparse
@@ -331,12 +340,78 @@ def mtls(run):
     return lines, True, summary
 
 
+# the conduit's drills on the Retrieval container (caapi-est -attack) and the error each Retrieval it acted on must
+# end in: from the CAI's container checks (bundle), or the Vault's refusal (rrp/cmd/vault-gateway)
+CONDUIT = {
+    "seal": ("not signed by the trusted Vault key", "not sealed by the trusted Vault key"),
+    "swap": ("associated data does not name what the Evidence bound",),
+    "hint": ("credential-hint",),
+    "hint-group": ("associated data does not name what the Evidence bound",),
+}
+
+
+def conduit(run, attack):
+    results = json.loads((run / "results.json").read_text())
+    acts = {}  # Target -> what the conduit did to each Retrieval for it, in order
+    first = None
+    for log in (run / "caapi-est.log", run / "caapi-est-outside.log"):
+        if not log.exists():
+            continue
+        for line in log.read_text().splitlines():
+            mark = f"conduit attack {attack}: Retrieval for "
+            if mark not in line:
+                continue
+            target, _, what = line.split(mark, 1)[1].partition(": ")
+            acts.setdefault(target, []).append(what)
+            first = first or target
+    lines = [
+        f"the conduit's drill: {attack}; it acted on {sum(map(len, acts.values()))} Retrievals, for {len(acts)} Targets"
+    ]
+    bad = []
+    for r in results:
+        did = acts.get(r["target"])
+        lines.append(" ".join(["ok " if r["ok"] else "no ", r["target"].ljust(38), r["type"].ljust(8),
+                               r.get("error", "")[:110]]).rstrip())  # fmt: skip
+        if did is None:
+            if not r["ok"]:
+                bad.append(f"{r['target']}: not acted on, and not admitted")
+            continue
+        lines.append(f"    the conduit: {did[-1][:150]}")
+        if attack == "swap" and r["target"] == first:
+            if not r["ok"]:
+                bad.append(f"{r['target']}: the first Retrieval, given its own container, not admitted")
+            continue
+        if r["ok"] or r.get("secret_sha256"):
+            bad.append(f"{r['target']}: a secret taken from what the conduit returned")
+        elif not any(reason in r.get("error", "") for reason in CONDUIT[attack]):
+            bad.append(f"{r['target']}: refused, but not for {' or '.join(map(repr, CONDUIT[attack]))}")
+    if not acts:
+        return lines, False, f"the conduit's log names no Retrieval it acted on in the drill {attack!r}"
+    if missing := sorted(set(acts) - {r["target"] for r in results}):
+        bad.append(f"acted on Targets the workload has no result for: {', '.join(missing)}")
+    if bad:
+        return lines, False, "; ".join(bad)
+    others = len(results) - len(acts)
+    refused = len(acts) - (attack == "swap")
+    say = {
+        "seal": f"{refused} Retrievals given the conduit's own container, each refused by the CAI for its origin",
+        "swap": f"the first Retrieval admitted with its own container; {refused} given the container of the one "
+        "before, each refused by the CAI for its associated data",
+        "hint": f"{refused} Retrievals asked with the Credential Hint of a workload the Target serves no group to, "
+        "each refused by the Vault",
+        "hint-group": f"{refused} Retrievals asked with the Credential Hint of another group the Target serves to the "
+        "same launches: the Vault released that group's secret, and the CAI refused each for its associated data",
+    }[attack]
+    return lines, True, f"{say}; the {others} other Targets admitted"
+
+
 JUDGES = {
     "demo": lambda a: demo(a.run, a.expect, a.reason),
     "attacks": lambda a: attacks(a.run),
     "redirect": lambda a: redirect(a.run),
     "bank-pay": lambda a: bank_pay(a.run, a.expect),
     "mtls": lambda a: mtls(a.run),
+    "conduit": lambda a: conduit(a.run, a.attack),
 }
 
 
@@ -352,6 +427,8 @@ def main(argv=None):
             p.add_argument("--reason", default="", help="refused: the text every refusal's error must contain")
         if kind == "bank-pay":
             p.add_argument("--expect", choices=("pay", "ordinary", "unapproved", "platform"), required=True)
+        if kind == "conduit":
+            p.add_argument("--attack", choices=tuple(CONDUIT), required=True)
     args = parser.parse_args(argv)
     try:
         lines, ok, summary = JUDGES[args.kind](args)

@@ -31,6 +31,16 @@ What changed, newest first. Dates are UTC.
   showing that the tool refuses a message without a required member, with a member the CDDL does not define, or
   with a byte string in standard base64.
 
+- **The conduit's drills on the Retrieval container** (`CONDUIT_ATTACK=seal|swap|hint|hint-group make demo`;
+  [docs/attacks.md](docs/attacks.md), section 6): the workload's CAS Client returns a container it sealed itself
+  (TACRA's option of the CAS Server encrypting to CEKpub), the Vault's container of the Retrieval before, or asks the
+  Vault with another Credential Hint, one the Target serves no group to or one of another group it serves to the
+  same launches (the bench pack's new `other_groups`, `audit.workload.tacra.example`; `scripts/setup.sh` stores its
+  key). `scripts/verdict.py conduit` judges each run from the workload's results and the conduit's log. Unit tests of
+  the container (`bundle/keptcek_test.go`) show which check refuses a container meant for another request: with a new
+  CEK for each Retrieval, none is needed; with a CEK kept across Retrievals, the hpke-auth container needs the
+  associated data's Target check, and the hpke-base-signed container's signature covers the Target.
+
 ### Fixed
 
 - The EST server kept one attest-initiate session per Handle, so an attest-initiate for a second Target's

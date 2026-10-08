@@ -279,6 +279,13 @@ def load_pack(path):
                 f"{where}: a Secret Vault Target needs 'secret', a Credential Authority Target "
                 "'certificate_validity', and neither the other"
             )
+        others = t.get("other_groups", {})
+        if others and not vault:
+            raise PackError(f"{where}: other_groups belong to a Secret Vault Target")
+        if pack["workload"]["hint"] in others or not all("path" in g for g in others.values()):
+            raise PackError(
+                f"{where}: each of other_groups names another Credential Hint than the workload's, and a path"
+            )
     return pack
 
 
@@ -334,13 +341,14 @@ def target_config(t, workload, measurements, everyone):
     c["verifiers"] = everyone if t["verifiers"] == "all" else t["verifiers"]
     c["acceptable"] = t["acceptable"]
     if "secret" in t:
-        s = t["secret"]
+        # the workload's group, and the Target's other groups: the same launches, under other Credential Hints
         c["groups"] = {
-            workload["hint"]: {
+            hint: {
                 "secret_path": s["path"],
                 "measurements": measurements,
                 **{k: v for k, v in s.items() if k != "path"},
             }
+            for hint, s in {workload["hint"]: t["secret"], **t.get("other_groups", {})}.items()
         }
     else:
         c["identities"] = {
