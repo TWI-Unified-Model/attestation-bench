@@ -57,8 +57,31 @@ What changed, newest first. Dates are UTC.
   Authorities: with the RRP identifier `vault2` refuses every kind; without it, it releases the workload's group's key
   for every kind but present-nonce, each container sealed to the Attester's CEKpub. 6 runs, 20 of 20 each.
 
+- **The attest-* wire as proposed for the EST draft** (EST patch 0014; [e2e/est-attest.cddl](e2e/est-attest.cddl)):
+  a media type for each message type, as EST has one for each (RFC 7030, Section 3.2.4), with the names of the
+  reference implementation: `application/est-attest-initiate+json`, `-enroll+json`, `-retrieve+json` and
+  `-bundle+json`, with a CA label or without; any other request type, `application/json` included, gets 415 with an
+  `Accept` header. No `rrp_id`, `required_bindings` or `server_id` in the attest-initiate response, no `endorsements`
+  in the requests. The EST server refuses with 400, saying why, any request that is not what the CDDL defines (a
+  member in another case or twice, null, invalid UTF-8, a byte string that is not unpadded base64url as `.b64u` takes
+  it, a handle where its Freshness Kind takes none or none where it takes one, data after the object), and a body
+  over its limit with 413. `make test-live` checks the types, the 415s and four of these refusals on the live server,
+  none of which uses up a Handle; `e2e/scripts/est-wire-cddl.py` takes the repository's CDDL and checks each message's
+  media type. On the three platforms in both RATS models, 8 October: 6 demos, 10 of 10 Targets each, 120 messages
+  valid against the CDDL, 180 media types as their place's, 84 altered messages refused; 3 attack runs, 262, 262 and
+  162 checks, each PASS, the pre-play's 72 messages valid against the CDDL with their media types
+  ([docs/verification.md](docs/verification.md)).
+
 ### Fixed
 
+- A demo run whose SSH reverse tunnel did not come up ran its workload anyway and ended in a verdict about the
+  Targets ("10 of 10 Targets not admitted") for a failure of the network: on 8 October the tunnel's session to an AWS
+  instance timed out during the banner exchange. The demo scripts now open the tunnel again, up to three times, when
+  its session ends, and a run whose tunnel never comes up stops, saying so.
+- The pre-play took the Credential Hint as the Target's one identity or credential group, and stopped at a Vault Target
+  with two, which every Vault Target has had since the conduit's drills added `other_groups`: the first attack run
+  after them found it ([its README](hwcheck/evidence/20261008T135750Z-gcp-sev-snp/README.md)). It now sends the
+  workload's own hint (`packs/tacra-bench`, `workload.hint`).
 - README, [docs/attacks.md](docs/attacks.md) and [docs/getting-started.md](docs/getting-started.md) said that without
   the RRP identifier only a nonce stops the redirection. That holds for RRPs that share one epoch marker, on Evidence
   made for the first; they now say so, and what the variants found.

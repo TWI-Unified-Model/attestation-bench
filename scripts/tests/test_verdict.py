@@ -40,6 +40,26 @@ WAIVER = "the honest Evidence admitted under the bench's waiver: Milan bit 4: ad
 # before that patch, which found the EST server's fault (its README)
 CLOCK_RUNS = ["20261007T212531Z-gcp-sev-snp", "20261007T213607Z-aws-sev-snp", "20261007T214424Z-gcp-tdx"]
 EST_FAULT_RUN = "20261007T211305Z-gcp-sev-snp"
+# the attest-* wire as proposed for the EST draft (EST patch 0014), 8 October 2026: the demos at 6bf2b37, each with its
+# EST wire log, and the media type each message of the wire carries (e2e/scripts/est-wire-cddl.py); the attack runs
+# at dae1fb0, and the one before it, whose pre-play stopped at a Target with two credential groups (its README)
+WIRE_DEMO_RUNS = [
+    "20261008T134108Z-gcp-sev-snp-e2e-passport",
+    "20261008T134423Z-aws-sev-snp-e2e-passport",
+    "20261008T134640Z-gcp-tdx-e2e-passport",
+    "20261008T134939Z-gcp-sev-snp-e2e-background-check",
+    "20261008T135240Z-aws-sev-snp-e2e-background-check",
+    "20261008T135441Z-gcp-tdx-e2e-background-check",
+]
+WIRE_TYPES = {
+    ("GET", "attest-initiate", "response"): "application/est-attest-initiate+json",
+    ("POST", "attest-enroll", "request"): "application/est-attest-enroll+json",
+    ("POST", "attest-enroll", "response"): "application/pkcs7-mime",
+    ("POST", "attest-retrieve", "request"): "application/est-attest-retrieve+json",
+    ("POST", "attest-retrieve", "response"): "application/est-attest-bundle+json",
+}
+WIRE_ATTACK_RUNS = ["20261008T141202Z-gcp-sev-snp", "20261008T142240Z-aws-sev-snp", "20261008T143101Z-gcp-tdx"]
+PREPLAY_HINT_FAULT_RUN = "20261008T135750Z-gcp-sev-snp"
 # the conduit experiment (7 October 2026): #20 in Background Check and in Passport, and the conduit's #19 rewrites
 CONDUIT_RUNS = [
     "20261007T204444Z-gcp-snp-redirect",
@@ -214,6 +234,39 @@ class CommittedRuns(unittest.TestCase):
                     "with it ahead taken at once",
                     last,
                 )
+
+    def test_demo_on_the_proposed_wire(self):
+        for run in WIRE_DEMO_RUNS:
+            with self.subTest(run=run):
+                code, last = verdict("demo", E2E / run)
+                self.assertEqual(code, 0, last)
+                self.assertTrue(last.startswith("VERDICT PASS: all 10 Targets: credential acquired and admitted"), last)
+                lines = (E2E / run / "bench-logs" / "est-wire.log").read_text().splitlines()
+                self.assertEqual(len(lines), 20)  # attest-initiate and the second leg, for each of 10 Targets
+                for rec in map(json.loads, lines):
+                    resource = rec["path"].rsplit("/", 1)[-1]
+                    self.assertEqual(rec["status"], 200, rec["path"])
+                    for part in ("request", "response") if rec["method"] == "POST" else ("response",):
+                        got = rec[f"{part}_content_type"].split(";")[0]
+                        self.assertEqual(got, WIRE_TYPES[(rec["method"], resource, part)], f"{rec['path']} {part}")
+                    if resource == "attest-initiate":  # what the wire no longer carries
+                        members = set(json.loads(rec["response_body"]))
+                        self.assertFalse(members & {"rrp_id", "required_bindings", "server_id"}, members)
+
+    def test_attacks_on_the_proposed_wire(self):
+        for run in WIRE_ATTACK_RUNS:
+            with self.subTest(run=run):
+                code, last = verdict("attacks", HW / run)
+                self.assertEqual(code, 0, last)
+                self.assertIn(
+                    "absent-timestamp Evidence made with the clock behind refused; the other four kinds' Evidence made "
+                    "with it ahead taken at once",
+                    last,
+                )
+
+    def test_the_run_that_found_the_preplay_hint(self):
+        why = "VERDICT FAIL: the pre-play check not as expected: the Evidence made with the guest's clock ahead was not presented"
+        self.assertEqual(verdict("attacks", HW / PREPLAY_HINT_FAULT_RUN), (1, why))
 
     def test_the_run_that_found_the_est_fault(self):
         why = (

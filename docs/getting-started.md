@@ -131,22 +131,25 @@ Then the tests that need the running bench, still without hardware:
 make test-live
 ```
 
-It checks the EST server's wire format through the running server: the media types each attest-* resource takes, the
-415 it answers to any other, the Handle as unpadded base64url, a Handle that serves one request only. Each request
-carries the real Evidence of a committed hardware run, which the RRP refuses because it is bound to another Handle.
+It checks the EST server's wire format through the running server, as the CDDL of the attest-* wire defines it
+([../e2e/est-attest.cddl](../e2e/est-attest.cddl)): the attest-initiate response's media type and members, the Handle
+as unpadded base64url; that each resource takes its own media type only and answers 415, with an Accept header, to
+any other; that it refuses with 400 a request that is not of the CDDL's syntax; that none of these refusals uses up the
+Handle, which then serves one request only. Each request carries the real Evidence of a committed hardware run, which
+the RRP refuses because it is bound to another Handle.
 Then the live verifiers appraise again the Evidence of every committed attack run from 6 October 2026 on, with each
 run's own records as the RRP's: the honest Evidence must pass and each changed binding must fail, as when the run was
 made. Veraison fetches AMD's revocation list and the TDX verifier Intel's collateral, so it needs the network.
 
 ```
-  ok  attest-initiate https://db-nonce.tacra.example: 200, mode enroll, Handle 43 characters of unpadded base64url, 32 octets
-  ok  /attest-enroll as text/plain: 415 Content-Type must be application/json
+  ok  attest-initiate https://db-nonce.tacra.example: 200 application/est-attest-initiate+json, members acceptable_csk, acceptable_evidence, expires_in, freshness_kind, handle, mode; Handle 43 characters of unpadded base64url, 32 octets
+  ok  /attest-enroll as application/json: 415 Content-Type must be application/est-attest-enroll+json; Accept application/est-attest-enroll+json
   ...
-  ok    20261007T182023Z-gcp-tdx       50 checks, 0 not as expected
-test-live: the EST wire format as expected; 29 committed runs appraised again, 1450 checks as expected
+  ok    20261008T143101Z-gcp-tdx       50 checks, 0 not as expected
+test-live: the EST wire format as expected; 37 committed runs appraised again, 1850 checks as expected
 ```
 
-That is at v0.1.0; every attack run committed after it adds one run and 50 checks.
+That is on 8 October 2026; every attack run committed after it adds one run and 50 checks.
 
 ## 7. Run TACRA end to end, on real hardware
 

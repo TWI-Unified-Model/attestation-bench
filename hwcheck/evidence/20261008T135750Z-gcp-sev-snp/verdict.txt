@@ -1,0 +1,8 @@
+rrpverify-platform: 50 checks, 0 not as expected
+rrpverify-service: 50 checks, 0 not as expected
+rrpverify-veraison-fixed: 162 checks, 0 not as expected (a build the bench compares with: reported, not judged)
+rrpverify-veraison-fork: 142 checks, 60 not as expected (a build the bench compares with: reported, not judged)
+rrpverify-veraison-v015: 162 checks, 0 not as expected
+the platform rule's waiver: Milan bit 4: admitted without bit 4, AMD-SB-3034
+guest minus RRP: +1.152 s, within 1.293 s
+VERDICT FAIL: the pre-play check not as expected: the Evidence made with the guest's clock ahead was not presented

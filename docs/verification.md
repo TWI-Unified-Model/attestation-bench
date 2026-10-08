@@ -288,3 +288,25 @@ make report RUNS="hwcheck/evidence/20261008T03* hwcheck/evidence/20261008T04*"  
 tests judging the twelve runs and copies of them changed in one place; with the Vault's runs, 60. The 27 earlier
 redirect runs are judged as before. Before its runs, the bench with the second Vault passed `make check-mtls`, 40 of
 40, locally. `make cloud-check` found both clouds empty at the end of each batch.
+
+## The attest-* wire as proposed for the EST draft (8 October 2026)
+
+The wire format proposed for draft-novak-lamps-tacra-est (`f3cc899`): a media type for each message type, no `rrp_id`
+in the attest-initiate response, no `endorsements` in the requests, and the messages in CDDL
+([../e2e/est-attest.cddl](../e2e/est-attest.cddl)). The EST server (patch 0014) refuses, saying why, any request that
+is not what the CDDL defines. Before any code, the CDDL took the 360 messages of the 18 hardware runs of 7 and 8
+October that kept a wire log, once `rrp_id` and `required_bindings` were taken out, and refused each of 50 alterations
+that break a rule of it. Two faults of the bench came out on the way, each fixed in a commit of its own: a demo run
+whose SSH reverse tunnel did not come up still ran and blamed the Targets (`6bf2b37`), and the pre-play stopped at a
+Vault Target with two credential groups (`dae1fb0`; [the run that found it](../hwcheck/evidence/20261008T135750Z-gcp-sev-snp)).
+
+| Check | Commit | Result |
+|---|---|---|
+| `make check` | `dae1fb0` | every linter clean; the EST patches' tests 12 (9 before), in 7 files, each of eight checks of patch 0014 failing one when turned off; 60 Python tests, and with these runs and their tests 63 |
+| `make check-mtls`, `make test-live` | `6bf2b37` | 40 of 40; the EST wire format: 21 checks as expected (the attest-initiate response's type and members; 415 with Accept for `application/json`, `text/plain` and the other resource's type; 400 for `endorsements`, a request twice, a member twice, standard base64; the Handle unused by any of them); 33 committed runs appraised again, 1650 checks |
+| `make demo` on the three platforms, Passport and Background Check | `6bf2b37` | 6 PASS, 10 of 10 Targets each |
+| `e2e/scripts/est-wire-cddl.py` on the six demos' wire logs | `6bf2b37` | 120 messages valid, 180 of 180 with the media type of their place (the Vault's containers as `application/est-attest-bundle+json`), 84 altered messages refused |
+| `make attacks` on the three platforms | `dae1fb0` | 3 PASS: 262, 262 and 162 checks; the pre-play's 72 messages, taken from the EST server's wire log (an attack run keeps none of its own), valid against the CDDL with their media types |
+| `make test-live` with the new runs | `dae1fb0` | the EST wire format as expected; 37 committed runs appraised again, 1850 checks |
+
+`make cloud-check` found both clouds empty at the end of each batch.

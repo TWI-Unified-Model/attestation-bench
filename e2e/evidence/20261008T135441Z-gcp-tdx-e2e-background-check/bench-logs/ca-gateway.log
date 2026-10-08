@@ -1,0 +1,10 @@
+2026/10/08 08:56:05 background-check: this RRP asks https://localhost:8453 (tdx), 4966 octets of Evidence (application/vnd.veraison.tsm-report+cbor)
+2026/10/08 08:56:06 enrolled: target=https://db-nonce.tacra.example kind=present-nonce hint="payments.workload.tacra.example" caller=[est-server.bench.tacra.example]
+2026/10/08 08:56:06 background-check: this RRP asks https://localhost:8453 (tdx), 4966 octets of Evidence (application/vnd.veraison.tsm-report+cbor)
+2026/10/08 08:56:06 enrolled: target=https://db-epoch.tacra.example kind=present-epoch hint="payments.workload.tacra.example" caller=[est-server.bench.tacra.example]
+2026/10/08 08:56:07 background-check: this RRP asks https://localhost:8453 (tdx), 4966 octets of Evidence (application/vnd.veraison.tsm-report+cbor)
+2026/10/08 08:56:07 enrolled: target=https://db-lepoch.tacra.example kind=absent-epoch hint="payments.workload.tacra.example" caller=[est-server.bench.tacra.example]
+2026/10/08 08:56:08 background-check: this RRP asks https://localhost:8453 (tdx), 4966 octets of Evidence (application/vnd.veraison.tsm-report+cbor)
+2026/10/08 08:56:08 enrolled: target=https://db-time.tacra.example kind=absent-timestamp hint="payments.workload.tacra.example" caller=[est-server.bench.tacra.example]
+2026/10/08 08:56:09 background-check: this RRP asks https://localhost:8453 (tdx), 4966 octets of Evidence (application/vnd.veraison.tsm-report+cbor)
+2026/10/08 08:56:09 enrolled: target=https://db-none.tacra.example kind=absent-none hint="payments.workload.tacra.example" caller=[est-server.bench.tacra.example]
