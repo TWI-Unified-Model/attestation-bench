@@ -4,9 +4,10 @@
 #   fork's mock CA (the TACRA backend alone, a strict configuration), 0010 the reference-vector tests in a package of
 #   their own, apart from the upstream tests' mock CA, 0011 the fork's mock TEE and mock attested CA out of the tree,
 #   0012 a session per Target for a present-epoch Handle, which every Target shares, 0013 an optional wire log of the
-#   attest-* exchanges, as they crossed the wire.
+#   attest-* exchanges, as they crossed the wire, 0014 the attest-* wire as proposed for the draft in October 2026: a
+#   media type for each message, no rrp_id or endorsements, the requests' syntax checked against the CDDL.
 NAME=globalsign-est
 REPO=https://github.com/TWI-Unified-Model/globalsign-est.git
 BASE=04ffa468b167eb36d8b1af0e354c4af41427a02e   # sudar_feature_01, sudarsh4495, 2026-09-27
 LICENSE=MIT
-VARIANTS="src:13:b9b7be277f0fb6cc8182ab5d6f1f73a480457127"
+VARIANTS="src:14:2e666b672b6e4df54c0d9944dd1c5ae8c5c824e2"

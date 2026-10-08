@@ -1,23 +1,32 @@
 #!/usr/bin/env python3
-"""Checks the messages of EST wire logs against a CDDL of the draft's envelopes, with the cddl tool.
+"""Checks the messages of EST wire logs against the CDDL of the attest-* wire, with the cddl tool, and their media types.
 
 A wire log is the EST server's (est-server.json, wire_log; a run keeps its part in bench-logs/est-wire.log): one JSON
-object per exchange on an attest-* resource, the request and the response as they crossed the wire. Each message the
-CDDL defines is checked against its rule: the attest-initiate response, the attest-enroll and attest-retrieve requests
-and the attest-retrieve response. Before that, for the first message of each kind, the check shows that the tool
-refuses what it must: the message without a member every message of the kind carries, with a member the CDDL does not
-define, and with a byte string in standard base64 instead of unpadded base64url.
+object per exchange on an attest-* resource, the request and the response as they crossed the wire. The CDDL is the
+one of the wire format proposed for draft-novak-lamps-tacra-est in October 2026 (e2e/est-attest.cddl). Each message it
+defines is checked against its rule: the attest-initiate response, the attest-enroll and attest-retrieve requests. The
+attest-retrieve response, the Secret Vault's container, is not in it (the container is TACRA's). Of every message the
+media type is checked: its own (one for each message type: application/est-attest-initiate+json, -enroll+json,
+-retrieve+json and -bundle+json), application/pkcs7-mime for the enrollment's certificate, text/plain for a refusal.
 
-    e2e/scripts/est-wire-cddl.py CDDL WIRE_LOG...
+Before that, for the first message of each kind (each rule, Freshness Kind and mode), the check shows that the tool
+refuses what the CDDL must: the message without freshness_kind; with a member the CDDL does not define (rrp_id in a
+response, endorsements in a request); with a byte string in standard base64; with a handle where its kind takes none,
+or without one where it takes one; a response of one mode with the other mode's algorithms.
 
+    e2e/scripts/est-wire-cddl.py [--cddl CDDL] WIRE_LOG...
+
+The wire log of a run whose requests are all as the workload sent them: make test-live's deliberate refusals are not.
 The cddl tool is Carsten Bormann's (the Ruby gem `cddl`), found as $CDDL_TOOL or in BENCH_HOME/gems; Ruby 4 no longer
 bundles two libraries it needs, so they come with it:
 
     GEM_HOME="$BENCH_HOME/gems" gem install --no-document cddl:0.12.14 pstore:0.2.1 base64:0.3.0
 
-Prints one line per message and exits 1 unless every message is valid and every altered message refused.
+Prints one line per message and exits 1 unless every message is valid with its media type and every altered message
+refused.
 """
 
+import argparse
 import json
 import os
 import subprocess
@@ -26,17 +35,24 @@ import tempfile
 from pathlib import Path
 
 HOME = Path(os.environ.get("BENCH_HOME", str(Path.home() / ".attestation-bench")))
+CDDL = Path(__file__).resolve().parents[1] / "est-attest.cddl"
 
-# (method, resource, status or None for any, which body) -> the CDDL rule of that message
+# (method, resource, which body) -> the CDDL rule of that message; a response only when its status is 200
 RULES = {
-    ("GET", "attest-initiate", 200, "response"): "attestation-initiation-response",
-    ("POST", "attest-enroll", None, "request"): "attested-enrollment-request",
-    ("POST", "attest-retrieve", None, "request"): "attested-retrieval-request",
-    ("POST", "attest-retrieve", 200, "response"): "encrypted-credential-bundle",
+    ("GET", "attest-initiate", "response"): "attestation-initiation-response",
+    ("POST", "attest-enroll", "request"): "attested-enrollment-request",
+    ("POST", "attest-retrieve", "request"): "attested-retrieval-request",
 }
-# for the altered messages: a member every message of the kind carries, and byte strings, in the order tried
-REQUIRED = ("freshness_kind", "ciphertext")
-BYTES = ("evidence", "handle", "ciphertext")
+# (method, resource, which body) -> the media type of the request, or of the response when its status is 200; any
+# other response is a refusal, in text/plain
+TYPES = {
+    ("POST", "attest-enroll", "request"): "application/est-attest-enroll+json",
+    ("POST", "attest-retrieve", "request"): "application/est-attest-retrieve+json",
+    ("GET", "attest-initiate", "response"): "application/est-attest-initiate+json",
+    ("POST", "attest-enroll", "response"): "application/pkcs7-mime",
+    ("POST", "attest-retrieve", "response"): "application/est-attest-bundle+json",
+}
+PRESENT = ("present-nonce", "present-epoch")
 
 
 def tool():
@@ -45,85 +61,125 @@ def tool():
     return exe, env
 
 
-def validate(spec, rule, message, tmp):
-    """The tool's verdict on one message against one rule: (valid, the tool's first line of explanation)."""
+def validate(spec, start, instance, tmp):
+    """The tool's verdict on an instance against a start rule: (valid, the tool's first line of explanation)."""
     s, m = Path(tmp, "check.cddl"), Path(tmp, "message.json")
-    s.write_text(f"start = {rule}\n\n{spec}")
-    m.write_text(json.dumps(message))
+    s.write_text(f"start = {start}\n\n{spec}")
+    m.write_text(json.dumps(instance))
     exe, env = tool()
     out = subprocess.run([exe, str(s), "validate", str(m)], capture_output=True, text=True, env=env, check=False)
     lines = (out.stderr + out.stdout).splitlines()  # the tool says why on stderr, then its trace on stdout
     why = [line for line in lines if line and not line.startswith("*** Unused rule")]
-    return out.returncode == 0, (why[0] if why else "")
+    return out.returncode == 0, (why[0][:300] if why else "")
+
+
+def media_type(header):
+    return header.split(";", 1)[0].strip().lower()
 
 
 def messages(log):
-    """Every message of a wire log the rules define: (where, kind, rule, message)."""
+    """Every message of a wire log: (where, what it is, its media type, the media type of its place, its CDDL rule or
+    None, its body). attest-initiate's request, a GET without a body, is not one."""
     for n, line in enumerate(log.read_text().splitlines(), 1):
         if not line.strip():
             continue
         rec = json.loads(line)
-        resource = rec["path"].rsplit("/", 1)[-1]
-        for (method, res, status, part), rule in RULES.items():
-            if rec["method"] != method or resource != res or (status is not None and rec["status"] != status):
+        resource, method, status = rec["path"].rsplit("/", 1)[-1], rec["method"], rec["status"]
+        for part in ("request", "response"):
+            ctype = rec.get(f"{part}_content_type", "")
+            body = rec.get(f"{part}_body", "") or rec.get(f"{part}_body_base64", "")
+            if part == "request" and method == "GET":
                 continue
-            body = rec.get(f"{part}_body", "")
-            try:
-                message = json.loads(body)
-            except ValueError:
-                yield f"{log}:{n}", f"{resource} {part}", rule, None  # not JSON: invalid as any rule
-                continue
-            yield f"{log}:{n}", f"{resource} {part}", rule, message
+            ok_response = part == "request" or status == 200
+            want = TYPES.get((method, resource, part)) if ok_response else "text/plain"
+            rule = RULES.get((method, resource, part)) if ok_response else None
+            what = f"{resource} {part}" + (f" {status}" if part == "response" else "")
+            yield f"{log}:{n}", what, ctype, want, rule, body
 
 
-def altered(message):
-    """The message three ways it must be refused, each with what was done."""
-    for k in REQUIRED:
-        if k in message:
-            m = dict(message)
-            del m[k]
-            yield f"without {k}", m
-            break
-    yield "with a member the CDDL does not define", dict(message, x_not_in_the_cddl="")
-    for k in BYTES:
+def altered(rule, message):
+    """The message, altered in each way the CDDL must refuse for its rule, kind and mode: (what was done, message)."""
+    kind = message.get("freshness_kind")
+    m = dict(message)
+    del m["freshness_kind"]
+    yield "without freshness_kind", m
+    name, value = (
+        ("rrp_id", "https://ca1.tacra.example") if rule.startswith("attestation-") else ("endorsements", "AAAA")
+    )
+    yield f"with {name}, which the CDDL does not define", dict(message, **{name: value})
+    for k in ("evidence", "handle"):
         if isinstance(message.get(k), str) and len(message[k]) >= 4:
-            m = dict(message)
-            m[k] = m[k][:-2] + "+/"  # characters of standard base64, not of base64url
-            yield f"with {k} in standard base64", m
+            yield f"with {k} in standard base64", dict(message, **{k: message[k][:-2] + "+/"})  # not base64url's
             break
+    takes_handle = kind in PRESENT if rule.startswith("attestation-") else kind != "absent-none"
+    if takes_handle:
+        m = dict(message)
+        m.pop("handle", None)
+        yield "without a handle", m
+    else:
+        yield "with a handle", dict(message, handle="AAAAAAAAAAA")
+    if rule.startswith("attestation-"):
+        other = "acceptable_cek" if message.get("mode") == "enroll" else "acceptable_csk"
+        yield f"with {other}", dict(message, **{other: ["x"]})
 
 
 def main(argv=None):
-    argv = sys.argv[1:] if argv is None else argv
-    if len(argv) < 2:
-        print(__doc__.split("\n\n")[1].strip())
-        return 2
-    spec = Path(argv[0]).read_text()
-    bad = valid = refused = 0
-    first = set()
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--cddl", type=Path, default=CDDL, help="the CDDL (default: e2e/est-attest.cddl)")
+    ap.add_argument("logs", type=Path, nargs="+", metavar="WIRE_LOG")
+    a = ap.parse_args(argv)
+    spec = a.cddl.read_text()
+    found = [m for log in a.logs for m in messages(log)]
+    if not found:
+        print("EST wire CDDL: no message in the wire log")
+        return 1
+    bad = valid = typed = refused = 0
+    verdicts = {}  # (where, what) -> (valid, why)
+    firsts = {}  # (rule, Freshness Kind, mode) -> (what, the first valid message of that kind)
     with tempfile.TemporaryDirectory() as tmp:
-        for log in map(Path, argv[1:]):
-            for where, kind, rule, message in messages(log):
-                if message is None:
-                    bad += 1
-                    print(f"BAD {where} {kind}: not JSON")
+        for rule in RULES.values():
+            items = []
+            for where, what, _, _, r, body in found:
+                if r != rule:
                     continue
-                ok, why = validate(spec, rule, message, tmp)
-                valid += ok
-                bad += not ok
-                print(f"{'ok ' if ok else 'BAD'} {where} {kind} as {rule}" + ("" if ok else f": {why}"))
-                if rule in first or not ok:
+                try:
+                    message = json.loads(body)
+                except ValueError:
+                    message = None
+                items.append((where, what, message))
+            objects = [m for _, _, m in items if isinstance(m, dict)]
+            # every message of the rule at once, as an array of them; one by one only if that fails
+            all_ok = bool(objects) and validate(spec, f"[* {rule}]", objects, tmp)[0]
+            for where, what, message in items:
+                if not isinstance(message, dict):
+                    verdicts[(where, what)] = (False, "not a JSON object")
                     continue
-                first.add(rule)
-                for what, m in altered(message):
-                    ok2, _ = validate(spec, rule, m, tmp)
-                    refused += not ok2
-                    bad += ok2
-                    print(f"{'ok ' if not ok2 else 'BAD'}   {kind} {what}: {'refused' if not ok2 else 'accepted'}")
-    total = valid + bad
-    print(f"EST wire CDDL: {valid} messages valid, {refused} altered messages refused, {bad} not as expected"
-          if total else "EST wire CDDL: no message in the wire log")  # fmt: skip
-    return 1 if bad or not total else 0
+                verdicts[(where, what)] = (True, "") if all_ok else validate(spec, rule, message, tmp)
+                if verdicts[(where, what)][0]:
+                    firsts.setdefault((rule, message.get("freshness_kind"), message.get("mode")), (what, message))
+        for where, what, ctype, want, rule, _ in found:
+            ok, why = verdicts[(where, what)] if rule else (True, "")
+            type_ok = media_type(ctype) == want
+            valid += bool(rule) and ok
+            typed += type_ok
+            bad += not (ok and type_ok)
+            note = (
+                f" as {rule}"
+                if rule
+                else (" (the Vault's container, not in this CDDL)" if want.endswith("+json") else "")
+            )
+            print(f"{'ok ' if ok and type_ok else 'BAD'} {where} {what}{note}, {media_type(ctype) or 'no media type'}"
+                  + ("" if ok else f": {why}") + ("" if type_ok else f", not {want}"))  # fmt: skip
+        for (rule, kind, mode), (what, message) in firsts.items():
+            for how, m in altered(rule, message):
+                ok, _ = validate(spec, rule, m, tmp)
+                refused += not ok
+                bad += ok
+                print(f"{'ok ' if not ok else 'BAD'}   {what}, {kind}{' ' + mode if mode else ''}, {how}: "
+                      f"{'refused' if not ok else 'accepted'}")  # fmt: skip
+    print(f"EST wire CDDL: {valid} messages valid, {typed} of {len(found)} with their place's media type, "
+          f"{refused} altered messages refused, {bad} not as expected")  # fmt: skip
+    return 1 if bad else 0
 
 
 if __name__ == "__main__":

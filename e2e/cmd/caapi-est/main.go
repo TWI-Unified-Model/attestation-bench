@@ -167,7 +167,7 @@ func grpcError(err error) error {
 		return status.Error(codes.Unavailable, err.Error())
 	}
 	switch e.StatusCode() {
-	case http.StatusBadRequest, http.StatusUnsupportedMediaType:
+	case http.StatusBadRequest, http.StatusRequestEntityTooLarge, http.StatusUnsupportedMediaType:
 		return status.Error(codes.InvalidArgument, e.Error())
 	case http.StatusForbidden, http.StatusUnauthorized:
 		return status.Error(codes.PermissionDenied, e.Error())
@@ -189,9 +189,6 @@ func (b *bridge) InitiateRemoteAttestation(ctx context.Context, in *caapiv1.Init
 		return nil, grpcError(err)
 	}
 	out := &caapiv1.InitiateCredentialAcquisitionResponse{FreshnessKind: kinds[r.FreshnessKind]}
-	if r.RRPID != "" {
-		out.RrpId = &r.RRPID
-	}
 	if len(r.Handle) > 0 {
 		out.FreshnessHandle = r.Handle
 	}

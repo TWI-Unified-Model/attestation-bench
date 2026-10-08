@@ -66,7 +66,7 @@ reference runs, six fail: each found a fault in its day, which its README or the
 | `e2e-attester.json` | the workload's configuration: Targets, RRP identifiers and public keys only |
 | `e2e-attester-stdout.txt`, `caapi-est.log` | what the workload and the CAS Client printed |
 | `bench-logs/` | each trust zone service's log lines for this run only |
-| `bench-logs/est-wire.log` | every attest-* exchange of this run, request and response, as it crossed the wire: one JSON object per line, written by the EST server (`wire_log`, EST patch 0013); `e2e/scripts/est-wire-cddl.py` checks its messages against a CDDL |
+| `bench-logs/est-wire.log` | every attest-* exchange of this run, request and response, as it crossed the wire: one JSON object per line, written by the EST server (`wire_log`, EST patch 0013); `e2e/scripts/est-wire-cddl.py` checks its messages against the CDDL of the attest-* wire ([../e2e/est-attest.cddl](../e2e/est-attest.cddl)) and the media type of each |
 | `run-window.txt` | the run's start and end, in seconds since 1970 |
 | `platform-rule.json` | the platform rule the RRPs applied: product lines, minimum TCB, required PLATFORM_INFO and mitigation bits, the mitigation bits waived by name, and SMT on SEV-SNP, refused TD attributes on TDX ([../trust/README.md](../trust/README.md)); runs before 7 October 2026 have none |
 | `kernel.txt`, `machine-type.txt` (GCP) or `instance.txt` (AWS), `vm-deleted.txt` | the guest's kernel, the machine, and the record of its deletion, with the time it was found gone |
