@@ -6,6 +6,20 @@ What changed, newest first. Dates are UTC.
 
 ### Added
 
+- **The replay variants of `make redirect`** (`REDIRECT_VARIANT=replay`, `replay-vault`): the same request offered
+  twice at the same RRP, `ca1` or `vault1`, for each Freshness Kind, in Background Check and in Passport. The RRP
+  keeps no record of a CSR or CEKpub it served, so only the freshness element can refuse the second offer: a
+  present-nonce Handle serves once; an epoch marker serves while it is current, a timestamp while its window holds,
+  absent-none always. Both credentials are for the Attester's own key, so the conduit obtains nothing it can use:
+  what the replay measures is double issuance or release from one Evidence
+  ([docs/attacks.md](docs/attacks.md), section 2). `scripts/verdict.py` judges each outcome against that table.
+- **`hwcheck/cmd/conduit-view`**: what the conduit sees of a run's Evidence and, in Passport, of its Attestation
+  Results, field by field as the platform's own library parses it, with what each field tells (the machine, the
+  launch, the firmware, the policy, the Attester's choice) and the certificates that travel with it. On the runs
+  of 8 October the conduit learns the chip on GCP SEV-SNP (`CHIP_ID`, the VCEK's hwID), the provider's key domain
+  and region on AWS (the VLEK's cspID, `CHIP_ID` zero) and the platform on GCP TDX (the PCK certificate's PPID and
+  FMSPC), and on every platform the launch, the firmware level and the policy
+  ([docs/attacks.md](docs/attacks.md), section 7). Its test reads those three runs.
 - **The conduit's rewrites** in `make redirect` (TACRA #19): on Evidence made for `ca1`, the conduit sends, one at a
   time, a made-up Handle, the Freshness Kind `absent-none`, a credential type the Target does not offer, another
   workload's Credential Hint, and the other credential type the Target offers. Each is refused for its own reason but

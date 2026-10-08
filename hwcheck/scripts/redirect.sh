@@ -20,6 +20,11 @@
 #     vault       the default run on the Secret Vaults: Retrieval Evidence for a ledger Target of vault1, offered to
 #                 vault1 and to vault2, its copy with another RRP identifier (packs/tacra-bench); each asked for the
 #                 workload's group's key, in the hpke-base-signed container to an MLKEM768-P256 CEK
+#     replay      the same request twice at ca1, in the pass with the RRP identifier alone: what a conduit that holds a
+#                 request gets by offering it again. The RRP keeps no record of a CSR it served, so only the freshness
+#                 element can refuse the second offer: a present-nonce Handle serves once; an epoch marker serves while
+#                 it is current, a timestamp while its window holds, absent-none always
+#     replay-vault  the same on the Secret Vaults: Retrieval twice at vault1
 #
 # The guest only runs hwrun (offline); all gateway interaction is on this machine, where the bench runs. The bench runs
 # every pass in Background Check (or Passport), reconfigured between them (OMIT_RRP_ID, and OWN_EPOCHS in a variant),
@@ -49,9 +54,9 @@ RUNS_DIR="${RUNS_DIR:-$BENCH_HOME/runs}"
 MODEL=background-check; [ -n "${PASSPORT:-}" ] && MODEL=passport
 VARIANT="${REDIRECT_VARIANT:-default}"
 case "$VARIANT" in
-  default|vault) OWN="";;
+  default|vault|replay|replay-vault) OWN="";;
   own-epochs|start-ca2) OWN=1;;   # ca2 keeps an epoch marker of its own
-  *) echo "unknown REDIRECT_VARIANT $VARIANT: own-epochs, start-ca2 or vault" >&2; exit 2;;
+  *) echo "unknown REDIRECT_VARIANT $VARIANT: own-epochs, start-ca2, vault, replay or replay-vault" >&2; exit 2;;
 esac
 OUT="$RUNS_DIR/${STAMP}-${CLOUD}-redirect"; [ "$MODEL" = passport ] && OUT="$OUT-passport"
 if [ "$VARIANT" != default ]; then OUT="$OUT-$VARIANT"; fi
@@ -61,7 +66,7 @@ CA1_ID=https://ca1.tacra.example   # the RRP identifier the honest EST server's 
 # The RRP pair the conduit plays: the Credential Authorities (Enrollment), or, in the vault variant, the Secret Vaults
 # (Retrieval of the workload's group's key, sealed in the hpke-base-signed container to an MLKEM768-P256 CEK, the only
 # one the ledger Targets take)
-if [ "$VARIANT" = vault ]; then
+if [ "$VARIANT" = vault ] || [ "$VARIANT" = replay-vault ]; then
   MODE=retrieve; RRP1=vault1; RRP2=vault2; URL1=https://127.0.0.1:9102; URL2=https://127.0.0.1:9104
   ID1=https://vault1.tacra.example; TPRE=ledger; CTYPE=api-key
 else
@@ -240,6 +245,23 @@ offer_redirect() {
   done
 }
 
+# offer_replay PASS: every case to the first RRP twice, as made: what the conduit gets from a request it holds by
+# offering it again. The RRP keeps no record of a CSR or CEKpub it served (rrp/internal/gateway), so only the freshness
+# element can refuse the second offer (rrp/internal/fresh: a present-nonce Handle is deleted on its first use; an epoch
+# marker is compared with the current one, a timestamp with its window, absent-none with nothing).
+offer_replay() {
+  local PASS="$1" d="$OUT/$1" k fresh n res
+  : > "$d/results.jsonl"
+  for k in "${ORDER[@]}"; do
+    fresh="$(fresh_of "$k")"
+    for n in 1 2; do
+      res="$(post_case "$d" "$fresh" "$RRP1")"
+      echo "{\"pass\":\"$PASS\",\"kind\":\"$fresh\",\"rrp\":\"$RRP1\",\"offer\":$n,\"result\":$res}" >> "$d/results.jsonl"
+      echo "  $PASS $fresh -> $RRP1, offer $n : $(echo "$res" | said)"
+    done
+  done
+}
+
 # rewrite DIR KIND NAME [rrp-issue flags]: one rewrite by the conduit, offered to ca1
 rewrite() {
   local d="$1" fresh="$2" name="$3" res; shift 3
@@ -282,16 +304,21 @@ reconfigure normal
 vm_create
 wait_ssh || { echo "ssh never came up" >&2; exit 1; }
 guest_ssh "$PROVISION" 2>>"$OUT/run-ssh.stderr"
-make_evidence with-rrp-id "$ID1"; offer_redirect with-rrp-id
+make_evidence with-rrp-id "$ID1"
+case "$VARIANT" in replay|replay-vault) offer_replay with-rrp-id;; *) offer_redirect with-rrp-id;; esac
 if [ "$VARIANT" = default ]; then
   echo "== the conduit's rewrites (#19), at ca1, on Evidence made for ca1"
   make_evidence rewrites "$ID1"; offer_rewrites rewrites
   make_evidence type-offered "$ID1"; offer_rewrites type-offered
 fi
 
-echo "== bench: $MODEL, NO RRP identifier in the binding (variant: $VARIANT)"
-reconfigure omit
-make_evidence no-rrp-id ""; offer_redirect no-rrp-id
+case "$VARIANT" in
+  replay|replay-vault) ;;   # the RRP identifier has no bearing on a second offer at the same RRP: one pass
+  *)
+    echo "== bench: $MODEL, NO RRP identifier in the binding (variant: $VARIANT)"
+    reconfigure omit
+    make_evidence no-rrp-id ""; offer_redirect no-rrp-id;;
+esac
 
 vm_delete; trap 'restore_bench; rm -rf "$BIN"' EXIT
 echo "== bench: back as it was ($MODEL_BEFORE, the RRP identifier in the binding)"

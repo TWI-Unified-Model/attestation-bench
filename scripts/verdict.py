@@ -27,7 +27,7 @@ hwcheck/evidence included.
             SEV-SNP run that keeps the rule (platform-rule.json) names its waivers in the verdict, as a demo does.
   redirect  results.jsonl. ca1 issues for every Freshness Kind in both passes. With the RRP identifier in the binding,
             ca2 refuses every kind; without it, ca2 refuses present-nonce alone. A run of a variant (variant.txt:
-            own-epochs, start-ca2, vault; hwcheck/scripts/redirect.sh) is judged by that variant's table, each refusal
+            own-epochs, start-ca2, vault, replay, replay-vault; hwcheck/scripts/redirect.sh) is judged by that variant's table, each refusal
             for its own reason: the Handle, the epoch marker or the binding (redirect_variant_expected).
   bank-pay  report.json, from the Demo Bank's payment service. pay: the payment went through. ordinary: no
             attestation, no credential, and the ledger and the fraud service refused the workload. unapproved:
@@ -62,6 +62,8 @@ REDIRECT_REFUSALS = {
 
 
 REDIRECT_VARIANT_RRPS = {"own-epochs": ("ca1", "ca2"), "start-ca2": ("ca1", "ca2"), "vault": ("vault1", "vault2")}
+# the replay variants: the same request offered twice at the first RRP, and what a second offer gets there
+REPLAY_RRP = {"replay": ("ca1", "issued"), "replay-vault": ("vault1", "released")}
 
 
 def redirect_variant_expected(variant):
@@ -297,6 +299,8 @@ def rewrite_lines(rows):
 def redirect(run):
     variant_file = run / "variant.txt"
     variant = variant_file.read_text().strip() if variant_file.exists() else "default"
+    if variant in REPLAY_RRP:
+        return redirect_replay(run, variant)
     if variant != "default":
         return redirect_variant(run, variant)
     rows = [json.loads(x) for x in (run / "results.jsonl").read_text().splitlines() if x.strip()]
@@ -387,6 +391,60 @@ def redirect_variant(run, variant):
             "the Secret Vaults: with the RRP identifier, vault2 refused all 5 Freshness Kinds; without it, it released "
             "the workload's group's key for every kind but present-nonce"
         )
+    return lines, True, summary
+
+
+def redirect_replay(run, variant):
+    """A replay variant of the redirection experiment (hwcheck/scripts/redirect.sh, REDIRECT_VARIANT=replay or
+    replay-vault): the same request offered twice at the first RRP, in the pass with the RRP identifier. The first
+    offer is served. The second is refused for the Handle with present-nonce, which the RRP deletes on its first use
+    (rrp/internal/fresh), and served again with every other Freshness Kind: an epoch marker serves while it is current,
+    a timestamp while its window holds, absent-none always, and the RRP keeps no record of a CSR or CEKpub it served."""
+    rrp, verb = REPLAY_RRP[variant]
+    rows = [json.loads(x) for x in (run / "results.jsonl").read_text().splitlines() if x.strip()]
+    got = {
+        (r["kind"], r.get("offer")): r["result"]
+        for r in rows
+        if "rewrite" not in r and r.get("pass") == "with-rrp-id" and r.get("rrp") == rrp
+    }
+    extra = [
+        f"an outcome a replay run does not make: {r.get('pass')} {r.get('kind')} {r.get('rrp')} {r.get('rewrite', '')}"
+        for r in rows
+        if "rewrite" in r or r.get("pass") != "with-rrp-id" or r.get("rrp") != rrp
+    ]
+    served = verb.upper()
+    lines, wrong = [f"variant {variant}", f"{'kind':18} {'first offer':28} second offer at {rrp}"], []
+    for k in FRESHNESS_KINDS:
+        cells = []
+        for n in (1, 2):
+            res = got.get((k, n))
+            if res is None:
+                cells.append("missing")
+                wrong.append(f"{k} offer {n}: missing")
+                continue
+            reason = res.get("reason", "")
+            why = next(
+                (name for name, (code, parts) in REDIRECT_REFUSALS.items()
+                 if reason.startswith(code) and any(x in reason for x in parts)),
+                None,
+            )  # fmt: skip
+            cells.append(served if res["issued"] else f"refused ({why or reason[:40]})")
+            want = "Handle" if n == 2 and k == "present-nonce" else True
+            if want is True and not res["issued"]:
+                wrong.append(f"{k} offer {n}: refused ({reason[:90]}), expected {served}")
+            elif want is not True and (res["issued"] or why != want):
+                was = served if res["issued"] else f"refused ({reason[:90]})"
+                wrong.append(f"{k} offer {n}: {was}, expected refused for the {want}")
+        lines.append(f"{k:18} {cells[0]:28} {cells[1]}")
+    lines += clock_lines(run)
+    if wrong or extra:
+        failed = [f"{len(wrong)} of {len(FRESHNESS_KINDS) * 2} outcomes not as expected"] if wrong else []
+        failed += [f"{len(extra)} outcomes a replay run does not make"] if extra else []
+        return lines + wrong + extra, False, "; ".join(failed)
+    summary = (
+        f"the same request twice at {rrp}: the second offer with present-nonce refused for the Handle; with "
+        f"present-epoch, absent-epoch, absent-timestamp and absent-none the credential {verb} twice"
+    )
     return lines, True, summary
 
 

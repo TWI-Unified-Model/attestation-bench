@@ -107,6 +107,28 @@ and `start-ca2` at `c0f02ac`, `vault` at `1a751f6`:
 | `vault`, Background Check | [run](../hwcheck/evidence/20261008T041327Z-gcp-snp-redirect-vault) | [run](../hwcheck/evidence/20261008T042128Z-gcp-tdx-redirect-vault) | [run](../hwcheck/evidence/20261008T042814Z-aws-snp-redirect-vault) |
 | `vault`, Passport | [run](../hwcheck/evidence/20261008T041741Z-gcp-snp-redirect-passport-vault) | [run](../hwcheck/evidence/20261008T042456Z-gcp-tdx-redirect-passport-vault) | [run](../hwcheck/evidence/20261008T043101Z-aws-snp-redirect-passport-vault) |
 
+```bash
+REDIRECT_VARIANT=replay make redirect PLATFORM=gcp-snp         # also replay-vault; PASSPORT=1 in Passport
+```
+
+`replay` and `replay-vault` ask the opposite question: not what a second RRP does with Evidence made for the first,
+but what the first RRP does with the same request a second time. The conduit, which holds every request it carried,
+offers each Freshness Kind's request to `ca1` (Enrollment) or to `vault1` (Retrieval of the workload's group's key)
+twice, in the pass with the RRP identifier alone, since the identifier has no bearing on a second offer at the same
+RRP. The RRP keeps no record of a CSR or CEKpub it served (`rrp/internal/gateway`), so only the freshness element can
+refuse the second offer (`rrp/internal/fresh`):
+
+| Freshness Kind | second offer at the same RRP | why |
+|---|---|---|
+| `present-nonce` | refused, `freshness` | the RRP deletes a Handle on its first use |
+| `present-epoch`, `absent-epoch` | issued or released again | the epoch marker is the current one until the epoch moves |
+| `absent-timestamp` | issued or released again | the timestamp is inside the window (`max_age`, `clock_skew`; [limits.md](limits.md), "Time") |
+| `absent-none` | issued or released again | nothing to compare |
+
+Both credentials are for the Attester's own key, so the conduit obtains nothing it can use: what the replay measures
+is double issuance or release from one Evidence, which a deployment that counts credentials, or audits them, has to
+know about. The verdict (`scripts/verdict.py`) checks each outcome against this table.
+
 Then the conduit rewrites, one at a time, what it relays to `ca1` on Evidence made for `ca1`
 ([TACRA issue #19](https://github.com/TheBankster/rats-tacra/issues/19): which fields of attest-initiate travel, and
 through whom):
@@ -205,3 +227,31 @@ not open whatever its associated data says. With one CEK kept across Retrievals,
 carries the RRP identifier and the freshness element but not the Target, so only the associated data's Target check
 refuses another Target's container under a freshness element the Targets share; the hpke-base-signed container's
 signature covers the Target and CEKpub, and refuses it without that check.
+
+## 7. What the conduit sees
+
+```bash
+cd hwcheck && go run ./cmd/conduit-view ../hwcheck/evidence/20261008T154907Z-gcp-sev-snp   # any attack or redirect run
+```
+
+Evidence is signed, not encrypted: the conduit, the CAS Client and the CAS Server of TACRA, reads all of it, and in
+Passport the CAS Server reads the Attestation Results too (RFC 9334, Sections 11 and 12.2, expect a relaying entity
+not to have access to Evidence, and warn what Evidence reveals). `conduit-view` prints what one run's Evidence shows
+its reader, field by field as the platform's own library parses it (go-sev-guest, go-tdx-guest), with what each field
+tells: the machine, the launch, the firmware, the policy, or the Attester's own choice; then the certificates that
+travel with it, and the EAR the verifier issued. From the attack runs of 8 October 2026:
+
+| The conduit can tell | GCP SEV-SNP | AWS SEV-SNP | GCP TDX |
+|---|---|---|---|
+| which machine | yes: `CHIP_ID` (64 octets) and the VCEK's hwID name the chip | not the machine: VLEK-signed, `CHIP_ID` zero; the VLEK's cspID names the provider's key domain, with its region | yes: the PCK certificate's SGX extension names the platform (PPID, FMSPC, PCE-ID) |
+| which launch | `MEASUREMENT`, `ID_KEY_DIGEST`, `HOST_DATA` | the same | `MRTD`, `RTMR0`–`RTMR3`, `MROWNER`, `MRCONFIGID` |
+| which firmware | the four TCB versions, the mitigation vectors, the SNP firmware version | the same | `TEE_TCB_SVN`, `MRSEAM` (the TDX module), the Quoting Enclave's `MRSIGNER` and SVN |
+| which policy | debug, migration, SMT (`POLICY`, `PLATFORM_INFO`) | the same | `TDATTRIBUTES`, `XFAM`, `SEAMATTRIBUTES` |
+| the Attester's choice | `REPORT_DATA`: the binding value, relayed, not changeable | the same | `REPORTDATA`: the same |
+| in Passport, besides | the verifier's verdict, trustworthiness vector and annotated evidence (a CoRIM tag) | the same | the verdict and the launch claims (mrtd, rtmrs, tcb svn, attributes) |
+
+What the conduit cannot read is what the architecture keeps from it: the Attester's keys (CSKpri, CEKpri) and, in
+Retrieval, the secret the Vault sealed to CEKpub. The data for TACRA's open choice on confidentiality (whether a
+deployment accepts a CAS that reads Evidence, or encrypts Evidence to the Verifier) is this table; `conduit-view`
+reproduces it from any committed run.
+

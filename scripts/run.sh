@@ -8,7 +8,7 @@
 #   attacks   the substitution suite: honest Evidence, then one attack per changed input, each to be refused for its
 #             own reason
 #   redirect  the #20 redirection experiment: one Evidence offered to two Credential Authorities, with and without the
-#             RRP identifier in the binding (REDIRECT_VARIANT=own-epochs, start-ca2 or vault:
+#             RRP identifier in the binding (REDIRECT_VARIANT=own-epochs, start-ca2, vault, replay or replay-vault:
 #             hwcheck/scripts/redirect.sh)
 #
 # PLATFORM is where the TEE runs:
