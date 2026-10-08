@@ -129,6 +129,15 @@ Both credentials are for the Attester's own key, so the conduit obtains nothing 
 is double issuance or release from one Evidence, which a deployment that counts credentials, or audits them, has to
 know about. The verdict (`scripts/verdict.py`) checks each outcome against this table.
 
+Runs of 8 October 2026 at `4a5c270`, each 10 of 10 outcomes as the table says:
+
+| Variant | GCP SEV-SNP | GCP TDX | AWS SEV-SNP |
+|---|---|---|---|
+| `replay`, Background Check | [run](../hwcheck/evidence/20261008T184000Z-gcp-snp-redirect-replay) | [run](../hwcheck/evidence/20261008T190244Z-gcp-tdx-redirect-replay) | [run](../hwcheck/evidence/20261008T185320Z-aws-snp-redirect-replay) |
+| `replay`, Passport | [run](../hwcheck/evidence/20261008T184330Z-gcp-snp-redirect-passport-replay) | [run](../hwcheck/evidence/20261008T190548Z-gcp-tdx-redirect-passport-replay) | [run](../hwcheck/evidence/20261008T185545Z-aws-snp-redirect-passport-replay) |
+| `replay-vault`, Background Check | [run](../hwcheck/evidence/20261008T184656Z-gcp-snp-redirect-replay-vault) | [run](../hwcheck/evidence/20261008T190855Z-gcp-tdx-redirect-replay-vault) | [run](../hwcheck/evidence/20261008T185807Z-aws-snp-redirect-replay-vault) |
+| `replay-vault`, Passport | [run](../hwcheck/evidence/20261008T185010Z-gcp-snp-redirect-passport-replay-vault) | [run](../hwcheck/evidence/20261008T191151Z-gcp-tdx-redirect-passport-replay-vault) | [run](../hwcheck/evidence/20261008T190023Z-aws-snp-redirect-passport-replay-vault) |
+
 Then the conduit rewrites, one at a time, what it relays to `ca1` on Evidence made for `ca1`
 ([TACRA issue #19](https://github.com/TheBankster/rats-tacra/issues/19): which fields of attest-initiate travel, and
 through whom):

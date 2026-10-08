@@ -74,6 +74,22 @@ WIRE_ATTACK_RUNS = [
     "20261008T160809Z-gcp-tdx",
 ]
 PREPLAY_HINT_FAULT_RUN = "20261008T135750Z-gcp-sev-snp"
+# the replay variants (hwcheck/scripts/redirect.sh, REDIRECT_VARIANT=replay, replay-vault), 8 October 2026 at 4a5c270:
+# the same request twice at ca1 and at vault1, on the three platforms, in Background Check and in Passport
+REPLAY_RUNS = {
+    "20261008T184000Z-gcp-snp-redirect-replay": "replay",
+    "20261008T184330Z-gcp-snp-redirect-passport-replay": "replay",
+    "20261008T184656Z-gcp-snp-redirect-replay-vault": "replay-vault",
+    "20261008T185010Z-gcp-snp-redirect-passport-replay-vault": "replay-vault",
+    "20261008T185320Z-aws-snp-redirect-replay": "replay",
+    "20261008T185545Z-aws-snp-redirect-passport-replay": "replay",
+    "20261008T185807Z-aws-snp-redirect-replay-vault": "replay-vault",
+    "20261008T190023Z-aws-snp-redirect-passport-replay-vault": "replay-vault",
+    "20261008T190244Z-gcp-tdx-redirect-replay": "replay",
+    "20261008T190548Z-gcp-tdx-redirect-passport-replay": "replay",
+    "20261008T190855Z-gcp-tdx-redirect-replay-vault": "replay-vault",
+    "20261008T191151Z-gcp-tdx-redirect-passport-replay-vault": "replay-vault",
+}
 # the conduit experiment (7 October 2026): #20 in Background Check and in Passport, and the conduit's #19 rewrites
 CONDUIT_RUNS = [
     "20261007T204444Z-gcp-snp-redirect",
@@ -320,6 +336,19 @@ class CommittedRuns(unittest.TestCase):
                 code, last = verdict("redirect", HW / run)
                 self.assertEqual(code, 0, last)
                 self.assertTrue(last.startswith(starts[variant]), last)
+
+    def test_redirect_replay(self):
+        ends = {
+            "replay": "the credential issued twice",
+            "replay-vault": "the credential released twice",
+        }
+        for run, variant in REPLAY_RUNS.items():
+            with self.subTest(run=run):
+                code, last = verdict("redirect", HW / run)
+                self.assertEqual(code, 0, last)
+                self.assertTrue(last.startswith("VERDICT PASS: the same request twice at "), last)
+                self.assertIn("the second offer with present-nonce refused for the Handle", last)
+                self.assertTrue(last.endswith(ends[variant]), last)
 
     def test_bank_pay(self):
         for run, expect in BANK_RUNS.items():

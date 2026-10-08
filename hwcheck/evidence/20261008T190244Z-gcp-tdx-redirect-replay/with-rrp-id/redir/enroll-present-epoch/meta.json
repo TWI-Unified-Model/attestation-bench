@@ -1,0 +1,14 @@
+{
+ "case": "enroll-present-epoch",
+ "mode": "enroll",
+ "freshness_kind": "present-epoch",
+ "target": "https://db-epoch.tacra.example",
+ "relying_party": "https://ca1.tacra.example",
+ "freshness_element_b64": "L5hhaj491WWv4172c2u2dULKAkeyr7L3uY_UwP85u88",
+ "binding_value_hex": "4e1a280ab092474b728d8eca8e35127ab22ac5cc69336655c605a7f750f330ad51723b1121d40a1f9d1d428567d345afdb39faee51ac9503757f8a1383259098",
+ "evidence_ms": 40.663,
+ "token_bytes": 4966,
+ "report_sha256": "6d4bfeb77384c2e837879c473f07640a57de9970a9c80d13f728f8f2fa920435",
+ "signing_key": "TDX quote",
+ "chip_id_prefix": "MRTD f21e6b48743fe14c"
+}

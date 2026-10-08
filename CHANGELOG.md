@@ -12,7 +12,7 @@ What changed, newest first. Dates are UTC.
   present-nonce Handle serves once; an epoch marker serves while it is current, a timestamp while its window holds,
   absent-none always. Both credentials are for the Attester's own key, so the conduit obtains nothing it can use:
   what the replay measures is double issuance or release from one Evidence
-  ([docs/attacks.md](docs/attacks.md), section 2). `scripts/verdict.py` judges each outcome against that table.
+  ([docs/attacks.md](docs/attacks.md), section 2). `scripts/verdict.py` judges each outcome against that table. On the three platforms, 8 October: 12 runs, 10 of 10 outcomes each.
 - **`hwcheck/cmd/conduit-view`**: what the conduit sees of a run's Evidence and, in Passport, of its Attestation
   Results, field by field as the platform's own library parses it, with what each field tells (the machine, the
   launch, the firmware, the policy, the Attester's choice) and the certificates that travel with it. On the runs

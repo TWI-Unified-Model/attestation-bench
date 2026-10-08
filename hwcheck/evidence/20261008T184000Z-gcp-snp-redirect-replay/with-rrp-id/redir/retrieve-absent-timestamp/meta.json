@@ -1,0 +1,14 @@
+{
+ "case": "retrieve-absent-timestamp",
+ "mode": "retrieve",
+ "freshness_kind": "absent-timestamp",
+ "target": "https://db-time.tacra.example",
+ "relying_party": "https://vault1.tacra.example",
+ "freshness_element_b64": "AAAAAGrH4_c",
+ "binding_value_hex": "4fba8b0a210f647f90ab776d17a3e717f19e2c99263caf778f607e652a19e4b5fb7fa60afbb734bdda1215920db110a97dda01bc742347ac34a1e3f7f3c6d4b7",
+ "evidence_ms": 8.214,
+ "token_bytes": 5989,
+ "report_sha256": "93615511b0d9637495778636f343466b8a7fae0ff42f8f11f4f7171ca89c0e02",
+ "signing_key": "VCEK",
+ "chip_id_prefix": "72096f47f0c0900a"
+}

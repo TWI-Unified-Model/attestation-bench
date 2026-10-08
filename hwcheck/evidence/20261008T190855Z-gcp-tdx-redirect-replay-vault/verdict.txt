@@ -1,0 +1,9 @@
+variant replay-vault
+kind               first offer                  second offer at vault1
+present-nonce      RELEASED                     refused (Handle)
+present-epoch      RELEASED                     RELEASED
+absent-epoch       RELEASED                     RELEASED
+absent-timestamp   RELEASED                     RELEASED
+absent-none        RELEASED                     RELEASED
+guest minus RRP: +1.190 s, within 1.301 s
+VERDICT PASS: the same request twice at vault1: the second offer with present-nonce refused for the Handle; with present-epoch, absent-epoch, absent-timestamp and absent-none the credential released twice

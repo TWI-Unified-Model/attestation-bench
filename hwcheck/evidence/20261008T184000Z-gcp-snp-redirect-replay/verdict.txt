@@ -1,0 +1,9 @@
+variant replay
+kind               first offer                  second offer at ca1
+present-nonce      ISSUED                       refused (Handle)
+present-epoch      ISSUED                       ISSUED
+absent-epoch       ISSUED                       ISSUED
+absent-timestamp   ISSUED                       ISSUED
+absent-none        ISSUED                       ISSUED
+guest minus RRP: +1.127 s, within 1.260 s
+VERDICT PASS: the same request twice at ca1: the second offer with present-nonce refused for the Handle; with present-epoch, absent-epoch, absent-timestamp and absent-none the credential issued twice
