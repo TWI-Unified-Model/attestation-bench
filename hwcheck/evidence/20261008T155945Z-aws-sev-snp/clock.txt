@@ -1,0 +1,45 @@
+guest clock (UTC, seconds): 1791475259.217322814
+clocksource: tsc
+available clocksources: tsc kvm-clock hpet acpi_pm 
+kernel command line: BOOT_IMAGE=/vmlinuz-7.0.0-1014-aws root=PARTUUID=ff84a5a7-578e-4843-9465-767e4a11edcc ro console=tty1 console=ttyS0 nvme_core.io_timeout=4294967295 panic=-1
+-- boot lines on SEV, TDX, the TSC and the clocksource (dmesg)
+[    0.000000] kvm-clock: Using msrs 4b564d01 and 4b564d00
+[    0.000001] kvm-clock: using sched offset of 18569018747 cycles
+[    0.000003] clocksource: kvm-clock: mask: 0xffffffffffffffff max_cycles: 0x1cd42e4dffb, max_idle_ns: 881590591483 ns
+[    0.000008] tsc: Detected 2649.998 MHz processor
+[    0.012211] clocksource: refined-jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 1910969940391419 ns
+[    0.309533] clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 1911260446275000 ns
+[    2.723046] clocksource: hpet: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 30580167144 ns
+[    2.862541] clocksource: tsc-early: mask: 0xffffffffffffffff max_cycles: 0x2632bb35aa3, max_idle_ns: 440795244412 ns
+[    2.994814] Memory Encryption Features active: AMD SEV SEV-ES SEV-SNP
+[    2.995702] SEV: Status: SEV SEV-ES SEV-SNP 
+[    3.285409] clocksource: Switched to clocksource kvm-clock
+[    3.355988] clocksource: acpi_pm: mask: 0xffffff max_cycles: 0xffffff, max_idle_ns: 2085701024 ns
+[    3.411153] clocksource: tsc: mask: 0xffffffffffffffff max_cycles: 0x2632bb35aa3, max_idle_ns: 440795244412 ns
+[    3.420580] clocksource: Switched to clocksource tsc
+[    3.947738] software IO TLB: Memory encryption is active and system is using DMA bounce buffers
+-- the time service
+active: chrony
+active: chronyd
+MS Name/IP address         Stratum Poll Reach LastRx Last sample               
+===============================================================================
+^* 169.254.169.123               3   4    17     7   +902ns[-9748ns] +/-  543us
+^- 185.125.190.58                2   6    17     7  +2535us[+2524us] +/-   51ms
+^- 185.125.190.56                2   6    17     6  +1498us[+1498us] +/-   51ms
+^- 185.125.190.57                2   6    17     5  +1441us[+1441us] +/-   52ms
+^- 91.189.91.157                 2   6    17     6   +784us[ +784us] +/-   35ms
+^- 45.79.51.42                   2   6    17     6   -264us[ -264us] +/-   61ms
+^- 172.234.44.141                2   6    17     5  -3052us[-3052us] +/-   67ms
+^- 23.143.82.48                  2   6    17     6    +65ms[  +65ms] +/-   82ms
+^- 45.33.53.84                   2   6    17     6   +359us[ +359us] +/-   30ms
+Name/IP address             Mode KeyID Type KLen Last Atmp  NAK Cook CLen
+=========================================================================
+169.254.169.123                -     0    0    0    -    0    0    0    0
+185.125.190.58                 -     0    0    0    -    0    0    0    0
+185.125.190.56                 -     0    0    0    -    0    0    0    0
+185.125.190.57                 -     0    0    0    -    0    0    0    0
+91.189.91.157                  -     0    0    0    -    0    0    0    0
+45.79.51.42                    -     0    0    0    -    0    0    0    0
+172.234.44.141                 -     0    0    0    -    0    0    0    0
+23.143.82.48                   -     0    0    0    -    0    0    0    0
+45.33.53.84                    -     0    0    0    -    0    0    0    0

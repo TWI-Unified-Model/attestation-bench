@@ -310,3 +310,23 @@ Vault Target with two credential groups (`dae1fb0`; [the run that found it](../h
 | `make test-live` with the new runs | `dae1fb0` | the EST wire format as expected; 37 committed runs appraised again, 1850 checks |
 
 `make cloud-check` found both clouds empty at the end of each batch.
+
+### After the check against what was asked (`bee2ae9`)
+
+The wire was then checked against what the group asked in the review of the EST draft's pull request #1 and in TACRA
+#17, #19 and #20. `credential_type` is now optional in both requests, as in the draft's Retrieval request and the
+group's fork: whether it travels at all is #19. The check also found two faults of the server, both fixed in
+`bee2ae9`. It correlated a request's Handle before its Evidence format, so a request refused for the format (415) used
+up a present-nonce Handle, against the draft's order: syntax, media type and size limits first, then the Handle
+(`TestFormatRefusalLeavesTheHandle` fails under the old order). And nothing tested its 502 and 503: `TestUnreachable`
+gets each from a local port nothing listens on.
+
+| Check | Commit | Result |
+|---|---|---|
+| `make check` | `bee2ae9`, with these runs | every linter clean, gitleaks over 274 commits and the changes not yet committed; the EST patches' tests 14 (12 before), in 8 files; 63 Python tests |
+| `make demo` on the three platforms, Passport and Background Check | `bee2ae9` | 6 PASS, 10 of 10 Targets each |
+| `e2e/scripts/est-wire-cddl.py` on the six demos' wire logs | `bee2ae9` | 120 messages valid, 180 of 180 with the media type of their place, 84 altered messages refused |
+| `make attacks` on the three platforms | `bee2ae9` | 3 PASS: 262, 262 and 162 checks; the pre-play's 72 messages valid against the CDDL, 132 of 132 media types as their place's, 60 altered messages refused |
+| `make test-live` with the new runs | `bee2ae9` | the EST wire format: 25 checks as expected, the 415 for Evidence of a format not accepted among them, after which the same Handle reaches the RRP; 40 runs appraised again, 2000 checks |
+
+`make cloud-check` found both clouds empty at the end of each batch.

@@ -40,9 +40,10 @@ WAIVER = "the honest Evidence admitted under the bench's waiver: Milan bit 4: ad
 # before that patch, which found the EST server's fault (its README)
 CLOCK_RUNS = ["20261007T212531Z-gcp-sev-snp", "20261007T213607Z-aws-sev-snp", "20261007T214424Z-gcp-tdx"]
 EST_FAULT_RUN = "20261007T211305Z-gcp-sev-snp"
-# the attest-* wire as proposed for the EST draft (EST patch 0014), 8 October 2026: the demos at 6bf2b37, each with its
-# EST wire log, and the media type each message of the wire carries (e2e/scripts/est-wire-cddl.py); the attack runs
-# at dae1fb0, and the one before it, whose pre-play stopped at a Target with two credential groups (its README)
+# the attest-* wire as proposed for the EST draft (EST patch 0014), 8 October 2026: the demos at 6bf2b37 and, after the
+# check against what the group asked, at bee2ae9, each with its EST wire log, and the media type each message of the
+# wire carries (e2e/scripts/est-wire-cddl.py); the attack runs at dae1fb0 and at bee2ae9, and the one before them, whose
+# pre-play stopped at a Target with two credential groups (its README)
 WIRE_DEMO_RUNS = [
     "20261008T134108Z-gcp-sev-snp-e2e-passport",
     "20261008T134423Z-aws-sev-snp-e2e-passport",
@@ -50,6 +51,12 @@ WIRE_DEMO_RUNS = [
     "20261008T134939Z-gcp-sev-snp-e2e-background-check",
     "20261008T135240Z-aws-sev-snp-e2e-background-check",
     "20261008T135441Z-gcp-tdx-e2e-background-check",
+    "20261008T153259Z-gcp-sev-snp-e2e-passport",
+    "20261008T153608Z-aws-sev-snp-e2e-passport",
+    "20261008T153811Z-gcp-tdx-e2e-passport",
+    "20261008T154103Z-gcp-sev-snp-e2e-background-check",
+    "20261008T154400Z-aws-sev-snp-e2e-background-check",
+    "20261008T154603Z-gcp-tdx-e2e-background-check",
 ]
 WIRE_TYPES = {
     ("GET", "attest-initiate", "response"): "application/est-attest-initiate+json",
@@ -58,7 +65,14 @@ WIRE_TYPES = {
     ("POST", "attest-retrieve", "request"): "application/est-attest-retrieve+json",
     ("POST", "attest-retrieve", "response"): "application/est-attest-bundle+json",
 }
-WIRE_ATTACK_RUNS = ["20261008T141202Z-gcp-sev-snp", "20261008T142240Z-aws-sev-snp", "20261008T143101Z-gcp-tdx"]
+WIRE_ATTACK_RUNS = [
+    "20261008T141202Z-gcp-sev-snp",
+    "20261008T142240Z-aws-sev-snp",
+    "20261008T143101Z-gcp-tdx",
+    "20261008T154907Z-gcp-sev-snp",
+    "20261008T155945Z-aws-sev-snp",
+    "20261008T160809Z-gcp-tdx",
+]
 PREPLAY_HINT_FAULT_RUN = "20261008T135750Z-gcp-sev-snp"
 # the conduit experiment (7 October 2026): #20 in Background Check and in Passport, and the conduit's #19 rewrites
 CONDUIT_RUNS = [

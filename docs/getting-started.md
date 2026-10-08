@@ -135,8 +135,9 @@ It checks the EST server's wire format through the running server, as the CDDL o
 ([../e2e/est-attest.cddl](../e2e/est-attest.cddl)): the attest-initiate response's media type and members, the Handle
 as unpadded base64url; that each resource takes its own media type only and answers 415, with an Accept header, to
 any other; that it refuses with 400 a request that is not of the CDDL's syntax; that none of these refusals uses up the
-Handle, which then serves one request only. Each request carries the real Evidence of a committed hardware run, which
-the RRP refuses because it is bound to another Handle.
+Handle, which then serves one request only; and that Evidence of a format the server does not accept is refused with
+415 before the Handle is correlated, so the same Handle still reaches the RRP. Each request carries the real Evidence
+of a committed hardware run, which the RRP refuses because it is bound to another Handle.
 Then the live verifiers appraise again the Evidence of every committed attack run from 6 October 2026 on, with each
 run's own records as the RRP's: the honest Evidence must pass and each changed binding must fail, as when the run was
 made. Veraison fetches AMD's revocation list and the TDX verifier Intel's collateral, so it needs the network.
@@ -145,8 +146,8 @@ made. Veraison fetches AMD's revocation list and the TDX verifier Intel's collat
   ok  attest-initiate https://db-nonce.tacra.example: 200 application/est-attest-initiate+json, members acceptable_csk, acceptable_evidence, expires_in, freshness_kind, handle, mode; Handle 43 characters of unpadded base64url, 32 octets
   ok  /attest-enroll as application/json: 415 Content-Type must be application/est-attest-enroll+json; Accept application/est-attest-enroll+json
   ...
-  ok    20261008T143101Z-gcp-tdx       50 checks, 0 not as expected
-test-live: the EST wire format as expected; 37 committed runs appraised again, 1850 checks as expected
+  ok    20261008T160809Z-gcp-tdx       50 checks, 0 not as expected
+test-live: the EST wire format as expected; 40 committed runs appraised again, 2000 checks as expected
 ```
 
 That is on 8 October 2026; every attack run committed after it adds one run and 50 checks.
