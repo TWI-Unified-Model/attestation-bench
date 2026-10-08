@@ -1,0 +1,10 @@
+2026/10/08 23:56:20 https://db-nonce.tacra.example           acquire failed: cai: EnrollCredential: 403 RRP ca: attestation: ear: not signed by the verifier's key: none of the verifiers this RRP takes for the Target (veraison, tdx) signed it
+2026/10/08 23:56:21 https://db-epoch.tacra.example           acquire failed: cai: EnrollCredential: 403 RRP ca: attestation: ear: not signed by the verifier's key: none of the verifiers this RRP takes for the Target (veraison, tdx) signed it
+2026/10/08 23:56:21 https://db-lepoch.tacra.example          acquire failed: cai: EnrollCredential: 403 RRP ca: attestation: ear: not signed by the verifier's key: none of the verifiers this RRP takes for the Target (veraison, tdx) signed it
+2026/10/08 23:56:22 https://db-time.tacra.example            acquire failed: cai: EnrollCredential: 403 RRP ca: attestation: ear: not signed by the verifier's key: none of the verifiers this RRP takes for the Target (veraison, tdx) signed it
+2026/10/08 23:56:22 https://db-none.tacra.example            acquire failed: cai: EnrollCredential: 403 RRP ca: attestation: ear: not signed by the verifier's key: none of the verifiers this RRP takes for the Target (veraison, tdx) signed it
+2026/10/08 23:56:23 https://ledger-nonce.tacra.example       api-key acquired in   532.1 ms (1 attempt(s)); relying party answered 200
+2026/10/08 23:56:24 https://ledger-epoch.tacra.example       api-key acquired in   541.8 ms (1 attempt(s)); relying party answered 200
+2026/10/08 23:56:24 https://ledger-lepoch.tacra.example      api-key acquired in   538.0 ms (1 attempt(s)); relying party answered 200
+2026/10/08 23:56:25 https://ledger-time.tacra.example        api-key acquired in   571.4 ms (1 attempt(s)); relying party answered 200
+2026/10/08 23:56:26 https://ledger-none.tacra.example        api-key acquired in   486.5 ms (1 attempt(s)); relying party answered 200

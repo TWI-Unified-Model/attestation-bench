@@ -6,6 +6,11 @@ What changed, newest first. Dates are UTC.
 
 ### Added
 
+- **The conduit's verifier drill** (`CONDUIT_ATTACK=verifier make config && make start`, then `make demo`): the EST
+  server, as the attacking conduit in Passport, signs each Enrollment's Attestation Results again with a key of its
+  own before the Credential Authority sees them (EST patch 0016); the Credential Authority refuses each, none of the
+  verifiers it takes having signed them, and the five Retrievals are admitted. Three platforms, 8 October: the
+  measurement of the threat model's "choice of Verifier" ([docs/attacks.md](docs/attacks.md), section 6).
 - **The report on the RRP identifier, both ways** ([docs/rrp-identifier.md](docs/rrp-identifier.md)): the protocol
   with the identifier in the binding and without it on the same events, row by row with every run named, what the
   identifier buys and costs, the text that follows either way, what the report does not cover, and the two bench

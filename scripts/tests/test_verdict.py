@@ -148,6 +148,13 @@ CONDUIT_RUNS = [
     "20261007T210314Z-gcp-tdx-redirect-passport",
     "20261007T210728Z-aws-snp-redirect-passport",
 ]
+# the conduit's verifier drill (docs/attacks.md, section 6): the EST server, as the attacking conduit in Passport, signed
+# each Enrollment's Attestation Results again with a key of its own; 8 October 2026 at 3b6a74ba
+VERIFIER_DRILL_RUNS = [
+    "20261008T234813Z-gcp-sev-snp-e2e-passport-conduit-verifier",
+    "20261008T235252Z-aws-sev-snp-e2e-passport-conduit-verifier",
+    "20261008T235455Z-gcp-tdx-e2e-passport-conduit-verifier",
+]
 # the conduit's drills on the Retrieval container (docs/attacks.md, section 6), at af909f4, in Passport
 CONTAINER_DRILL_RUNS = {
     "20261008T003630Z-gcp-sev-snp-e2e-passport-conduit-seal": "seal",
@@ -367,6 +374,26 @@ class CommittedRuns(unittest.TestCase):
                 code, last = verdict("conduit", E2E / run, "--attack", attack)
                 self.assertEqual(code, 0, last)
                 self.assertTrue(last.endswith("; the 5 other Targets admitted"), last)
+
+    def test_conduit_verifier_drill(self):
+        for run in VERIFIER_DRILL_RUNS:
+            with self.subTest(run=run):
+                code, last = verdict("conduit", E2E / run, "--attack", "verifier")
+                self.assertEqual(code, 0, last)
+                self.assertTrue(
+                    last.startswith(
+                        "VERDICT PASS: 5 Enrollments given Attestation Results signed again with the conduit's own verifier key"
+                    ),
+                    last,
+                )
+                self.assertTrue(last.endswith("; the 5 other Targets admitted"), last)
+                acts = [
+                    x
+                    for x in (E2E / run / "bench-logs" / "est-conduit.log").read_text().splitlines()
+                    if "conduit attack verifier: Enrollment for " in x
+                ]
+                self.assertEqual(len(acts), 5, "five acts logged")
+                self.assertTrue(all("(SPKI SHA-256 " in x for x in acts), "each act names the conduit's key")
 
     def test_redirect(self):
         for run in REDIRECT_RUNS:

@@ -1,0 +1,17 @@
+the conduit's drill: verifier; it acted on 5 requests, for 5 Targets
+no  https://db-nonce.tacra.example         x509     cai: EnrollCredential: 403 RRP ca: attestation: ear: not signed by the verifier's key: none of the verifiers t
+    the conduit: Attestation Results of verifier veraison signed again with the conduit's own verifier key (SPKI SHA-256 c14b690479ee688a5c6cd79b48e3af4d9a841dc12d3096
+no  https://db-epoch.tacra.example         x509     cai: EnrollCredential: 403 RRP ca: attestation: ear: not signed by the verifier's key: none of the verifiers t
+    the conduit: Attestation Results of verifier veraison signed again with the conduit's own verifier key (SPKI SHA-256 c14b690479ee688a5c6cd79b48e3af4d9a841dc12d3096
+no  https://db-lepoch.tacra.example        x509     cai: EnrollCredential: 403 RRP ca: attestation: ear: not signed by the verifier's key: none of the verifiers t
+    the conduit: Attestation Results of verifier veraison signed again with the conduit's own verifier key (SPKI SHA-256 c14b690479ee688a5c6cd79b48e3af4d9a841dc12d3096
+no  https://db-time.tacra.example          x509     cai: EnrollCredential: 403 RRP ca: attestation: ear: not signed by the verifier's key: none of the verifiers t
+    the conduit: Attestation Results of verifier veraison signed again with the conduit's own verifier key (SPKI SHA-256 c14b690479ee688a5c6cd79b48e3af4d9a841dc12d3096
+no  https://db-none.tacra.example          x509     cai: EnrollCredential: 403 RRP ca: attestation: ear: not signed by the verifier's key: none of the verifiers t
+    the conduit: Attestation Results of verifier veraison signed again with the conduit's own verifier key (SPKI SHA-256 c14b690479ee688a5c6cd79b48e3af4d9a841dc12d3096
+ok  https://ledger-nonce.tacra.example     api-key
+ok  https://ledger-epoch.tacra.example     api-key
+ok  https://ledger-lepoch.tacra.example    api-key
+ok  https://ledger-time.tacra.example      api-key
+ok  https://ledger-none.tacra.example      api-key
+VERDICT PASS: 5 Enrollments given Attestation Results signed again with the conduit's own verifier key, each refused by the Credential Authority: none of the verifiers it takes signed them; the 5 other Targets admitted

@@ -256,7 +256,8 @@ make config && make start                           # back as it was
 The verdict (`scripts/verdict.py conduit --attack verifier`) reads the EST server's conduit log for the acts and
 `results.json` for the refusals. What this measures is the bound of the threat model's "the conduit's choice of
 Verifier": in Passport nothing but the RRP's provisioned verifier keys bounds which verifier's word the Credential
-Authority takes.
+Authority takes. Runs of 8 October 2026 at `3b6a74ba`, each 10 Targets, the 5 Enrollments refused and the 5
+Retrievals admitted: [GCP SEV-SNP](../e2e/evidence/20261008T234813Z-gcp-sev-snp-e2e-passport-conduit-verifier), [AWS SEV-SNP](../e2e/evidence/20261008T235252Z-aws-sev-snp-e2e-passport-conduit-verifier), [GCP TDX](../e2e/evidence/20261008T235455Z-gcp-tdx-e2e-passport-conduit-verifier).
 
 ## 7. What the conduit sees
 

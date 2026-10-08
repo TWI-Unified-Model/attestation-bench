@@ -1,0 +1,117 @@
+[
+ {
+  "target": "https://db-nonce.tacra.example",
+  "type": "x509",
+  "ok": false,
+  "error": "cai: EnrollCredential: 403 RRP ca: attestation: ear: not signed by the verifier's key: none of the verifiers this RRP takes for the Target (veraison, tdx) signed it\n",
+  "attempts": 1,
+  "acquire_ms": 904.147,
+  "initiate_ms": 315.769,
+  "second_leg_ms": 578.599,
+  "rup_status": 0
+ },
+ {
+  "target": "https://db-epoch.tacra.example",
+  "type": "x509",
+  "ok": false,
+  "error": "cai: EnrollCredential: 403 RRP ca: attestation: ear: not signed by the verifier's key: none of the verifiers this RRP takes for the Target (veraison, tdx) signed it\n",
+  "attempts": 1,
+  "acquire_ms": 566.623,
+  "initiate_ms": 218.11,
+  "second_leg_ms": 339.036,
+  "rup_status": 0
+ },
+ {
+  "target": "https://db-lepoch.tacra.example",
+  "type": "x509",
+  "ok": false,
+  "error": "cai: EnrollCredential: 403 RRP ca: attestation: ear: not signed by the verifier's key: none of the verifiers this RRP takes for the Target (veraison, tdx) signed it\n",
+  "attempts": 1,
+  "acquire_ms": 563.322,
+  "initiate_ms": 216.675,
+  "second_leg_ms": 337.853,
+  "rup_status": 0
+ },
+ {
+  "target": "https://db-time.tacra.example",
+  "type": "x509",
+  "ok": false,
+  "error": "cai: EnrollCredential: 403 RRP ca: attestation: ear: not signed by the verifier's key: none of the verifiers this RRP takes for the Target (veraison, tdx) signed it\n",
+  "attempts": 1,
+  "acquire_ms": 538.098,
+  "initiate_ms": 217.319,
+  "second_leg_ms": 312.081,
+  "rup_status": 0
+ },
+ {
+  "target": "https://db-none.tacra.example",
+  "type": "x509",
+  "ok": false,
+  "error": "cai: EnrollCredential: 403 RRP ca: attestation: ear: not signed by the verifier's key: none of the verifiers this RRP takes for the Target (veraison, tdx) signed it\n",
+  "attempts": 1,
+  "acquire_ms": 588.869,
+  "initiate_ms": 307.649,
+  "second_leg_ms": 271.824,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-nonce.tacra.example",
+  "type": "api-key",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 569.523,
+  "initiate_ms": 289.261,
+  "second_leg_ms": 270.404,
+  "secret_sha256": "332e6832d1a35ebe5a1e3361d2306469c966868bffeb6dc25ed4a2cc7892ee10",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"api-key\"}"
+ },
+ {
+  "target": "https://ledger-epoch.tacra.example",
+  "type": "api-key",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 522.506,
+  "initiate_ms": 199.628,
+  "second_leg_ms": 313.25,
+  "secret_sha256": "332e6832d1a35ebe5a1e3361d2306469c966868bffeb6dc25ed4a2cc7892ee10",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"api-key\"}"
+ },
+ {
+  "target": "https://ledger-lepoch.tacra.example",
+  "type": "api-key",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 587.652,
+  "initiate_ms": 216.087,
+  "second_leg_ms": 361.822,
+  "secret_sha256": "332e6832d1a35ebe5a1e3361d2306469c966868bffeb6dc25ed4a2cc7892ee10",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"api-key\"}"
+ },
+ {
+  "target": "https://ledger-time.tacra.example",
+  "type": "api-key",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 573.339,
+  "initiate_ms": 284.906,
+  "second_leg_ms": 278.809,
+  "secret_sha256": "332e6832d1a35ebe5a1e3361d2306469c966868bffeb6dc25ed4a2cc7892ee10",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"api-key\"}"
+ },
+ {
+  "target": "https://ledger-none.tacra.example",
+  "type": "api-key",
+  "ok": true,
+  "attempts": 1,
+  "acquire_ms": 518.06,
+  "initiate_ms": 183.884,
+  "second_leg_ms": 323.954,
+  "secret_sha256": "332e6832d1a35ebe5a1e3361d2306469c966868bffeb6dc25ed4a2cc7892ee10",
+  "rup_status": 200,
+  "rup_response": "{\"admitted\":\"api-key\"}"
+ }
+]
