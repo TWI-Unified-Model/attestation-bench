@@ -1,0 +1,10 @@
+{"pass":"with-rrp-id","kind":"present-nonce","rrp":"ca1","result":{"issued":false,"reason":"freshness fresh: freshness element is not valid now: unknown or already used Handle","status":409}}
+{"pass":"with-rrp-id","kind":"present-nonce","rrp":"ca2","result":{"issued":false,"reason":"attestation ear: not affirming: TDX is \"contraindicated\"","status":403}}
+{"pass":"with-rrp-id","kind":"present-epoch","rrp":"ca1","result":{"issued":false,"reason":"freshness fresh: freshness element is not valid now: the epoch marker is not the current one","status":409}}
+{"pass":"with-rrp-id","kind":"present-epoch","rrp":"ca2","result":{"issued":false,"reason":"attestation ear: not affirming: TDX is \"contraindicated\"","status":403}}
+{"pass":"with-rrp-id","kind":"absent-epoch","rrp":"ca1","result":{"cert_issuer":"CN=TACRA bench CA Intermediate CA,O=TACRA bench CA","cert_serial":"7718b9f59aa4d24d31b93a104da92f78","cert_subject":"CN=payments.workload.tacra.example","issued":true,"status":200}}
+{"pass":"with-rrp-id","kind":"absent-epoch","rrp":"ca2","result":{"issued":false,"reason":"freshness fresh: freshness element is not valid now: the epoch marker is not the current one","status":409}}
+{"pass":"with-rrp-id","kind":"absent-timestamp","rrp":"ca1","result":{"cert_issuer":"CN=TACRA bench CA Intermediate CA,O=TACRA bench CA","cert_serial":"6c319e2c2b3f898a966fc187b7e67467","cert_subject":"CN=payments.workload.tacra.example","issued":true,"status":200}}
+{"pass":"with-rrp-id","kind":"absent-timestamp","rrp":"ca2","result":{"issued":false,"reason":"attestation ear: not affirming: TDX is \"contraindicated\"","status":403}}
+{"pass":"with-rrp-id","kind":"absent-none","rrp":"ca1","result":{"cert_issuer":"CN=TACRA bench CA Intermediate CA,O=TACRA bench CA","cert_serial":"56bbea94e20c4107fce96f0ad0cb286f","cert_subject":"CN=payments.workload.tacra.example","issued":true,"status":200}}
+{"pass":"with-rrp-id","kind":"absent-none","rrp":"ca2","result":{"issued":false,"reason":"attestation ear: not affirming: TDX is \"contraindicated\"","status":403}}

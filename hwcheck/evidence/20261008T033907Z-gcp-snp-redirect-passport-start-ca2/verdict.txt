@@ -1,0 +1,14 @@
+variant start-ca2
+pass         kind               ca1                  ca2
+with-rrp-id  present-nonce      refused (Handle)     refused (binding)
+with-rrp-id  present-epoch      refused (epoch)      refused (binding)
+with-rrp-id  absent-epoch       ISSUED               refused (epoch)
+with-rrp-id  absent-timestamp   ISSUED               refused (binding)
+with-rrp-id  absent-none        ISSUED               refused (binding)
+no-rrp-id    present-nonce      refused (Handle)     ISSUED
+no-rrp-id    present-epoch      refused (epoch)      ISSUED
+no-rrp-id    absent-epoch       ISSUED               refused (epoch)
+no-rrp-id    absent-timestamp   ISSUED               ISSUED
+no-rrp-id    absent-none        ISSUED               ISSUED
+guest minus RRP: +1.202 s, within 1.265 s
+VERDICT PASS: the conduit starting at ca2: with the RRP identifier, ca2 refused all 5 Freshness Kinds, the two whose Handles it minted itself for the binding; without it, ca2 issued for every kind but absent-epoch, whose marker the Attester holds, present-nonce included

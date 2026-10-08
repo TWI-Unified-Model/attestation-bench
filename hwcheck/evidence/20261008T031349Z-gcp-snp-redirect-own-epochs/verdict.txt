@@ -1,0 +1,14 @@
+variant own-epochs
+pass         kind               ca1                  ca2
+with-rrp-id  present-nonce      ISSUED               refused (Handle)
+with-rrp-id  present-epoch      ISSUED               refused (epoch)
+with-rrp-id  absent-epoch       ISSUED               refused (epoch)
+with-rrp-id  absent-timestamp   ISSUED               refused (binding)
+with-rrp-id  absent-none        ISSUED               refused (binding)
+no-rrp-id    present-nonce      ISSUED               refused (Handle)
+no-rrp-id    present-epoch      ISSUED               refused (epoch)
+no-rrp-id    absent-epoch       ISSUED               refused (epoch)
+no-rrp-id    absent-timestamp   ISSUED               ISSUED
+no-rrp-id    absent-none        ISSUED               ISSUED
+guest minus RRP: +1.229 s, within 1.312 s
+VERDICT PASS: ca2 with an epoch marker of its own: with the RRP identifier, ca2 refused all 5 Freshness Kinds; without it, it issued for absent-timestamp and absent-none alone, refusing present-nonce for the Handle and present-epoch and absent-epoch for the epoch marker

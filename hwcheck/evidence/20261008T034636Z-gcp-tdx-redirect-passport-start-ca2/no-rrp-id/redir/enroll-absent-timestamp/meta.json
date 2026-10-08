@@ -1,0 +1,14 @@
+{
+ "case": "enroll-absent-timestamp",
+ "mode": "enroll",
+ "freshness_kind": "absent-timestamp",
+ "target": "https://db-time.tacra.example",
+ "relying_party": "",
+ "freshness_element_b64": "AAAAAGrHEp4",
+ "binding_value_hex": "312e5fb59e35b37432a96df025e85c5679632a05d4e3870167c93aedfeab35a0aca37cf9398e729899a23ffe19f793d0e88e8e88a5485a0f362f90a228dc9f12",
+ "evidence_ms": 39.282,
+ "token_bytes": 4970,
+ "report_sha256": "cc7e9758d4b65018e03e314d5eed29a25474df995a8324b8a14c5a9981f1ec8a",
+ "signing_key": "TDX quote",
+ "chip_id_prefix": "MRTD f21e6b48743fe14c"
+}

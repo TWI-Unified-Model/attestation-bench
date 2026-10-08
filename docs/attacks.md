@@ -63,10 +63,38 @@ make redirect                   # also PLATFORM=gcp-snp, gcp-tdx, aws-snp; PASSP
 
 The workload produces Evidence for a Target of the Credential Authority `ca1`; the attacker offers the same Evidence
 to a second one, `ca2`, "another bank". With the RRP identifier in the binding, `ca2` refuses every Freshness Kind.
-Without it, only a nonce `ca2` never issued stops it: the other four kinds are issued twice. In Passport
+Without it, only a nonce `ca2` never issued stops it: the other four kinds are issued twice. That is with the two
+sharing one epoch marker, and with Evidence made for `ca1`; the variants below change each. In Passport
 (`PASSPORT=1`) the conduit gets the Attestation Results for each Evidence from the verifier, as an honest CAS does for
 `ca1`, and offers those. The table and how to read it: [getting-started.md](getting-started.md), step 9. The open
 question it informs: [TACRA issue #20](https://github.com/TheBankster/rats-tacra/issues/20).
+
+```bash
+REDIRECT_VARIANT=own-epochs make redirect PLATFORM=gcp-snp   # also start-ca2; PASSPORT=1 in Passport
+```
+
+In both variants `ca2` keeps an epoch marker of its own. In `own-epochs` the Evidence is made for `ca1`, as above. In
+`start-ca2` the conduit starts the exchange at `ca2`: the present-nonce and present-epoch Handles are `ca2`'s, from its
+attest-initiate, while the Attester holds the deployment's epoch marker (absent-epoch) and, with the RRP identifier,
+binds `ca1`, the RRP it serves. Neither variant runs the rewrites below.
+
+| What `ca2` does | `own-epochs` | `start-ca2` |
+|---|---|---|
+| with the RRP identifier | refuses all five: present-nonce for the Handle, present-epoch and absent-epoch for its epoch marker, the other two for the binding | refuses all five: absent-epoch for its epoch marker, the other four for the binding, its own Handles included |
+| without it | issues for absent-timestamp and absent-none alone | issues for every kind but absent-epoch, present-nonce included |
+
+So a nonce keeps Evidence made for one RRP from serving a second, but not a conduit that starts the exchange at the
+second; for every Freshness Kind, only the RRP identifier the Attester holds stops that. What `ca2` issues is bound to
+the Attester's own key either way, so the conduit cannot use it: what the identifier decides is which RRP serves the
+Attester, and who chooses it. `ca1`, the control, issues where the freshness is its own, and refuses `ca2`'s Handles.
+The verdict checks each refusal's reason (`scripts/verdict.py`). Runs of 8 October 2026 at `c0f02ac`, 20 of 20 each:
+
+| Variant | GCP SEV-SNP | GCP TDX | AWS SEV-SNP |
+|---|---|---|---|
+| `own-epochs`, Background Check | [run](../hwcheck/evidence/20261008T031349Z-gcp-snp-redirect-own-epochs) | [run](../hwcheck/evidence/20261008T032611Z-gcp-tdx-redirect-own-epochs) | [run](../hwcheck/evidence/20261008T033255Z-aws-snp-redirect-own-epochs) |
+| `own-epochs`, Passport | [run](../hwcheck/evidence/20261008T032215Z-gcp-snp-redirect-passport-own-epochs) | [run](../hwcheck/evidence/20261008T032934Z-gcp-tdx-redirect-passport-own-epochs) | [run](../hwcheck/evidence/20261008T033608Z-aws-snp-redirect-passport-own-epochs) |
+| `start-ca2`, Background Check | [run](../hwcheck/evidence/20261008T031807Z-gcp-snp-redirect-start-ca2) | [run](../hwcheck/evidence/20261008T034309Z-gcp-tdx-redirect-start-ca2) | [run](../hwcheck/evidence/20261008T035017Z-aws-snp-redirect-start-ca2) |
+| `start-ca2`, Passport | [run](../hwcheck/evidence/20261008T033907Z-gcp-snp-redirect-passport-start-ca2) | [run](../hwcheck/evidence/20261008T034636Z-gcp-tdx-redirect-passport-start-ca2) | [run](../hwcheck/evidence/20261008T035308Z-aws-snp-redirect-passport-start-ca2) |
 
 Then the conduit rewrites, one at a time, what it relays to `ca1` on Evidence made for `ca1`
 ([TACRA issue #19](https://github.com/TheBankster/rats-tacra/issues/19): which fields of attest-initiate travel, and

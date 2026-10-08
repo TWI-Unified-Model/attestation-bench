@@ -42,7 +42,20 @@ What changed, newest first. Dates are UTC.
   associated data's Target check, and the hpke-base-signed container's signature covers the Target. On the three platforms,
   8 October, 12 runs: each as its drill expects ([docs/attacks.md](docs/attacks.md), section 6).
 
+- **The redirection experiment's variants** (`REDIRECT_VARIANT`, TACRA #20). The default run fixes two things: its two
+  Credential Authorities share one epoch marker, and the conduit offers Evidence made for `ca1`. In `own-epochs`
+  `ca2` keeps an epoch marker of its own; in `start-ca2` the conduit also starts the exchange at `ca2`, whose Handles
+  the Evidence then binds. Without the RRP identifier `ca2` issues, with an epoch of its own, for absent-timestamp and
+  absent-none alone, and, when the conduit starts there, for every kind but absent-epoch, present-nonce included; with
+  the identifier it refuses all five in both. The verdict checks each refusal's reason: the Handle, the epoch marker
+  or the binding. On the three platforms in both RATS models, 8 October, 12 runs, 20 of 20 each
+  ([docs/attacks.md](docs/attacks.md), section 2).
+
 ### Fixed
+
+- README, [docs/attacks.md](docs/attacks.md) and [docs/getting-started.md](docs/getting-started.md) said that without
+  the RRP identifier only a nonce stops the redirection. That holds for RRPs that share one epoch marker, on Evidence
+  made for the first; they now say so, and what the variants found.
 
 - The EST server kept one attest-initiate session per Handle, so an attest-initiate for a second Target's
   present-epoch, whose Handle is the epoch every Target shares, replaced the first Target's session and refused its

@@ -258,7 +258,10 @@ VERDICT PASS: with the RRP identifier, ca2 refused all 5 Freshness Kinds; withou
 ```
 
 With the RRP identifier in the binding, `ca2` refuses every Freshness Kind. Without it, only a nonce `ca2` never
-issued stops the redirection. This is the question of
+issued stops the redirection: here, where the two share one epoch marker and the Evidence is made for `ca1`. With
+`REDIRECT_VARIANT=own-epochs` `ca2` keeps an epoch marker of its own; with `REDIRECT_VARIANT=start-ca2` the conduit
+also starts the exchange at `ca2`, and without the identifier `ca2` issues on its own nonce ([attacks.md](attacks.md),
+section 2). This is the question of
 [TACRA issue #20](https://github.com/TheBankster/rats-tacra/issues/20). Each rewrite is refused for its own reason,
 except the other credential type the Target offers: nothing binds the type, and only the present-nonce Handle, minted
 for one type, catches it ([attacks.md](attacks.md), section 2; [TACRA issue #19](https://github.com/TheBankster/rats-tacra/issues/19)).

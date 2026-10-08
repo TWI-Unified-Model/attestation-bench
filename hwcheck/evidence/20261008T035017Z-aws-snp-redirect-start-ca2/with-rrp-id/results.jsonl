@@ -1,0 +1,10 @@
+{"pass":"with-rrp-id","kind":"present-nonce","rrp":"ca1","result":{"issued":false,"reason":"freshness fresh: freshness element is not valid now: unknown or already used Handle","status":409}}
+{"pass":"with-rrp-id","kind":"present-nonce","rrp":"ca2","result":{"issued":false,"reason":"attestation ear: not affirming: SEVSNP is \"contraindicated\"","status":403}}
+{"pass":"with-rrp-id","kind":"present-epoch","rrp":"ca1","result":{"issued":false,"reason":"freshness fresh: freshness element is not valid now: the epoch marker is not the current one","status":409}}
+{"pass":"with-rrp-id","kind":"present-epoch","rrp":"ca2","result":{"issued":false,"reason":"attestation ear: not affirming: SEVSNP is \"contraindicated\"","status":403}}
+{"pass":"with-rrp-id","kind":"absent-epoch","rrp":"ca1","result":{"cert_issuer":"CN=TACRA bench CA Intermediate CA,O=TACRA bench CA","cert_serial":"61db97204759d4dca379558d7adebc7d","cert_subject":"CN=payments.workload.tacra.example","issued":true,"status":200}}
+{"pass":"with-rrp-id","kind":"absent-epoch","rrp":"ca2","result":{"issued":false,"reason":"freshness fresh: freshness element is not valid now: the epoch marker is not the current one","status":409}}
+{"pass":"with-rrp-id","kind":"absent-timestamp","rrp":"ca1","result":{"cert_issuer":"CN=TACRA bench CA Intermediate CA,O=TACRA bench CA","cert_serial":"f0a00b8c7c5d928b362032e6ab61356a","cert_subject":"CN=payments.workload.tacra.example","issued":true,"status":200}}
+{"pass":"with-rrp-id","kind":"absent-timestamp","rrp":"ca2","result":{"issued":false,"reason":"attestation ear: not affirming: SEVSNP is \"contraindicated\"","status":403}}
+{"pass":"with-rrp-id","kind":"absent-none","rrp":"ca1","result":{"cert_issuer":"CN=TACRA bench CA Intermediate CA,O=TACRA bench CA","cert_serial":"3859a9d648df02325e033c8396ad3e01","cert_subject":"CN=payments.workload.tacra.example","issued":true,"status":200}}
+{"pass":"with-rrp-id","kind":"absent-none","rrp":"ca2","result":{"issued":false,"reason":"attestation ear: not affirming: SEVSNP is \"contraindicated\"","status":403}}

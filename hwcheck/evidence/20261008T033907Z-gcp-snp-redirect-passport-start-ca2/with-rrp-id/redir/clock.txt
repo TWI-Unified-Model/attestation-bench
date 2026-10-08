@@ -1,0 +1,29 @@
+guest clock (UTC, seconds): 1791430853.493239897
+clocksource: tsc
+available clocksources: tsc kvm-clock acpi_pm 
+kernel command line: BOOT_IMAGE=/vmlinuz-7.0.0-1011-gcp root=PARTUUID=25738ee1-aeb2-42e1-895b-9a587dbb9157 ro console=ttyS0,115200 panic=-1
+-- boot lines on SEV, TDX, the TSC and the clocksource (dmesg)
+[    0.000000] [Firmware Bug]: TSC doesn't count with P0 frequency!
+[    0.000000] kvm-clock: Using msrs 4b564d01 and 4b564d00
+[    0.000000] kvm-clock: using sched offset of 12743941974 cycles
+[    0.000002] clocksource: kvm-clock: mask: 0xffffffffffffffff max_cycles: 0x1cd42e4dffb, max_idle_ns: 881590591483 ns
+[    0.000010] tsc: Detected 2450.000 MHz processor
+[    0.001389] clocksource: refined-jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 1910969940391419 ns
+[    0.140089] clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 1911260446275000 ns
+[    0.370520] clocksource: tsc-early: mask: 0xffffffffffffffff max_cycles: 0x2350b8d102a, max_idle_ns: 440795297257 ns
+[    0.646714] Memory Encryption Features active: AMD SEV SEV-ES SEV-SNP
+[    0.647556] SEV: Status: SEV SEV-ES SEV-SNP 
+[    1.197590] clocksource: Switched to clocksource kvm-clock
+[    1.211025] clocksource: acpi_pm: mask: 0xffffff max_cycles: 0xffffff, max_idle_ns: 2085701024 ns
+[    1.239019] clocksource: tsc: mask: 0xffffffffffffffff max_cycles: 0x2350b8d102a, max_idle_ns: 440795297257 ns
+[    1.239207] clocksource: Switched to clocksource tsc
+[    1.427989] software IO TLB: Memory encryption is active and system is using DMA bounce buffers
+-- the time service
+active: chrony
+active: chronyd
+MS Name/IP address         Stratum Poll Reach LastRx Last sample               
+===============================================================================
+^* 169.254.169.254               2   6    17    13   -106ns[  -11us] +/-  172us
+Name/IP address             Mode KeyID Type KLen Last Atmp  NAK Cook CLen
+=========================================================================
+169.254.169.254                -     0    0    0    -    0    0    0    0

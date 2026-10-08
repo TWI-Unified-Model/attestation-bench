@@ -1,5 +1,6 @@
-"""Tests of scripts/report.py on the committed runs: the reference runs pass, a bank gives a row per payment, a run of
-an earlier format is not judged, and a run that failed in its day still fails.
+"""Tests of scripts/report.py on the committed runs: the reference runs pass, a variant of the redirection experiment is
+named, a bank gives a row per payment, a run of an earlier format is not judged, and a run that failed in its day still
+fails.
 
     python3 -m unittest discover -s scripts/tests        (make test)
 """
@@ -42,6 +43,15 @@ class Report(unittest.TestCase):
         self.assertIn("| end to end | GCP SEV-SNP | Passport | PASS*: all 10 Targets", rows[1])
         self.assertIn("| substitution attacks | GCP TDX |  | PASS*: 82 checks", rows[2])
         self.assertIn("| #20 redirection | GCP SEV-SNP | Background Check | PASS*: with the RRP identifier", rows[3])
+
+    def test_the_redirection_variants_are_named(self):
+        rows, count = report(
+            HW / "20261008T031349Z-gcp-snp-redirect-own-epochs",
+            HW / "20261008T035308Z-aws-snp-redirect-passport-start-ca2",
+        )
+        self.assertEqual(count, "2 runs: 2 PASS, 0 FAIL, 0 not judged")
+        self.assertIn("| #20 redirection, own-epochs | GCP SEV-SNP | Background Check | PASS", rows[0])
+        self.assertIn("| #20 redirection, start-ca2 | AWS SEV-SNP | Passport | PASS", rows[1])
 
     def test_a_bank_gives_a_row_per_payment(self):
         rows, count = report(E2E / "20261006T230714Z-demo-bank")

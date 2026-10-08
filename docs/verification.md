@@ -264,3 +264,23 @@ make report RUNS="e2e/evidence/20261007T17* e2e/evidence/20261007T18* e2e/eviden
 The verdict tests judge these payments too. `make test-live` at v0.1.0: the EST wire format as expected, and the 29
 committed attack runs appraised again by the live verifiers, 1450 checks. Both clouds were empty after each bank. The
 tag `v0.1.1` is set once CI has passed on its commit.
+
+## The redirection's variants (8 October 2026)
+
+The redirection experiment answers TACRA #20 with two things fixed: its two Credential Authorities share one epoch
+marker, and the conduit offers Evidence made for `ca1`. Two variants change each (`c0f02ac`,
+[attacks.md](attacks.md), section 2), and the verdict checks each refusal's reason in them. One run of each came
+first, on GCP SEV-SNP in Background Check; the other ten followed, one at a time, each checked for VMs left behind.
+
+| Runs | Commit | Result |
+|---|---|---|
+| `REDIRECT_VARIANT=own-epochs make redirect` on the three platforms, Background Check and Passport | `c0f02ac` | 6 PASS, 20 of 20 each: without the RRP identifier `ca2` issued for absent-timestamp and absent-none alone, refusing present-nonce for the Handle and the two epoch kinds for its epoch marker; with it, all five refused |
+| `REDIRECT_VARIANT=start-ca2 make redirect`, the same | `c0f02ac` | 6 PASS, 20 of 20 each: without the identifier `ca2` issued for every kind but absent-epoch, present-nonce included; with it, all five refused, its own Handles for the binding |
+
+```bash
+make report RUNS="hwcheck/evidence/20261008T03*"   # 12 runs, 12 PASS
+```
+
+`make check` at `c0f02ac`: every linter clean, 52 Python tests; with the runs committed, 59, the verdict and report
+tests judging the twelve runs and copies of them changed in one place. The 27 earlier redirect runs are judged as
+before. `make cloud-check` found both clouds empty at the end.

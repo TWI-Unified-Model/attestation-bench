@@ -69,6 +69,22 @@ REDIRECT_RUNS = [
     "20261006T225943Z-gcp-tdx-redirect",
     "20261006T230316Z-aws-snp-redirect",
 ]
+# the redirection experiment's variants (hwcheck/scripts/redirect.sh, REDIRECT_VARIANT), from c0f02ac, 8 October 2026:
+# each on GCP SEV-SNP, GCP TDX and AWS SEV-SNP, in Background Check and in Passport
+REDIRECT_VARIANT_RUNS = {
+    "20261008T031349Z-gcp-snp-redirect-own-epochs": "own-epochs",
+    "20261008T032215Z-gcp-snp-redirect-passport-own-epochs": "own-epochs",
+    "20261008T032611Z-gcp-tdx-redirect-own-epochs": "own-epochs",
+    "20261008T032934Z-gcp-tdx-redirect-passport-own-epochs": "own-epochs",
+    "20261008T033255Z-aws-snp-redirect-own-epochs": "own-epochs",
+    "20261008T033608Z-aws-snp-redirect-passport-own-epochs": "own-epochs",
+    "20261008T031807Z-gcp-snp-redirect-start-ca2": "start-ca2",
+    "20261008T033907Z-gcp-snp-redirect-passport-start-ca2": "start-ca2",
+    "20261008T034309Z-gcp-tdx-redirect-start-ca2": "start-ca2",
+    "20261008T034636Z-gcp-tdx-redirect-passport-start-ca2": "start-ca2",
+    "20261008T035017Z-aws-snp-redirect-start-ca2": "start-ca2",
+    "20261008T035308Z-aws-snp-redirect-passport-start-ca2": "start-ca2",
+}
 # the refusal scenarios on hardware (make demo with UNAPPROVED=1 or OTHER_PLATFORM=1), each with the reason it expects
 REFUSAL_RUNS = {
     "20261007T140959Z-gcp-sev-snp-e2e-passport-unapproved": "ear: not affirming: SEVSNP is",
@@ -218,6 +234,17 @@ class CommittedRuns(unittest.TestCase):
             with self.subTest(run=run):
                 code, last = verdict("redirect", HW / run)
                 self.assertEqual(code, 0, last)
+
+    def test_redirect_variants(self):
+        starts = {
+            "own-epochs": "VERDICT PASS: ca2 with an epoch marker of its own: ",
+            "start-ca2": "VERDICT PASS: the conduit starting at ca2: ",
+        }
+        for run, variant in REDIRECT_VARIANT_RUNS.items():
+            with self.subTest(run=run):
+                code, last = verdict("redirect", HW / run)
+                self.assertEqual(code, 0, last)
+                self.assertTrue(last.startswith(starts[variant]), last)
 
     def test_bank_pay(self):
         for run, expect in BANK_RUNS.items():
@@ -486,6 +513,52 @@ class ChangedRuns(unittest.TestCase):
         lines = (run / "results.jsonl").read_text().splitlines()
         (run / "results.jsonl").write_text("\n".join(lines[1:]) + "\n")
         self.assertEqual(verdict("redirect", run), (1, "VERDICT FAIL: 1 of 20 outcomes not as expected"))
+
+    def variant_run(self, variant):
+        run = next(r for r, v in REDIRECT_VARIANT_RUNS.items() if v == variant)
+        return self.copy(HW / run, "results.jsonl", "variant.txt")
+
+    def change_cell(self, run, cell, result):
+        rows = [json.loads(x) for x in (run / "results.jsonl").read_text().splitlines()]
+        for r in rows:
+            if (r["pass"], r["kind"], r["rrp"]) == cell:
+                r["result"] = result
+        (run / "results.jsonl").write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+
+    def test_redirect_variant_issued(self):
+        # start-ca2: ca2 issues on a Handle it minted, though the binding names ca1
+        run = self.variant_run("start-ca2")
+        self.change_cell(run, ("with-rrp-id", "present-nonce", "ca2"), {"issued": True, "status": 200})
+        code, lines = verdict_lines("redirect", run)
+        self.assertEqual((code, lines[-1]), (1, "VERDICT FAIL: 1 of 20 outcomes not as expected"))
+        self.assertIn("with-rrp-id present-nonce ca2: ISSUED, expected refused for the binding", lines)
+
+    def test_redirect_variant_refused_for_another_reason(self):
+        # own-epochs: ca2 refuses present-epoch, for a Handle instead of its epoch marker
+        run = self.variant_run("own-epochs")
+        handle = "freshness fresh: freshness element is not valid now: unknown or already used Handle"
+        self.change_cell(run, ("no-rrp-id", "present-epoch", "ca2"), {"issued": False, "status": 409, "reason": handle})
+        code, lines = verdict_lines("redirect", run)
+        self.assertEqual((code, lines[-1]), (1, "VERDICT FAIL: 1 of 20 outcomes not as expected"))
+        self.assertIn(f"no-rrp-id present-epoch ca2: refused ({handle}), expected refused for the epoch", lines)
+
+    def test_redirect_variant_judged_as_the_other(self):
+        run = self.variant_run("own-epochs")
+        (run / "variant.txt").write_text("start-ca2\n")
+        code, last = verdict("redirect", run)
+        self.assertEqual(code, 1, last)
+
+    def test_redirect_variant_without_its_name(self):
+        # without variant.txt a run is judged as the default experiment, whose table a variant's run does not match
+        run = self.variant_run("own-epochs")
+        (run / "variant.txt").unlink()
+        code, last = verdict("redirect", run)
+        self.assertEqual(code, 1, last)
+
+    def test_redirect_unknown_variant(self):
+        run = self.variant_run("own-epochs")
+        (run / "variant.txt").write_text("own-nonces\n")
+        self.assertEqual(verdict("redirect", run), (1, "VERDICT FAIL: unknown variant 'own-nonces' (variant.txt)"))
 
     def test_bank_unapproved_with_credential(self):
         run = self.copy(BANK / "20261006T232917Z-unapproved", "report.json")

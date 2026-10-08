@@ -1,0 +1,10 @@
+{"pass":"with-rrp-id","kind":"present-nonce","rrp":"ca1","result":{"issued":false,"reason":"freshness fresh: freshness element is not valid now: unknown or already used Handle","status":409}}
+{"pass":"with-rrp-id","kind":"present-nonce","rrp":"ca2","result":{"issued":false,"reason":"attestation ear: eat_nonce is not the binding value","status":403}}
+{"pass":"with-rrp-id","kind":"present-epoch","rrp":"ca1","result":{"issued":false,"reason":"freshness fresh: freshness element is not valid now: the epoch marker is not the current one","status":409}}
+{"pass":"with-rrp-id","kind":"present-epoch","rrp":"ca2","result":{"issued":false,"reason":"attestation ear: eat_nonce is not the binding value","status":403}}
+{"pass":"with-rrp-id","kind":"absent-epoch","rrp":"ca1","result":{"cert_issuer":"CN=TACRA bench CA Intermediate CA,O=TACRA bench CA","cert_serial":"a40aa2b9059d02fba054d453b84cc469","cert_subject":"CN=payments.workload.tacra.example","issued":true,"status":200}}
+{"pass":"with-rrp-id","kind":"absent-epoch","rrp":"ca2","result":{"issued":false,"reason":"freshness fresh: freshness element is not valid now: the epoch marker is not the current one","status":409}}
+{"pass":"with-rrp-id","kind":"absent-timestamp","rrp":"ca1","result":{"cert_issuer":"CN=TACRA bench CA Intermediate CA,O=TACRA bench CA","cert_serial":"f93ecac0efbd9c2e1f2e23e12f5ace72","cert_subject":"CN=payments.workload.tacra.example","issued":true,"status":200}}
+{"pass":"with-rrp-id","kind":"absent-timestamp","rrp":"ca2","result":{"issued":false,"reason":"attestation ear: eat_nonce is not the binding value","status":403}}
+{"pass":"with-rrp-id","kind":"absent-none","rrp":"ca1","result":{"cert_issuer":"CN=TACRA bench CA Intermediate CA,O=TACRA bench CA","cert_serial":"f8d25151d4d6706bb6cd8fa24ec51778","cert_subject":"CN=payments.workload.tacra.example","issued":true,"status":200}}
+{"pass":"with-rrp-id","kind":"absent-none","rrp":"ca2","result":{"issued":false,"reason":"attestation ear: eat_nonce is not the binding value","status":403}}
