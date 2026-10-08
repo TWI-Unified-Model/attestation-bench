@@ -1,5 +1,6 @@
 # The EST server: GlobalSign's EST (MIT) as forked by the TWI SIG, at the head of Sudar's pull request #3
-# (branch sudar_feature_01), with our patches: 0001-0006 the TACRA backend and the attest-* wire format,
+# (branch sudar_feature_01, deleted when the pull request was closed unmerged on 8 October 2026; GitHub serves the
+# commit as refs/pull/3/head), with our patches: 0001-0006 the TACRA backend and the attest-* wire format,
 #   0007 dependencies without a reached vulnerability, 0008 no tests on stand-ins, 0009 the server without the
 #   fork's mock CA (the TACRA backend alone, a strict configuration), 0010 the reference-vector tests in a package of
 #   their own, apart from the upstream tests' mock CA, 0011 the fork's mock TEE and mock attested CA out of the tree,

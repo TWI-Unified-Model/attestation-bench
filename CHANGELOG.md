@@ -6,6 +6,12 @@ What changed, newest first. Dates are UTC.
 
 ### Added
 
+- **The protocol without the RRP identifier, end to end** (`OMIT_RRP_ID=1`; TACRA #20): one switch reaches the
+  workload's CAI (`WithoutRelyingPartyBinding`), the EST server (patch 0015: the Passport nonce without the
+  identifier) and the RRPs, so the same demos, attacks, replays and drills run with the identifier bound and
+  without it. On the three platforms, 8 October: 33 runs, each as the run of its kind with the identifier; what
+  differs is which RRP serves the Attester ([docs/attacks.md](docs/attacks.md), section 8). Leaving the identifier
+  out is a change to the CAS Server as well as to the text: its nonce must match what the RRP recomputes.
 - **The replay variants of `make redirect`** (`REDIRECT_VARIANT=replay`, `replay-vault`): the same request offered
   twice at the same RRP, `ca1` or `vault1`, for each Freshness Kind, in Background Check and in Passport. The RRP
   keeps no record of a CSR or CEKpub it served, so only the freshness element can refuse the second offer: a
@@ -92,6 +98,15 @@ What changed, newest first. Dates are UTC.
 
 ### Fixed
 
+- rrpverify's service path (the deployed Veraison given the binding value as the expected nonce) still made the
+  "other RRP identifier" case when no identifier was bound, so the honest request counted as an accepted
+  substitution, ten times: the first attack run without the identifier found it
+  ([its README](hwcheck/evidence/20261008T202943Z-gcp-sev-snp-no-rrp-id/README.md)). The case is left out there too, as the verify path
+  already left it out.
+- The AWS SEV-SNP attack script gave the empty identifiers of `OMIT_RRP_ID=1` to hwrun, the pre-play and
+  rrpverify's service path, but not to its verify path, which then refused the honest Evidence of every request:
+  the first AWS attack run without the identifier found it ([its README](hwcheck/evidence/20261008T210307Z-aws-sev-snp-no-rrp-id/README.md)).
+  The verify line takes the same flags as the service line, as the GCP scripts' lines did.
 - A request the EST server refused for its Evidence format (415) used up its present-nonce Handle: since
   patch 0001 the server correlated the Handle first. It now checks the format first, as the draft's processing
   has it (syntax, media type and size limits, then the Handle); `TestFormatRefusalLeavesTheHandle` fails under

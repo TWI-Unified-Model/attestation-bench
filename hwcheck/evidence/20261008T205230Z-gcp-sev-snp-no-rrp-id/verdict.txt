@@ -1,0 +1,20 @@
+rrpverify-platform: 50 checks, 0 not as expected
+rrpverify-service: 40 checks, 0 not as expected
+rrpverify-veraison-fixed: 142 checks, 0 not as expected (a build the bench compares with: reported, not judged)
+rrpverify-veraison-fork: 122 checks, 50 not as expected (a build the bench compares with: reported, not judged)
+rrpverify-veraison-v015: 142 checks, 0 not as expected
+pre-play ahead enroll-absent-epoch: at once 200
+pre-play ahead enroll-absent-none: at once 200
+pre-play ahead enroll-absent-timestamp: at once 409; 286 s or more after it was made 200, 407 s 200, 411 s 409 (max_age 120 s, clock_skew 5 s)
+pre-play ahead enroll-present-epoch: at once 200
+pre-play ahead enroll-present-nonce: at once 200
+pre-play ahead retrieve-absent-epoch: at once 200
+pre-play ahead retrieve-absent-none: at once 200
+pre-play ahead retrieve-absent-timestamp: at once 409; 286 s or more after it was made 200, 407 s 200, 411 s 409 (max_age 120 s, clock_skew 5 s)
+pre-play ahead retrieve-present-epoch: at once 200
+pre-play ahead retrieve-present-nonce: at once 200
+pre-play behind enroll-absent-timestamp: at once 409; 411 s or more after it was made 409
+pre-play behind retrieve-absent-timestamp: at once 409; 411 s or more after it was made 409
+the platform rule's waiver: Milan bit 4: admitted without bit 4, AMD-SB-3034
+guest minus RRP: +1.051 s, within 1.235 s
+VERDICT PASS: 232 checks: the honest Evidence passed, every attack refused for its own reason; the honest Evidence admitted under the bench's waiver: Milan bit 4: admitted without bit 4, AMD-SB-3034; exposure, the guest's clock: https://db-time.tacra.example accepted Evidence 286 s old or more, and again 407 s old or more (max_age 120 s); https://ledger-time.tacra.example accepted Evidence 286 s old or more, and again 407 s old or more (max_age 120 s); absent-timestamp Evidence made with the clock behind refused; the other four kinds' Evidence made with it ahead taken at once

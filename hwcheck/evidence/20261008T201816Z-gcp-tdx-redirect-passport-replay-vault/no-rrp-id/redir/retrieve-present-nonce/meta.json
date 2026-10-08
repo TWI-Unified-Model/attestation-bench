@@ -1,0 +1,14 @@
+{
+ "case": "retrieve-present-nonce",
+ "mode": "retrieve",
+ "freshness_kind": "present-nonce",
+ "target": "https://ledger-nonce.tacra.example",
+ "relying_party": "",
+ "freshness_element_b64": "XlR3XVOpaQN2ALJKTi4Zub7icF-Kh5d_TCzqgRw56SY",
+ "binding_value_hex": "56541185100c0e6703a3fab0b1b0a2593be25a141dacf39ca314092b7f63d72b80b6e705fef2c126b6186b738a19c538622bbd79cf917e06eea319df99ba02af",
+ "evidence_ms": 41.285,
+ "token_bytes": 4966,
+ "report_sha256": "6ed2271b6e85d74ceda922aa255fd2becbf67a80bb88d5ac0b95bed27afcec03",
+ "signing_key": "TDX quote",
+ "chip_id_prefix": "MRTD f21e6b48743fe14c"
+}

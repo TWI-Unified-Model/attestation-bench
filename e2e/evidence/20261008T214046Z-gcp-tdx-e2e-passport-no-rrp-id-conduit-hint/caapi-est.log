@@ -1,0 +1,12 @@
+2026/10/08 21:41:58 caapi-est: CAAPI on 127.0.0.1:50061, EST server localhost:18443
+2026/10/08 21:41:58 caapi-est: the conduit of the drill "hint" (docs/attacks.md, section 6)
+2026/10/08 21:42:03 conduit attack hint: Retrieval for https://ledger-nonce.tacra.example: sent the Credential Hint "reports.workload.tacra.example" in place of the Attester's "payments.workload.tacra.example"
+2026/10/08 21:42:03 conduit attack hint: Retrieval for https://ledger-nonce.tacra.example: the EST server answered: 403 RRP vault: credential-hint: no credential group for this Credential Hint at this Target
+2026/10/08 21:42:04 conduit attack hint: Retrieval for https://ledger-epoch.tacra.example: sent the Credential Hint "reports.workload.tacra.example" in place of the Attester's "payments.workload.tacra.example"
+2026/10/08 21:42:04 conduit attack hint: Retrieval for https://ledger-epoch.tacra.example: the EST server answered: 403 RRP vault: credential-hint: no credential group for this Credential Hint at this Target
+2026/10/08 21:42:04 conduit attack hint: Retrieval for https://ledger-lepoch.tacra.example: sent the Credential Hint "reports.workload.tacra.example" in place of the Attester's "payments.workload.tacra.example"
+2026/10/08 21:42:05 conduit attack hint: Retrieval for https://ledger-lepoch.tacra.example: the EST server answered: 403 RRP vault: credential-hint: no credential group for this Credential Hint at this Target
+2026/10/08 21:42:05 conduit attack hint: Retrieval for https://ledger-time.tacra.example: sent the Credential Hint "reports.workload.tacra.example" in place of the Attester's "payments.workload.tacra.example"
+2026/10/08 21:42:05 conduit attack hint: Retrieval for https://ledger-time.tacra.example: the EST server answered: 403 RRP vault: credential-hint: no credential group for this Credential Hint at this Target
+2026/10/08 21:42:05 conduit attack hint: Retrieval for https://ledger-none.tacra.example: sent the Credential Hint "reports.workload.tacra.example" in place of the Attester's "payments.workload.tacra.example"
+2026/10/08 21:42:06 conduit attack hint: Retrieval for https://ledger-none.tacra.example: the EST server answered: 403 RRP vault: credential-hint: no credential group for this Credential Hint at this Target

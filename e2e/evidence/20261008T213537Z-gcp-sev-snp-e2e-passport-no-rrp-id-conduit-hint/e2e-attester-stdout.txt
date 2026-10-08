@@ -1,0 +1,10 @@
+2026/10/08 21:37:22 https://db-nonce.tacra.example           x509    acquired in   636.2 ms (1 attempt(s)); relying party answered 200
+2026/10/08 21:37:23 https://db-epoch.tacra.example           x509    acquired in   547.0 ms (1 attempt(s)); relying party answered 200
+2026/10/08 21:37:24 https://db-lepoch.tacra.example          x509    acquired in   566.8 ms (1 attempt(s)); relying party answered 200
+2026/10/08 21:37:24 https://db-time.tacra.example            x509    acquired in   543.4 ms (1 attempt(s)); relying party answered 200
+2026/10/08 21:37:25 https://db-none.tacra.example            x509    acquired in   512.2 ms (1 attempt(s)); relying party answered 200
+2026/10/08 21:37:26 https://ledger-nonce.tacra.example       acquire failed: cai: RetrieveCredential: 403 RRP vault: credential-hint: no credential group for this Credential Hint at this Target
+2026/10/08 21:37:26 https://ledger-epoch.tacra.example       acquire failed: cai: RetrieveCredential: 403 RRP vault: credential-hint: no credential group for this Credential Hint at this Target
+2026/10/08 21:37:27 https://ledger-lepoch.tacra.example      acquire failed: cai: RetrieveCredential: 403 RRP vault: credential-hint: no credential group for this Credential Hint at this Target
+2026/10/08 21:37:27 https://ledger-time.tacra.example        acquire failed: cai: RetrieveCredential: 403 RRP vault: credential-hint: no credential group for this Credential Hint at this Target
+2026/10/08 21:37:28 https://ledger-none.tacra.example        acquire failed: cai: RetrieveCredential: 403 RRP vault: credential-hint: no credential group for this Credential Hint at this Target

@@ -1,0 +1,14 @@
+variant replay
+pass         kind               first offer                  second offer at ca1
+with-rrp-id  present-nonce      ISSUED                       refused (Handle)
+with-rrp-id  present-epoch      ISSUED                       ISSUED
+with-rrp-id  absent-epoch       ISSUED                       ISSUED
+with-rrp-id  absent-timestamp   ISSUED                       ISSUED
+with-rrp-id  absent-none        ISSUED                       ISSUED
+no-rrp-id    present-nonce      ISSUED                       refused (Handle)
+no-rrp-id    present-epoch      ISSUED                       ISSUED
+no-rrp-id    absent-epoch       ISSUED                       ISSUED
+no-rrp-id    absent-timestamp   ISSUED                       ISSUED
+no-rrp-id    absent-none        ISSUED                       ISSUED
+guest minus RRP: +1.142 s, within 1.304 s
+VERDICT PASS: the same request twice at ca1: the second offer with present-nonce refused for the Handle; with present-epoch, absent-epoch, absent-timestamp and absent-none the credential issued twice, with the RRP identifier bound and without it alike

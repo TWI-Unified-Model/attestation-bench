@@ -90,6 +90,55 @@ REPLAY_RUNS = {
     "20261008T190855Z-gcp-tdx-redirect-replay-vault": "replay-vault",
     "20261008T191151Z-gcp-tdx-redirect-passport-replay-vault": "replay-vault",
 }
+# the protocol without the RRP identifier (OMIT_RRP_ID=1 end to end: the CAI, the EST server and the RRPs), the same
+# events as with it, 8 October 2026: the replay variants in both passes and the Passport demos at 153eb2f; the
+# substitution attacks on GCP, the conduit's container drills and the Background Check demos at c3909630, after the
+# first attack run found that rrpverify's service path still made the RRP identifier case; the AWS attacks at
+# 1c1df049, after their first run found the AWS script's verify line without the empty identifiers (both runs are
+# kept, with their READMEs)
+REPLAY_BOTH_PASSES_RUNS = {
+    "20261008T194057Z-gcp-snp-redirect-replay": "replay",
+    "20261008T194502Z-gcp-snp-redirect-passport-replay": "replay",
+    "20261008T194859Z-gcp-snp-redirect-replay-vault": "replay-vault",
+    "20261008T195250Z-gcp-snp-redirect-passport-replay-vault": "replay-vault",
+    "20261008T195636Z-aws-snp-redirect-replay": "replay",
+    "20261008T195930Z-aws-snp-redirect-passport-replay": "replay",
+    "20261008T200229Z-aws-snp-redirect-replay-vault": "replay-vault",
+    "20261008T200516Z-aws-snp-redirect-passport-replay-vault": "replay-vault",
+    "20261008T200806Z-gcp-tdx-redirect-replay": "replay",
+    "20261008T201133Z-gcp-tdx-redirect-passport-replay": "replay",
+    "20261008T201457Z-gcp-tdx-redirect-replay-vault": "replay-vault",
+    "20261008T201816Z-gcp-tdx-redirect-passport-replay-vault": "replay-vault",
+}
+NO_RRP_ID_DEMO_RUNS = [
+    "20261008T202206Z-gcp-sev-snp-e2e-passport-no-rrp-id",
+    "20261008T202505Z-aws-sev-snp-e2e-passport-no-rrp-id",
+    "20261008T202708Z-gcp-tdx-e2e-passport-no-rrp-id",
+    "20261008T215102Z-gcp-sev-snp-e2e-background-check-no-rrp-id",
+    "20261008T215357Z-aws-sev-snp-e2e-background-check-no-rrp-id",
+    "20261008T215602Z-gcp-tdx-e2e-background-check-no-rrp-id",
+]
+NO_RRP_ID_ATTACK_RUNS = [
+    "20261008T205230Z-gcp-sev-snp-no-rrp-id",
+    "20261008T211132Z-gcp-tdx-no-rrp-id",
+    "20261008T220040Z-aws-sev-snp-no-rrp-id",
+]
+NO_RRP_ID_DRILL_RUNS = {
+    "20261008T212014Z-gcp-sev-snp-e2e-passport-no-rrp-id-conduit-seal": "seal",
+    "20261008T212315Z-aws-sev-snp-e2e-passport-no-rrp-id-conduit-seal": "seal",
+    "20261008T212519Z-gcp-tdx-e2e-passport-no-rrp-id-conduit-seal": "seal",
+    "20261008T212753Z-gcp-sev-snp-e2e-passport-no-rrp-id-conduit-swap": "swap",
+    "20261008T213051Z-aws-sev-snp-e2e-passport-no-rrp-id-conduit-swap": "swap",
+    "20261008T213253Z-gcp-tdx-e2e-passport-no-rrp-id-conduit-swap": "swap",
+    "20261008T213537Z-gcp-sev-snp-e2e-passport-no-rrp-id-conduit-hint": "hint",
+    "20261008T213840Z-aws-sev-snp-e2e-passport-no-rrp-id-conduit-hint": "hint",
+    "20261008T214046Z-gcp-tdx-e2e-passport-no-rrp-id-conduit-hint": "hint",
+    "20261008T214316Z-gcp-sev-snp-e2e-passport-no-rrp-id-conduit-hint-group": "hint-group",
+    "20261008T214614Z-aws-sev-snp-e2e-passport-no-rrp-id-conduit-hint-group": "hint-group",
+    "20261008T214815Z-gcp-tdx-e2e-passport-no-rrp-id-conduit-hint-group": "hint-group",
+}
+SERVICE_CASE_GAP_RUN = "20261008T202943Z-gcp-sev-snp-no-rrp-id"
+AWS_VERIFY_FLAGS_GAP_RUN = "20261008T210307Z-aws-sev-snp-no-rrp-id"
 # the conduit experiment (7 October 2026): #20 in Background Check and in Passport, and the conduit's #19 rewrites
 CONDUIT_RUNS = [
     "20261007T204444Z-gcp-snp-redirect",
@@ -349,6 +398,55 @@ class CommittedRuns(unittest.TestCase):
                 self.assertTrue(last.startswith("VERDICT PASS: the same request twice at "), last)
                 self.assertIn("the second offer with present-nonce refused for the Handle", last)
                 self.assertTrue(last.endswith(ends[variant]), last)
+
+    def test_replay_both_passes(self):
+        for run, variant in REPLAY_BOTH_PASSES_RUNS.items():
+            with self.subTest(run=run):
+                code, last = verdict("redirect", HW / run)
+                self.assertEqual(code, 0, last)
+                rrp = "vault1" if variant == "replay-vault" else "ca1"
+                self.assertTrue(last.startswith(f"VERDICT PASS: the same request twice at {rrp}: "), last)
+                self.assertTrue(last.endswith(", with the RRP identifier bound and without it alike"), last)
+
+    def test_demos_without_the_rrp_identifier(self):
+        for run in NO_RRP_ID_DEMO_RUNS:
+            with self.subTest(run=run):
+                code, last = verdict("demo", E2E / run)
+                self.assertEqual(code, 0, last)
+                self.assertTrue(last.startswith("VERDICT PASS: all 10 Targets: credential acquired and admitted"), last)
+                cfg = json.loads((E2E / run / "e2e-attester.json").read_text())
+                self.assertTrue(cfg["omit_rrp_id_binding"], "the workload bound no RRP identifier")
+
+    def test_attacks_without_the_rrp_identifier(self):
+        for run in NO_RRP_ID_ATTACK_RUNS:
+            with self.subTest(run=run):
+                code, last = verdict("attacks", HW / run)
+                self.assertEqual(code, 0, last)
+                self.assertIn("every attack refused for its own reason", last)
+                in_process = (
+                    "rrpverify-tdx.json"
+                    if (HW / run / "rrpverify-tdx.json").is_file()
+                    else "rrpverify-veraison-v015.json"
+                )
+                for name in ("rrpverify-service.json", in_process):
+                    report = json.loads((HW / run / name).read_text())
+                    self.assertEqual((report["rrp_ca"], report["rrp_vault"]), ("", ""), name)
+                    self.assertFalse(any(r["check"] == "other RRP identifier" for r in report["results"]), name)
+                service = json.loads((HW / run / "rrpverify-service.json").read_text())["results"]
+                self.assertEqual(len(service), 40, "four cases per request: no identifier to substitute")
+
+    def test_the_runs_that_found_the_gaps_without_the_identifier(self):
+        why = "VERDICT FAIL: 10 of 242 checks not as expected"
+        self.assertEqual(verdict("attacks", HW / SERVICE_CASE_GAP_RUN), (1, why))
+        why = "VERDICT FAIL: 120 of 212 checks not as expected"
+        self.assertEqual(verdict("attacks", HW / AWS_VERIFY_FLAGS_GAP_RUN), (1, why))
+
+    def test_drills_without_the_rrp_identifier(self):
+        for run, attack in NO_RRP_ID_DRILL_RUNS.items():
+            with self.subTest(run=run):
+                code, last = verdict("conduit", E2E / run, "--attack", attack)
+                self.assertEqual(code, 0, last)
+                self.assertTrue(last.endswith("; the 5 other Targets admitted"), last)
 
     def test_bank_pay(self):
         for run, expect in BANK_RUNS.items():

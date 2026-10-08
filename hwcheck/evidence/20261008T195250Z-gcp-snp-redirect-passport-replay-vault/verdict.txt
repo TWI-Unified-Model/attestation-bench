@@ -1,0 +1,14 @@
+variant replay-vault
+pass         kind               first offer                  second offer at vault1
+with-rrp-id  present-nonce      RELEASED                     refused (Handle)
+with-rrp-id  present-epoch      RELEASED                     RELEASED
+with-rrp-id  absent-epoch       RELEASED                     RELEASED
+with-rrp-id  absent-timestamp   RELEASED                     RELEASED
+with-rrp-id  absent-none        RELEASED                     RELEASED
+no-rrp-id    present-nonce      RELEASED                     refused (Handle)
+no-rrp-id    present-epoch      RELEASED                     RELEASED
+no-rrp-id    absent-epoch       RELEASED                     RELEASED
+no-rrp-id    absent-timestamp   RELEASED                     RELEASED
+no-rrp-id    absent-none        RELEASED                     RELEASED
+guest minus RRP: +1.029 s, within 1.209 s
+VERDICT PASS: the same request twice at vault1: the second offer with present-nonce refused for the Handle; with present-epoch, absent-epoch, absent-timestamp and absent-none the credential released twice, with the RRP identifier bound and without it alike

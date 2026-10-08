@@ -1,0 +1,30 @@
+rrpverify-platform: 50 checks, 0 not as expected
+rrpverify-service: 50 checks, 10 not as expected
+  enroll-present-nonce: other RRP identifier: want fail, got pass
+  retrieve-present-nonce: other RRP identifier: want fail, got pass
+  enroll-present-epoch: other RRP identifier: want fail, got pass
+  retrieve-present-epoch: other RRP identifier: want fail, got pass
+  enroll-absent-epoch: other RRP identifier: want fail, got pass
+  retrieve-absent-epoch: other RRP identifier: want fail, got pass
+  enroll-absent-timestamp: other RRP identifier: want fail, got pass
+  retrieve-absent-timestamp: other RRP identifier: want fail, got pass
+  enroll-absent-none: other RRP identifier: want fail, got pass
+  retrieve-absent-none: other RRP identifier: want fail, got pass
+rrpverify-veraison-fixed: 142 checks, 0 not as expected (a build the bench compares with: reported, not judged)
+rrpverify-veraison-fork: 122 checks, 50 not as expected (a build the bench compares with: reported, not judged)
+rrpverify-veraison-v015: 142 checks, 0 not as expected
+pre-play ahead enroll-absent-epoch: at once 200
+pre-play ahead enroll-absent-none: at once 200
+pre-play ahead enroll-absent-timestamp: at once 409; 285 s or more after it was made 200, 406 s 200, 410 s 409 (max_age 120 s, clock_skew 5 s)
+pre-play ahead enroll-present-epoch: at once 200
+pre-play ahead enroll-present-nonce: at once 200
+pre-play ahead retrieve-absent-epoch: at once 200
+pre-play ahead retrieve-absent-none: at once 200
+pre-play ahead retrieve-absent-timestamp: at once 409; 285 s or more after it was made 200, 406 s 200, 410 s 409 (max_age 120 s, clock_skew 5 s)
+pre-play ahead retrieve-present-epoch: at once 200
+pre-play ahead retrieve-present-nonce: at once 200
+pre-play behind enroll-absent-timestamp: at once 409; 410 s or more after it was made 409
+pre-play behind retrieve-absent-timestamp: at once 409; 410 s or more after it was made 409
+the platform rule's waiver: Milan bit 4: admitted without bit 4, AMD-SB-3034
+guest minus RRP: +1.427 s, within 1.560 s
+VERDICT FAIL: 10 of 242 checks not as expected

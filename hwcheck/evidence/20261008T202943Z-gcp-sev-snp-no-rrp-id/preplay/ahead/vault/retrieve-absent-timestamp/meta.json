@@ -1,0 +1,14 @@
+{
+ "case": "retrieve-absent-timestamp",
+ "mode": "retrieve",
+ "freshness_kind": "absent-timestamp",
+ "target": "https://ledger-time.tacra.example",
+ "relying_party": "",
+ "freshness_element_b64": "AAAAAGrH_z4",
+ "binding_value_hex": "c4eb8929aba992e43b6e96664fb18d0600491ab85f024e7d70f1adfd1b11af7c18c1507d588ac8821e968630570eed6cb8a50d9342ca8564f446571c61926216",
+ "evidence_ms": 8.502,
+ "token_bytes": 5989,
+ "report_sha256": "a3bc28ff8d952fa1b0462654de3cc816f1ecbd1dcdc691c509a76bd2b16062a7",
+ "signing_key": "VCEK",
+ "chip_id_prefix": "e4d1b687080d8361"
+}

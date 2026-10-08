@@ -264,3 +264,52 @@ Retrieval, the secret the Vault sealed to CEKpub. The data for TACRA's open choi
 deployment accepts a CAS that reads Evidence, or encrypts Evidence to the Verifier) is this table; `conduit-view`
 reproduces it from any committed run.
 
+## 8. The same attacks without the RRP identifier
+
+```bash
+OMIT_RRP_ID=1 make config && make start           # the CAI, the EST server and the RRPs bind no identifier
+OMIT_RRP_ID=1 make demo PLATFORM=gcp-snp          # also make attacks; CONDUIT_ATTACK=… make demo; the runs end in -no-rrp-id
+make config && make start                         # back as it was
+```
+
+TACRA issue #20 asks whether the RRP identifier belongs in the binding. The bench measures the protocol both ways
+with the same events: `OMIT_RRP_ID=1` reaches the workload's CAI (`WithoutRelyingPartyBinding`: the identifier is
+left out of the Evidence's binding; the identifiers the CAI holds still name the Vault's and the Credential
+Authority's trust anchors), the EST server (patch 0015: its Verifier session nonce in Passport is computed without
+the identifier) and the RRPs (`omit_rrp_id_in_binding`). Leaving the identifier out of TACRA is therefore a change
+to the CAS Server as well as to the text: the server's nonce has to match what the RRP recomputes.
+
+Runs of 8 October 2026, each as the run of its kind with the identifier (sections 1, 2 and 6 above): the replay
+variants and the Passport demos at `153eb2f`; the attacks on GCP, the drills and the Background Check demos at
+`c3909630`; the attacks on AWS at `1c1df049`.
+
+| What | GCP SEV-SNP | GCP TDX | AWS SEV-SNP |
+|---|---|---|---|
+| `make demo`, Background Check | [run](../e2e/evidence/20261008T215102Z-gcp-sev-snp-e2e-background-check-no-rrp-id) | [run](../e2e/evidence/20261008T215602Z-gcp-tdx-e2e-background-check-no-rrp-id) | [run](../e2e/evidence/20261008T215357Z-aws-sev-snp-e2e-background-check-no-rrp-id) |
+| `make demo`, Passport | [run](../e2e/evidence/20261008T202206Z-gcp-sev-snp-e2e-passport-no-rrp-id) | [run](../e2e/evidence/20261008T202708Z-gcp-tdx-e2e-passport-no-rrp-id) | [run](../e2e/evidence/20261008T202505Z-aws-sev-snp-e2e-passport-no-rrp-id) |
+| `make attacks` | [run](../hwcheck/evidence/20261008T205230Z-gcp-sev-snp-no-rrp-id) | [run](../hwcheck/evidence/20261008T211132Z-gcp-tdx-no-rrp-id) | [run](../hwcheck/evidence/20261008T220040Z-aws-sev-snp-no-rrp-id) |
+| `REDIRECT_VARIANT=replay`, Background Check, both passes | [run](../hwcheck/evidence/20261008T194057Z-gcp-snp-redirect-replay) | [run](../hwcheck/evidence/20261008T200806Z-gcp-tdx-redirect-replay) | [run](../hwcheck/evidence/20261008T195636Z-aws-snp-redirect-replay) |
+| `REDIRECT_VARIANT=replay`, Passport, both passes | [run](../hwcheck/evidence/20261008T194502Z-gcp-snp-redirect-passport-replay) | [run](../hwcheck/evidence/20261008T201133Z-gcp-tdx-redirect-passport-replay) | [run](../hwcheck/evidence/20261008T195930Z-aws-snp-redirect-passport-replay) |
+| `REDIRECT_VARIANT=replay-vault`, Background Check, both passes | [run](../hwcheck/evidence/20261008T194859Z-gcp-snp-redirect-replay-vault) | [run](../hwcheck/evidence/20261008T201457Z-gcp-tdx-redirect-replay-vault) | [run](../hwcheck/evidence/20261008T200229Z-aws-snp-redirect-replay-vault) |
+| `REDIRECT_VARIANT=replay-vault`, Passport, both passes | [run](../hwcheck/evidence/20261008T195250Z-gcp-snp-redirect-passport-replay-vault) | [run](../hwcheck/evidence/20261008T201816Z-gcp-tdx-redirect-passport-replay-vault) | [run](../hwcheck/evidence/20261008T200516Z-aws-snp-redirect-passport-replay-vault) |
+| `CONDUIT_ATTACK=seal` | [run](../e2e/evidence/20261008T212014Z-gcp-sev-snp-e2e-passport-no-rrp-id-conduit-seal) | [run](../e2e/evidence/20261008T212519Z-gcp-tdx-e2e-passport-no-rrp-id-conduit-seal) | [run](../e2e/evidence/20261008T212315Z-aws-sev-snp-e2e-passport-no-rrp-id-conduit-seal) |
+| `CONDUIT_ATTACK=swap` | [run](../e2e/evidence/20261008T212753Z-gcp-sev-snp-e2e-passport-no-rrp-id-conduit-swap) | [run](../e2e/evidence/20261008T213253Z-gcp-tdx-e2e-passport-no-rrp-id-conduit-swap) | [run](../e2e/evidence/20261008T213051Z-aws-sev-snp-e2e-passport-no-rrp-id-conduit-swap) |
+| `CONDUIT_ATTACK=hint` | [run](../e2e/evidence/20261008T213537Z-gcp-sev-snp-e2e-passport-no-rrp-id-conduit-hint) | [run](../e2e/evidence/20261008T214046Z-gcp-tdx-e2e-passport-no-rrp-id-conduit-hint) | [run](../e2e/evidence/20261008T213840Z-aws-sev-snp-e2e-passport-no-rrp-id-conduit-hint) |
+| `CONDUIT_ATTACK=hint-group` | [run](../e2e/evidence/20261008T214316Z-gcp-sev-snp-e2e-passport-no-rrp-id-conduit-hint-group) | [run](../e2e/evidence/20261008T214815Z-gcp-tdx-e2e-passport-no-rrp-id-conduit-hint-group) | [run](../e2e/evidence/20261008T214614Z-aws-sev-snp-e2e-passport-no-rrp-id-conduit-hint-group) |
+
+What is the same without the identifier: every substitution of the Target, the CSR or CEKpub or the freshness
+element is refused (the binding still holds the other three values; the "other RRP identifier" check is left out,
+since there is none to substitute); the same request a second time is served or refused exactly as with it; the
+conduit's container drills end as before; the ten Targets of each demo acquire their credentials in both RATS models.
+What differs is section 2 alone: which RRP serves the Attester is, without the identifier, the conduit's choice
+among the RRPs that trust the same Verifier.
+
+Two runs of the series found gaps in the bench, not in the protocol, and are kept with their READMEs. The first attack
+run without the identifier, [`20261008T202943Z-gcp-sev-snp-no-rrp-id`](../hwcheck/evidence/20261008T202943Z-gcp-sev-snp-no-rrp-id/README.md): rrpverify's
+service path, the one that gives the deployed Veraison the binding value as the expected nonce, still made the "other
+RRP identifier" case when there was no identifier to substitute, so the honest request was counted as an accepted
+substitution, ten times (left out since `c3909630`). The first AWS attack run,
+[`20261008T210307Z-aws-sev-snp-no-rrp-id`](../hwcheck/evidence/20261008T210307Z-aws-sev-snp-no-rrp-id/README.md): the AWS script's `verify` line had not
+been given the empty identifiers its hwrun, pre-play and `service` lines were given, so the in-process appraisals
+recomputed the binding with an identifier the guest had not bound and refused the honest Evidence; the service path of
+that run, given them, came out 40 of 40 as expected (the line takes the same flags since `1c1df049`).
