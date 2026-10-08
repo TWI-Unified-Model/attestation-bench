@@ -39,7 +39,8 @@ What changed, newest first. Dates are UTC.
   key). `scripts/verdict.py conduit` judges each run from the workload's results and the conduit's log. Unit tests of
   the container (`bundle/keptcek_test.go`) show which check refuses a container meant for another request: with a new
   CEK for each Retrieval, none is needed; with a CEK kept across Retrievals, the hpke-auth container needs the
-  associated data's Target check, and the hpke-base-signed container's signature covers the Target.
+  associated data's Target check, and the hpke-base-signed container's signature covers the Target. On the three platforms,
+  8 October, 12 runs: each as its drill expects ([docs/attacks.md](docs/attacks.md), section 6).
 
 ### Fixed
 

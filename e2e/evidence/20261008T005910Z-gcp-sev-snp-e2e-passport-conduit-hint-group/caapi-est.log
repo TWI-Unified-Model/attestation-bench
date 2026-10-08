@@ -1,0 +1,7 @@
+2026/10/08 01:00:47 caapi-est: CAAPI on 127.0.0.1:50061, EST server localhost:18443
+2026/10/08 01:00:47 caapi-est: the conduit of the drill "hint-group" (docs/attacks.md, section 6)
+2026/10/08 01:00:51 conduit attack hint-group: Retrieval for https://ledger-nonce.tacra.example: sent the Credential Hint "audit.workload.tacra.example" in place of the Attester's "payments.workload.tacra.example"
+2026/10/08 01:00:52 conduit attack hint-group: Retrieval for https://ledger-epoch.tacra.example: sent the Credential Hint "audit.workload.tacra.example" in place of the Attester's "payments.workload.tacra.example"
+2026/10/08 01:00:52 conduit attack hint-group: Retrieval for https://ledger-lepoch.tacra.example: sent the Credential Hint "audit.workload.tacra.example" in place of the Attester's "payments.workload.tacra.example"
+2026/10/08 01:00:53 conduit attack hint-group: Retrieval for https://ledger-time.tacra.example: sent the Credential Hint "audit.workload.tacra.example" in place of the Attester's "payments.workload.tacra.example"
+2026/10/08 01:00:53 conduit attack hint-group: Retrieval for https://ledger-none.tacra.example: sent the Credential Hint "audit.workload.tacra.example" in place of the Attester's "payments.workload.tacra.example"

@@ -1,0 +1,7 @@
+2026/10/08 00:38:08 caapi-est: CAAPI on 127.0.0.1:50061, EST server localhost:18443
+2026/10/08 00:38:08 caapi-est: the conduit of the drill "seal" (docs/attacks.md, section 6)
+2026/10/08 00:38:12 conduit attack seal: Retrieval for https://ledger-nonce.tacra.example: returned its own hpke-base-signed container, sealed to the Attester's CEKpub with the conduit's keys, the Vault's associated data kept
+2026/10/08 00:38:12 conduit attack seal: Retrieval for https://ledger-epoch.tacra.example: returned its own hpke-base-signed container, sealed to the Attester's CEKpub with the conduit's keys, the Vault's associated data kept
+2026/10/08 00:38:13 conduit attack seal: Retrieval for https://ledger-lepoch.tacra.example: returned its own hpke-base-signed container, sealed to the Attester's CEKpub with the conduit's keys, the Vault's associated data kept
+2026/10/08 00:38:13 conduit attack seal: Retrieval for https://ledger-time.tacra.example: returned its own hpke-base-signed container, sealed to the Attester's CEKpub with the conduit's keys, the Vault's associated data kept
+2026/10/08 00:38:14 conduit attack seal: Retrieval for https://ledger-none.tacra.example: returned its own hpke-base-signed container, sealed to the Attester's CEKpub with the conduit's keys, the Vault's associated data kept

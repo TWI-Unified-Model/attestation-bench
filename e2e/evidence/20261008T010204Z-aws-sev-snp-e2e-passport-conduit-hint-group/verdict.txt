@@ -1,0 +1,17 @@
+the conduit's drill: hint-group; it acted on 5 Retrievals, for 5 Targets
+ok  https://db-nonce.tacra.example         x509
+ok  https://db-epoch.tacra.example         x509
+ok  https://db-lepoch.tacra.example        x509
+ok  https://db-time.tacra.example          x509
+ok  https://db-none.tacra.example          x509
+no  https://ledger-nonce.tacra.example     api-key  cai: failed to unwrap retrieved credential: bundle: associated data does not name what the Evidence bound
+    the conduit: sent the Credential Hint "audit.workload.tacra.example" in place of the Attester's "payments.workload.tacra.example"
+no  https://ledger-epoch.tacra.example     api-key  cai: failed to unwrap retrieved credential: bundle: associated data does not name what the Evidence bound
+    the conduit: sent the Credential Hint "audit.workload.tacra.example" in place of the Attester's "payments.workload.tacra.example"
+no  https://ledger-lepoch.tacra.example    api-key  cai: failed to unwrap retrieved credential: bundle: associated data does not name what the Evidence bound
+    the conduit: sent the Credential Hint "audit.workload.tacra.example" in place of the Attester's "payments.workload.tacra.example"
+no  https://ledger-time.tacra.example      api-key  cai: failed to unwrap retrieved credential: bundle: associated data does not name what the Evidence bound
+    the conduit: sent the Credential Hint "audit.workload.tacra.example" in place of the Attester's "payments.workload.tacra.example"
+no  https://ledger-none.tacra.example      api-key  cai: failed to unwrap retrieved credential: bundle: associated data does not name what the Evidence bound
+    the conduit: sent the Credential Hint "audit.workload.tacra.example" in place of the Attester's "payments.workload.tacra.example"
+VERDICT PASS: 5 Retrievals asked with the Credential Hint of another group the Target serves to the same launches: the Vault released that group's secret, and the CAI refused each for its associated data; the 5 other Targets admitted

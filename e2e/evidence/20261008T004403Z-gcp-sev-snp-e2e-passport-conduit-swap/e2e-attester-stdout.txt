@@ -1,0 +1,10 @@
+2026/10/08 00:45:55 https://db-nonce.tacra.example           x509    acquired in   583.1 ms (1 attempt(s)); relying party answered 200
+2026/10/08 00:45:55 https://db-epoch.tacra.example           x509    acquired in   544.9 ms (1 attempt(s)); relying party answered 200
+2026/10/08 00:45:56 https://db-lepoch.tacra.example          x509    acquired in   499.4 ms (1 attempt(s)); relying party answered 200
+2026/10/08 00:45:57 https://db-time.tacra.example            x509    acquired in   554.5 ms (1 attempt(s)); relying party answered 200
+2026/10/08 00:45:58 https://db-none.tacra.example            x509    acquired in   578.1 ms (1 attempt(s)); relying party answered 200
+2026/10/08 00:45:58 https://ledger-nonce.tacra.example       api-key acquired in   580.2 ms (1 attempt(s)); relying party answered 200
+2026/10/08 00:45:59 https://ledger-epoch.tacra.example       acquire failed: cai: failed to unwrap retrieved credential: bundle: associated data does not name what the Evidence bound
+2026/10/08 00:46:00 https://ledger-lepoch.tacra.example      acquire failed: cai: failed to unwrap retrieved credential: bundle: associated data does not name what the Evidence bound
+2026/10/08 00:46:00 https://ledger-time.tacra.example        acquire failed: cai: failed to unwrap retrieved credential: bundle: associated data does not name what the Evidence bound
+2026/10/08 00:46:01 https://ledger-none.tacra.example        acquire failed: cai: failed to unwrap retrieved credential: bundle: associated data does not name what the Evidence bound

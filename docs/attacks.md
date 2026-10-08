@@ -146,6 +146,20 @@ CONDUIT_ATTACK=seal make demo PLATFORM=gcp-snp   # also swap, hint, hint-group; 
 Every Enrollment of these runs is admitted: the conduit acts on Retrievals only. Each run is judged by
 `scripts/verdict.py conduit` from the workload's results and the conduit's own log line for each Retrieval it acted on.
 
+Runs of 8 October 2026 at `af909f4`, in Passport (the Vault seals the same way in Background Check), each 10
+Targets, the 5 Enrollments admitted:
+
+| Drill | GCP SEV-SNP | AWS SEV-SNP | GCP TDX |
+|---|---|---|---|
+| `seal` | [run](../e2e/evidence/20261008T003630Z-gcp-sev-snp-e2e-passport-conduit-seal) | [run](../e2e/evidence/20261008T003924Z-aws-sev-snp-e2e-passport-conduit-seal) | [run](../e2e/evidence/20261008T004125Z-gcp-tdx-e2e-passport-conduit-seal) |
+| `swap` | [run](../e2e/evidence/20261008T004403Z-gcp-sev-snp-e2e-passport-conduit-swap) | [run](../e2e/evidence/20261008T004710Z-aws-sev-snp-e2e-passport-conduit-swap) | [run](../e2e/evidence/20261008T004908Z-gcp-tdx-e2e-passport-conduit-swap) |
+| `hint` | [run](../e2e/evidence/20261008T005144Z-gcp-sev-snp-e2e-passport-conduit-hint) | [run](../e2e/evidence/20261008T005438Z-aws-sev-snp-e2e-passport-conduit-hint) | [run](../e2e/evidence/20261008T005645Z-gcp-tdx-e2e-passport-conduit-hint) |
+| `hint-group` | [run](../e2e/evidence/20261008T005910Z-gcp-sev-snp-e2e-passport-conduit-hint-group) | [run](../e2e/evidence/20261008T010204Z-aws-sev-snp-e2e-passport-conduit-hint-group) | [run](../e2e/evidence/20261008T010403Z-gcp-tdx-e2e-passport-conduit-hint-group) |
+
+In `hint-group` the run's wire log (`bench-logs/est-wire.log`) shows what the CAI refused: the Vault answered each
+rewritten request with 200 and a container whose associated data names `audit.workload.tacra.example` and that
+group's `group_id`.
+
 What the drills leave to the unit tests of the container (`bundle/keptcek_test.go`, real keys, real sealing): which
 check refuses a container meant for another request. With a new CEK for each Retrieval, as the CAI makes, it does
 not open whatever its associated data says. With one CEK kept across Retrievals, the hpke-auth container's HPKE info

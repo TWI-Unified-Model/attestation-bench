@@ -1,0 +1,17 @@
+the conduit's drill: hint; it acted on 10 Retrievals, for 5 Targets
+ok  https://db-nonce.tacra.example         x509
+ok  https://db-epoch.tacra.example         x509
+ok  https://db-lepoch.tacra.example        x509
+ok  https://db-time.tacra.example          x509
+ok  https://db-none.tacra.example          x509
+no  https://ledger-nonce.tacra.example     api-key  cai: RetrieveCredential: 403 RRP vault: credential-hint: no credential group for this Credential Hint at this
+    the conduit: the EST server answered: 403 RRP vault: credential-hint: no credential group for this Credential Hint at this Target
+no  https://ledger-epoch.tacra.example     api-key  cai: RetrieveCredential: 403 RRP vault: credential-hint: no credential group for this Credential Hint at this
+    the conduit: the EST server answered: 403 RRP vault: credential-hint: no credential group for this Credential Hint at this Target
+no  https://ledger-lepoch.tacra.example    api-key  cai: RetrieveCredential: 403 RRP vault: credential-hint: no credential group for this Credential Hint at this
+    the conduit: the EST server answered: 403 RRP vault: credential-hint: no credential group for this Credential Hint at this Target
+no  https://ledger-time.tacra.example      api-key  cai: RetrieveCredential: 403 RRP vault: credential-hint: no credential group for this Credential Hint at this
+    the conduit: the EST server answered: 403 RRP vault: credential-hint: no credential group for this Credential Hint at this Target
+no  https://ledger-none.tacra.example      api-key  cai: RetrieveCredential: 403 RRP vault: credential-hint: no credential group for this Credential Hint at this
+    the conduit: the EST server answered: 403 RRP vault: credential-hint: no credential group for this Credential Hint at this Target
+VERDICT PASS: 5 Retrievals asked with the Credential Hint of a workload the Target serves no group to, each refused by the Vault; the 5 other Targets admitted

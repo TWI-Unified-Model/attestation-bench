@@ -49,6 +49,21 @@ CONDUIT_RUNS = [
     "20261007T210314Z-gcp-tdx-redirect-passport",
     "20261007T210728Z-aws-snp-redirect-passport",
 ]
+# the conduit's drills on the Retrieval container (docs/attacks.md, section 6), at af909f4, in Passport
+CONTAINER_DRILL_RUNS = {
+    "20261008T003630Z-gcp-sev-snp-e2e-passport-conduit-seal": "seal",
+    "20261008T003924Z-aws-sev-snp-e2e-passport-conduit-seal": "seal",
+    "20261008T004125Z-gcp-tdx-e2e-passport-conduit-seal": "seal",
+    "20261008T004403Z-gcp-sev-snp-e2e-passport-conduit-swap": "swap",
+    "20261008T004710Z-aws-sev-snp-e2e-passport-conduit-swap": "swap",
+    "20261008T004908Z-gcp-tdx-e2e-passport-conduit-swap": "swap",
+    "20261008T005144Z-gcp-sev-snp-e2e-passport-conduit-hint": "hint",
+    "20261008T005438Z-aws-sev-snp-e2e-passport-conduit-hint": "hint",
+    "20261008T005645Z-gcp-tdx-e2e-passport-conduit-hint": "hint",
+    "20261008T005910Z-gcp-sev-snp-e2e-passport-conduit-hint-group": "hint-group",
+    "20261008T010204Z-aws-sev-snp-e2e-passport-conduit-hint-group": "hint-group",
+    "20261008T010403Z-gcp-tdx-e2e-passport-conduit-hint-group": "hint-group",
+}
 REDIRECT_RUNS = [
     "20261006T225552Z-gcp-snp-redirect",
     "20261006T225943Z-gcp-tdx-redirect",
@@ -190,6 +205,13 @@ class CommittedRuns(unittest.TestCase):
                 code, last = verdict("redirect", HW / run)
                 self.assertEqual(code, 0, last)
                 self.assertIn("of the conduit's 20 rewrites at ca1", last)
+
+    def test_conduit_container_drills(self):
+        for run, attack in CONTAINER_DRILL_RUNS.items():
+            with self.subTest(run=run):
+                code, last = verdict("conduit", E2E / run, "--attack", attack)
+                self.assertEqual(code, 0, last)
+                self.assertTrue(last.endswith("; the 5 other Targets admitted"), last)
 
     def test_redirect(self):
         for run in REDIRECT_RUNS:
@@ -408,6 +430,56 @@ class ChangedRuns(unittest.TestCase):
         rows = (run / "results.jsonl").read_text().splitlines()
         (run / "results.jsonl").write_text("\n".join(x for x in rows if '"made-up Handle"' not in x) + "\n")
         self.assertEqual(verdict("redirect", run), (1, "VERDICT FAIL: 1 of 40 outcomes not as expected"))
+
+    def drill(self, attack):
+        run = next(r for r, a in CONTAINER_DRILL_RUNS.items() if a == attack)
+        return self.copy(E2E / run, "results.json", "caapi-est.log")
+
+    def test_conduit_seal_secret_taken(self):
+        run = self.drill("seal")
+        self.edit_json("results.json", lambda rs: rs[5].update(ok=True, secret_sha256="0" * 64))
+        code, last = verdict("conduit", run, "--attack", "seal")
+        self.assertEqual(code, 1, last)
+        self.assertIn("a secret taken from what the conduit returned", last)
+
+    def test_conduit_refused_for_another_reason(self):
+        run = self.drill("hint-group")
+        self.edit_json("results.json", lambda rs: rs[6].update(error="403 RRP vault: credential-hint: no group"))
+        code, last = verdict("conduit", run, "--attack", "hint-group")
+        self.assertEqual(code, 1, last)
+        self.assertIn("refused, but not for", last)
+
+    def test_conduit_swap_first_refused(self):
+        run = self.drill("swap")
+        first = next(
+            line.split("Retrieval for ", 1)[1].split(": ", 1)[0]
+            for line in (run / "caapi-est.log").read_text().splitlines()
+            if "the first Retrieval" in line
+        )
+        self.edit_json("results.json", lambda rs: [r.update(ok=False) for r in rs if r["target"] == first])
+        code, last = verdict("conduit", run, "--attack", "swap")
+        self.assertEqual(code, 1, last)
+        self.assertIn("the first Retrieval, given its own container, not admitted", last)
+
+    def test_conduit_enrollment_not_admitted(self):
+        run = self.drill("seal")
+        self.edit_json("results.json", lambda rs: rs[0].update(ok=False))
+        code, last = verdict("conduit", run, "--attack", "seal")
+        self.assertEqual(code, 1, last)
+        self.assertIn("not acted on, and not admitted", last)
+
+    def test_conduit_judged_as_another_drill(self):
+        run = self.drill("seal")
+        code, last = verdict("conduit", run, "--attack", "hint")
+        self.assertEqual(code, 1, last)
+        self.assertIn("names no Retrieval it acted on in the drill 'hint'", last)
+
+    def test_conduit_without_its_log(self):
+        run = self.drill("swap")
+        (run / "caapi-est.log").unlink()
+        code, last = verdict("conduit", run, "--attack", "swap")
+        self.assertEqual(code, 1, last)
+        self.assertIn("names no Retrieval it acted on", last)
 
     def test_redirect_missing_outcome(self):
         run = self.copy(HW / REDIRECT_RUNS[0], "results.jsonl")

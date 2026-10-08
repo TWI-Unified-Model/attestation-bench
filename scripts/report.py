@@ -41,6 +41,7 @@ PAYMENTS = {  # a bank's payment run: what it is, its platform, what its verdict
 E2E = re.compile(
     r"(?P<plat>gcp-sev-snp|gcp-tdx|aws-sev-snp)-e2e(?:-(?P<model>passport|background-check))?"
     r"(?:-(?P<scen>cas-outside|unapproved|other-platform))?"
+    r"(?:-conduit-(?P<attack>seal|swap|hint|hint-group))?"  # the conduit's drills (docs/attacks.md, section 6)
 )
 ATTACKS = re.compile(r"(?P<hw>gcp-sev-snp|gcp-tdx|aws-sev-snp)")
 REDIRECT = re.compile(r"(?P<plat>gcp-snp|gcp-tdx|aws-snp)-redirect(?:-passport)?")
@@ -95,6 +96,10 @@ def rows(run):
     if e := E2E.fullmatch(name):
         scen = e.group("scen") or ""
         model = MODELS.get(e.group("model") or "", "") or recorded_model(run, "Passport")
+        if attack := e.group("attack"):
+            v = judged(run, lambda: verdict.conduit(run, attack), ["results.json"])
+            yield run.name, f"the conduit's drill: {attack}", PLATFORMS[e.group("plat")], model, *v
+            return
         expect = "refused" if scen in ("unapproved", "other-platform") else "admitted"
         v = judged(run, lambda: verdict.demo(run, expect, ""), ["results.json"])
         yield run.name, SCENARIOS[scen], PLATFORMS[e.group("plat")], model, *v
