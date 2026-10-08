@@ -37,6 +37,9 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 PROFILE = "application/vnd.veraison.tsm-report+cbor"
+# the Credential Hint the bench's workload sends (packs/tacra-bench, workload.hint; e2e/scripts/guest_config.py)
+PACK = Path(__file__).resolve().parents[2] / "packs" / "tacra-bench" / "pack.json"
+HINT = json.loads(PACK.read_text())["workload"]["hint"]
 KINDS = ("present-nonce", "present-epoch", "absent-epoch", "absent-timestamp", "absent-none")
 SHORT = {"present-nonce": "nonce", "present-epoch": "epoch", "absent-epoch": "lepoch", "absent-timestamp": "time",
          "absent-none": "none"}  # fmt: skip
@@ -123,17 +126,18 @@ def entries_of(pre, home, set_name):
             meta = json.loads((case_dir / "meta.json").read_text())
             kind, tgt = meta["freshness_kind"], meta["target"]
             policy = json.loads(Path(home, "config", f"{gateway}.json").read_text())["targets"][tgt]
-            # the Credential Hint, as the bench's workload sends it: the Target's one identity (a Credential Authority)
-            # or credential group (a Secret Vault)
+            # the Credential Hint, as the bench's workload sends it: one of the Target's identities (a Credential
+            # Authority) or credential groups (a Secret Vault, whose Target may serve other groups too: the pack's
+            # other_groups)
             names = list(policy.get("identities") or policy.get("groups") or {})
-            if len(names) != 1:
-                sys.exit(f"{tgt}: {len(names)} identities or credential groups in the policy; the check needs one")
+            if HINT not in names:
+                sys.exit(f"{tgt}: the workload's Credential Hint {HINT} is none of the policy's {names}")
             element = unb64u(meta.get("freshness_element_b64") or "")
             body = {"target": tgt, "credential_type": ctype, "freshness_kind": kind,
                     field: b64u((case_dir / "subject.der").read_bytes()),
                     "evidence": b64u((case_dir / "evidence.tsm.cbor").read_bytes()),
                     "binding": {"method": "binding-input", "hash": "sha512"}, "profile": PROFILE,
-                    "credential_hint": names[0]}  # fmt: skip
+                    "credential_hint": HINT}  # fmt: skip
             if element:
                 body["handle"] = b64u(element)
             e = {"set": set_name, "target": tgt, "rrp": gateway, "mode": mode, "kind": kind, "case": meta["case"],
