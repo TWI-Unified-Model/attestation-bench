@@ -7,9 +7,11 @@
 #   0012 a session per Target for a present-epoch Handle, which every Target shares, 0013 an optional wire log of the
 #   attest-* exchanges, as they crossed the wire, 0014 the attest-* wire as proposed for the draft in October 2026: a
 #   media type for each message, no rrp_id or endorsements, the requests' syntax checked against the CDDL,
-#   0015 the #20 variant: an RRP entry may omit the RRP identifier from the binding, as the bench's gateways can.
+#   0015 the #20 variant: an RRP entry may omit the RRP identifier from the binding, as the bench's gateways can,
+#   0016 the conduit's verifier drill: in Passport the server signs the Attestation Results of an RRP entry's
+#   requests again with a key of its own (conduit_attack), for the bench to measure what refuses them.
 NAME=globalsign-est
 REPO=https://github.com/TWI-Unified-Model/globalsign-est.git
 BASE=04ffa468b167eb36d8b1af0e354c4af41427a02e   # sudar_feature_01, sudarsh4495, 2026-09-27
 LICENSE=MIT
-VARIANTS="src:15:b994b71e488b0115eb13845277fa9569e983f2c9"
+VARIANTS="src:16:57ab704b1e828473b7049fcda814b9de1c5c2c8b"

@@ -12,7 +12,10 @@
 #                                  RATS_MODEL=background-check: the gateways ask the verifiers themselves;
 #                                  OMIT_RRP_ID=1: the RRPs bind no RRP identifier (#20);
 #                                  OWN_EPOCHS=1: the copies of an RRP (ca-2, vault-2: the redirection experiment's
-#                                  other bank, hwcheck/scripts/redirect.sh) keep an epoch marker of their own
+#                                  other bank, hwcheck/scripts/redirect.sh) keep an epoch marker of their own;
+#                                  CONDUIT_ATTACK=verifier: the EST server is the attacking conduit of that drill
+#                                  (docs/attacks.md, section 6): it signs the Attestation Results again with a key of
+#                                  its own before the Credential Authority sees them
 #   e2e/scripts/bench.sh start|stop|status
 set -euo pipefail
 # BENCH_HOME (default ~/.attestation-bench) and VERAISON_DEPLOYMENT, the pinned tools on PATH: scripts/lib.sh
@@ -33,6 +36,7 @@ config() {
   local flags=(--rats-model "${RATS_MODEL:-passport}")
   if [ "${OMIT_RRP_ID:-}" = 1 ]; then flags+=(--omit-rrp-id); fi
   if [ "${OWN_EPOCHS:-}" = 1 ]; then flags+=(--own-epochs); fi
+  if [ "${CONDUIT_ATTACK:-}" = verifier ]; then flags+=(--conduit-attack verifier); fi
   python3 "$HERE/scripts/trustzone.py" --home "$B" --veraison "$VERAISON_DEPLOYMENT" --pack "$PACK" "${flags[@]}"
   (cd "$HERE/rrp" && GOWORK=off go build -o "$BIN/ca-gateway" ./cmd/ca-gateway && GOWORK=off go build -o "$BIN/vault-gateway" ./cmd/vault-gateway \
     && GOWORK=off go build -o "$BIN/tdx-verifier" ./cmd/tdx-verifier)

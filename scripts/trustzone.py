@@ -130,6 +130,16 @@ def main():
         if "same_as" in r:
             rrps[r["name"]] = dict(rrps[r["same_as"]], rrp_id=r["rrp_id"], listen=r["listen"])
     redirection_variants(pack, rrps, omit_rrp_id=a.omit_rrp_id, own_epochs=a.own_epochs, est_rrps=est_rrps)
+    if a.conduit_attack == "verifier":
+        if a.rats_model != "passport":
+            sys.exit(
+                "--conduit-attack verifier is a Passport drill: in Background Check the EST server holds no Attestation Results"
+            )
+        for e in (
+            est_rrps.values()
+        ):  # the Credential Authority alone: the drill's 5 Enrollments; the 5 Retrievals stay honest
+            if e["mode"] == "enroll":
+                e["conduit_attack"] = "verifier"
 
     est = est_server(home, logs, a.est_listen, vd, root, verifiers, est_rrps, est_targets)
     others = [infra["est-server"], infra["ca-gateway"], infra["vault-gateway"]]
@@ -194,6 +204,12 @@ def parse_args():
         help="who asks the verifiers: the EST server (passport) or the gateways (background-check)",
     )
     p.add_argument("--omit-rrp-id", action="store_true", help="the #20 variant: the RRPs bind no RRP identifier")
+    p.add_argument(
+        "--conduit-attack",
+        choices=("verifier",),
+        help="a drill in which the EST server is the attacking conduit (docs/attacks.md, section 6): verifier, in "
+        "Passport it signs the Attestation Results again with a key of its own before the Credential Authority sees them",
+    )
     p.add_argument(
         "--own-epochs",
         action="store_true",
@@ -403,6 +419,7 @@ def est_server(home, logs, listen, vd, root, verifiers, rrps, targets):
             ca_certs=f"{home}/step/certs/intermediate_ca.crt",
             rrps=rrps,
             targets=targets,
+            conduit_log=f"{logs}/est-conduit.log",
         ),
     }
 

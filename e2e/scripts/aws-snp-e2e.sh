@@ -38,10 +38,19 @@ MODEL="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('ra
 OTHER_PLATFORM="${OTHER_PLATFORM:-}"
 UNAPPROVED="${UNAPPROVED:-}"
 CONDUIT_ATTACK="${CONDUIT_ATTACK:-}"
-case "$CONDUIT_ATTACK" in "" | seal | swap | hint | hint-group) ;; *) bench_die "CONDUIT_ATTACK=$CONDUIT_ATTACK: seal, swap, hint or hint-group" ;; esac
+case "$CONDUIT_ATTACK" in "" | seal | swap | hint | hint-group | verifier) ;; *) bench_die "CONDUIT_ATTACK=$CONDUIT_ATTACK: seal, swap, hint, hint-group or verifier" ;; esac
 [ -z "$CONDUIT_ATTACK" ] || [ -z "$OTHER_PLATFORM$UNAPPROVED" ] || bench_die "CONDUIT_ATTACK runs on its own, without OTHER_PLATFORM or UNAPPROVED"
-GUEST_ATTACK=""
-[ -z "$CONDUIT_ATTACK" ] || GUEST_ATTACK=" -attack $CONDUIT_ATTACK"
+GUEST_ATTACK="" # the CAS Client is the attacker of the container drills; of verifier, the EST server is (bench.sh config)
+case "$CONDUIT_ATTACK" in seal | swap | hint | hint-group) GUEST_ATTACK=" -attack $CONDUIT_ATTACK" ;; esac
+if [ "$CONDUIT_ATTACK" = verifier ]; then
+  # the EST server is the attacker of this drill: the trust zone has to be configured with it
+  python3 - "$B/config/est-server.json" <<'PY' || bench_die "CONDUIT_ATTACK=verifier: the EST server is not configured as the attacking conduit: CONDUIT_ATTACK=verifier make config && make start (and make config && make start to put it back)"
+import json, sys
+rrps = json.load(open(sys.argv[1]))["tacra"]["rrps"].values()
+sys.exit(0 if any(r.get("conduit_attack") == "verifier" and r.get("rats_model", "passport") == "passport" for r in rrps) else 1)
+PY
+  [ -f "$B/est-conduit.log" ] || : > "$B/est-conduit.log"
+fi
 EXPECT=(--expect admitted) # what the run must show (scripts/verdict.py)
 [ -z "$OTHER_PLATFORM" ] || EXPECT=(--expect refused --reason "none of the verifiers this RRP takes for the Target")
 # UNAPPROVED=1: a c6a.xlarge, whose launch (four vCPUs) the bench does not approve; every Target must be refused for it
@@ -66,7 +75,8 @@ python3 -c "import json,sys; json.dump(json.load(open(sys.argv[1])).get('platfor
 # the EST server writes every attest-* exchange to its wire log (scripts/trustzone.py, wire_log), from its start
 [ -f "$B/est-wire.log" ] || bench_die "no EST wire log in $B: the EST server runs with an older configuration;" \
   "make config, then make stop start"
-for f in est-server est-wire ca-gateway vault-gateway rup tdx-verifier; do wc -l < "$B/$f.log" > "$OUT/bench-logs/.$f.start"; done
+[ -f "$B/est-conduit.log" ] || : > "$B/est-conduit.log"
+for f in est-server est-wire est-conduit ca-gateway vault-gateway rup tdx-verifier; do wc -l < "$B/$f.log" > "$OUT/bench-logs/.$f.start"; done
 wc -l < "$VERAISON_DEPLOYMENT/logs/vts.log" > "$OUT/bench-logs/.vts.start"
 wc -l < "$VERAISON_DEPLOYMENT/logs/verification.log" > "$OUT/bench-logs/.verification.start"
 
@@ -174,7 +184,7 @@ trap 'rm -rf "$BIN"' EXIT
 cleanup
 
 echo "== bench logs for the run"
-for f in est-server est-wire ca-gateway vault-gateway rup tdx-verifier; do tail -n +"$(( $(cat "$OUT/bench-logs/.$f.start") + 1 ))" "$B/$f.log" | grep -v "TLS handshake error" > "$OUT/bench-logs/$f.log" || true; done
+for f in est-server est-wire est-conduit ca-gateway vault-gateway rup tdx-verifier; do tail -n +"$(( $(cat "$OUT/bench-logs/.$f.start") + 1 ))" "$B/$f.log" | grep -v "TLS handshake error" > "$OUT/bench-logs/$f.log" || true; done
 tail -n +"$(( $(cat "$OUT/bench-logs/.vts.start") + 1 ))" "$VERAISON_DEPLOYMENT/logs/vts.log" | grep -v DEBUG > "$OUT/bench-logs/veraison-vts.log" || true
 # Veraison's verification API: who asked for each session (client-ca)
 tail -n +"$(( $(cat "$OUT/bench-logs/.verification.start") + 1 ))" "$VERAISON_DEPLOYMENT/logs/verification.log" | grep -v DEBUG \

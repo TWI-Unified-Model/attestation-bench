@@ -43,6 +43,9 @@ hwcheck/evidence included.
             before, refused for its associated data. hint: asked with the hint of a workload the Target serves no
             group to, refused by the Vault. hint-group: asked with the hint of another group the Target serves to the
             same launches; the Vault releases that group's secret, refused by the CAI for its associated data.
+            verifier: the EST server was the attacker (CONDUIT_ATTACK=verifier make config): it signed the Attestation
+            Results of each Enrollment again with a key of its own, and the conduit's log is bench-logs/est-conduit.log;
+            each Enrollment refused by the Credential Authority, none of the verifiers it takes having signed them.
 """
 
 import argparse
@@ -511,6 +514,7 @@ CONDUIT = {
     "swap": ("associated data does not name what the Evidence bound",),
     "hint": ("credential-hint",),
     "hint-group": ("associated data does not name what the Evidence bound",),
+    "verifier": ("not signed by the verifier's key",),
 }
 
 
@@ -518,18 +522,18 @@ def conduit(run, attack):
     results = json.loads((run / "results.json").read_text())
     acts = {}  # Target -> what the conduit did to each Retrieval for it, in order
     first = None
-    for log in (run / "caapi-est.log", run / "caapi-est-outside.log"):
+    for log in (run / "caapi-est.log", run / "caapi-est-outside.log", run / "bench-logs" / "est-conduit.log"):
         if not log.exists():
             continue
         for line in log.read_text().splitlines():
-            mark = f"conduit attack {attack}: Retrieval for "
-            if mark not in line:
+            mark = f"conduit attack {attack}: "  # then "Retrieval for TARGET: …", or the EST server's "Enrollment for TARGET: …"
+            if mark not in line or " for " not in line.split(mark, 1)[1]:
                 continue
-            target, _, what = line.split(mark, 1)[1].partition(": ")
+            target, _, what = line.split(mark, 1)[1].split(" for ", 1)[1].partition(": ")
             acts.setdefault(target, []).append(what)
             first = first or target
     lines = [
-        f"the conduit's drill: {attack}; it acted on {sum(map(len, acts.values()))} Retrievals, for {len(acts)} Targets"
+        f"the conduit's drill: {attack}; it acted on {sum(map(len, acts.values()))} requests, for {len(acts)} Targets"
     ]
     bad = []
     for r in results:
@@ -565,6 +569,8 @@ def conduit(run, attack):
         "each refused by the Vault",
         "hint-group": f"{refused} Retrievals asked with the Credential Hint of another group the Target serves to the "
         "same launches: the Vault released that group's secret, and the CAI refused each for its associated data",
+        "verifier": f"{refused} Enrollments given Attestation Results signed again with the conduit's own verifier key, "
+        "each refused by the Credential Authority: none of the verifiers it takes signed them",
     }[attack]
     return lines, True, f"{say}; the {others} other Targets admitted"
 

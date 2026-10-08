@@ -237,6 +237,27 @@ carries the RRP identifier and the freshness element but not the Target, so only
 refuses another Target's container under a freshness element the Targets share; the hpke-base-signed container's
 signature covers the Target and CEKpub, and refuses it without that check.
 
+### The conduit's own Verifier (`verifier`)
+
+In Passport the CAS Server, not the RRP, asks the Verifier and relays the Attestation Results. A conduit that wanted the
+Credential Authority to take results of its own choosing would sign them with a key of its own, as a Verifier of the
+conduit's own would. In this drill the EST server is the attacking conduit, so the trust zone is configured with it:
+
+```bash
+CONDUIT_ATTACK=verifier make config && make start   # the EST server signs each Enrollment's Attestation Results again
+CONDUIT_ATTACK=verifier make demo PLATFORM=gcp-snp  # also aws-snp, gcp-tdx
+make config && make start                           # back as it was
+```
+
+| Drill | What the conduit does | What stops it | Expected result |
+|---|---|---|---|
+| `verifier` | after the verifier returned the Attestation Results of an Enrollment, signs them again with a P-256 key of its own, header and payload unchanged (the key's SPKI SHA-256 and each act: `bench-logs/est-conduit.log`), and sends them on to the Credential Authority; the five Retrievals go on as the verifier signed them | the Credential Authority takes Attestation Results only under the keys of the verifiers its policy names for the Target (`rrp/internal/ear`, N24) | each Enrollment refused, `attestation: ear: not signed by the verifier's key: none of the verifiers this RRP takes for the Target (…) signed it`; the 5 Retrievals admitted |
+
+The verdict (`scripts/verdict.py conduit --attack verifier`) reads the EST server's conduit log for the acts and
+`results.json` for the refusals. What this measures is the bound of the threat model's "the conduit's choice of
+Verifier": in Passport nothing but the RRP's provisioned verifier keys bounds which verifier's word the Credential
+Authority takes.
+
 ## 7. What the conduit sees
 
 ```bash
