@@ -6,6 +6,10 @@ What changed, newest first. Dates are UTC.
 
 ### Added
 
+- **The report on the RRP identifier, both ways** ([docs/rrp-identifier.md](docs/rrp-identifier.md)): the protocol
+  with the identifier in the binding and without it on the same events, row by row with every run named, what the
+  identifier buys and costs, the text that follows either way, what the report does not cover, and the two bench
+  faults the series found. Written for TACRA issue #20.
 - **The protocol without the RRP identifier, end to end** (`OMIT_RRP_ID=1`; TACRA #20): one switch reaches the
   workload's CAI (`WithoutRelyingPartyBinding`), the EST server (patch 0015: the Passport nonce without the
   identifier) and the RRPs, so the same demos, attacks, replays and drills run with the identifier bound and

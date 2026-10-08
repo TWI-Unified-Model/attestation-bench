@@ -123,6 +123,7 @@ What a run does **not** prove: [docs/limits.md](docs/limits.md).
 | Read | To |
 |---|---|
 | [Getting started](docs/getting-started.md) | go from a fresh clone to a passing run on hardware, step by step |
+| [The RRP identifier, both ways](docs/rrp-identifier.md) | the protocol with the RRP identifier in the binding and without it, measured on the same events (TACRA #20): what the identifier changes, what it costs, the text that follows |
 | [Concepts](docs/concepts.md) | understand TACRA's terms: Target, RRP, Evidence, binding, Freshness Kinds, Passport, Background Check |
 | [Architecture](docs/architecture.md) | see every component, port and trust boundary |
 | [Hardware](docs/hardware/README.md) | run on GCP SEV-SNP, GCP TDX and AWS SEV-SNP |
