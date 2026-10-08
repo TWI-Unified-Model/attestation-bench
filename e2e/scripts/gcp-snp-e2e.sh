@@ -143,9 +143,22 @@ fi
 echo "== reverse tunnel to the bench (EST server 18443, mTLS service 19443)"
 FWD=(-R 18443:127.0.0.1:18443 -R 19443:127.0.0.1:19443)
 [ -n "$CAS_OUTSIDE" ] && FWD+=(-R 50061:127.0.0.1:50061)
-"${SSH[@]}" -- -N -o ExitOnForwardFailure=yes "${FWD[@]}" 2>>"$OUT/ssh.stderr" &
-TUNNEL=$!
-for _ in $(seq 1 20); do "${SSH[@]}" --command='nc -z 127.0.0.1 18443 && nc -z 127.0.0.1 19443' >/dev/null 2>&1 && break; sleep 3; done
+# up to three tries: the tunnel is opened again when its SSH session ends (a connection that drops or times out); a
+# run whose tunnel never comes up stops here, as none of its requests would reach the bench
+UP=""
+for try in 1 2 3; do
+  "${SSH[@]}" -- -N -o ExitOnForwardFailure=yes "${FWD[@]}" 2>>"$OUT/ssh.stderr" &
+  TUNNEL=$!
+  for _ in $(seq 1 20); do
+    kill -0 "$TUNNEL" 2>/dev/null || break
+    "${SSH[@]}" --command='nc -z 127.0.0.1 18443 && nc -z 127.0.0.1 19443' >/dev/null 2>&1 && { UP=1; break; }
+    sleep 3
+  done
+  [ -z "$UP" ] || break
+  kill "$TUNNEL" 2>/dev/null || true
+  echo "$(bench_now) the reverse tunnel is not up, try $try of 3" >>"$OUT/ssh.stderr"
+done
+[ -n "$UP" ] || bench_die "the reverse tunnel to the bench never came up ($OUT/ssh.stderr): no request of this run would reach it"
 
 echo "== run in the guest"
 NB="$(date -u +%s)"
