@@ -263,10 +263,13 @@ func serviceVerify(args []string) {
 		}{
 			{"honest", "pass", platform.BindingValue(elem, *target, rrp, subject)},
 			{"other Target", "fail", platform.BindingValue(elem, "https://other.tacra.example", rrp, subject)},
-			{"other RRP identifier", "fail", platform.BindingValue(elem, *target, otherRRP, subject)},
+			{otherRRPCase, "fail", platform.BindingValue(elem, *target, otherRRP, subject)},
 			{"other CSR / CEKpub", "fail", platform.BindingValue(elem, *target, rrp, flipped)},
 			{"other freshness element", "fail", platform.BindingValue(otherElem, *target, rrp, subject)},
 		} {
+			if c.name == otherRRPCase && rrp == otherRRP {
+				continue // no identifier bound (the #20 variant): the case would be the honest one again, and prove nothing
+			}
 			t0 := time.Now()
 			ear, err := v.verify(token, c.bv[:])
 			ms := float64(time.Since(t0).Microseconds()) / 1000
