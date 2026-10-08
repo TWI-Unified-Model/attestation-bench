@@ -28,7 +28,7 @@ paths = ['''(^|/)hwcheck/evidence/[^/]+/ears/[^/]+\.ear\.jws$''']
 
 [[allowlists]]
 description = "the attestation results (EARs) the verifier issued for a conduit run's Evidence in Passport, which the conduit offers, the redirection's variants included: signed tokens, not credentials"
-paths = ['''(^|/)hwcheck/evidence/[^/]+-redirect-passport(-own-epochs|-start-ca2)?/(with-rrp-id|no-rrp-id|rewrites|type-offered)/ears/[^/]+\.ear\.jws$''']
+paths = ['''(^|/)hwcheck/evidence/[^/]+-redirect-passport(-own-epochs|-start-ca2|-vault)?/(with-rrp-id|no-rrp-id|rewrites|type-offered)/ears/[^/]+\.ear\.jws$''']
 
 [[allowlists]]
 description = "go.sum lines in our dependency patches: a module, its version and the hash of its contents, not a credential"

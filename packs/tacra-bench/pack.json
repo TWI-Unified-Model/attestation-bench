@@ -18,7 +18,14 @@
    "rrp_id": "https://ca2.tacra.example",
    "listen": "127.0.0.1:9103"
   },
-  {"name": "vault", "kind": "secret-vault", "rrp_id": "https://vault1.tacra.example", "listen": "127.0.0.1:9102"}
+  {"name": "vault", "kind": "secret-vault", "rrp_id": "https://vault1.tacra.example", "listen": "127.0.0.1:9102"},
+  {
+   "name": "vault-2",
+   "same_as": "vault",
+   "service": "vault-gateway-2",
+   "rrp_id": "https://vault2.tacra.example",
+   "listen": "127.0.0.1:9104"
+  }
  ],
  "targets": [
   {

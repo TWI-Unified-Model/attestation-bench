@@ -30,7 +30,7 @@ esac
 export BENCH_OS BENCH_ARCH
 
 # Every listener of the local trust zone; all bind 127.0.0.1.
-BENCH_PORTS="8200 8443 8453 8463 9000 9101 9102 9103 9443 10443 18443 19443 50051"
+BENCH_PORTS="8200 8443 8453 8463 9000 9101 9102 9103 9104 9443 10443 18443 19443 50051"
 export BENCH_PORTS
 
 # The Go modules that make lint and make test cover: all but the proof of concept's est module, kept as the SIG wrote

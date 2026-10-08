@@ -8,7 +8,8 @@
 #   attacks   the substitution suite: honest Evidence, then one attack per changed input, each to be refused for its
 #             own reason
 #   redirect  the #20 redirection experiment: one Evidence offered to two Credential Authorities, with and without the
-#             RRP identifier in the binding (REDIRECT_VARIANT=own-epochs or start-ca2: hwcheck/scripts/redirect.sh)
+#             RRP identifier in the binding (REDIRECT_VARIANT=own-epochs, start-ca2 or vault:
+#             hwcheck/scripts/redirect.sh)
 #
 # PLATFORM is where the TEE runs:
 #   gcp-snp   a Google Cloud AMD SEV-SNP VM (n2d-standard-2)

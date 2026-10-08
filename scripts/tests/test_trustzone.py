@@ -58,8 +58,9 @@ class Waivers(unittest.TestCase):
 
 
 class RedirectionVariants(unittest.TestCase):
-    """The bench's pack has a copy of its Credential Authority, ca-2, another bank's, which the redirection experiment
-    offers Evidence made for ca to (hwcheck/scripts/redirect.sh). Each RRP starts with the deployment's epoch file."""
+    """The bench's pack has a copy of its Credential Authority, ca-2, and of its Secret Vault, vault-2, another bank's,
+    which the redirection experiment offers Evidence made for ca or vault to (hwcheck/scripts/redirect.sh). Each RRP
+    starts with the deployment's epoch file."""
 
     def configs(self, **variant):
         p = pack("tacra-bench")
@@ -75,15 +76,16 @@ class RedirectionVariants(unittest.TestCase):
     def test_own_epochs(self):
         c = self.configs(own_epochs=True)
         self.assertNotIn("epoch_file", c["ca-2"], "the copy keeps an epoch marker of its own")
+        self.assertNotIn("epoch_file", c["vault-2"], "the copy keeps an epoch marker of its own")
         self.assertEqual(c["ca"]["epoch_file"], "/bench/epoch.hex")
         self.assertEqual(c["vault"]["epoch_file"], "/bench/epoch.hex")
         self.assertFalse(any("omit_rrp_id_in_binding" in x for x in c.values()))
 
     def test_omit_rrp_id(self):
         c = self.configs(omit_rrp_id=True)
-        self.assertTrue(c["ca"]["omit_rrp_id_in_binding"])
-        self.assertTrue(c["ca-2"]["omit_rrp_id_in_binding"])
-        self.assertNotIn("omit_rrp_id_in_binding", c["vault"], "only the Credential Authorities")
+        self.assertEqual(sorted(c), ["ca", "ca-2", "vault", "vault-2"])
+        for name, x in c.items():
+            self.assertTrue(x["omit_rrp_id_in_binding"], f"{name}: every RRP, Credential Authority and Secret Vault")
         self.assertTrue(all(x["epoch_file"] == "/bench/epoch.hex" for x in c.values()))
 
     def test_both(self):

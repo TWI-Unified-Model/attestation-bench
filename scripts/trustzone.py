@@ -193,9 +193,7 @@ def parse_args():
         default="passport",
         help="who asks the verifiers: the EST server (passport) or the gateways (background-check)",
     )
-    p.add_argument(
-        "--omit-rrp-id", action="store_true", help="the #20 variant: the Credential Authorities bind no RRP identifier"
-    )
+    p.add_argument("--omit-rrp-id", action="store_true", help="the #20 variant: the RRPs bind no RRP identifier")
     p.add_argument(
         "--own-epochs",
         action="store_true",
@@ -301,11 +299,11 @@ def rrp_kind(pack, r):
 
 def redirection_variants(pack, rrps, omit_rrp_id=False, own_epochs=False):
     """The variants of the redirection experiment (hwcheck/scripts/redirect.sh), applied to the RRPs' configurations in
-    place. omit_rrp_id: the Credential Authorities bind no RRP identifier, the variant #20 is about. own_epochs: each
-    copy of an RRP ("same_as", another bank) keeps an epoch marker of its own, as a gateway does without an epoch file,
-    instead of the one the deployment's RRPs share."""
+    place. omit_rrp_id: the RRPs, Credential Authorities and Secret Vaults, bind no RRP identifier, the variant #20 is
+    about. own_epochs: each copy of an RRP ("same_as", another bank) keeps an epoch marker of its own, as a gateway does
+    without an epoch file, instead of the one the deployment's RRPs share."""
     for r in pack["rrps"]:
-        if omit_rrp_id and rrp_kind(pack, r) == "credential-authority":
+        if omit_rrp_id:
             rrps[r["name"]]["omit_rrp_id_in_binding"] = True
         if own_epochs and "same_as" in r:
             rrps[r["name"]].pop("epoch_file", None)

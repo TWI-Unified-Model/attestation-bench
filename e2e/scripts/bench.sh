@@ -10,9 +10,9 @@
 #                                  (packs/tacra-bench) and the approved launches (trust/approved-launches.json), with
 #                                  scripts/trustzone.py, the program the Demo Bank's trust zone uses too.
 #                                  RATS_MODEL=background-check: the gateways ask the verifiers themselves;
-#                                  OMIT_RRP_ID=1: the Credential Authorities bind no RRP identifier (#20);
-#                                  OWN_EPOCHS=1: the second Credential Authority (ca-2) keeps an epoch marker of its
-#                                  own (the redirection experiment, hwcheck/scripts/redirect.sh)
+#                                  OMIT_RRP_ID=1: the RRPs bind no RRP identifier (#20);
+#                                  OWN_EPOCHS=1: the copies of an RRP (ca-2, vault-2: the redirection experiment's
+#                                  other bank, hwcheck/scripts/redirect.sh) keep an epoch marker of their own
 #   e2e/scripts/bench.sh start|stop|status
 set -euo pipefail
 # BENCH_HOME (default ~/.attestation-bench) and VERAISON_DEPLOYMENT, the pinned tools on PATH: scripts/lib.sh
@@ -63,7 +63,7 @@ case "${1:-status}" in
   start)
     # every service stopped before: what they start with is recorded (make setup compares it later)
     none_running=yes
-    for s in step-ca vault tdx-verifier ca-gateway ca-gateway-2 vault-gateway est-server rup; do
+    for s in step-ca vault tdx-verifier ca-gateway ca-gateway-2 vault-gateway vault-gateway-2 est-server rup; do
       if running "$s"; then none_running=; fi
     done
     "$HERE/e2e/scripts/veraison-local.sh" start
@@ -79,13 +79,16 @@ case "${1:-status}" in
     [ -f "$B/config/ca-gateway-2.json" ] && start_one ca-gateway-2 "$BIN/ca-gateway" -config "$B/config/ca-gateway-2.json"
     start_one vault-gateway "$BIN/vault-gateway" -config "$B/config/vault-gateway.json"
     wait_port 9101; wait_port 9102; [ -f "$B/config/ca-gateway-2.json" ] && wait_port 9103
+    # the second Vault once the first listens: it reads the key files the first creates when they are absent
+    [ -f "$B/config/vault-gateway-2.json" ] && start_one vault-gateway-2 "$BIN/vault-gateway" \
+      -config "$B/config/vault-gateway-2.json" && wait_port 9104
     start_one est-server "$BIN/estserver" -config "$B/config/est-server.json"
     start_one rup "$BIN/rup" -listen 127.0.0.1:19443 -cert "$B/tls/rup.crt" -key "$B/tls/rup.key" \
       -client-ca "$B/workload-ca.pem" -allow payments.workload.tacra.example -api-key-file "$B/secrets/rup-api-key"
     wait_port 18443; wait_port 19443
     if [ -n "$none_running" ]; then bench_fingerprint >"$B/started.fingerprint"; fi ;;
   stop)
-    for s in rup est-server vault-gateway ca-gateway-2 ca-gateway tdx-verifier vault step-ca; do
+    for s in rup est-server vault-gateway-2 vault-gateway ca-gateway-2 ca-gateway tdx-verifier vault step-ca; do
       if running "$s"; then pid="$(cat "$B/$s.pid")"; kill "$pid"; for _ in 1 2 3 4 5 6 7 8 9 10; do kill -0 "$pid" 2>/dev/null || break; sleep 0.5; done; echo "$s stopped"; fi
       rm -f "$B/$s.pid"
     done
@@ -93,7 +96,7 @@ case "${1:-status}" in
     "$HERE/e2e/scripts/veraison-local.sh" stop ;;
   status)
     "$HERE/e2e/scripts/veraison-local.sh" status
-    for s in step-ca vault tdx-verifier ca-gateway ca-gateway-2 vault-gateway est-server rup; do
+    for s in step-ca vault tdx-verifier ca-gateway ca-gateway-2 vault-gateway vault-gateway-2 est-server rup; do
       if running "$s"; then echo "$s running ($(cat "$B/$s.pid"))"; else echo "$s stopped"; fi
     done ;;
   *) echo "usage: $0 config|start|stop|status" >&2; exit 2 ;;

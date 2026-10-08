@@ -17,6 +17,9 @@
 #     start-ca2   ca2 keeps an epoch marker of its own, and the conduit starts the exchange there: the present-nonce and
 #                 present-epoch Handles are ca2's, from its attest-initiate; the Attester holds the deployment's epoch
 #                 marker (absent-epoch) and, in the pass with the RRP identifier, binds ca1's, the RRP it serves
+#     vault       the default run on the Secret Vaults: Retrieval Evidence for a ledger Target of vault1, offered to
+#                 vault1 and to vault2, its copy with another RRP identifier (packs/tacra-bench); each asked for the
+#                 workload's group's key, in the hpke-base-signed container to an MLKEM768-P256 CEK
 #
 # The guest only runs hwrun (offline); all gateway interaction is on this machine, where the bench runs. The bench runs
 # every pass in Background Check (or Passport), reconfigured between them (OMIT_RRP_ID, and OWN_EPOCHS in a variant),
@@ -46,15 +49,24 @@ RUNS_DIR="${RUNS_DIR:-$BENCH_HOME/runs}"
 MODEL=background-check; [ -n "${PASSPORT:-}" ] && MODEL=passport
 VARIANT="${REDIRECT_VARIANT:-default}"
 case "$VARIANT" in
-  default) OWN="";;
+  default|vault) OWN="";;
   own-epochs|start-ca2) OWN=1;;   # ca2 keeps an epoch marker of its own
-  *) echo "unknown REDIRECT_VARIANT $VARIANT: own-epochs or start-ca2" >&2; exit 2;;
+  *) echo "unknown REDIRECT_VARIANT $VARIANT: own-epochs, start-ca2 or vault" >&2; exit 2;;
 esac
 OUT="$RUNS_DIR/${STAMP}-${CLOUD}-redirect"; [ "$MODEL" = passport ] && OUT="$OUT-passport"
 if [ "$VARIANT" != default ]; then OUT="$OUT-$VARIANT"; fi
 BIN="$(mktemp -d)"
 CA1=https://127.0.0.1:9101; CA2=https://127.0.0.1:9103
 CA1_ID=https://ca1.tacra.example   # the RRP identifier the honest EST server's Credential Authority binds
+# The RRP pair the conduit plays: the Credential Authorities (Enrollment), or, in the vault variant, the Secret Vaults
+# (Retrieval of the workload's group's key, sealed in the hpke-base-signed container to an MLKEM768-P256 CEK, the only
+# one the ledger Targets take)
+if [ "$VARIANT" = vault ]; then
+  MODE=retrieve; RRP1=vault1; RRP2=vault2; URL1=https://127.0.0.1:9102; URL2=https://127.0.0.1:9104
+  ID1=https://vault1.tacra.example; TPRE=ledger; CTYPE=api-key
+else
+  MODE=enroll; RRP1=ca1; RRP2=ca2; URL1="$CA1"; URL2="$CA2"; ID1="$CA1_ID"; TPRE=db; CTYPE=x509
+fi
 B="$BENCH_HOME"; CERT="$B/tls/clients/est-server.crt"; KEY_C="$B/tls/clients/est-server.key"; ROOT="$B/tls/root.crt"
 mkdir -p "$OUT"
 git -C "$REPO" rev-parse --short=12 HEAD > "$OUT/code-rev.txt"
@@ -146,73 +158,81 @@ if [ "'"$TEE"'" = tdx ]; then :; else sudo modprobe sev-guest 2>/dev/null || tru
 mountpoint -q /sys/kernel/config || sudo mount -t configfs none /sys/kernel/config
 ls -ld /sys/kernel/config/tsm/report; uname -r'
 
-# initiate URL TARGET: attest-initiate for TARGET at the Credential Authority at URL, as the conduit sends it; prints the
-# Handle it returned (base64url, as the RRP returned it)
+# initiate URL TARGET [CTYPE]: attest-initiate for TARGET and credential type CTYPE (x509) at the RRP at URL, as the
+# conduit sends it; prints the Handle it returned (base64url, as the RRP returned it)
 initiate() {
   curl -s --cacert "$ROOT" --cert "$CERT" --key "$KEY_C" -H 'Content-Type: application/json' \
-    -d "{\"target\":\"$2\",\"credential_type\":\"x509\"}" "$1/tacra/v1/initiate" \
+    -d "{\"target\":\"$2\",\"credential_type\":\"${3:-x509}\"}" "$1/tacra/v1/initiate" \
     | python3 -c "import sys,json;print(json.load(sys.stdin)['handle'])"
 }
-START="$CA1"; [ "$VARIANT" = start-ca2 ] && START="$CA2"   # where the conduit starts the exchange
+START="$URL1"; [ "$VARIANT" = start-ca2 ] && START="$CA2"   # where the conduit starts the exchange
 
-# make_evidence PASS RRPCA : mint a present-nonce Handle where the conduit starts (ca1; ca2 in start-ca2), make Evidence
-# in the guest bound to RRPCA and copy it back; in Passport, also the Attestation Results the verifier issues for each
-# case, as an honest CAS gets them. In start-ca2 the present-epoch Handle is ca2's epoch marker, from its attest-initiate.
+# make_evidence PASS RRPID : mint a present-nonce Handle where the conduit starts (the first RRP; ca2 in start-ca2),
+# make Evidence in the guest bound to RRPID and copy it back; in Passport, also the Attestation Results the verifier
+# issues for each case, as an honest CAS gets them. In start-ca2 the present-epoch Handle is ca2's epoch marker, from
+# its attest-initiate. The Credential Authorities' cases are Enrollments; in the vault variant, Retrievals alone.
 make_evidence() {
-  local PASS="$1" RRPCA="$2" d="$OUT/$1"; mkdir -p "$d"
-  local nonce epoch epoch_handle=""
-  nonce="$(initiate "$START" https://db-nonce.tacra.example)"; epoch="$(tr -d '[:space:]' < "$B/epoch.hex")"
+  local PASS="$1" RRPID="$2" d="$OUT/$1"; mkdir -p "$d"
+  local nonce epoch epoch_handle="" guest_args
+  nonce="$(initiate "$START" "https://$TPRE-nonce.tacra.example" "$CTYPE")"
+  epoch="$(tr -d '[:space:]' < "$B/epoch.hex")"
   if [ "$VARIANT" = start-ca2 ]; then epoch_handle="$(initiate "$CA2" https://db-epoch.tacra.example)"; fi
-  python3 - "$nonce" "$epoch" "$d" "$epoch_handle" <<'PY'
+  python3 - "$nonce" "$epoch" "$d" "$epoch_handle" "$MODE" "$TPRE" <<'PY'
 import sys, json, base64, os, secrets
-nonce_url, epoch_hex, d, epoch_handle_url = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+nonce_url, epoch_hex, d, epoch_handle_url, mode, tpre = sys.argv[1:7]
 std = lambda b: base64.b64encode(b).decode()
 url = lambda s: base64.urlsafe_b64decode(s + "=" * (-len(s) % 4))
-handles = {"nonce_enroll": std(url(nonce_url)), "nonce_retrieve": std(secrets.token_bytes(32)),
-           "epoch": std(bytes.fromhex(epoch_hex))}
+minted, other = std(url(nonce_url)), std(secrets.token_bytes(32))  # the Handle the RRP minted goes to its mode
+handles = {"nonce_enroll": minted if mode == "enroll" else other,
+           "nonce_retrieve": other if mode == "enroll" else minted, "epoch": std(bytes.fromhex(epoch_hex))}
 if epoch_handle_url:  # start-ca2: the present-epoch Handle is ca2's own epoch marker
     handles["epoch_handle"] = std(url(epoch_handle_url))
 json.dump(handles, open(os.path.join(d, "handles.json"), "w"))
-json.dump({"present-nonce": "https://db-nonce.tacra.example", "present-epoch": "https://db-epoch.tacra.example",
-           "absent-epoch": "https://db-lepoch.tacra.example", "absent-timestamp": "https://db-time.tacra.example",
-           "absent-none": "https://db-none.tacra.example"}, open(os.path.join(d, "targets.json"), "w"))
+short = {"present-nonce": "nonce", "present-epoch": "epoch", "absent-epoch": "lepoch", "absent-timestamp": "time",
+         "absent-none": "none"}
+json.dump({k: f"https://{tpre}-{n}.tacra.example" for k, n in short.items()}, open(os.path.join(d, "targets.json"), "w"))
 PY
+  guest_args="-rrp-ca '$RRPID' -csr-cn payments.workload.tacra.example"
+  [ "$MODE" = retrieve ] && guest_args="-modes retrieve -cek mlkem768-p256 -rrp-vault '$RRPID'"
   guest_in "$BIN/hwrun" "$d/handles.json" "$d/targets.json" "$HW/scripts/guest-clock.sh"
   bench_guest_run "$OUT/run-ssh.stderr" "set -e
-sudo ~/hwrun -tee $TEE -targets ~/targets.json -handles ~/handles.json -rrp-ca '$RRPCA' -csr-cn payments.workload.tacra.example -out /root/redir 2>&1
+sudo ~/hwrun -tee $TEE -targets ~/targets.json -handles ~/handles.json $guest_args -out /root/redir 2>&1
 sudo bash ~/guest-clock.sh /root/redir
 sudo chmod -R a+rX /root/redir; rm -rf ~/redir; sudo cp -r /root/redir ~/redir; sudo chown -R \$(id -u):\$(id -g) ~/redir" \
     guest_ssh | tee -a "$OUT/hwrun-stdout.txt"
   [ -f "$OUT/clock-offset.txt" ] || bench_clock_offset "$OUT/clock-offset.txt" guest_ssh
   guest_out redir "$d/"
   if [ "$MODEL" = passport ]; then
-    "$BIN/rrpverify" ears -in "$d/redir" -mode enroll -out "$d/ears" ${VERIFIER[@]+"${VERIFIER[@]}"} | tee "$d/ears.txt"
+    "$BIN/rrpverify" ears -in "$d/redir" -mode "$MODE" -out "$d/ears" ${VERIFIER[@]+"${VERIFIER[@]}"} \
+      | tee "$d/ears.txt"
   fi
 }
 
-# post_case DIR KIND RRP [rrp-issue flags]: the conduit offers the case of KIND, as made in DIR, to RRP (ca1 or ca2);
-# later flags replace the honest ones (the #19 rewrites). Prints rrp-issue's JSON.
+# post_case DIR KIND RRP [rrp-issue flags]: the conduit offers the case of KIND, as made in DIR, to RRP (the first or
+# the second of the pair); later flags replace the honest ones (the #19 rewrites). Prints rrp-issue's JSON.
 post_case() {
   local d="$1" fresh="$2" rrp="$3"; shift 3
-  local url="$CA1" c="$d/redir/enroll-$fresh" k handle
-  [ "$rrp" = ca2 ] && url="$CA2"
+  local url="$URL1" c="$d/redir/$MODE-$fresh" k handle
+  [ "$rrp" = "$RRP2" ] && url="$URL2"
   for k in "${ORDER[@]}"; do [ "$(fresh_of "$k")" = "$fresh" ] && break; done
   handle="$(python3 -c "import json;print(json.load(open('$c/meta.json')).get('freshness_element_b64',''))")"
-  local leg=(-evidence "$c/evidence.tsm.cbor")
-  [ "$MODEL" = passport ] && leg=(-ear "$d/ears/enroll-$fresh.ear.jws")
-  "$BIN/rrp-issue" enroll -url "$url" -target "https://db-$k.tacra.example" -ctype x509 -kind "$fresh" \
-    ${handle:+-handle "$handle"} "${leg[@]}" -csr "$c/subject.der" -ca "$ROOT" -cert "$CERT" -key "$KEY_C" "$@"
+  local leg=(-evidence "$c/evidence.tsm.cbor") subj=(-csr "$c/subject.der")
+  [ "$MODEL" = passport ] && leg=(-ear "$d/ears/$MODE-$fresh.ear.jws")
+  # Retrieval: CEKpub as the binding took it, and the workload's group, which the Vault releases a key to
+  [ "$MODE" = retrieve ] && subj=(-cek "$c/subject.der" -hint payments.workload.tacra.example)
+  "$BIN/rrp-issue" "$MODE" -url "$url" -target "https://$TPRE-$k.tacra.example" -ctype "$CTYPE" -kind "$fresh" \
+    ${handle:+-handle "$handle"} "${leg[@]}" "${subj[@]}" -ca "$ROOT" -cert "$CERT" -key "$KEY_C" "$@"
 }
 
-said() { python3 -c "import sys,json;d=json.load(sys.stdin);print('ISSUED' if d['issued'] else 'refused', d.get('reason',d.get('cert_subject','')))"; }
+said() { python3 -c "import sys,json;d=json.load(sys.stdin);print('ISSUED' if d['issued'] else 'refused', d.get('reason',d.get('cert_subject',d.get('container_rrp_id',''))))"; }
 
-# offer_redirect PASS: every case to ca1 and to ca2, as made
+# offer_redirect PASS: every case to the first RRP and to the second, as made
 offer_redirect() {
   local PASS="$1" d="$OUT/$1" k fresh rrp res
   : > "$d/results.jsonl"
   for k in "${ORDER[@]}"; do
     fresh="$(fresh_of "$k")"
-    for rrp in ca1 ca2; do
+    for rrp in "$RRP1" "$RRP2"; do
       res="$(post_case "$d" "$fresh" "$rrp")"
       echo "{\"pass\":\"$PASS\",\"kind\":\"$fresh\",\"rrp\":\"$rrp\",\"result\":$res}" >> "$d/results.jsonl"
       echo "  $PASS $fresh -> $rrp : $(echo "$res" | said)"
@@ -223,8 +243,8 @@ offer_redirect() {
 # rewrite DIR KIND NAME [rrp-issue flags]: one rewrite by the conduit, offered to ca1
 rewrite() {
   local d="$1" fresh="$2" name="$3" res; shift 3
-  res="$(post_case "$d" "$fresh" ca1 "$@")"
-  echo "{\"pass\":\"$(basename "$d")\",\"kind\":\"$fresh\",\"rrp\":\"ca1\",\"rewrite\":\"$name\",\"result\":$res}" >> "$d/results.jsonl"
+  res="$(post_case "$d" "$fresh" "$RRP1" "$@")"
+  echo "{\"pass\":\"$(basename "$d")\",\"kind\":\"$fresh\",\"rrp\":\"$RRP1\",\"rewrite\":\"$name\",\"result\":$res}" >> "$d/results.jsonl"
   echo "  $(basename "$d") $fresh, $name -> ca1 : $(echo "$res" | said)"
 }
 
@@ -262,11 +282,11 @@ reconfigure normal
 vm_create
 wait_ssh || { echo "ssh never came up" >&2; exit 1; }
 guest_ssh "$PROVISION" 2>>"$OUT/run-ssh.stderr"
-make_evidence with-rrp-id "$CA1_ID"; offer_redirect with-rrp-id
+make_evidence with-rrp-id "$ID1"; offer_redirect with-rrp-id
 if [ "$VARIANT" = default ]; then
   echo "== the conduit's rewrites (#19), at ca1, on Evidence made for ca1"
-  make_evidence rewrites "$CA1_ID"; offer_rewrites rewrites
-  make_evidence type-offered "$CA1_ID"; offer_rewrites type-offered
+  make_evidence rewrites "$ID1"; offer_rewrites rewrites
+  make_evidence type-offered "$ID1"; offer_rewrites type-offered
 fi
 
 echo "== bench: $MODEL, NO RRP identifier in the binding (variant: $VARIANT)"

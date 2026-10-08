@@ -4,13 +4,15 @@
 // with the EST server's identity, exactly as the honest conduit authenticates (N23); it is a test driver, it mints no
 // Handle, holds no attestation key, and decides nothing.
 //
-//	rrp-issue mint   -url https://127.0.0.1:9101 -target T -ctype x509
-//	rrp-issue enroll -url https://127.0.0.1:9103 -target T -ctype x509 -kind present-nonce -handle B64 -evidence E.cbor -csr C.der
+//	rrp-issue mint     -url https://127.0.0.1:9101 -target T -ctype x509
+//	rrp-issue enroll   -url https://127.0.0.1:9103 -target T -ctype x509 -kind present-nonce -handle B64 -evidence E.cbor -csr C.der
+//	rrp-issue retrieve -url https://127.0.0.1:9104 -target T -ctype api-key -kind present-nonce -handle B64 -evidence E.cbor -cek K.der -hint H
 //
-// mint prints the attest-initiate answer (handle, freshness_kind, rrp_id). enroll posts a second leg, in Background
-// Check the Evidence as the Attester produced it (-evidence), in Passport the Attestation Results a verifier issued
-// for it (-ear), with any field as the conduit chooses to send it (the #19 rewrites), and prints whether the gateway
-// issued, the status and the reason. Both print one JSON object.
+// mint prints the attest-initiate answer (handle, freshness_kind, rrp_id). enroll and retrieve post a second leg, in
+// Background Check the Evidence as the Attester produced it (-evidence), in Passport the Attestation Results a
+// verifier issued for it (-ear), with any field as the conduit chooses to send it (the #19 rewrites), and print
+// whether the gateway issued (a certificate; for retrieve, a container), the status and the reason. Each prints one
+// JSON object.
 package main
 
 import (
@@ -88,9 +90,90 @@ func commonFlags(fs *flag.FlagSet) (url, target, ctype, ca, cert, key *string) {
 	return
 }
 
+// secondLeg posts a second leg to the gateway's mode, enroll (the CSR, -csr) or retrieve (CEKpub, -cek), and prints
+// whether the gateway issued: for enroll the certificate's serial, issuer and subject, for retrieve the container and
+// the RRP identifier and Target its associated data name; otherwise the gateway's reason.
+func secondLeg(mode string, args []string) {
+	fs := flag.NewFlagSet(mode, flag.ExitOnError)
+	url, target, ctype, ca, cert, key := commonFlags(fs)
+	kind := fs.String("kind", "present-nonce", "freshness kind")
+	handle := fs.String("handle", "", "the freshness handle (base64url, as mint returned it)")
+	evidence := fs.String("evidence", "", "Background Check: the Evidence file (TSM report, CBOR)")
+	earPath := fs.String("ear", "", "Passport: the Attestation Results file (compact JWS)")
+	csr := fs.String("csr", "", "enroll: the CSR file (DER)")
+	cek := fs.String("cek", "", "retrieve: CEKpub as the binding took it (the case's subject.der)")
+	profile := fs.String("profile", "application/vnd.veraison.tsm-report+cbor", "the Evidence media type")
+	hint := fs.String("hint", "", "the Credential Hint to send (none by default)")
+	if err := fs.Parse(args); err != nil {
+		die("%v", err)
+	}
+	subject, field := *csr, "csr"
+	if mode == "retrieve" {
+		subject, field = *cek, "cek_pub"
+	}
+	if (*evidence == "") == (*earPath == "") || subject == "" {
+		die("%s needs -%s and one of -evidence (Background Check) and -ear (Passport)", mode, map[string]string{
+			"csr": "csr", "cek_pub": "cek"}[field])
+	}
+	leg := map[string]string{"freshness_kind": *kind, "target": *target, "credential_type": *ctype, field: b64(subject)}
+	if *evidence != "" { // Background Check: the Evidence as the Attester produced it; the RRP asks the verifier itself
+		leg["evidence"], leg["profile"] = b64(*evidence), *profile
+	} else { // Passport: the Attestation Results, which the RRP checks against the binding value it recomputes
+		jws, err := os.ReadFile(*earPath)
+		if err != nil {
+			die("read %s: %v", *earPath, err)
+		}
+		leg["ear"] = strings.TrimSpace(string(jws))
+	}
+	if *handle != "" {
+		leg["handle"] = *handle
+	}
+	if *hint != "" {
+		leg["credential_hint"] = *hint
+	}
+	c := client(*ca, *cert, *key)
+	st, raw := post(c, strings.TrimRight(*url, "/")+"/tacra/v1/"+mode, leg)
+	res := map[string]any{"status": st, "issued": st == http.StatusOK}
+	switch {
+	case st == http.StatusOK && mode == "enroll":
+		var out struct {
+			CertificateChain []string `json:"certificate_chain"`
+		}
+		if json.Unmarshal(raw, &out) == nil && len(out.CertificateChain) > 0 {
+			if der, err := base64.RawURLEncoding.DecodeString(out.CertificateChain[0]); err == nil {
+				if crt, err := x509.ParseCertificate(der); err == nil {
+					res["cert_serial"] = fmt.Sprintf("%x", crt.SerialNumber)
+					res["cert_issuer"] = crt.Issuer.String()
+					res["cert_subject"] = crt.Subject.String()
+				}
+			}
+		}
+	case st == http.StatusOK: // retrieve: the container, sealed to the Attester's CEKpub, which no one else can open
+		var out struct {
+			Container string `json:"container"`
+			AAD       struct {
+				RRPID  string `json:"rrp_id"`
+				Target string `json:"target"`
+			} `json:"aad"`
+		}
+		if json.Unmarshal(raw, &out) == nil {
+			res["container"], res["container_rrp_id"], res["container_target"] = out.Container, out.AAD.RRPID, out.AAD.Target
+		}
+	default:
+		var e struct{ Error, Detail string }
+		_ = json.Unmarshal(raw, &e)
+		res["reason"] = strings.TrimSpace(e.Error + " " + e.Detail)
+		if res["reason"] == "" {
+			res["reason"] = strings.TrimSpace(string(raw))
+		}
+	}
+	b, _ := json.Marshal(res)
+	fmt.Println(string(b))
+}
+
 func main() {
 	if len(os.Args) < 2 {
-		die("usage: rrp-issue mint|enroll ...")
+		die("usage: rrp-issue mint|enroll|retrieve ...")
 	}
 	switch os.Args[1] {
 	case "mint":
@@ -106,64 +189,8 @@ func main() {
 			die("initiate: HTTP %d: %s", st, raw)
 		}
 		fmt.Printf("%s\n", raw)
-	case "enroll":
-		fs := flag.NewFlagSet("enroll", flag.ExitOnError)
-		url, target, ctype, ca, cert, key := commonFlags(fs)
-		kind := fs.String("kind", "present-nonce", "freshness kind")
-		handle := fs.String("handle", "", "the freshness handle (base64url, as mint returned it)")
-		evidence := fs.String("evidence", "", "Background Check: the Evidence file (TSM report, CBOR)")
-		earPath := fs.String("ear", "", "Passport: the Attestation Results file (compact JWS)")
-		csr := fs.String("csr", "", "the CSR file (DER)")
-		profile := fs.String("profile", "application/vnd.veraison.tsm-report+cbor", "the Evidence media type")
-		hint := fs.String("hint", "", "the Credential Hint to send (none by default)")
-		if err := fs.Parse(os.Args[2:]); err != nil {
-			die("%v", err)
-		}
-		if (*evidence == "") == (*earPath == "") || *csr == "" {
-			die("enroll needs -csr and one of -evidence (Background Check) and -ear (Passport)")
-		}
-		leg := map[string]string{"freshness_kind": *kind, "target": *target, "credential_type": *ctype, "csr": b64(*csr)}
-		if *evidence != "" { // Background Check: the Evidence as the Attester produced it; the RRP asks the verifier itself
-			leg["evidence"], leg["profile"] = b64(*evidence), *profile
-		} else { // Passport: the Attestation Results, which the RRP checks against the binding value it recomputes
-			jws, err := os.ReadFile(*earPath)
-			if err != nil {
-				die("read %s: %v", *earPath, err)
-			}
-			leg["ear"] = strings.TrimSpace(string(jws))
-		}
-		if *handle != "" {
-			leg["handle"] = *handle
-		}
-		if *hint != "" {
-			leg["credential_hint"] = *hint
-		}
-		c := client(*ca, *cert, *key)
-		st, raw := post(c, strings.TrimRight(*url, "/")+"/tacra/v1/enroll", leg)
-		res := map[string]any{"status": st, "issued": st == http.StatusOK}
-		if st == http.StatusOK {
-			var out struct {
-				CertificateChain []string `json:"certificate_chain"`
-			}
-			if json.Unmarshal(raw, &out) == nil && len(out.CertificateChain) > 0 {
-				if der, err := base64.RawURLEncoding.DecodeString(out.CertificateChain[0]); err == nil {
-					if crt, err := x509.ParseCertificate(der); err == nil {
-						res["cert_serial"] = fmt.Sprintf("%x", crt.SerialNumber)
-						res["cert_issuer"] = crt.Issuer.String()
-						res["cert_subject"] = crt.Subject.String()
-					}
-				}
-			}
-		} else {
-			var e struct{ Error, Detail string }
-			_ = json.Unmarshal(raw, &e)
-			res["reason"] = strings.TrimSpace(e.Error + " " + e.Detail)
-			if res["reason"] == "" {
-				res["reason"] = strings.TrimSpace(string(raw))
-			}
-		}
-		b, _ := json.Marshal(res)
-		fmt.Println(string(b))
+	case "enroll", "retrieve":
+		secondLeg(os.Args[1], os.Args[2:])
 	default:
 		die("unknown command %q", os.Args[1])
 	}
