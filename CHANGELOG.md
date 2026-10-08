@@ -50,6 +50,12 @@ What changed, newest first. Dates are UTC.
   the identifier it refuses all five in both. The verdict checks each refusal's reason: the Handle, the epoch marker
   or the binding. On the three platforms in both RATS models, 8 October, 12 runs, 20 of 20 each
   ([docs/attacks.md](docs/attacks.md), section 2).
+- **The redirection on the Secret Vaults** (`REDIRECT_VARIANT=vault`): Retrieval had never been redirected. A second
+  Vault, `vault-2`, in the bench's pack (its own RRP identifier and listener; `bench.sh` starts it once the first
+  Vault listens, as it reads the key files the first creates), and `rrp-issue retrieve`, the Retrieval's second leg.
+  `--omit-rrp-id` now leaves the identifier out of every RRP's binding, the Secret Vaults' too. As on the Credential
+  Authorities: with the RRP identifier `vault2` refuses every kind; without it, it releases the workload's group's key
+  for every kind but present-nonce, each container sealed to the Attester's CEKpub. 6 runs, 20 of 20 each.
 
 ### Fixed
 

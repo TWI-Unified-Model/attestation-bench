@@ -50,6 +50,7 @@ VM of its own ([demo-bank.md](demo-bank.md)).
 | Credential Authority gateway | `ca-gateway` (`rrp/cmd`) | `127.0.0.1:9101` | an RRP: mints Freshness Handles, checks the binding and the verifier result, asks step-ca to sign |
 | Second Credential Authority | `ca-gateway` with `ca-gateway-2.json` | `127.0.0.1:9103` | the same, another RRP identifier: the second bank of `make redirect` |
 | Secret Vault gateway | `vault-gateway` (`rrp/cmd`) | `127.0.0.1:9102` | an RRP: the same checks, then reads the secret from Vault and releases it in the signed container |
+| Second Secret Vault | `vault-gateway` with `vault-gateway-2.json` | `127.0.0.1:9104` | the same, another RRP identifier: the second bank of `REDIRECT_VARIANT=vault make redirect` |
 | step-ca | Smallstep `step-ca` | `127.0.0.1:9000` | the workload CA |
 | HashiCorp Vault | `vault` | `127.0.0.1:8200` | stores the secret the Vault gateway releases |
 | Veraison | `vts`, `provisioning`, `verification`, `management` (`third_party/veraison-services`) | `127.0.0.1:50051` (VTS), `:9443`, `:8443`, `:10443` | the SEV-SNP verifier; provisioned with AMD's ARK and the approved launches (`trust/`) |

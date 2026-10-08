@@ -1,0 +1,14 @@
+{
+ "case": "retrieve-absent-epoch",
+ "mode": "retrieve",
+ "freshness_kind": "absent-epoch",
+ "target": "https://ledger-lepoch.tacra.example",
+ "relying_party": "https://vault1.tacra.example",
+ "freshness_element_b64": "L5hhaj491WWv4172c2u2dULKAkeyr7L3uY_UwP85u88",
+ "binding_value_hex": "afc311c09b956f440126ad4a98a47e42cb7165b42b9ac605ff30f247242634af22095da4b3a18b68fadcf8dc0d565405b3c13de1457f9600abf1a170a8738f6a",
+ "evidence_ms": 8.909,
+ "token_bytes": 5963,
+ "report_sha256": "02db5581b2d3c021c72d5f41021f37d5776b7d6f5b5752007ae770da941cdab9",
+ "signing_key": "VLEK",
+ "chip_id_prefix": "0000000000000000"
+}

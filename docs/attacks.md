@@ -70,10 +70,10 @@ sharing one epoch marker, and with Evidence made for `ca1`; the variants below c
 question it informs: [TACRA issue #20](https://github.com/TheBankster/rats-tacra/issues/20).
 
 ```bash
-REDIRECT_VARIANT=own-epochs make redirect PLATFORM=gcp-snp   # also start-ca2; PASSPORT=1 in Passport
+REDIRECT_VARIANT=own-epochs make redirect PLATFORM=gcp-snp   # also start-ca2 and vault; PASSPORT=1 in Passport
 ```
 
-In both variants `ca2` keeps an epoch marker of its own. In `own-epochs` the Evidence is made for `ca1`, as above. In
+In `own-epochs` and `start-ca2` `ca2` keeps an epoch marker of its own. In `own-epochs` the Evidence is made for `ca1`, as above. In
 `start-ca2` the conduit starts the exchange at `ca2`: the present-nonce and present-epoch Handles are `ca2`'s, from its
 attest-initiate, while the Attester holds the deployment's epoch marker (absent-epoch) and, with the RRP identifier,
 binds `ca1`, the RRP it serves. Neither variant runs the rewrites below.
@@ -87,7 +87,16 @@ So a nonce keeps Evidence made for one RRP from serving a second, but not a cond
 second; for every Freshness Kind, only the RRP identifier the Attester holds stops that. What `ca2` issues is bound to
 the Attester's own key either way, so the conduit cannot use it: what the identifier decides is which RRP serves the
 Attester, and who chooses it. `ca1`, the control, issues where the freshness is its own, and refuses `ca2`'s Handles.
-The verdict checks each refusal's reason (`scripts/verdict.py`). Runs of 8 October 2026 at `c0f02ac`, 20 of 20 each:
+
+`vault` runs the default experiment on the Secret Vaults, which it leaves out: Retrieval Evidence for a ledger Target
+of `vault1`, offered to `vault1` and to `vault2`, its copy with another RRP identifier (the bench's pack), each asked
+for the workload's group's key in the hpke-base-signed container. As on the Credential Authorities, with the RRP
+identifier `vault2` refuses every kind, and without it releases the key for every kind but present-nonce, the two
+Vaults sharing one epoch marker. Each container it releases is sealed to the Attester's CEKpub, and its associated data
+names `vault2`.
+
+The verdict checks each refusal's reason (`scripts/verdict.py`). Runs of 8 October 2026, 20 of 20 each, `own-epochs`
+and `start-ca2` at `c0f02ac`, `vault` at `1a751f6`:
 
 | Variant | GCP SEV-SNP | GCP TDX | AWS SEV-SNP |
 |---|---|---|---|
@@ -95,6 +104,8 @@ The verdict checks each refusal's reason (`scripts/verdict.py`). Runs of 8 Octob
 | `own-epochs`, Passport | [run](../hwcheck/evidence/20261008T032215Z-gcp-snp-redirect-passport-own-epochs) | [run](../hwcheck/evidence/20261008T032934Z-gcp-tdx-redirect-passport-own-epochs) | [run](../hwcheck/evidence/20261008T033608Z-aws-snp-redirect-passport-own-epochs) |
 | `start-ca2`, Background Check | [run](../hwcheck/evidence/20261008T031807Z-gcp-snp-redirect-start-ca2) | [run](../hwcheck/evidence/20261008T034309Z-gcp-tdx-redirect-start-ca2) | [run](../hwcheck/evidence/20261008T035017Z-aws-snp-redirect-start-ca2) |
 | `start-ca2`, Passport | [run](../hwcheck/evidence/20261008T033907Z-gcp-snp-redirect-passport-start-ca2) | [run](../hwcheck/evidence/20261008T034636Z-gcp-tdx-redirect-passport-start-ca2) | [run](../hwcheck/evidence/20261008T035308Z-aws-snp-redirect-passport-start-ca2) |
+| `vault`, Background Check | [run](../hwcheck/evidence/20261008T041327Z-gcp-snp-redirect-vault) | [run](../hwcheck/evidence/20261008T042128Z-gcp-tdx-redirect-vault) | [run](../hwcheck/evidence/20261008T042814Z-aws-snp-redirect-vault) |
+| `vault`, Passport | [run](../hwcheck/evidence/20261008T041741Z-gcp-snp-redirect-passport-vault) | [run](../hwcheck/evidence/20261008T042456Z-gcp-tdx-redirect-passport-vault) | [run](../hwcheck/evidence/20261008T043101Z-aws-snp-redirect-passport-vault) |
 
 Then the conduit rewrites, one at a time, what it relays to `ca1` on Evidence made for `ca1`
 ([TACRA issue #19](https://github.com/TheBankster/rats-tacra/issues/19): which fields of attest-initiate travel, and

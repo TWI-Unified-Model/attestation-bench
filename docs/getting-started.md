@@ -90,23 +90,24 @@ make status
 ```
 
 ```
-vts running (10698)
-provisioning running (10724)
-verification running (10726)
-management running (10728)
-step-ca running (10730)
-vault running (10731)
-tdx-verifier running (10755)
-ca-gateway running (10760)
-ca-gateway-2 running (10761)
-vault-gateway running (10762)
-est-server running (10775)
-rup running (10776)
+vts running (94687)
+provisioning running (94713)
+verification running (94715)
+management running (94717)
+step-ca running (94719)
+vault running (94720)
+tdx-verifier running (94744)
+ca-gateway running (94751)
+ca-gateway-2 running (94752)
+vault-gateway running (94753)
+vault-gateway-2 running (94762)
+est-server running (94767)
+rup running (94768)
 ```
 
-Twelve services, all listening on `127.0.0.1` only: Veraison's four, step-ca, Vault, the TDX verifier, the two
-Credential Authority gateways (the second exists for the redirection experiment), the Secret Vault gateway, the EST
-server and the Relying Party (`rup`). What each one does: [architecture.md](architecture.md).
+Thirteen services, all listening on `127.0.0.1` only: Veraison's four, step-ca, Vault, the TDX verifier, the two
+Credential Authority gateways and the two Secret Vault gateways (the second of each exists for the redirection
+experiment), the EST server and the Relying Party (`rup`). What each one does: [architecture.md](architecture.md).
 
 ## 6. Check that every component authenticates the others
 
@@ -260,8 +261,8 @@ VERDICT PASS: with the RRP identifier, ca2 refused all 5 Freshness Kinds; withou
 With the RRP identifier in the binding, `ca2` refuses every Freshness Kind. Without it, only a nonce `ca2` never
 issued stops the redirection: here, where the two share one epoch marker and the Evidence is made for `ca1`. With
 `REDIRECT_VARIANT=own-epochs` `ca2` keeps an epoch marker of its own; with `REDIRECT_VARIANT=start-ca2` the conduit
-also starts the exchange at `ca2`, and without the identifier `ca2` issues on its own nonce ([attacks.md](attacks.md),
-section 2). This is the question of
+also starts the exchange at `ca2`, and without the identifier `ca2` issues on its own nonce; `REDIRECT_VARIANT=vault`
+runs the same on the two Secret Vaults ([attacks.md](attacks.md), section 2). This is the question of
 [TACRA issue #20](https://github.com/TheBankster/rats-tacra/issues/20). Each rewrite is refused for its own reason,
 except the other credential type the Target offers: nothing binds the type, and only the present-nonce Handle, minted
 for one type, catches it ([attacks.md](attacks.md), section 2; [TACRA issue #19](https://github.com/TheBankster/rats-tacra/issues/19)).

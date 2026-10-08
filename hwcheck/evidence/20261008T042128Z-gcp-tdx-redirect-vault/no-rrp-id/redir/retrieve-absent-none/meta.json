@@ -1,0 +1,13 @@
+{
+ "case": "retrieve-absent-none",
+ "mode": "retrieve",
+ "freshness_kind": "absent-none",
+ "target": "https://ledger-none.tacra.example",
+ "relying_party": "",
+ "binding_value_hex": "2bd1037a90275262613b017548b4ccbed273d991fbb6ea8d2dd971843f9f1a7dea09a4ac7646fb5cb3c3748b06c50cbd1138a5cb35806610ec6ff3c597e0b71c",
+ "evidence_ms": 39.318,
+ "token_bytes": 4966,
+ "report_sha256": "bc9f9dcbcf77c1e017601499cb811cf0926fba2c14e4331ffd9279ede4d03e08",
+ "signing_key": "TDX quote",
+ "chip_id_prefix": "MRTD f21e6b48743fe14c"
+}

@@ -1,0 +1,14 @@
+variant vault
+pass         kind               vault1               vault2
+with-rrp-id  present-nonce      ISSUED               refused (Handle)
+with-rrp-id  present-epoch      ISSUED               refused (binding)
+with-rrp-id  absent-epoch       ISSUED               refused (binding)
+with-rrp-id  absent-timestamp   ISSUED               refused (binding)
+with-rrp-id  absent-none        ISSUED               refused (binding)
+no-rrp-id    present-nonce      ISSUED               refused (Handle)
+no-rrp-id    present-epoch      ISSUED               ISSUED
+no-rrp-id    absent-epoch       ISSUED               ISSUED
+no-rrp-id    absent-timestamp   ISSUED               ISSUED
+no-rrp-id    absent-none        ISSUED               ISSUED
+guest minus RRP: +1.191 s, within 1.340 s
+VERDICT PASS: the Secret Vaults: with the RRP identifier, vault2 refused all 5 Freshness Kinds; without it, it released the workload's group's key for every kind but present-nonce

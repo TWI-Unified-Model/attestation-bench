@@ -1,0 +1,14 @@
+{
+ "case": "retrieve-present-epoch",
+ "mode": "retrieve",
+ "freshness_kind": "present-epoch",
+ "target": "https://ledger-epoch.tacra.example",
+ "relying_party": "",
+ "freshness_element_b64": "L5hhaj491WWv4172c2u2dULKAkeyr7L3uY_UwP85u88",
+ "binding_value_hex": "5c4cc6f898915c2f57cf3e82d90b9a6078665c0be4892ab54d69346b3c0bd5b3bb4c1c6895ee32fa34724c17389ee92661eb5473f966de67bfb060668512e898",
+ "evidence_ms": 41.219,
+ "token_bytes": 4966,
+ "report_sha256": "d1ad81ff6a60e7d950498e9ea330064f7624963956e7eda1ed00be0b9d10ce68",
+ "signing_key": "TDX quote",
+ "chip_id_prefix": "MRTD f21e6b48743fe14c"
+}

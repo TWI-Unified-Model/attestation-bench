@@ -268,19 +268,23 @@ tag `v0.1.1` is set once CI has passed on its commit.
 ## The redirection's variants (8 October 2026)
 
 The redirection experiment answers TACRA #20 with two things fixed: its two Credential Authorities share one epoch
-marker, and the conduit offers Evidence made for `ca1`. Two variants change each (`c0f02ac`,
-[attacks.md](attacks.md), section 2), and the verdict checks each refusal's reason in them. One run of each came
-first, on GCP SEV-SNP in Background Check; the other ten followed, one at a time, each checked for VMs left behind.
+marker, and the conduit offers Evidence made for `ca1`. Two variants change each (`c0f02ac`), and a third runs the
+experiment on the Secret Vaults, which it left out (`1a751f6`: a second Vault in the bench's pack,
+`rrp-issue retrieve`); [attacks.md](attacks.md), section 2. The verdict checks each refusal's reason in them. One run
+of each came first, on GCP SEV-SNP in Background Check; the others followed, one at a time, each checked for VMs left
+behind.
 
 | Runs | Commit | Result |
 |---|---|---|
 | `REDIRECT_VARIANT=own-epochs make redirect` on the three platforms, Background Check and Passport | `c0f02ac` | 6 PASS, 20 of 20 each: without the RRP identifier `ca2` issued for absent-timestamp and absent-none alone, refusing present-nonce for the Handle and the two epoch kinds for its epoch marker; with it, all five refused |
 | `REDIRECT_VARIANT=start-ca2 make redirect`, the same | `c0f02ac` | 6 PASS, 20 of 20 each: without the identifier `ca2` issued for every kind but absent-epoch, present-nonce included; with it, all five refused, its own Handles for the binding |
+| `REDIRECT_VARIANT=vault make redirect`, the same | `1a751f6` | 6 PASS, 20 of 20 each: without the identifier `vault2` released the workload's group's key for every kind but present-nonce, each container sealed to the Attester's CEKpub and naming `vault2`; with it, all five refused |
 
 ```bash
-make report RUNS="hwcheck/evidence/20261008T03*"   # 12 runs, 12 PASS
+make report RUNS="hwcheck/evidence/20261008T03* hwcheck/evidence/20261008T04*"   # 18 runs, 18 PASS
 ```
 
 `make check` at `c0f02ac`: every linter clean, 52 Python tests; with the runs committed, 59, the verdict and report
-tests judging the twelve runs and copies of them changed in one place. The 27 earlier redirect runs are judged as
-before. `make cloud-check` found both clouds empty at the end.
+tests judging the twelve runs and copies of them changed in one place; with the Vault's runs, 60. The 27 earlier
+redirect runs are judged as before. Before its runs, the bench with the second Vault passed `make check-mtls`, 40 of
+40, locally. `make cloud-check` found both clouds empty at the end of each batch.

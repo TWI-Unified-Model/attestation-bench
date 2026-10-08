@@ -69,8 +69,9 @@ REDIRECT_RUNS = [
     "20261006T225943Z-gcp-tdx-redirect",
     "20261006T230316Z-aws-snp-redirect",
 ]
-# the redirection experiment's variants (hwcheck/scripts/redirect.sh, REDIRECT_VARIANT), from c0f02ac, 8 October 2026:
-# each on GCP SEV-SNP, GCP TDX and AWS SEV-SNP, in Background Check and in Passport
+# the redirection experiment's variants (hwcheck/scripts/redirect.sh, REDIRECT_VARIANT), 8 October 2026, own-epochs and
+# start-ca2 from c0f02ac, vault from 1a751f6: each on GCP SEV-SNP, GCP TDX and AWS SEV-SNP, in Background Check and in
+# Passport
 REDIRECT_VARIANT_RUNS = {
     "20261008T031349Z-gcp-snp-redirect-own-epochs": "own-epochs",
     "20261008T032215Z-gcp-snp-redirect-passport-own-epochs": "own-epochs",
@@ -84,6 +85,12 @@ REDIRECT_VARIANT_RUNS = {
     "20261008T034636Z-gcp-tdx-redirect-passport-start-ca2": "start-ca2",
     "20261008T035017Z-aws-snp-redirect-start-ca2": "start-ca2",
     "20261008T035308Z-aws-snp-redirect-passport-start-ca2": "start-ca2",
+    "20261008T041327Z-gcp-snp-redirect-vault": "vault",
+    "20261008T041741Z-gcp-snp-redirect-passport-vault": "vault",
+    "20261008T042128Z-gcp-tdx-redirect-vault": "vault",
+    "20261008T042456Z-gcp-tdx-redirect-passport-vault": "vault",
+    "20261008T042814Z-aws-snp-redirect-vault": "vault",
+    "20261008T043101Z-aws-snp-redirect-passport-vault": "vault",
 }
 # the refusal scenarios on hardware (make demo with UNAPPROVED=1 or OTHER_PLATFORM=1), each with the reason it expects
 REFUSAL_RUNS = {
@@ -239,6 +246,7 @@ class CommittedRuns(unittest.TestCase):
         starts = {
             "own-epochs": "VERDICT PASS: ca2 with an epoch marker of its own: ",
             "start-ca2": "VERDICT PASS: the conduit starting at ca2: ",
+            "vault": "VERDICT PASS: the Secret Vaults: ",
         }
         for run, variant in REDIRECT_VARIANT_RUNS.items():
             with self.subTest(run=run):
@@ -541,6 +549,14 @@ class ChangedRuns(unittest.TestCase):
         code, lines = verdict_lines("redirect", run)
         self.assertEqual((code, lines[-1]), (1, "VERDICT FAIL: 1 of 20 outcomes not as expected"))
         self.assertIn(f"no-rrp-id present-epoch ca2: refused ({handle}), expected refused for the epoch", lines)
+
+    def test_redirect_vault_released_with_the_rrp_id(self):
+        # vault: vault2 releases on Evidence that binds vault1
+        run = self.variant_run("vault")
+        self.change_cell(run, ("with-rrp-id", "absent-none", "vault2"), {"issued": True, "status": 200})
+        code, lines = verdict_lines("redirect", run)
+        self.assertEqual((code, lines[-1]), (1, "VERDICT FAIL: 1 of 20 outcomes not as expected"))
+        self.assertIn("with-rrp-id absent-none vault2: ISSUED, expected refused for the binding", lines)
 
     def test_redirect_variant_judged_as_the_other(self):
         run = self.variant_run("own-epochs")

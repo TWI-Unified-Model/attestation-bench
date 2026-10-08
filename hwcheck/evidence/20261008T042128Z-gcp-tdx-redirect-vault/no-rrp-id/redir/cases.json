@@ -1,0 +1,71 @@
+[
+ {
+  "case": "retrieve-present-nonce",
+  "mode": "retrieve",
+  "freshness_kind": "present-nonce",
+  "target": "https://ledger-nonce.tacra.example",
+  "relying_party": "",
+  "freshness_element_b64": "xo3HPW2o1QfWbmCaPdw_vCdHksApkiWVBFVtgUB-qxg",
+  "binding_value_hex": "32e69cc27b61a4af44b1ce0f33300e7b4cb3aa947677de9c8816c1b68f178bfb17e807ed6a8cc4da00b89707980708ceeaaa508015a481fa231e09d62da4822a",
+  "evidence_ms": 42.221,
+  "token_bytes": 4966,
+  "report_sha256": "7c09ebaefbe2da52517a139732c6aa88b1b542cc35823192efe31e577533b405",
+  "signing_key": "TDX quote",
+  "chip_id_prefix": "MRTD f21e6b48743fe14c"
+ },
+ {
+  "case": "retrieve-present-epoch",
+  "mode": "retrieve",
+  "freshness_kind": "present-epoch",
+  "target": "https://ledger-epoch.tacra.example",
+  "relying_party": "",
+  "freshness_element_b64": "L5hhaj491WWv4172c2u2dULKAkeyr7L3uY_UwP85u88",
+  "binding_value_hex": "5c4cc6f898915c2f57cf3e82d90b9a6078665c0be4892ab54d69346b3c0bd5b3bb4c1c6895ee32fa34724c17389ee92661eb5473f966de67bfb060668512e898",
+  "evidence_ms": 41.219,
+  "token_bytes": 4966,
+  "report_sha256": "d1ad81ff6a60e7d950498e9ea330064f7624963956e7eda1ed00be0b9d10ce68",
+  "signing_key": "TDX quote",
+  "chip_id_prefix": "MRTD f21e6b48743fe14c"
+ },
+ {
+  "case": "retrieve-absent-epoch",
+  "mode": "retrieve",
+  "freshness_kind": "absent-epoch",
+  "target": "https://ledger-lepoch.tacra.example",
+  "relying_party": "",
+  "freshness_element_b64": "L5hhaj491WWv4172c2u2dULKAkeyr7L3uY_UwP85u88",
+  "binding_value_hex": "7330c35a585ffd8bd07c251a7ed87ed9a52fc97c42c90693f1af2e85ed35823e082801c5f4f963320cdecd5765ec02ada300733df89b5ab89f81e97f6ee600dc",
+  "evidence_ms": 39.842,
+  "token_bytes": 4966,
+  "report_sha256": "05d0e217e0526b763b3d58b977c52f2346a636c1e8fc1dc90874e1ddde95a7d5",
+  "signing_key": "TDX quote",
+  "chip_id_prefix": "MRTD f21e6b48743fe14c"
+ },
+ {
+  "case": "retrieve-absent-timestamp",
+  "mode": "retrieve",
+  "freshness_kind": "absent-timestamp",
+  "target": "https://ledger-time.tacra.example",
+  "relying_party": "",
+  "freshness_element_b64": "AAAAAGrHGsQ",
+  "binding_value_hex": "3d0b6e27d533eef09e9f0f87c3ecaa432464901cb11a5a28e572ae0b4d6e23075926f2a91d423579ba5a29fee7b354031ef09d0f37d3a9fbd90a438206f20006",
+  "evidence_ms": 39.421,
+  "token_bytes": 4966,
+  "report_sha256": "af4fa989627fae4b211d6226181712ff23da9cad3e32db6d29b9a6262c63c762",
+  "signing_key": "TDX quote",
+  "chip_id_prefix": "MRTD f21e6b48743fe14c"
+ },
+ {
+  "case": "retrieve-absent-none",
+  "mode": "retrieve",
+  "freshness_kind": "absent-none",
+  "target": "https://ledger-none.tacra.example",
+  "relying_party": "",
+  "binding_value_hex": "2bd1037a90275262613b017548b4ccbed273d991fbb6ea8d2dd971843f9f1a7dea09a4ac7646fb5cb3c3748b06c50cbd1138a5cb35806610ec6ff3c597e0b71c",
+  "evidence_ms": 39.318,
+  "token_bytes": 4966,
+  "report_sha256": "bc9f9dcbcf77c1e017601499cb811cf0926fba2c14e4331ffd9279ede4d03e08",
+  "signing_key": "TDX quote",
+  "chip_id_prefix": "MRTD f21e6b48743fe14c"
+ }
+]
