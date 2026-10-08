@@ -165,7 +165,7 @@ cleanup
 echo "== RRP verification: Veraison fork as it is, with the DER and signer-info fixes, and on v0.15.0 with AMD roots"
 for v in fork fixed v015; do
   # its log (standard error) holds Veraison's own lines, the revocation check of each appraisal among them
-  "$BIN/rrpverify-$v" verify -in "$OUT" -handles "$OUT/handles.json" -ark "$OUT/amd-kds-milan-vlek-cert_chain.pem" \
+  "$BIN/rrpverify-$v" verify -in "$OUT" -handles "$OUT/handles.json" -ark "$OUT/amd-kds-milan-vlek-cert_chain.pem" ${RRPV[@]+"${RRPV[@]}"} \
     -not-before "$NB" -not-after "$NA" -out "$OUT/rrpverify-veraison-$v.json" 2>"$OUT/rrpverify-veraison-$v.stderr.log" \
     | tee "$OUT/rrpverify-veraison-$v.txt"
 done
