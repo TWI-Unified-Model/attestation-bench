@@ -285,7 +285,9 @@ start_all() {
 }
 
 preflight() {
-  "$BENCH_REPO/scripts/doctor.sh" >/dev/null || { "$BENCH_REPO/scripts/doctor.sh"; exit 1; }
+  # the doctor's report is kept and printed only if it fails: the report of the run that failed, not of a second run
+  local report
+  if ! report="$("$BENCH_REPO/scripts/doctor.sh" 2>&1)"; then printf '%s\n' "$report" >&2; exit 1; fi
   # the ports must be free, or held by this bench: a rerun while some of its services run (after a partial setup too)
   local f ours=""
   for f in "$B"/*.pid "$V"/logs/*.pid; do
