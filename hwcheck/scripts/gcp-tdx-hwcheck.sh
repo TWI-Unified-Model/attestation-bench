@@ -35,6 +35,7 @@ if [ -n "${OMIT_RRP_ID:-}" ]; then RRP_FLAGS="-rrp-ca '' -rrp-vault ''"; RRPV=(-
 BIN="$(mktemp -d)"
 mkdir -p "$OUT"
 echo "$CODE_REV" > "$OUT/code-rev.txt"
+cat "$BENCH_HOME/est-source.txt" > "$OUT/est-source.txt" 2>/dev/null || true   # what the EST server was built from
 
 echo "== build hwrun (linux/amd64) and rrpverify"
 (cd "$HW" && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -o "$BIN/hwrun" ./cmd/hwrun)
