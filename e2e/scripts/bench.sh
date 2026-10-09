@@ -41,6 +41,9 @@ config() {
   (cd "$HERE/rrp" && GOWORK=off go build -o "$BIN/ca-gateway" ./cmd/ca-gateway && GOWORK=off go build -o "$BIN/vault-gateway" ./cmd/vault-gateway \
     && GOWORK=off go build -o "$BIN/tdx-verifier" ./cmd/tdx-verifier)
   (cd "$EST" && GOWORK=off go build -o "$BIN/estserver" ./cmd/estserver)
+  # what the EST server was built from: the bench's tested tree, or EST_REPO (a branch under review); a run keeps it
+  { echo "estserver built from $EST"; git -C "$EST" log -1 --format="  commit %H %s" 2>/dev/null || echo "  not a git checkout";
+    if [ -z "$(git -C "$EST" status --porcelain 2>/dev/null)" ]; then echo "  worktree clean"; else echo "  worktree modified"; fi; } > "$B/est-source.txt"
   (cd "$HERE/e2e" && GOWORK=off go build -o "$BIN/rup" ./cmd/rup)
   # the TDX verifier's EAR key, provisioned to the gateways as a file (its signing key is created if absent)
   "$BIN/tdx-verifier" -config "$B/config/tdx-verifier.json" -public-jwk >"$B/gateways/tdx-verifier.ear.jwk" 2>>"$B/tdx-verifier.log"

@@ -72,7 +72,7 @@ if grep -q stopped "$OUT/bench-status.txt"; then echo "!! start the bench first:
   # the sources of the EST server and of the deployed Veraison (upstream commit, our patches, tree)
   "$HERE/third_party/describe.sh" globalsign-est veraison-services go-gen-ref | grep -v -e '/src-fork ' -e '/src-der '
   # the deployed Veraison, as its binaries say they were built
-  "$HERE/e2e/scripts/veraison-build-info.sh"; } > "$OUT/code-revs.txt"
+  "$HERE/e2e/scripts/veraison-build-info.sh"; cat "$B/est-source.txt" 2>/dev/null; } > "$OUT/code-revs.txt"
 echo "$MODEL" > "$OUT/rats-model.txt"
 # the platform rule the RRPs apply (trust/platform-policy.json, as scripts/trustzone.py gave it to them)
 python3 -c "import json,sys; json.dump(json.load(open(sys.argv[1])).get('platform'), sys.stdout, indent=1)" \

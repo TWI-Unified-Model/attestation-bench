@@ -50,6 +50,7 @@ echo "== build hwrun (linux/amd64) and rrpverify (three Veraison builds)"
 shasum -a 256 "$BIN/hwrun" | awk '{print $1"  hwrun (linux/amd64)"}' > "$OUT/binaries.sha256"
 { # in-process builds: fork = src-fork, fixed = src-der, v015 = src (third_party/veraison-services/UPSTREAM)
   "$REPO/third_party/describe.sh" veraison-services go-gen-ref
+  cat "$B/est-source.txt" 2>/dev/null
   "$REPO/e2e/scripts/veraison-build-info.sh"; } > "$OUT/veraison-revs.txt"
 
 echo "== RRP mints the Freshness Handles; AMD KDS chain for VLEK (ASVK, ARK)"
