@@ -6,6 +6,10 @@ What changed, newest first. Dates are UTC.
 
 ### Added
 
+- **The threat model** ([docs/threat-model.md](docs/threat-model.md)): the CAS as the attacker, sent to the TWI SIG on
+  8 October for its meeting of 13 October: the roles and what bounds each, the integrity half with every claim
+  measured on hardware (the verifier drill closed the last one the same night), the confidentiality half as the
+  open choice with the cost of each option, the two texts for the RRP identifier, and the coverage table.
 - **The conduit's verifier drill** (`CONDUIT_ATTACK=verifier make config && make start`, then `make demo`): the EST
   server, as the attacking conduit in Passport, signs each Enrollment's Attestation Results again with a key of its
   own before the Credential Authority sees them (EST patch 0016); the Credential Authority refuses each, none of the

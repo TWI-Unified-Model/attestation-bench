@@ -124,6 +124,7 @@ What a run does **not** prove: [docs/limits.md](docs/limits.md).
 |---|---|
 | [Getting started](docs/getting-started.md) | go from a fresh clone to a passing run on hardware, step by step |
 | [The RRP identifier, both ways](docs/rrp-identifier.md) | the protocol with the RRP identifier in the binding and without it, measured on the same events (TACRA #20): what the identifier changes, what it costs, the text that follows |
+| [The threat model](docs/threat-model.md) | the Credential Acquisition System as the attacker: what each role holds and what bounds it, the integrity half measured, the confidentiality half as the open choice, the two texts for the RRP identifier, and a coverage table of what the conduit can do to each value |
 | [Concepts](docs/concepts.md) | understand TACRA's terms: Target, RRP, Evidence, binding, Freshness Kinds, Passport, Background Check |
 | [Architecture](docs/architecture.md) | see every component, port and trust boundary |
 | [Hardware](docs/hardware/README.md) | run on GCP SEV-SNP, GCP TDX and AWS SEV-SNP |
