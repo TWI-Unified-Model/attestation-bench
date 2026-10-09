@@ -148,6 +148,16 @@ CONDUIT_RUNS = [
     "20261007T210314Z-gcp-tdx-redirect-passport",
     "20261007T210728Z-aws-snp-redirect-passport",
 ]
+# the EST server built from the transfer branch for the group's repository (TWI-Unified-Model/globalsign-est: the mock
+# CA kept beside the TACRA backend), in the bench's trust zone, 9 October 2026, transfer commit 96a919cfece9: the demo
+# on the three platforms in Passport, and the substitution suite on GCP SEV-SNP; each run's EST source record
+# (code-revs.txt, veraison-revs.txt) names that tree
+G1_TRANSFER_RUNS = [
+    "20261009T004707Z-gcp-sev-snp-e2e-passport",
+    "20261009T005009Z-aws-sev-snp-e2e-passport",
+    "20261009T005217Z-gcp-tdx-e2e-passport",
+    "20261009T005500Z-gcp-sev-snp",
+]
 # the conduit's verifier drill (docs/attacks.md, section 6): the EST server, as the attacking conduit in Passport, signed
 # each Enrollment's Attestation Results again with a key of its own; 8 October 2026 at 3b6a74ba
 VERIFIER_DRILL_RUNS = [
@@ -374,6 +384,25 @@ class CommittedRuns(unittest.TestCase):
                 code, last = verdict("conduit", E2E / run, "--attack", attack)
                 self.assertEqual(code, 0, last)
                 self.assertTrue(last.endswith("; the 5 other Targets admitted"), last)
+
+    def test_the_transfer_branch_in_the_trust_zone(self):
+        for run in G1_TRANSFER_RUNS:
+            with self.subTest(run=run):
+                if "-e2e-" in run:
+                    code, last = verdict("demo", E2E / run)
+                    self.assertTrue(
+                        last.startswith("VERDICT PASS: all 10 Targets: credential acquired and admitted"), last
+                    )
+                    record = (E2E / run / "code-revs.txt").read_text()
+                else:
+                    code, last = verdict("attacks", HW / run)
+                    self.assertIn("every attack refused for its own reason", last)
+                    record = (HW / run / "veraison-revs.txt").read_text()
+                self.assertEqual(code, 0, last)
+                self.assertIn("estserver built from", record)
+                self.assertIn("globalsign-est-transfer", record)
+                self.assertIn("96a919cfece9", record)
+                self.assertIn("worktree clean", record)
 
     def test_conduit_verifier_drill(self):
         for run in VERIFIER_DRILL_RUNS:

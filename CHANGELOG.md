@@ -6,6 +6,11 @@ What changed, newest first. Dates are UTC.
 
 ### Added
 
+- **The transfer branch verified in the trust zone**: the EST server built from the branch prepared for the group's
+  repository (TWI-Unified-Model/globalsign-est: the mock CA kept beside the TACRA backend, the wire of the draft's
+  pull request) at `96a919cfece9`, run with `EST_REPO` on 9 October: the demo on the three platforms in Passport,
+  10 of 10 Targets each, and the substitution suite on GCP SEV-SNP, every attack refused; each run's EST source
+  record names that tree.
 - **The threat model** ([docs/threat-model.md](docs/threat-model.md)): the CAS as the attacker, sent to the TWI SIG on
   8 October for its meeting of 13 October: the roles and what bounds each, the integrity half with every claim
   measured on hardware (the verifier drill closed the last one the same night), the confidentiality half as the
