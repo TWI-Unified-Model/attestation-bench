@@ -5,8 +5,9 @@
 #   fork's mock CA (the TACRA backend alone, a strict configuration), 0010 the reference-vector tests in a package of
 #   their own, apart from the upstream tests' mock CA, 0011 the fork's mock TEE and mock attested CA out of the tree,
 #   0012 a session per Target for a present-epoch Handle, which every Target shares, 0013 an optional wire log of the
-#   attest-* exchanges, as they crossed the wire, 0014 the attest-* wire as proposed for the draft in October 2026: a
-#   media type for each message, no rrp_id or endorsements, the requests' syntax checked against the CDDL,
+#   attest-* exchanges, as they crossed the wire, 0014 the attest-* wire of the draft (proposed on 8 October 2026 as
+#   TheBankster/lamps-tacra-est#10, merged into the draft's master on 10 October, 4fa3883): a media type for each
+#   message, no rrp_id or endorsements, the requests' syntax checked against the CDDL,
 #   0015 the #20 variant: an RRP entry may omit the RRP identifier from the binding, as the bench's gateways can,
 #   0016 the conduit's verifier drill: in Passport the server signs the Attestation Results of an RRP entry's
 #   requests again with a key of its own (conduit_attack), for the bench to measure what refuses them.

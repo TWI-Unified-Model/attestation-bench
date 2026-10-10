@@ -6,6 +6,9 @@ What changed, newest first. Dates are UTC.
 
 ### Added
 
+- **The wire is the draft's**: the attest-* wire this bench runs (EST patch 0014, [e2e/est-attest.cddl](e2e/est-attest.cddl)) was
+  merged into draft-novak-lamps-tacra-est's master on 10 October 2026 (TheBankster/lamps-tacra-est#10, `4fa3883`); `UPSTREAM` and
+  [docs/verification.md](docs/verification.md) say so.
 - **The transfer branch verified in the trust zone**: the EST server built from the branch prepared for the group's
   repository (TWI-Unified-Model/globalsign-est: the mock CA kept beside the TACRA backend, the wire of the draft's
   pull request) at `96a919cfece9`, run with `EST_REPO` on 9 October: the demo on the three platforms in Passport,

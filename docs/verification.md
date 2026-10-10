@@ -289,9 +289,10 @@ tests judging the twelve runs and copies of them changed in one place; with the 
 redirect runs are judged as before. Before its runs, the bench with the second Vault passed `make check-mtls`, 40 of
 40, locally. `make cloud-check` found both clouds empty at the end of each batch.
 
-## The attest-* wire as proposed for the EST draft (8 October 2026)
+## The attest-* wire as proposed for the EST draft (8 October 2026; merged on 10 October)
 
-The wire format proposed for draft-novak-lamps-tacra-est (`f3cc899`): a media type for each message type, no `rrp_id`
+Merged into the draft's master on 10 October 2026 (`4fa3883`), after Mark Novak's review of that day: three remarks, on the
+media-type table and the processing steps, all answered in the text. The wire format proposed for draft-novak-lamps-tacra-est (`f3cc899`): a media type for each message type, no `rrp_id`
 in the attest-initiate response, no `endorsements` in the requests, and the messages in CDDL
 ([../e2e/est-attest.cddl](../e2e/est-attest.cddl)). The EST server (patch 0014) refuses, saying why, any request that
 is not what the CDDL defines. Before any code, the CDDL took the 360 messages of the 18 hardware runs of 7 and 8
