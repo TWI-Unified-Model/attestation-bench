@@ -11,8 +11,8 @@
 # (preplay-ca-targets.json and preplay-vault-targets.json beside this script); so are the Handles, minted by the live
 # RRPs, which present-nonce and the epochs need (preplay-handles.json).
 set -euo pipefail
-offset=$1 out=$2 tee=$3 kinds=$4 bind=${5:-}   # bind=no-rrp-id: the #20 variant, the Evidence binds no RRP identifier
-rrp=(); [ "$bind" = no-rrp-id ] && rrp=(-rrp-ca "" -rrp-vault "")
+offset=$1 out=$2 tee=$3 kinds=$4 bind=${5:-}   # the Evidence binds no RRP identifier (the decision of 6 October 2026); bind=with-rrp-id: the measured variant
+rrp=(-rrp-ca "" -rrp-vault ""); [ "$bind" = with-rrp-id ] && rrp=(-rrp-ca https://ca1.tacra.example -rrp-vault https://vault1.tacra.example)
 here="$(cd "$(dirname "$0")" && pwd)"
 mkdir -p "$out"
 only=(); [ "$kinds" = all ] || only=(-kinds "$kinds")

@@ -27,11 +27,11 @@ import (
 // Config is a gateway's configuration file.
 type Config struct {
 	RRPID string `json:"rrp_id"` // the identifier Evidence binds for this RRP
-	// OmitRRPIDInBinding, when set, makes this RRP recompute the binding value with an empty RRP identifier, as if
-	// TACRA carried none (TheBankster/rats-tacra#19 and #20: whether the RRP identifier belongs in the binding). It
-	// is an experiment to measure, on hardware, what the identifier prevents; the default (false) keeps the
-	// identifier in the binding. RRPID is still reported at attest-initiate either way.
-	OmitRRPIDInBinding bool   `json:"omit_rrp_id_in_binding,omitempty"`
+	// BindRRPIDInBinding, when set, makes this RRP recompute the binding value with its RRP identifier, as TACRA
+	// Section 4.5 read before the group's decision of 6 October 2026 to leave the identifier out
+	// (TheBankster/rats-tacra#20): the measured variant (docs/rrp-identifier.md). By default (false) the binding
+	// value carries an empty identifier. RRPID is still reported at attest-initiate either way.
+	BindRRPIDInBinding bool   `json:"bind_rrp_id_in_binding,omitempty"`
 	Listen             string `json:"listen"`
 	TLSCert            string `json:"tls_cert"`
 	TLSKey             string `json:"tls_key"`
@@ -390,9 +390,9 @@ func (g *Gateway) Check(req *SecondLeg, subject []byte) (*ear.Result, *Target, e
 		}
 		return nil, nil, refuse(http.StatusBadRequest, "freshness", err)
 	}
-	bindRRPID := g.Config.RRPID
-	if g.Config.OmitRRPIDInBinding {
-		bindRRPID = "" // #19/#20 experiment: recompute as if TACRA carried no RRP identifier
+	bindRRPID := "" // the decision of 6 October 2026 (rats-tacra#20): no RRP identifier in the binding
+	if g.Config.BindRRPIDInBinding {
+		bindRRPID = g.Config.RRPID // the measured variant: the identifier bound, as Section 4.5 read before
 	}
 	bv := platform.BindingValue(req.Handle, req.Target, bindRRPID, subject)
 	jws := req.EAR

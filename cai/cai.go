@@ -104,9 +104,11 @@ type Client struct {
 	// csrNamesHint makes the CSR name the Credential Hint instead of the
 	// Target, leaving the certificate's names to the CA's policy.
 	csrNamesHint bool
-	// omitRelyingPartyBinding makes the Evidence bind no RRP identifier (the #20 variant: TACRA as if Section 4.5
-	// carried none); the identifiers the CAI holds still name the trust anchors it checks a credential against.
-	omitRelyingPartyBinding bool
+	// bindRelyingParty makes the Evidence bind the RRP identifier the CAI holds, as TACRA Section 4.5 read before the
+	// group's decision of 6 October 2026 to leave it out (TheBankster/rats-tacra#20): the measured variant, kept for
+	// the comparison (docs/rrp-identifier.md). By default the Evidence binds none; the identifiers the CAI holds still
+	// name the trust anchors it checks a credential against.
+	bindRelyingParty bool
 	// caAnchors holds, per RRP identifier, the Credential Authority's certificates the CAI holds for Enrollment, and
 	// certMaxValidity the longest an issued certificate may remain valid (cert.go; tacra-est N15).
 	caAnchors       map[string]*x509.CertPool
@@ -118,10 +120,11 @@ type Client struct {
 // names by policy (the test bench's CA gateway does).
 func WithCSRNamingHint() Option { return func(c *Client) { c.csrNamesHint = true } }
 
-// WithoutRelyingPartyBinding makes the Evidence bind no RRP identifier, the #20 variant of TACRA (as if Section
-// 4.5 carried none). The identifiers the CAI holds per Target and mode still name the Secret Vault's and the
-// Credential Authority's trust anchors; they are left out of the binding alone.
-func WithoutRelyingPartyBinding() Option { return func(c *Client) { c.omitRelyingPartyBinding = true } }
+// WithRelyingPartyBinding makes the Evidence bind the RRP identifier the CAI holds for the Target and mode, as TACRA
+// Section 4.5 read before 6 October 2026 (TheBankster/rats-tacra#20); the bench's RRPs and EST server must bind it
+// too. Without it the Evidence binds no identifier, the group's decision; the identifiers the CAI holds still name
+// the Secret Vault's and the Credential Authority's trust anchors.
+func WithRelyingPartyBinding() Option { return func(c *Client) { c.bindRelyingParty = true } }
 
 // Option configures a Client.
 type Option func(*Client)
@@ -284,12 +287,12 @@ func (c *Client) heldRelyingParty(target string, mode Mode) (string, error) {
 	return held, nil
 }
 
-// boundRelyingParty is the identifier the Evidence binds: the one held, or none with WithoutRelyingPartyBinding.
+// boundRelyingParty is the identifier the Evidence binds: none, or the one held with WithRelyingPartyBinding.
 func (c *Client) boundRelyingParty(held string) string {
-	if c.omitRelyingPartyBinding {
-		return ""
+	if c.bindRelyingParty {
+		return held
 	}
-	return held
+	return ""
 }
 
 func (c *Client) retrieve(ctx context.Context, req AcquisitionRequest) (*Credential, error) {

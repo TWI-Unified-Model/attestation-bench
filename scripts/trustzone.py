@@ -129,7 +129,7 @@ def main():
     for r in pack["rrps"]:
         if "same_as" in r:
             rrps[r["name"]] = dict(rrps[r["same_as"]], rrp_id=r["rrp_id"], listen=r["listen"])
-    redirection_variants(pack, rrps, omit_rrp_id=a.omit_rrp_id, own_epochs=a.own_epochs, est_rrps=est_rrps)
+    redirection_variants(pack, rrps, bind_rrp_id=a.bind_rrp_id, own_epochs=a.own_epochs)
     if a.conduit_attack == "verifier":
         if a.rats_model != "passport":
             sys.exit(
@@ -203,7 +203,12 @@ def parse_args():
         default="passport",
         help="who asks the verifiers: the EST server (passport) or the gateways (background-check)",
     )
-    p.add_argument("--omit-rrp-id", action="store_true", help="the #20 variant: the RRPs bind no RRP identifier")
+    p.add_argument(
+        "--bind-rrp-id",
+        action="store_true",
+        help="the measured variant: the RRPs bind their identifier (TACRA 4.5 as read before 6 October 2026); the EST "
+        "server must bind it too, which the group's code no longer does. By default no RRP binds an identifier",
+    )
     p.add_argument(
         "--conduit-attack",
         choices=("verifier",),
@@ -313,20 +318,18 @@ def rrp_kind(pack, r):
     return by_name(pack, r["same_as"])["kind"] if "same_as" in r else r["kind"]
 
 
-def redirection_variants(pack, rrps, omit_rrp_id=False, own_epochs=False, est_rrps=None):
+def redirection_variants(pack, rrps, bind_rrp_id=False, own_epochs=False):
     """The variants of the redirection experiment (hwcheck/scripts/redirect.sh), applied to the RRPs' configurations in
-    place. omit_rrp_id: the RRPs, Credential Authorities and Secret Vaults, bind no RRP identifier, the variant #20 is
-    about. own_epochs: each copy of an RRP ("same_as", another bank) keeps an epoch marker of its own, as a gateway does
-    without an epoch file, instead of the one the deployment's RRPs share. est_rrps: the EST server's view of the RRPs
-    (its tacra.rrps), whose Passport nonce must omit the identifier too, or the Verifier's session would not match."""
+    place. bind_rrp_id: the RRPs, Credential Authorities and Secret Vaults, bind their identifier, as TACRA 4.5 read
+    before the group's decision of 6 October 2026 (rats-tacra#20); by default none does. The EST server's Passport nonce
+    must match: the group's code binds none, so the variant needs an EST tree from before 11 October 2026 (EST_REPO).
+    own_epochs: each copy of an RRP ("same_as", another bank) keeps an epoch marker of its own, as a gateway does
+    without an epoch file, instead of the one the deployment's RRPs share."""
     for r in pack["rrps"]:
-        if omit_rrp_id:
-            rrps[r["name"]]["omit_rrp_id_in_binding"] = True
+        if bind_rrp_id:
+            rrps[r["name"]]["bind_rrp_id_in_binding"] = True
         if own_epochs and "same_as" in r:
             rrps[r["name"]].pop("epoch_file", None)
-    if omit_rrp_id and est_rrps:
-        for e in est_rrps.values():
-            e["omit_rrp_id_in_binding"] = True
 
 
 def check_corim(snp, corim_path):

@@ -2,7 +2,7 @@
 # The #19/#20 conduit experiment on real hardware, through the deployed gateways. In a confidential guest, the
 # Attester produces Evidence for a Target that the honest EST server routes to ca1. The conduit (rrp-issue) then offers
 # it to ca1 and to a second Credential Authority, ca2, and we record which issues. Two passes: with the RRP identifier
-# in the binding (both CAs bind their own), and without it (OMIT_RRP_ID=1, both bind none). This measures, per
+# in the binding (both CAs bind their own), and without it (BIND_RRP_ID unset, both bind none: the default since 11 October 2026). This measures, per
 # Freshness Kind, what the RRP identifier prevents (#20). Then the conduit rewrites, one at a time, what it relays to
 # ca1 on Evidence made for ca1 (#19): a made-up Handle, the Freshness Kind, a credential type the Target does not
 # offer, another workload's Credential Hint, and the other credential type the Target offers; each outcome is recorded.
@@ -27,7 +27,7 @@
 #     replay-vault  the same on the Secret Vaults: Retrieval twice at vault1
 #
 # The guest only runs hwrun (offline); all gateway interaction is on this machine, where the bench runs. The bench runs
-# every pass in Background Check (or Passport), reconfigured between them (OMIT_RRP_ID, and OWN_EPOCHS in a variant),
+# every pass in Background Check (or Passport), reconfigured between them (BIND_RRP_ID, and OWN_EPOCHS in a variant; the pass with the identifier needs an EST server that binds it, EST_REPO from before 11 October 2026),
 # and is put back as it was however the run ends: its RATS model, the RRP identifier in the binding, one epoch marker.
 #
 # GCP_PROJECT, GCP_ZONE, AWS_REGION, AWS_AZ: where the VM goes (scripts/lib.sh). RUNS_DIR: where the run directory
@@ -83,7 +83,7 @@ RECONFIGURED=""
 restore_bench() { # the bench as it was before the experiment; nothing to do until reconfigure has run
   [ -n "$RECONFIGURED" ] || return 0
   bash "$REPO/e2e/scripts/bench.sh" stop >/dev/null 2>&1 || true
-  RATS_MODEL="$MODEL_BEFORE" OMIT_RRP_ID="" OWN_EPOCHS="" bash "$REPO/e2e/scripts/bench.sh" config >/dev/null 2>&1
+  RATS_MODEL="$MODEL_BEFORE" BIND_RRP_ID="" OWN_EPOCHS="" bash "$REPO/e2e/scripts/bench.sh" config >/dev/null 2>&1
   bash "$REPO/e2e/scripts/bench.sh" start >/dev/null 2>&1
   RECONFIGURED=""
 }
@@ -291,16 +291,16 @@ offer_rewrites() {
   done
 }
 
-reconfigure() { # $1 = "omit" or "normal"
-  local omit=""; [ "$1" = omit ] && omit=1
+reconfigure() { # $1 = "bind" (the RRPs bind their identifier: needs an EST server that binds it too, EST_REPO from before 11 October 2026) or "none"
+  local bind=""; [ "$1" = bind ] && bind=1
   RECONFIGURED=1
   bash "$REPO/e2e/scripts/bench.sh" stop >/dev/null 2>&1 || true
-  RATS_MODEL="$MODEL" OMIT_RRP_ID="$omit" OWN_EPOCHS="$OWN" bash "$REPO/e2e/scripts/bench.sh" config >/dev/null 2>&1
+  RATS_MODEL="$MODEL" BIND_RRP_ID="$bind" OWN_EPOCHS="$OWN" bash "$REPO/e2e/scripts/bench.sh" config >/dev/null 2>&1
   bash "$REPO/e2e/scripts/bench.sh" start >/dev/null 2>&1
 }
 
 echo "== bench: $MODEL, RRP identifier IN the binding (variant: $VARIANT)"
-reconfigure normal
+reconfigure bind
 vm_create
 wait_ssh || { echo "ssh never came up" >&2; exit 1; }
 guest_ssh "$PROVISION" 2>>"$OUT/run-ssh.stderr"
@@ -313,7 +313,7 @@ if [ "$VARIANT" = default ]; then
 fi
 
 echo "== bench: $MODEL, NO RRP identifier in the binding (variant: $VARIANT)"
-reconfigure omit
+reconfigure none
 make_evidence no-rrp-id ""
 case "$VARIANT" in replay|replay-vault) offer_replay no-rrp-id;; *) offer_redirect no-rrp-id;; esac
 

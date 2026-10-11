@@ -4,6 +4,17 @@ What changed, newest first. Dates are UTC.
 
 ## Unreleased: the data the group's open questions need
 
+### Changed
+
+- **No RRP identifier in the binding, by default** (11 October 2026): the group decided on 6 October to leave the identifier
+  out until the threat model is agreed (TheBankster/rats-tacra#20; Mark Novak in TWI-Unified-Model/globalsign-est#4), and the
+  EST server of the group's code binds none (EST patch 0017: an empty identifier field in the Section 4.5 layout; the
+  `omit_rrp_id_in_binding` switch gone; the mock without `server_id`). The bench follows: the CAI, the RRP gateways
+  (`bind_rrp_id_in_binding`), hwrun and rrpverify, the pre-play and the redirection experiment bind none unless
+  `BIND_RRP_ID=1` asks for the measured variant, which needs an EST tree from before 11 October. The runs of 8 October
+  without the identifier (`-no-rrp-id`) are unchanged; new runs with the identifier end in `-bind-rrp-id`
+  ([docs/rrp-identifier.md](docs/rrp-identifier.md), section 8).
+
 ### Added
 
 - **The wire is the draft's**: the attest-* wire this bench runs (EST patch 0014, [e2e/est-attest.cddl](e2e/est-attest.cddl)) was

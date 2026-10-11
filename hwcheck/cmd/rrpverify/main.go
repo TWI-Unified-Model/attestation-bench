@@ -100,7 +100,7 @@ func mint(args []string) {
 }
 
 // otherRRPCase is the substitution of the RRP identifier, which an RRP that binds none cannot refuse: that case is
-// left out when the run binds none (-rrp-ca and -rrp-vault empty, the #20 variant).
+// left out when the run binds none (-rrp-ca and -rrp-vault empty, the default since 11 October 2026: rats-tacra#20).
 const otherRRPCase = "other RRP identifier"
 
 func verify(args []string) {
@@ -109,8 +109,8 @@ func verify(args []string) {
 	handlesPath := fs.String("handles", "handles.json", "the handles this RRP minted")
 	arkPath := fs.String("ark", "", "AMD certificate chain from the KDS (PEM; the ARK is the self-signed one)")
 	target := fs.String("target", "https://db.tacra.example", "the Target this RRP answered Initiate for")
-	rrpCA := fs.String("rrp-ca", "https://ca1.tacra.example", "this Credential Authority's identifier")
-	rrpVault := fs.String("rrp-vault", "https://vault1.tacra.example", "this Secret Vault's identifier")
+	rrpCA := fs.String("rrp-ca", "", "this Credential Authority's identifier, if the run bound it (empty: none bound)")
+	rrpVault := fs.String("rrp-vault", "", "this Secret Vault's identifier, if the run bound it (empty: none bound)")
 	notBefore := fs.Int64("not-before", 0, "unix seconds: run started (RRP clock)")
 	notAfter := fs.Int64("not-after", 0, "unix seconds: run ended (RRP clock)")
 	window := fs.Int64("window", 300, "absent-timestamp acceptance window, seconds")

@@ -90,7 +90,8 @@ REPLAY_RUNS = {
     "20261008T190855Z-gcp-tdx-redirect-replay-vault": "replay-vault",
     "20261008T191151Z-gcp-tdx-redirect-passport-replay-vault": "replay-vault",
 }
-# the protocol without the RRP identifier (OMIT_RRP_ID=1 end to end: the CAI, the EST server and the RRPs), the same
+# the protocol without the RRP identifier (OMIT_RRP_ID=1 end to end at the time: the CAI, the EST server and the RRPs;
+# since 11 October 2026 the default, after the group's decision of 6 October), the same
 # events as with it, 8 October 2026: the replay variants in both passes and the Passport demos at 153eb2f; the
 # substitution attacks on GCP, the conduit's container drills and the Background Check demos at c3909630, after the
 # first attack run found that rrpverify's service path still made the RRP identifier case; the AWS attacks at

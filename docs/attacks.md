@@ -288,18 +288,24 @@ reproduces it from any committed run.
 
 ## 8. The same attacks without the RRP identifier
 
+Since 11 October 2026 the bench binds no RRP identifier by default: the group decided on 6 October to leave it out
+(TACRA issue #20) until the threat model is agreed, and the EST server of the group's repository binds none (EST patch
+0017; TWI-Unified-Model/globalsign-est#4). The runs of this section were made on 8 October with the switch of the
+time, `OMIT_RRP_ID=1`, against the then default with the identifier. The variant with the identifier is still
+measurable, as the comparison needs both sides:
+
 ```bash
-OMIT_RRP_ID=1 make config && make start           # the CAI, the EST server and the RRPs bind no identifier
-OMIT_RRP_ID=1 make demo PLATFORM=gcp-snp          # also make attacks; CONDUIT_ATTACK=… make demo; the runs end in -no-rrp-id
-make config && make start                         # back as it was
+BIND_RRP_ID=1 EST_REPO=<a tree from before 11 October> make config && make start   # the CAI and the RRPs bind the identifier
+BIND_RRP_ID=1 make demo PLATFORM=gcp-snp          # also make attacks; the runs end in -bind-rrp-id
+make config && make start                         # back to the default, no identifier
 ```
 
-TACRA issue #20 asks whether the RRP identifier belongs in the binding. The bench measures the protocol both ways
-with the same events: `OMIT_RRP_ID=1` reaches the workload's CAI (`WithoutRelyingPartyBinding`: the identifier is
+The bench measured the protocol both ways with the same events: the switch reached the workload's CAI (the identifier
 left out of the Evidence's binding; the identifiers the CAI holds still name the Vault's and the Credential
-Authority's trust anchors), the EST server (patch 0015: its Verifier session nonce in Passport is computed without
-the identifier) and the RRPs (`omit_rrp_id_in_binding`). Leaving the identifier out of TACRA is therefore a change
-to the CAS Server as well as to the text: the server's nonce has to match what the RRP recomputes.
+Authority's trust anchors), the EST server (its Verifier session nonce in Passport computed without the identifier)
+and the RRPs. Leaving the identifier out of TACRA is therefore a change to the CAS Server as well as to the text: the
+server's nonce has to match what the RRP recomputes. The EST server of the group's code now binds none, so the
+`BIND_RRP_ID=1` side needs an EST tree from before 11 October (`EST_REPO`), where the switch still exists.
 
 Runs of 8 October 2026, each as the run of its kind with the identifier (sections 1, 2 and 6 above): the replay
 variants and the Passport demos at `153eb2f`; the attacks on GCP, the drills and the Background Check demos at

@@ -19,8 +19,9 @@
 # UNAPPROVED=1 (SEV-SNP): the guest is an n2d-standard-4, whose launch (four vCPUs, four VMSAs in the measurement) is
 # not one the bench approves (trust/approved-launches.json): Veraison does not affirm it, and every Target must be
 # refused for it. A real VM, so the refusal is the hardware's measurement against the approved list.
-# OMIT_RRP_ID=1: the #20 variant, the Evidence binds no RRP identifier; the bench must be configured the same way
-# (OMIT_RRP_ID=1 e2e/scripts/bench.sh config); the run directory ends in -no-rrp-id.
+# BIND_RRP_ID=1: the measured variant, the Evidence binds the RRP identifier held (by default, since 11 October 2026,
+# it binds none: rats-tacra#20); the bench must be configured the same way (BIND_RRP_ID=1 e2e/scripts/bench.sh config)
+# and the EST server must bind it too; the run directory ends in -bind-rrp-id.
 # CONDUIT_ATTACK=seal|swap|hint|hint-group: the CAS Client is the attacker of docs/attacks.md, section 6, in the
 # Retrieval container (caapi-est -attack): seal returns a container it sealed itself, swap the Vault's container of
 # the Retrieval before, hint and hint-group ask the Vault with another Credential Hint. The run is judged by what the CAI does with
@@ -60,7 +61,7 @@ EXPECT=(--expect admitted) # what the run must show (scripts/verdict.py)
 [ -z "$OTHER_PLATFORM" ] || EXPECT=(--expect refused --reason "none of the verifiers this RRP takes for the Target")
 [ -z "$UNAPPROVED" ] || EXPECT=(--expect refused --reason "ear: not affirming: SEVSNP is")
 RUNS_DIR="${RUNS_DIR:-$B/runs}"
-OUT="$RUNS_DIR/${STAMP}-gcp-${TEE}-e2e-${MODEL}${OMIT_RRP_ID:+-no-rrp-id}${CAS_OUTSIDE:+-cas-outside}${OTHER_PLATFORM:+-other-platform}${UNAPPROVED:+-unapproved}${CONDUIT_ATTACK:+-conduit-$CONDUIT_ATTACK}"
+OUT="$RUNS_DIR/${STAMP}-gcp-${TEE}-e2e-${MODEL}${BIND_RRP_ID:+-bind-rrp-id}${CAS_OUTSIDE:+-cas-outside}${OTHER_PLATFORM:+-other-platform}${UNAPPROVED:+-unapproved}${CONDUIT_ATTACK:+-conduit-$CONDUIT_ATTACK}"
 BIN="$(mktemp -d)"
 mkdir -p "$OUT/bench-logs"
 SSH=(gcloud compute ssh "$NAME" --project="$PROJECT" --zone="$ZONE")
@@ -100,7 +101,7 @@ echo "== guest configuration (public material only)"
 # the Vault gateway takes callers with a certificate of the bench (mutual TLS): the operator's
 curl -sf --cacert "$B/tls/root.crt" --cert "$B/tls/clients/operator.crt" --key "$B/tls/clients/operator.key" https://127.0.0.1:9102/tacra/v1/origin-keys > "$BIN/origin-keys.json"
 cp "$B/tls/root.crt" "$BIN/bench-tls-root.crt"
-TEE="$TEE" B="$B" BIN="$BIN" TARGETS="${OTHER_PLATFORM:+other-platform}" OMIT_RRP_ID="${OMIT_RRP_ID:-}" python3 "$HERE/e2e/scripts/guest_config.py"
+TEE="$TEE" B="$B" BIN="$BIN" TARGETS="${OTHER_PLATFORM:+other-platform}" BIND_RRP_ID="${BIND_RRP_ID:-}" python3 "$HERE/e2e/scripts/guest_config.py"
 cp "$BIN/e2e-attester.json" "$OUT/e2e-attester.json"
 
 if [ "$TEE" = tdx ]; then

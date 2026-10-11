@@ -40,11 +40,11 @@ PAYMENTS = {  # a bank's payment run: what it is, its platform, what its verdict
 }
 E2E = re.compile(
     r"(?P<plat>gcp-sev-snp|gcp-tdx|aws-sev-snp)-e2e(?:-(?P<model>passport|background-check))?"
-    r"(?:-(?P<binding>no-rrp-id))?"  # the #20 variant: the Evidence binds no RRP identifier (OMIT_RRP_ID=1)
+    r"(?:-(?P<binding>no-rrp-id|bind-rrp-id))?"  # no-rrp-id: the runs of 8 October without the identifier; bind-rrp-id: the measured variant since 11 October
     r"(?:-(?P<scen>cas-outside|unapproved|other-platform))?"
     r"(?:-conduit-(?P<attack>seal|swap|hint|hint-group))?"  # the conduit's drills (docs/attacks.md, section 6)
 )
-ATTACKS = re.compile(r"(?P<hw>gcp-sev-snp|gcp-tdx|aws-sev-snp)(?:-(?P<binding>no-rrp-id))?")
+ATTACKS = re.compile(r"(?P<hw>gcp-sev-snp|gcp-tdx|aws-sev-snp)(?:-(?P<binding>no-rrp-id|bind-rrp-id))?")
 REDIRECT = re.compile(
     r"(?P<plat>gcp-snp|gcp-tdx|aws-snp)-redirect(?P<passport>-passport)?"
     r"(?:-(?P<variant>own-epochs|start-ca2|vault|replay-vault|replay))?"  # REDIRECT_VARIANT (hwcheck/scripts/redirect.sh)

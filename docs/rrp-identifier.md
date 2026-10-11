@@ -3,6 +3,11 @@
 8 October 2026, for [TACRA issue #20](https://github.com/TheBankster/rats-tacra/issues/20). Every number below is a
 run kept in this repository, named where it is stated; `make check` holds each of them (`scripts/tests/test_verdict.py`).
 
+**11 October 2026.** The group's decision of 6 October, to leave the identifier out until the threat model is agreed,
+is now the code: the EST server of the group's repository binds none (TWI-Unified-Model/globalsign-est#4, commit
+`7e4224c`; EST patch 0017 here), and this bench binds none by default, the CAI and the RRPs alike. `BIND_RRP_ID=1`
+reproduces the side with the identifier, against an EST tree from before 11 October (section 8).
+
 ## 1. The question
 
 Section 4.5 of TACRA binds the Evidence to the freshness element, the Target, the RRP identifier the CAI holds, and the
@@ -247,3 +252,20 @@ make config && make start                   # back as it was
 
 The hardware runs use your own cloud account and delete the VM they create ([docs/getting-started.md](getting-started.md));
 the mock reproduces the protocol logic without hardware. Reading a run: [docs/results.md](results.md).
+
+## 8. The decision and the code (11 October 2026)
+
+Mark Novak, reviewing the transfer of this backend to the group's repository (TWI-Unified-Model/globalsign-est#4, 11 October,
+02:19Z): the decision of 6 October was to drop the RRP identifier and the EST Server's identifier alike, and to look at
+adding them back after the threat model is agreed and documented. The code follows:
+
+- the EST server computes the Verifier session's nonce with an empty identifier field, the layout of Section 4.5 kept
+  (commit `7e4224c` of the transfer branch; EST patch 0017 of this bench); the per-RRP switch `omit_rrp_id_in_binding` is
+  gone, and the server's strict configuration refuses it;
+- the mock CA of the group's repository drops `server_id` from its binding digest and from the EncryptedCredentialBundle;
+- this bench binds none by default: the CAI (`cai.WithRelyingPartyBinding` is the opt-in), the RRP gateways
+  (`bind_rrp_id_in_binding`), hwrun and rrpverify (`-rrp-ca`/`-rrp-vault` empty by default), the pre-play and the
+  redirection experiment; `BIND_RRP_ID=1` is the measured variant, which needs an EST tree from before 11 October.
+
+The measurement of sections 3 to 7 stands as the comparison the decision can be read against; the runs of 11 October
+on the new default are listed in `docs/verification.md`.

@@ -64,8 +64,10 @@ func main() {
 	// targetsPath, when given, is a JSON object {freshness-kind: Target} so one run can bind each kind to the Target
 	// the bench configures for it (db-nonce is present-nonce, db-epoch present-epoch, ...); kinds it omits use -target.
 	targetsPath := flag.String("targets", "", "per-kind Targets (JSON {kind: target}); -target is the fallback")
-	rrpCA := flag.String("rrp-ca", "https://ca1.tacra.example", "RRP identifier for Enrollment")
-	rrpVault := flag.String("rrp-vault", "https://vault1.tacra.example", "RRP identifier for Retrieval")
+	// the RRP identifiers the Evidence binds: none by default (the group's decision of 6 October 2026, rats-tacra#20); given,
+	// the measured variant in which the Evidence binds them (the RRPs must bind them too)
+	rrpCA := flag.String("rrp-ca", "", "RRP identifier for Enrollment to bind (empty: bind none)")
+	rrpVault := flag.String("rrp-vault", "", "RRP identifier for Retrieval to bind (empty: bind none)")
 	// csrCN is the CSR's common name, the identity the Credential Authority is asked to certify. It has to be one the
 	// Target's policy grants the attested launch (the bench's db-* Targets grant payments.workload.tacra.example).
 	csrCN := flag.String("csr-cn", "workload.tacra.example", "the CSR's common name (the identity to certify)")

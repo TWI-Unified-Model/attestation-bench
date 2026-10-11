@@ -32,11 +32,12 @@ HW="$(cd "$(dirname "$0")/.." && pwd)"
 REPO="$(cd "$HW/.." && pwd)"
 CODE_REV="$(git -C "$REPO" rev-parse --short=12 HEAD)$(git -C "$REPO" diff --quiet HEAD -- platform cai hwcheck/cmd || echo -dirty)"
 RUNS_DIR="${RUNS_DIR:-$BENCH_HOME/runs}"
-OUT="$RUNS_DIR/${STAMP}-aws-sev-snp${OMIT_RRP_ID:+-no-rrp-id}"
-# OMIT_RRP_ID=1: the #20 variant, the guest binds no RRP identifier and rrpverify expects none (the bench's RRPs and
-# EST server must omit it too: OMIT_RRP_ID=1 e2e/scripts/bench.sh config)
-RRP_FLAGS=""; RRPV=(); PREPLAY_BIND=""
-if [ -n "${OMIT_RRP_ID:-}" ]; then RRP_FLAGS="-rrp-ca '' -rrp-vault ''"; RRPV=(-rrp-ca "" -rrp-vault ""); PREPLAY_BIND=no-rrp-id; fi
+OUT="$RUNS_DIR/${STAMP}-aws-sev-snp${BIND_RRP_ID:+-bind-rrp-id}"
+# The guest binds no RRP identifier and rrpverify expects none: the group's decision of 6 October 2026 (rats-tacra#20), the
+# default since 11 October. BIND_RRP_ID=1: the measured variant, the identifiers bound (the bench's RRPs must bind them too,
+# BIND_RRP_ID=1 e2e/scripts/bench.sh config, and so must the EST server, which the group's code no longer does).
+RRP_FLAGS="-rrp-ca '' -rrp-vault ''"; RRPV=(-rrp-ca "" -rrp-vault ""); PREPLAY_BIND=""
+if [ -n "${BIND_RRP_ID:-}" ]; then RRP_FLAGS="-rrp-ca https://ca1.tacra.example -rrp-vault https://vault1.tacra.example"; RRPV=(-rrp-ca https://ca1.tacra.example -rrp-vault https://vault1.tacra.example); PREPLAY_BIND=with-rrp-id; fi
 BIN="$(mktemp -d)"
 mkdir -p "$OUT"
 echo "$CODE_REV" > "$OUT/code-rev.txt"

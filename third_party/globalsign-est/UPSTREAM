@@ -11,8 +11,11 @@
 #   0015 the #20 variant: an RRP entry may omit the RRP identifier from the binding, as the bench's gateways can,
 #   0016 the conduit's verifier drill: in Passport the server signs the Attestation Results of an RRP entry's
 #   requests again with a key of its own (conduit_attack), for the bench to measure what refuses them.
+#   0017 no RRP identifier in the binding (an empty field in the Section 4.5 layout) and no server_id in the fork's
+#   digest or bundle: the group's decision of 6 October 2026 (rats-tacra#20), as the transfer branch's 7e4224c; the
+#   fork's constants block as it was (4175988).
 NAME=globalsign-est
 REPO=https://github.com/TWI-Unified-Model/globalsign-est.git
 BASE=04ffa468b167eb36d8b1af0e354c4af41427a02e   # sudar_feature_01, sudarsh4495, 2026-09-27
 LICENSE=MIT
-VARIANTS="src:16:57ab704b1e828473b7049fcda814b9de1c5c2c8b"
+VARIANTS="src:17:3b2cb1f71b2aaa82d1ea0e1eeed7dde17f24b361"
