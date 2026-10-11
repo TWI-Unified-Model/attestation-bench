@@ -1,33 +1,18 @@
-From 1ae3fd991be6809aaa42a2383b8fe2e58a585632 Mon Sep 17 00:00:00 2001
-From: Serhii Nikolaichuk <nikolaichuk.s.f@gmail.com>
-Date: Wed, 7 Oct 2026 10:28:33 -0500
-Subject: [PATCH] attest: the fork's mock TEE and mock attested CA out of the
- tree
+attest: the fork's mock TEE and mock attested CA out of the tree
 
-attest.go carried the proof of concept's mock TEE: its Evidence format
-(a COSE_Sign1 EAT under a mock provider key), the code that made such
-Evidence and the code that appraised it. internal/mockca/attest.go
-carried the mock Verifier, Credential Authority and Secret Vault that
-used them. Nothing else used either, and the server no longer builds the
-mock CA (0009). Both go, with the dependencies only they needed
-(veraison/eat, go-cose and theirs); the comments that spoke of the mock
-now say what the code does. internal/mockca keeps GlobalSign's mock CA
-for the upstream tests that use it; the server does not import it.
+attest.go carries the proof of concept's mock TEE: its Evidence format (a COSE_Sign1 EAT under a mock provider key),
+the code that makes such Evidence and the code that appraises it. internal/mockca/attest.go carries the mock Verifier,
+Credential Authority and Secret Vault that use them. Nothing else uses either, and this bench's server does not build
+the mock CA (0001). Both go, with the dependencies only they needed (veraison/eat, go-cose and theirs); the comments
+that spoke of the mock say what the code does. internal/mockca keeps GlobalSign's mock CA for the upstream tests that
+use it; the server does not import it.
 
-The proof of concept's container encryption (EncECDHP256,
-SealCredentialBundle) stays: it is the container type of the
-AttestationCA interface. The TACRA backend forwards the Secret Vault's
-hpke-auth container unchanged (RawRetriever).
----
- attest.go                 | 247 +--------------
- go.mod                    |   9 -
- go.sum                    |  22 --
- internal/mockca/attest.go | 637 --------------------------------------
- 4 files changed, 4 insertions(+), 911 deletions(-)
- delete mode 100644 internal/mockca/attest.go
+The proof of concept's container encryption (EncECDHP256, SealCredentialBundle) stays: it is the container type of the
+AttestationCA interface. The TACRA backend forwards the Secret Vault's hpke-auth container unchanged (RawRetriever).
+The bench's rule, not the group's: patch 0011 of the series the bench carried until 11 October 2026.
 
 diff --git a/attest.go b/attest.go
-index bfb7672..d1d6004 100644
+index b984e54..1f4eb52 100644
 --- a/attest.go
 +++ b/attest.go
 @@ -3,12 +3,9 @@ package est
@@ -56,25 +41,23 @@ index bfb7672..d1d6004 100644
  )
  
  // Freshness kinds carried in AttestationInitiateResponse.FreshnessKind.
-@@ -75,12 +68,12 @@ const (
- 	// BindingInput identifies the direct-form binding of RFC binding-input
- 	// {binding-input}: a single digest, carried in a guest-chosen Evidence
- 	// field, over the Freshness element, server_id, Target and CSR/CEKpub.
--	// It is the only method this mock Verifier accepts.
-+	// It is the only method the TACRA backend asks for (RequiredBindings).
- 	BindingInput = "binding-input"
+@@ -81,7 +74,7 @@ const (
  
  	// BindingCSRHash identifies the enrollment request's CSR hash association.
  	// Retained for documentation only: it binds Evidence to the CSR but not
--	// to server_id or Target, so this mock no longer accepts it alone.
-+	// to server_id or Target.
+-	// to the Target, so this mock no longer accepts it alone.
++	// to the Target.
  	BindingCSRHash = "csr-hash"
  
  	// BindingCEKThumbprint identifies the retrieval request's CEK association.
-@@ -93,23 +86,6 @@ const (
+@@ -94,27 +87,6 @@ const (
  // baseline the specification will ultimately mandate.
  const EncECDHP256 = "ECDH-P256+HKDF-SHA256+A256GCM"
  
+-// SigECDSAP256SHA256 is the CSK signature algorithm an attest-initiate response
+-// offers for Enrollment (acceptable_csk).
+-const SigECDSAP256SHA256 = "ecdsa-p256-sha256"
+-
 -// Mock TEE evidence identifiers. These values define the non-production EAT
 -// profile appraised by the mock Verifier.
 -const (
@@ -95,7 +78,7 @@ index bfb7672..d1d6004 100644
  // Credential item types carried inside an EncryptedCredentialBundle.
  const (
  	CredentialItemX509Cert   = "x509-cert"
-@@ -161,8 +137,7 @@ type AttestationInitiateResponse struct {
+@@ -163,8 +135,7 @@ type AttestationInitiateResponse struct {
  }
  
  // Binding declares the request-level Evidence-to-CSR or Evidence-to-CEK
@@ -105,7 +88,7 @@ index bfb7672..d1d6004 100644
  type Binding struct {
  	Method string `json:"method"`
  	Hash   string `json:"hash,omitempty"`
-@@ -226,220 +201,6 @@ type EncryptedCredentialBundle struct {
+@@ -226,220 +197,6 @@ type EncryptedCredentialBundle struct {
  	Ciphertext         []byte `json:"ciphertext"`
  }
  
@@ -140,19 +123,19 @@ index bfb7672..d1d6004 100644
 -}
 -
 -// NewMockEvidence returns a CBOR COSE_Sign1 EAT signed by the supplied mock
--// provider key. The provider retains ownership of the private key. serverID
--// and target are the values the Attester intends to bind, and subject is the
--// CSR DER (enrollment) or CEKpub SubjectPublicKeyInfo DER (retrieval); all
--// three are folded into the direct-form binding_input digest of {{binding-input}}.
+-// provider key. The provider retains ownership of the private key. target is
+-// the value the Attester intends to bind, and subject is the CSR DER
+-// (enrollment) or CEKpub SubjectPublicKeyInfo DER (retrieval); both are folded
+-// into the direct-form binding_input digest of {{binding-input}}.
 -func NewMockEvidence(
 -	signer crypto.Signer,
 -	freshnessKind string,
 -	freshnessHandle []byte,
--	serverID, target string,
+-	target string,
 -	subject []byte,
 -) ([]byte, error) {
 -	return NewMockEvidenceAt(
--		signer, freshnessKind, freshnessHandle, serverID, target, subject, time.Now(),
+-		signer, freshnessKind, freshnessHandle, target, subject, time.Now(),
 -	)
 -}
 -
@@ -164,7 +147,7 @@ index bfb7672..d1d6004 100644
 -	signer crypto.Signer,
 -	freshnessKind string,
 -	freshnessHandle []byte,
--	serverID, target string,
+-	target string,
 -	subject []byte,
 -	issuedAt time.Time,
 -) ([]byte, error) {
@@ -223,7 +206,7 @@ index bfb7672..d1d6004 100644
 -		SoftwareName:  &software,
 -		PCRs:          mockPCRs(),
 -		FreshnessKind: freshnessKind,
--		BindingDigest: BindingDigest(freshnessHandle, serverID, target, subject),
+-		BindingDigest: BindingDigest(freshnessHandle, target, subject),
 -	}
 -	if freshnessKind == FreshnessPresentNonce ||
 -		freshnessKind == FreshnessPresentEpoch ||
@@ -326,7 +309,7 @@ index bfb7672..d1d6004 100644
  // CSRHash returns the SHA-256 digest of a DER-encoded PKCS#10 CSR, for use as
  // the csr-hash Evidence-to-CSR binding.
  func CSRHash(csrDER []byte) []byte {
-@@ -722,7 +483,7 @@ func attestRetrieve(w http.ResponseWriter, r *http.Request) {
+@@ -710,7 +467,7 @@ func attestRetrieve(w http.ResponseWriter, r *http.Request) {
  // RawRetriever is implemented by an AttestationCA whose Secret Vault produces the
  // EncryptedCredentialBundle itself (for example the hpke-auth container of the
  // revised EST profile): the EST server returns that container unchanged, as a
@@ -432,10 +415,10 @@ index 89657cf..7c4729e 100644
  gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 diff --git a/internal/mockca/attest.go b/internal/mockca/attest.go
 deleted file mode 100644
-index 635c95e..0000000
+index 0fc1726..0000000
 --- a/internal/mockca/attest.go
 +++ /dev/null
-@@ -1,637 +0,0 @@
+@@ -1,642 +0,0 @@
 -/*
 -Copyright (c) 2020 GMO GlobalSign, Inc.
 -
@@ -468,6 +451,7 @@ index 635c95e..0000000
 -	"fmt"
 -	"io"
 -	"net/http"
+-	"strings"
 -	"sync"
 -	"time"
 -
@@ -484,7 +468,6 @@ index 635c95e..0000000
 -	DefaultRetrieveTarget = "RUP-workload-2"
 -
 -	attestPolicyVersion = "poc-policy-v1"
--	attestServerID      = "twi-globalsign-est"
 -	nonceLifetime       = time.Second * 300
 -	nonceSize           = 32
 -	defaultTimestampAge = 300
@@ -658,9 +641,7 @@ index 635c95e..0000000
 -
 -	resp := &est.AttestationInitiateResponse{
 -		FreshnessKind:      freshnessKind,
--		ServerID:           attestServerID,
 -		AcceptableEvidence: []string{est.MockEATProfileType},
--		RequiredBindings:   []string{est.BindingInput},
 -		Mechanism:          mechanism,
 -	}
 -
@@ -709,7 +690,7 @@ index 635c95e..0000000
 -	if mechanism == est.MechanismRetrieve {
 -		resp.AcceptableCEK = []string{est.EncECDHP256}
 -	} else {
--		resp.AcceptableCSK = []string{"ecdsa-p256-sha256"}
+-		resp.AcceptableCSK = []string{est.SigECDSAP256SHA256}
 -	}
 -
 -	return resp, nil
@@ -766,7 +747,7 @@ index 635c95e..0000000
 -
 -// verifyEvidence mocks the RATS Verifier. It validates the provider signature,
 -// PCR policy, binding to the Freshness from attest-initiate, and the direct-
--// form binding_input digest ({{binding-input}}) covering server_id, Target and
+-// form binding_input digest ({{binding-input}}) covering the Target and the
 -// subject (CSR or CEKpub), then returns Attestation Results.
 -func (ca *AttestedCA) verifyEvidence(
 -	target, credentialType, freshnessKind string,
@@ -867,9 +848,9 @@ index 635c95e..0000000
 -		}
 -	}
 -
--	// Evidence-to-Server, Evidence-to-Target and Evidence-to-CSR/CEK binding,
--	// recomputed with this CAS's own server_id rather than trusting the request.
--	expectedDigest := est.BindingDigest(handle, attestServerID, target, subject)
+-	// Evidence-to-Target and Evidence-to-CSR/CEK binding, recomputed here rather
+-	// than trusting the request; no server identity (rats-tacra#20, 6 October 2026).
+-	expectedDigest := est.BindingDigest(handle, target, subject)
 -	if !bytes.Equal(claims.BindingDigest, expectedDigest) {
 -		return nil, caError{
 -			status: http.StatusForbidden,
@@ -877,6 +858,13 @@ index 635c95e..0000000
 -		}
 -	}
 -
+-	// VerifyMockEvidence accepts the one issuer est.MockTEEProviderID, which has
+-	// no ":", and hex has none, so issuer and PCR are recoverable from Subject;
+-	// should that guarantee ever change, the construction refuses rather than
+-	// produce an ambiguous Subject.
+-	if strings.ContainsRune(claims.Issuer, ':') {
+-		return nil, caError{status: http.StatusInternalServerError, desc: "attestation failed: issuer contains ':'"}
+-	}
 -	subjectHex := hex.EncodeToString(claims.PCRs[est.MockTEEWorkloadPCR])
 -
 -	return &attestationResults{
@@ -1062,7 +1050,7 @@ index 635c95e..0000000
 -	}
 -
 -	sealed, err := est.SealCredentialBundle(
--		bundle, req.CEKPub, req.Handle, req.Profile, attestServerID, req.Target, credentialHint,
+-		bundle, req.CEKPub, req.Handle, req.Profile, req.Target, credentialHint,
 -	)
 -	if err != nil {
 -		return nil, caError{

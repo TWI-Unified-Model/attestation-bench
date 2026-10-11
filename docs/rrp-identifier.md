@@ -6,7 +6,8 @@ run kept in this repository, named where it is stated; `make check` holds each o
 **11 October 2026.** The group's decision of 6 October, to leave the identifier out until the threat model is agreed,
 is now the code, and on 11 October Mark Novak asked for it all to go: the EST server of the group's repository binds the
 freshness element, the Target and the subject and carries no RRP or server identifier anywhere (TWI-Unified-Model/globalsign-est#4,
-commit `b531556`; EST patch 0018 here), and this bench does the same, with no switch left (section 8).
+commit `b531556`, in the group's master since 18:49Z that day, which this bench builds; until then EST patch 0018 of the bench's
+series), and this bench does the same, with no switch left (section 8).
 
 ## 1. The question
 
@@ -249,7 +250,8 @@ stay in the layout: "Let's rip it all out. For now: once we have a comprehensive
 only what's needed. Keeps the code clean." The code follows:
 
 - the EST server computes the Verifier session's nonce over three length-prefixed fields, the freshness element, the Target
-  and the subject (the transfer branch's `b531556`; EST patch 0018 here); its configuration names no `rrp_id` and the server
+  and the subject (the transfer branch's `b531556`, merged into the group's master on 11 October, which the bench builds since
+  that evening; until then EST patch 0018 of its series); its configuration names no `rrp_id` and the server
   checks none against the RRP's attest-initiate answer; the per-RRP switch of the day before is gone;
 - the mock CA of the group's repository drops `server_id` from its binding digest and from the EncryptedCredentialBundle
   (`7e4224c`), and its digest is now the same octets as the backend's;

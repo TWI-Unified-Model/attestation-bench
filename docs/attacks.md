@@ -304,7 +304,8 @@ reproduces it from any committed run.
 Since 12 October 2026 the binding carries no identifier of any party: the group decided on 6 October to leave the RRP
 identifier out (TACRA issue #20) and on 11 October to rip it out of the code altogether, with the EST Server's identifier,
 until an end-to-end understanding says what to put back (Mark Novak in TWI-Unified-Model/globalsign-est#4). The EST server
-of the group's code binds the freshness element, the Target and the subject (EST patch 0018), and so does this bench: the
+of the group's code binds the freshness element, the Target and the subject (`b531556`, in the group's master since 11 October,
+which this bench builds), and so does this bench: the
 CAI, the RRP gateways, hwrun and rrpverify, the pre-play and the redirection experiment. There is no switch left; the side
 with the identifier is history, measured on 8 October against the then default, and reproducible from the code of that day
 (`2a3777a3`, `BIND_RRP_ID=1`; before it, `OMIT_RRP_ID=1` on the code of 8 October). rrpverify appraises every committed run

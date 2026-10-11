@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # The repository's unit tests: go test in every Go module of BENCH_GO_MODULES (scripts/lib.sh); in each third-party
-# component, the tests our patches add, run in the patched sources, and no others; and the Python scripts' tests
+# component, the tests our patches add and ours that upstream merged, run in the patched sources, and no others; and the
+# Python scripts' tests
 # (scripts/tests: the run verdicts, judged on the committed reference runs). Exits non-zero on any failure.
 #
 #   scripts/test.sh        (make test)
@@ -26,15 +27,29 @@ for m in $BENCH_GO_MODULES; do
     failed="$failed $m"
   fi
 done
-bench_say "our tests in the third-party sources: the test files our patches add, and no others"
+bench_say "our tests in the third-party sources: the test files our patches add, and ours that upstream merged; no others"
 for up in third_party/*/UPSTREAM; do
   c="$(basename "$(dirname "$up")")"
   src="third_party/$c/src"
   # Ours are the test files the pinned upstream commit (the sources' HEAD, third_party/fetch.sh) does not have, wherever
-  # the series puts them. Upstream's tests are not run: some of them use mocks, as the EST fork's tests use its mock CA.
+  # the series puts them, and the test files of the packages UPSTREAM names in TESTS_OURS_IN_UPSTREAM: ours, which upstream
+  # merged (the EST fork's internal/tacra, 11 October 2026). Upstream's other tests are not run: some of them use mocks, as
+  # the EST fork's tests use its mock CA.
+  TESTS_OURS_IN_UPSTREAM=""
+  # shellcheck disable=SC1090
+  . "$up"
   ours=()
   while IFS= read -r f; do
-    git -C "$src" cat-file -e "HEAD:$f" 2>/dev/null || ours+=("$f")
+    if ! git -C "$src" cat-file -e "HEAD:$f" 2>/dev/null; then
+      ours+=("$f")
+      continue
+    fi
+    for d in $TESTS_OURS_IN_UPSTREAM; do
+      if [ "$(dirname "$f")" = "$d" ]; then
+        ours+=("$f")
+        break
+      fi
+    done
   done < <(git -C "$src" ls-files -- '*_test.go')
   if [ "${#ours[@]}" -eq 0 ]; then
     printf '  ok    %-18s no tests in its patches\n' "$c"

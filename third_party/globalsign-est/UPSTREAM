@@ -1,23 +1,15 @@
-# The EST server: GlobalSign's EST (MIT) as forked by the TWI SIG, at the head of Sudar's pull request #3
-# (branch sudar_feature_01, deleted when the pull request was closed unmerged on 8 October 2026; GitHub serves the
-# commit as refs/pull/3/head), with our patches: 0001-0006 the TACRA backend and the attest-* wire format,
-#   0007 dependencies without a reached vulnerability, 0008 no tests on stand-ins, 0009 the server without the
-#   fork's mock CA (the TACRA backend alone, a strict configuration), 0010 the reference-vector tests in a package of
-#   their own, apart from the upstream tests' mock CA, 0011 the fork's mock TEE and mock attested CA out of the tree,
-#   0012 a session per Target for a present-epoch Handle, which every Target shares, 0013 an optional wire log of the
-#   attest-* exchanges, as they crossed the wire, 0014 the attest-* wire of the draft (proposed on 8 October 2026 as
-#   TheBankster/lamps-tacra-est#10, merged into the draft's master on 10 October, 4fa3883): a media type for each
-#   message, no rrp_id or endorsements, the requests' syntax checked against the CDDL,
-#   0015 the #20 variant: an RRP entry may omit the RRP identifier from the binding, as the bench's gateways can,
-#   0016 the conduit's verifier drill: in Passport the server signs the Attestation Results of an RRP entry's
-#   requests again with a key of its own (conduit_attack), for the bench to measure what refuses them.
-#   0017 no RRP identifier in the binding (an empty field in the Section 4.5 layout) and no server_id in the fork's
-#   digest or bundle: the group's decision of 6 October 2026 (rats-tacra#20), as the transfer branch's 7e4224c; the
-#   fork's constants block as it was (4175988).
-#   0018 the identifiers ripped out (Mark, 11 October 14:31Z): a three-field binding, freshness, Target, subject, and
-#   no rrp_id in the configuration or checked at attest-initiate; as the transfer branch's b531556.
+# The EST server: GlobalSign's EST (MIT) as forked by the TWI SIG, at the fork's master of 11 October 2026 (6f80871, Mark
+# Novak's merge of our pull request #4: the TACRA backend, the attest-* wire of the draft, a three-field binding without
+# identifiers, the hardware vector, the reference vectors without rrp_id). The series of 18 patches the bench carried until
+# that evening (0001-0018) is in that master and retired; the bench at 9d3e74b3 reproduces it. Our patches now, the bench's
+# rules the group's server does not need:
+#   0001 the server without the fork's mock CA: the TACRA backend alone, a strict configuration (the series' 0009),
+#   0002 the fork's mock TEE and mock attested CA out of the tree, with the dependencies only they needed (the series' 0011).
+# The tests of cmd/estserver, internal/refvectors and internal/tacra are ours, merged with the pull request: scripts/test.sh
+# runs them (TESTS_OURS_IN_UPSTREAM), with the test files the two patches add, and no other test of the tree.
 NAME=globalsign-est
 REPO=https://github.com/TWI-Unified-Model/globalsign-est.git
-BASE=04ffa468b167eb36d8b1af0e354c4af41427a02e   # sudar_feature_01, sudarsh4495, 2026-09-27
+BASE=6f8087199539d4206ad96252c08fb945d66c0f79   # master: Merge pull request #4 from TWI-Unified-Model/tacra-wire-and-backend, 2026-10-11
 LICENSE=MIT
-VARIANTS="src:18:09762d19ebc68101b4ec198fae51c0b78d981f21"
+VARIANTS="src:2:bfd8d3aa3ec6cb7076a30f2fb17ac82c216e7744"
+TESTS_OURS_IN_UPSTREAM="cmd/estserver internal/refvectors internal/tacra"

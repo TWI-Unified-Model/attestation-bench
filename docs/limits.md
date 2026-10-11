@@ -105,8 +105,9 @@ Read this page before you cite a result.
     `go.opentelemetry.io/otel` v1.39.0 to v1.45.0 (GO-2026-4394, GO-2026-6505), `golang.org/x/text` v0.37.0 to
     v0.41.0 (GO-2026-5970), and, for findings not reached, `filippo.io/edwards25519` v1.1.1, `golang.org/x/crypto`
     v0.56.0, `golang.org/x/mod` v0.40.0.
-  - The EST server, patch 0007: `github.com/go-chi/chi` v4.1.2, which no release fixes (GO-2026-4316), to
-    `github.com/go-chi/chi/v5` v5.3.2, and `golang.org/x/crypto` v0.56.0; the bench's `e2e` module follows.
+  - The EST server: `github.com/go-chi/chi` v4.1.2, which no release fixes (GO-2026-4316), to `github.com/go-chi/chi/v5`
+    v5.3.2, and `golang.org/x/crypto` v0.56.0 (the bench's patch 0007 until 11 October 2026; in the group's master since its
+    pull request #4 was merged that day); the bench's `e2e` module follows.
 
   Left, and not reached: GO-2026-5932 in `golang.org/x/crypto` (no fixed release exists) and, in Veraison,
   GO-2025-3660 in `github.com/open-policy-agent/opa` v0.68.0 (fixed in v1.4.0, a major version that changes how Rego
@@ -117,7 +118,7 @@ Read this page before you cite a result.
   (`internal/mockca`) in the EST fork, and Veraison's generated mocks (`gomock`, in four `mocks` directories). The
   bench does not run those tests, and `make test` checks that no program it builds links a package named mock, fake
   or stub. Our EST patches took the proof of concept's mock CA, mock TEE and mock attested CA out of the server and
-  its library (patches 0009 and 0011). The EST library keeps the proof of concept's container encryption (ECDH-P256,
+  its library (its patches 0001 and 0002 on the group's master; 0009 and 0011 of the series before 11 October 2026). The EST library keeps the proof of concept's container encryption (ECDH-P256,
   HKDF, AES-GCM; its own comment calls it a stand-in for HPKE) as the container type of its interface. The bench never
   uses it: its Secret Vault seals with hpke-auth, and the EST server forwards that container unchanged.
 

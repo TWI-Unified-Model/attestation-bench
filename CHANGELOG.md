@@ -6,6 +6,15 @@ What changed, newest first. Dates are UTC.
 
 ### Changed
 
+- **The bench builds the group's EST server** (11 October 2026, evening): Mark Novak merged our pull request #4 into the master of
+  TWI-Unified-Model/globalsign-est at 18:49Z (`6f80871`, a merge commit of its 22 commits: the TACRA backend, the attest-* wire of
+  the draft, the three-field binding, the hardware vector, the reference vectors without `rrp_id`). `third_party/globalsign-est`
+  pins that master now, and the series of 18 patches the bench carried, which that master contains, is retired (reproducible
+  from `9d3e74b3`). Two patches remain, the bench's rules the group's server does not need: 0001 the server without the fork's
+  mock CA (the TACRA backend alone, a strict configuration; the series' 0009) and 0002 the fork's mock TEE and mock attested CA
+  out of the tree (the series' 0011). The tested tree is `bfd8d3aa3ec6`: the group's master with these two. `make test` runs
+  our tests in the EST tree as before, the test files the patches add and, new, those of the packages UPSTREAM names as ours,
+  merged upstream (`TESTS_OURS_IN_UPSTREAM`: `cmd/estserver`, `internal/refvectors`, `internal/tacra`); the same 9 files.
 - **The identifiers ripped out** (11 October 2026): the group decided on 6 October to leave the RRP identifier out of the
   binding (TheBankster/rats-tacra#20) and Mark Novak asked on 11 October, in TWI-Unified-Model/globalsign-est#4, to rip the RRP
   identifier and the EST Server's identifier out altogether, with no empty field kept. The binding is now three length-prefixed
