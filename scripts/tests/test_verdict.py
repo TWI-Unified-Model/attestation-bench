@@ -205,6 +205,20 @@ RIPOUT_BENCH_TREE_RUNS = [
     "20261011T155003Z-aws-sev-snp-e2e-passport",
     "20261011T155209Z-gcp-tdx-e2e-passport",
 ]
+# the bench on the group's master (11 October 2026, late evening; 8a000861): TWI-Unified-Model/globalsign-est master 6f80871, Mark
+# Novak's merge of pull request #4, with the bench's two patches, tree bfd8d3aa3ec6, the tested tree; the demo on the three
+# platforms in both RATS models and the substitution suite on the three platforms, each run's record naming that tree
+G3_MASTER_RUNS = [
+    "20261011T191449Z-gcp-sev-snp-e2e-passport",
+    "20261011T191754Z-aws-sev-snp-e2e-passport",
+    "20261011T191952Z-gcp-tdx-e2e-passport",
+    "20261011T192237Z-gcp-sev-snp-e2e-background-check",
+    "20261011T192535Z-aws-sev-snp-e2e-background-check",
+    "20261011T192727Z-gcp-tdx-e2e-background-check",
+    "20261011T193017Z-gcp-sev-snp",
+    "20261011T194051Z-aws-sev-snp",
+    "20261011T194919Z-gcp-tdx",
+]
 # a host's fault, kept with its README: the guest could not read the report's auxblob (the certificate table) on one AWS
 # instance; every Target failed before the protocol began; the run above on a fresh instance came out 10 of 10
 AWS_AUXBLOB_HOST_RUN = "20261011T151431Z-aws-sev-snp-e2e-background-check"
@@ -587,6 +601,37 @@ class CommittedRuns(unittest.TestCase):
                 else:
                     self.assertIn("third_party/globalsign-est/src", record)
                     self.assertIn("+ 18 patch(es), tree 09762d19ebc6: tested tree", record)
+
+    def test_the_bench_on_the_group_s_master(self):
+        """The runs of 11 October 2026, late evening, on the group's master (6f80871, the merge of pull request #4) with the bench's
+        two patches, tree bfd8d3aa3ec6: the demo in both RATS models and the substitution suite, each run naming that tree."""
+        for run in G3_MASTER_RUNS:
+            with self.subTest(run=run):
+                if "-e2e-" in run:
+                    code, last = verdict("demo", E2E / run)
+                    self.assertTrue(
+                        last.startswith("VERDICT PASS: all 10 Targets: credential acquired and admitted"), last
+                    )
+                    record = (E2E / run / "code-revs.txt").read_text()
+                    self.assertIn(
+                        "globalsign-est/src upstream 6f8087199539 + 2 patch(es), tree bfd8d3aa3ec6: tested tree", record
+                    )
+                    cfg = json.loads((E2E / run / "e2e-attester.json").read_text())
+                    self.assertFalse(
+                        [k for k in cfg if "rrp_id" in k], "no identifier switch in the workload's configuration"
+                    )
+                else:
+                    code, last = verdict("attacks", HW / run)
+                    self.assertIn("every attack refused for its own reason", last)
+                    revs = HW / run / "veraison-revs.txt"
+                    record = (revs if revs.exists() else HW / run / "est-source.txt").read_text()
+                    cases = json.loads((HW / run / "cases.json").read_text())
+                    self.assertEqual({m["binding_layout"] for m in cases}, {"freshness-target-subject"})
+                    self.assertFalse([m for m in cases if m.get("relying_party")], "no identifier bound")
+                self.assertEqual(code, 0, last)
+                self.assertIn("estserver built from", record)
+                self.assertIn("third_party/globalsign-est/src", record)
+                self.assertIn("commit 6f8087199539d4206ad96252c08fb945d66c0f79 Merge pull request #4", record)
 
     def test_aws_auxblob_host_fault_kept(self):
         """The host's fault of 11 October, kept with its README: every Target failed before the protocol began."""

@@ -14,7 +14,9 @@ What changed, newest first. Dates are UTC.
   mock CA (the TACRA backend alone, a strict configuration; the series' 0009) and 0002 the fork's mock TEE and mock attested CA
   out of the tree (the series' 0011). The tested tree is `bfd8d3aa3ec6`: the group's master with these two. `make test` runs
   our tests in the EST tree as before, the test files the patches add and, new, those of the packages UPSTREAM names as ours,
-  merged upstream (`TESTS_OURS_IN_UPSTREAM`: `cmd/estserver`, `internal/refvectors`, `internal/tacra`); the same 9 files.
+  merged upstream (`TESTS_OURS_IN_UPSTREAM`: `cmd/estserver`, `internal/refvectors`, `internal/tacra`); the same 9 files. On the hardware, from `8a000861`: 10 of 10 Targets in each of 6 demos (the three
+  platforms, both models) and 232, 232 and 142 checks in the attacks on GCP SEV-SNP, AWS SEV-SNP and GCP TDX, every attack refused
+  for its own reason; both clouds empty after ([docs/verification.md](docs/verification.md), "The bench on the group's master").
 - **The identifiers ripped out** (11 October 2026): the group decided on 6 October to leave the RRP identifier out of the
   binding (TheBankster/rats-tacra#20) and Mark Novak asked on 11 October, in TWI-Unified-Model/globalsign-est#4, to rip the RRP
   identifier and the EST Server's identifier out altogether, with no empty field kept. The binding is now three length-prefixed

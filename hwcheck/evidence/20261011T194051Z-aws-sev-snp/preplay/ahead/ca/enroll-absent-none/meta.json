@@ -1,0 +1,13 @@
+{
+ "case": "enroll-absent-none",
+ "mode": "enroll",
+ "freshness_kind": "absent-none",
+ "target": "https://db-none.tacra.example",
+ "binding_layout": "freshness-target-subject",
+ "binding_value_hex": "77cac45098ed76721b99e1ee8ad577ecddeb0c8ecd9915f4c4afdb0338c9cbde65246640f6de7037bda3b23c34b0045735058cc4f366ac95862e94ed55d07494",
+ "evidence_ms": 8.115,
+ "token_bytes": 5963,
+ "report_sha256": "a50f07fa8d66eaa1fb346ebbd58532ec7c952e251dcc31971c4a2cc1f14c8cec",
+ "signing_key": "VLEK",
+ "chip_id_prefix": "0000000000000000"
+}

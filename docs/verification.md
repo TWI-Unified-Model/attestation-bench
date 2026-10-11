@@ -424,3 +424,34 @@ model's 3.3 and the text proposed for 4.5 and the Security Considerations on 8 O
 
 `make cloud-check` found both clouds empty at the end. Logs: the bench's working notes, `tm-logs/ripout-verify-20261011.txt`
 and `ripout-verify-20261011-rerun-aws-bc.txt`.
+
+## The bench on the group's master (11 October 2026, late evening)
+
+Mark Novak merged pull request #4 at 18:49Z (`6f80871`, a merge commit of its 22 commits). Since `8a000861` the bench's
+`third_party/globalsign-est` pins that master, with two patches, the bench's rules the group's server does not need (no mock CA,
+the TACRA backend alone and a strict configuration; the mock TEE and mock attested CA out of the tree): tree `bfd8d3aa3ec6`, the
+tested tree. The series of 18 patches the sections above name is retired; the bench at `9d3e74b3` reproduces it.
+
+`make check` at `8a000861`: every linter clean; our tests in the EST tree 18, in 9 files (the test files the patches add and
+those of `cmd/estserver`, `internal/refvectors` and `internal/tacra`, ours, merged upstream); 78 Python tests. `make test-live`
+in Passport and in Background Check: the wire format as expected; the 52 committed runs appraised again by the live verifiers,
+2490 checks as expected (the bench's working notes, `tm-logs/g3-test-live-passport-20261011.txt` and `g3-test-live-bc-20261011.txt`).
+Then, from `8a000861`, with the EST server built from that tree:
+
+| run | kind | outcome | |
+|---|---|---|---|
+| `20261011T191449Z-gcp-sev-snp-e2e-passport` | demo, Passport | 10 of 10 Targets | [run](../e2e/evidence/20261011T191449Z-gcp-sev-snp-e2e-passport) |
+| `20261011T191754Z-aws-sev-snp-e2e-passport` | demo, Passport | 10 of 10 Targets | [run](../e2e/evidence/20261011T191754Z-aws-sev-snp-e2e-passport) |
+| `20261011T191952Z-gcp-tdx-e2e-passport` | demo, Passport | 10 of 10 Targets | [run](../e2e/evidence/20261011T191952Z-gcp-tdx-e2e-passport) |
+| `20261011T192237Z-gcp-sev-snp-e2e-background-check` | demo, Background Check | 10 of 10 Targets | [run](../e2e/evidence/20261011T192237Z-gcp-sev-snp-e2e-background-check) |
+| `20261011T192535Z-aws-sev-snp-e2e-background-check` | demo, Background Check | 10 of 10 Targets | [run](../e2e/evidence/20261011T192535Z-aws-sev-snp-e2e-background-check) |
+| `20261011T192727Z-gcp-tdx-e2e-background-check` | demo, Background Check | 10 of 10 Targets | [run](../e2e/evidence/20261011T192727Z-gcp-tdx-e2e-background-check) |
+| `20261011T193017Z-gcp-sev-snp` | attacks, GCP SEV-SNP | 232 checks, every attack refused for its own reason | [run](../hwcheck/evidence/20261011T193017Z-gcp-sev-snp) |
+| `20261011T194051Z-aws-sev-snp` | attacks, AWS SEV-SNP | 232 checks, every attack refused for its own reason | [run](../hwcheck/evidence/20261011T194051Z-aws-sev-snp) |
+| `20261011T194919Z-gcp-tdx` | attacks, GCP TDX | 142 checks, every attack refused for its own reason | [run](../hwcheck/evidence/20261011T194919Z-gcp-tdx) |
+
+Each run's record names what it ran: `estserver built from …/third_party/globalsign-est/src`, commit `6f80871`; the demos'
+`code-revs.txt` adds `globalsign-est/src upstream 6f8087199539 + 2 patch(es), tree bfd8d3aa3ec6: tested tree`. The outcomes are
+those of the runs of the afternoon on the same backend (above): the group's master and the bench's tree of the afternoon differ
+only in the mock the bench leaves out and in two tests. `make cloud-check` found both clouds empty at the end. Log:
+`tm-logs/g3-verify-20261011.txt`.

@@ -1,0 +1,11 @@
+enroll-present-nonce           43.4 ms    4970 B  TDX quote 
+retrieve-present-nonce         41.1 ms    4970 B  TDX quote 
+enroll-present-epoch           41.0 ms    4970 B  TDX quote 
+retrieve-present-epoch         40.8 ms    4970 B  TDX quote 
+enroll-absent-epoch            40.7 ms    4970 B  TDX quote 
+retrieve-absent-epoch          40.6 ms    4970 B  TDX quote 
+enroll-absent-timestamp        40.6 ms    4970 B  TDX quote 
+retrieve-absent-timestamp      40.6 ms    4970 B  TDX quote 
+enroll-absent-none             40.5 ms    4970 B  TDX quote 
+retrieve-absent-none           40.6 ms    4970 B  TDX quote 
+burst of 30: min 39.0 ms, median 39.4 ms, p95 40.6 ms, max 41.7 ms

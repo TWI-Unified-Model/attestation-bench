@@ -1,0 +1,13 @@
+10 of 10 Targets: credential acquired and admitted by the relying party
+ok  https://db-nonce.tacra.example         x509       1258.5 ms 200
+ok  https://db-epoch.tacra.example         x509        587.2 ms 200
+ok  https://db-lepoch.tacra.example        x509        550.5 ms 200
+ok  https://db-time.tacra.example          x509        545.4 ms 200
+ok  https://db-none.tacra.example          x509        539.1 ms 200
+ok  https://ledger-nonce.tacra.example     api-key     550.0 ms 200
+ok  https://ledger-epoch.tacra.example     api-key     542.5 ms 200
+ok  https://ledger-lepoch.tacra.example    api-key     535.1 ms 200
+ok  https://ledger-time.tacra.example      api-key     562.9 ms 200
+ok  https://ledger-none.tacra.example      api-key     574.2 ms 200
+guest minus RRP: +1.121 s, within 1.270 s
+VERDICT PASS: all 10 Targets: credential acquired and admitted by the relying party
