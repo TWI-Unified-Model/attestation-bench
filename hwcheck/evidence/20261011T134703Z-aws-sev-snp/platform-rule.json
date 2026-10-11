@@ -1,0 +1,56 @@
+{
+ "sevsnp": {
+  "require_machine_identity": false,
+  "allowed_chip_ids": [],
+  "allowed_products": [
+   "Milan",
+   "Genoa",
+   "Turin"
+  ],
+  "tcb_floors": {
+   "Milan": {
+    "bl": 4,
+    "snp": 29,
+    "ucode": 222
+   },
+   "Genoa": {
+    "snp": 28,
+    "ucode": 86
+   },
+   "Turin": {
+    "snp": 5,
+    "ucode": 81
+   }
+  },
+  "check_committed_tcb": true,
+  "smt": "allow-with-microcode-floor",
+  "required_mitigation_bits": {
+   "Milan": {
+    "1": "AMD-SB-3020 (CVE-2025-0033)",
+    "4": "AMD-SB-3034 (CVE-2025-54510)"
+   },
+   "Genoa": {
+    "1": "AMD-SB-3020 (CVE-2025-0033)"
+   },
+   "Turin": {
+    "0": "AMD-SB-3020 (CVE-2025-0033)"
+   }
+  },
+  "required_platform_info_bits": {
+   "Milan": {
+    "5": "AMD-SB-3015 (BadRAM, CVE-2024-21944): ALIAS_CHECK_COMPLETE"
+   },
+   "Genoa": {
+    "5": "AMD-SB-3015 (BadRAM, CVE-2024-21944): ALIAS_CHECK_COMPLETE"
+   }
+  },
+  "mitigation_waivers": {
+   "Milan": {
+    "4": "admitted without bit 4, AMD-SB-3034"
+   }
+  }
+ },
+ "tdx": {
+  "td_attributes_refused": "0x2000fff0"
+ }
+}

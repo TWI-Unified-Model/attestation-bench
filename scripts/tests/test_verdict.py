@@ -159,6 +159,27 @@ G1_TRANSFER_RUNS = [
     "20261009T005217Z-gcp-tdx-e2e-passport",
     "20261009T005500Z-gcp-sev-snp",
 ]
+# no RRP identifier in the binding, the default since 11 October 2026 (the group's decision of 6 October, rats-tacra#20): the
+# EST server built from the transfer branch at 7e4224ce421d (no identifier, no server_id) in the trust zone on the new default,
+# the demo on the three platforms in both RATS models and the substitution suite on the three platforms; then the bench's own
+# tree (patch 0017, tree 3b2cb1f71b2a, the tested tree), the demo in Passport on the three platforms. Each run's EST source
+# record names its tree; the workload's configuration binds no identifier; the attack runs' cases bound none
+NO_ID_DEFAULT_RUNS = [
+    "20261011T132003Z-gcp-sev-snp-e2e-passport",
+    "20261011T132258Z-aws-sev-snp-e2e-passport",
+    "20261011T132505Z-gcp-tdx-e2e-passport",
+    "20261011T132808Z-gcp-sev-snp-e2e-background-check",
+    "20261011T133105Z-aws-sev-snp-e2e-background-check",
+    "20261011T133326Z-gcp-tdx-e2e-background-check",
+    "20261011T133625Z-gcp-sev-snp",
+    "20261011T134703Z-aws-sev-snp",
+    "20261011T135526Z-gcp-tdx",
+]
+NO_ID_BENCH_TREE_RUNS = [
+    "20261011T140418Z-gcp-sev-snp-e2e-passport",
+    "20261011T140722Z-aws-sev-snp-e2e-passport",
+    "20261011T140930Z-gcp-tdx-e2e-passport",
+]
 # the conduit's verifier drill (docs/attacks.md, section 6): the EST server, as the attacking conduit in Passport, signed
 # each Enrollment's Attestation Results again with a key of its own; 8 October 2026 at 3b6a74ba
 VERIFIER_DRILL_RUNS = [
@@ -404,6 +425,36 @@ class CommittedRuns(unittest.TestCase):
                 self.assertIn("globalsign-est-transfer", record)
                 self.assertIn("96a919cfece9", record)
                 self.assertIn("worktree clean", record)
+
+    def test_no_rrp_identifier_is_the_default(self):
+        """The runs of 11 October 2026 on the new default: no identifier bound anywhere, the group's EST tree and the bench's own."""
+        for run in NO_ID_DEFAULT_RUNS + NO_ID_BENCH_TREE_RUNS:
+            with self.subTest(run=run):
+                if "-e2e-" in run:
+                    code, last = verdict("demo", E2E / run)
+                    self.assertTrue(
+                        last.startswith("VERDICT PASS: all 10 Targets: credential acquired and admitted"), last
+                    )
+                    record = (E2E / run / "code-revs.txt").read_text()
+                    cfg = json.loads((E2E / run / "e2e-attester.json").read_text())
+                    self.assertFalse(cfg.get("bind_rrp_id", False), "the workload binds no RRP identifier")
+                    self.assertNotIn("omit_rrp_id_binding", cfg, "the switch of 8 October is gone")
+                else:
+                    code, last = verdict("attacks", HW / run)
+                    self.assertIn("every attack refused for its own reason", last)
+                    revs = HW / run / "veraison-revs.txt"
+                    record = (revs if revs.exists() else HW / run / "est-source.txt").read_text()
+                    cases = json.loads((HW / run / "cases.json").read_text())
+                    self.assertEqual({m["relying_party"] for m in cases}, {""}, "every case bound no identifier")
+                self.assertEqual(code, 0, last)
+                self.assertIn("estserver built from", record)
+                if run in NO_ID_DEFAULT_RUNS:
+                    self.assertIn("globalsign-est-transfer", record)
+                    self.assertIn("7e4224ce421d", record)
+                    self.assertIn("worktree clean", record)
+                else:
+                    self.assertIn("third_party/globalsign-est/src", record)
+                    self.assertIn("+ 17 patch(es), tree 3b2cb1f71b2a: tested tree", record)
 
     def test_conduit_verifier_drill(self):
         for run in VERIFIER_DRILL_RUNS:

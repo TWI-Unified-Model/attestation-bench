@@ -331,3 +331,38 @@ gets each from a local port nothing listens on.
 | `make test-live` with the new runs | `bee2ae9` | the EST wire format: 25 checks as expected, the 415 for Evidence of a format not accepted among them, after which the same Handle reaches the RRP; 40 runs appraised again, 2000 checks |
 
 `make cloud-check` found both clouds empty at the end of each batch.
+
+## No RRP identifier, the default (11 October 2026)
+
+The group decided on 6 October to leave the RRP identifier out of the binding until the threat model is agreed
+(TheBankster/rats-tacra#20; Mark Novak in TWI-Unified-Model/globalsign-est#4, 11 October). The code follows: the EST server
+of the group's code computes the binding with an empty identifier field and carries no server_id (the transfer branch's
+`7e4224c`; EST patch 0017 here), and this bench binds none by default ([rrp-identifier.md](rrp-identifier.md), section 8).
+Run the same day, each with its EST source recorded (`code-revs.txt`, `veraison-revs.txt` or `est-source.txt`):
+
+**The group's tree, `7e4224c`, in the trust zone.**
+
+| run | kind | outcome | |
+|---|---|---|---|
+| `20261011T132003Z-gcp-sev-snp-e2e-passport` | demo, Passport | 10 of 10 Targets | [run](../e2e/evidence/20261011T132003Z-gcp-sev-snp-e2e-passport) |
+| `20261011T132258Z-aws-sev-snp-e2e-passport` | demo, Passport | 10 of 10 Targets | [run](../e2e/evidence/20261011T132258Z-aws-sev-snp-e2e-passport) |
+| `20261011T132505Z-gcp-tdx-e2e-passport` | demo, Passport | 10 of 10 Targets | [run](../e2e/evidence/20261011T132505Z-gcp-tdx-e2e-passport) |
+| `20261011T132808Z-gcp-sev-snp-e2e-background-check` | demo, Background Check | 10 of 10 Targets | [run](../e2e/evidence/20261011T132808Z-gcp-sev-snp-e2e-background-check) |
+| `20261011T133105Z-aws-sev-snp-e2e-background-check` | demo, Background Check | 10 of 10 Targets | [run](../e2e/evidence/20261011T133105Z-aws-sev-snp-e2e-background-check) |
+| `20261011T133326Z-gcp-tdx-e2e-background-check` | demo, Background Check | 10 of 10 Targets | [run](../e2e/evidence/20261011T133326Z-gcp-tdx-e2e-background-check) |
+| `20261011T133625Z-gcp-sev-snp` | attacks | 232 checks | [run](../hwcheck/evidence/20261011T133625Z-gcp-sev-snp) |
+| `20261011T134703Z-aws-sev-snp` | attacks | 232 checks | [run](../hwcheck/evidence/20261011T134703Z-aws-sev-snp) |
+| `20261011T135526Z-gcp-tdx` | attacks | 142 checks | [run](../hwcheck/evidence/20261011T135526Z-gcp-tdx) |
+
+The attack suites count 232 and 142 checks, not 262 and 162: the "other RRP identifier" substitution is left out when no
+identifier is bound, as it would be the honest case again (docs/attacks.md, section 8).
+
+**The bench's own tree, patch 0017 (tree `3b2cb1f71b2a`, the tested tree).**
+
+| run | kind | outcome | |
+|---|---|---|---|
+| `20261011T140418Z-gcp-sev-snp-e2e-passport` | demo, Passport | 10 of 10 Targets | [run](../e2e/evidence/20261011T140418Z-gcp-sev-snp-e2e-passport) |
+| `20261011T140722Z-aws-sev-snp-e2e-passport` | demo, Passport | 10 of 10 Targets | [run](../e2e/evidence/20261011T140722Z-aws-sev-snp-e2e-passport) |
+| `20261011T140930Z-gcp-tdx-e2e-passport` | demo, Passport | 10 of 10 Targets | [run](../e2e/evidence/20261011T140930Z-gcp-tdx-e2e-passport) |
+
+`make cloud-check` found both clouds empty at the end. Log: the bench's working notes, `tm-logs/drop-ids-verify-20261011.txt`.

@@ -1,0 +1,276 @@
+{
+ "made": {
+  "not_before": 1791727013,
+  "not_after": 1791727021
+ },
+ "guest_clock": {
+  "ahead": "the time service stopped: chrony; the clock set at 1791727016 (guest), to 1791727316, by 300 s\nthe clock set back at 1791727316 (guest), to 1791727016; the time service started again: chrony\n",
+  "behind": "the time service stopped: chrony; the clock set at 1791727016 (guest), to 1791726716, by -300 s\nthe clock set back at 1791726716 (guest), to 1791727016; the time service started again: chrony\n"
+ },
+ "results": [
+  {
+   "set": "ahead",
+   "target": "https://db-lepoch.tacra.example",
+   "rrp": "ca-gateway",
+   "mode": "enroll",
+   "kind": "absent-epoch",
+   "case": "enroll-absent-epoch",
+   "at_once": {
+    "at": 1791727050.16,
+    "status": 200,
+    "answer": "MIICtAYJKoZIhvcNAQcCoIICpTCCAqECAQExADALBgkqhkiG9w0BBwGgggKHMIICgzCCAimgAwIB\r\nAgIRAJlS2/RykcJ9XiL3Btj10G4wCgYIKoZIzj0EAwIwQjEXMBUGA1UEChMOVEFDUkEgYmVuY2gg\r\nQ0ExJzAlBgNVBAMTHlRBQ1JBIGJlbmNoIENBIEludGVybWVkaWF0ZSBDQTAeFw0yNjEwMTExMzU2\r\nMzFaFw0yNjEwMTExNDU3MzFaMCoxKDAmBgNVBAMTH3BheW1lbnRzLndvcmtsb2FkLn"
+   },
+   "rrp_log": [
+    "2026/10/11 08:57:31 enrolled: target=https://db-lepoch.tacra.example kind=absent-epoch hint=\"payments.workload.tacra.example\" caller=[est-server.bench.tacra.example]"
+   ]
+  },
+  {
+   "set": "ahead",
+   "target": "https://db-none.tacra.example",
+   "rrp": "ca-gateway",
+   "mode": "enroll",
+   "kind": "absent-none",
+   "case": "enroll-absent-none",
+   "at_once": {
+    "at": 1791727051.816,
+    "status": 200,
+    "answer": "MIICtAYJKoZIhvcNAQcCoIICpTCCAqECAQExADALBgkqhkiG9w0BBwGgggKHMIICgzCCAiigAwIB\r\nAgIQFkH16AGLS8U0vWpPiWNlBzAKBggqhkjOPQQDAjBCMRcwFQYDVQQKEw5UQUNSQSBiZW5jaCBD\r\nQTEnMCUGA1UEAxMeVEFDUkEgYmVuY2ggQ0EgSW50ZXJtZWRpYXRlIENBMB4XDTI2MTAxMTEzNTYz\r\nMVoXDTI2MTAxMTE0NTczMVowKjEoMCYGA1UEAxMfcGF5bWVudHMud29ya2xvYWQudG"
+   },
+   "rrp_log": [
+    "2026/10/11 08:57:31 enrolled: target=https://db-none.tacra.example kind=absent-none hint=\"payments.workload.tacra.example\" caller=[est-server.bench.tacra.example]"
+   ]
+  },
+  {
+   "set": "ahead",
+   "target": "https://db-time.tacra.example",
+   "rrp": "ca-gateway",
+   "mode": "enroll",
+   "kind": "absent-timestamp",
+   "case": "enroll-absent-timestamp",
+   "timestamp": 1791727316,
+   "max_age_s": 120,
+   "clock_skew_s": 5,
+   "at_once": {
+    "at": 1791727051.826,
+    "status": 409,
+    "answer": "409 RRP ca: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T14:01:56Z outside [now-2m0s, now+5s]"
+   },
+   "opened": {
+    "at": 1791727313.001,
+    "status": 200,
+    "answer": "MIICswYJKoZIhvcNAQcCoIICpDCCAqACAQExADALBgkqhkiG9w0BBwGgggKGMIICgjCCAimgAwIB\r\nAgIRAOOosMTkoZbW9QNRetlFDikwCgYIKoZIzj0EAwIwQjEXMBUGA1UEChMOVEFDUkEgYmVuY2gg\r\nQ0ExJzAlBgNVBAMTHlRBQ1JBIGJlbmNoIENBIEludGVybWVkaWF0ZSBDQTAeFw0yNjEwMTExNDAw\r\nNTNaFw0yNjEwMTExNTAxNTNaMCoxKDAmBgNVBAMTH3BheW1lbnRzLndvcmtsb2FkLn"
+   },
+   "before_close": {
+    "at": 1791727434.009,
+    "status": 200,
+    "answer": "MIICswYJKoZIhvcNAQcCoIICpDCCAqACAQExADALBgkqhkiG9w0BBwGgggKGMIICgjCCAiigAwIB\r\nAgIQdWbkC7AOYgFgMuT+Hs1EUzAKBggqhkjOPQQDAjBCMRcwFQYDVQQKEw5UQUNSQSBiZW5jaCBD\r\nQTEnMCUGA1UEAxMeVEFDUkEgYmVuY2ggQ0EgSW50ZXJtZWRpYXRlIENBMB4XDTI2MTAxMTE0MDI1\r\nNFoXDTI2MTAxMTE1MDM1NFowKjEoMCYGA1UEAxMfcGF5bWVudHMud29ya2xvYWQudG"
+   },
+   "after_close": {
+    "at": 1791727438.01,
+    "status": 409,
+    "answer": "409 RRP ca: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T14:01:56Z outside [now-2m0s, now+5s]"
+   },
+   "rrp_log": [
+    "2026/10/11 08:57:31 enroll refused: target=https://db-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T14:01:56Z outside [now-2m0s, now+5s]",
+    "2026/10/11 08:57:31 enroll refused: target=https://db-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T13:51:56Z outside [now-2m0s, now+5s]",
+    "2026/10/11 09:01:53 enrolled: target=https://db-time.tacra.example kind=absent-timestamp hint=\"payments.workload.tacra.example\" caller=[est-server.bench.tacra.example]",
+    "2026/10/11 09:03:54 enrolled: target=https://db-time.tacra.example kind=absent-timestamp hint=\"payments.workload.tacra.example\" caller=[est-server.bench.tacra.example]",
+    "2026/10/11 09:03:58 enroll refused: target=https://db-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T14:01:56Z outside [now-2m0s, now+5s]",
+    "2026/10/11 09:03:58 enroll refused: target=https://db-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T13:51:56Z outside [now-2m0s, now+5s]"
+   ]
+  },
+  {
+   "set": "ahead",
+   "target": "https://db-epoch.tacra.example",
+   "rrp": "ca-gateway",
+   "mode": "enroll",
+   "kind": "present-epoch",
+   "case": "enroll-present-epoch",
+   "at_once": {
+    "at": 1791727051.832,
+    "status": 200,
+    "answer": "MIICtAYJKoZIhvcNAQcCoIICpTCCAqECAQExADALBgkqhkiG9w0BBwGgggKHMIICgzCCAimgAwIB\r\nAgIRAIZZYQD8t08AFKBsclKyqaIwCgYIKoZIzj0EAwIwQjEXMBUGA1UEChMOVEFDUkEgYmVuY2gg\r\nQ0ExJzAlBgNVBAMTHlRBQ1JBIGJlbmNoIENBIEludGVybWVkaWF0ZSBDQTAeFw0yNjEwMTExMzU2\r\nMzFaFw0yNjEwMTExNDU3MzFaMCoxKDAmBgNVBAMTH3BheW1lbnRzLndvcmtsb2FkLn"
+   },
+   "rrp_log": [
+    "2026/10/11 08:57:31 enrolled: target=https://db-epoch.tacra.example kind=present-epoch hint=\"payments.workload.tacra.example\" caller=[est-server.bench.tacra.example]"
+   ]
+  },
+  {
+   "set": "ahead",
+   "target": "https://db-nonce.tacra.example",
+   "rrp": "ca-gateway",
+   "mode": "enroll",
+   "kind": "present-nonce",
+   "case": "enroll-present-nonce",
+   "at_once": {
+    "at": 1791727051.839,
+    "status": 200,
+    "answer": "MIICtAYJKoZIhvcNAQcCoIICpTCCAqECAQExADALBgkqhkiG9w0BBwGgggKHMIICgzCCAimgAwIB\r\nAgIRAJrhCwwuWeFCdxTtEvFjzZwwCgYIKoZIzj0EAwIwQjEXMBUGA1UEChMOVEFDUkEgYmVuY2gg\r\nQ0ExJzAlBgNVBAMTHlRBQ1JBIGJlbmNoIENBIEludGVybWVkaWF0ZSBDQTAeFw0yNjEwMTExMzU2\r\nMzFaFw0yNjEwMTExNDU3MzFaMCoxKDAmBgNVBAMTH3BheW1lbnRzLndvcmtsb2FkLn"
+   },
+   "rrp_log": [
+    "2026/10/11 08:57:31 enrolled: target=https://db-nonce.tacra.example kind=present-nonce hint=\"payments.workload.tacra.example\" caller=[est-server.bench.tacra.example]"
+   ]
+  },
+  {
+   "set": "ahead",
+   "target": "https://ledger-lepoch.tacra.example",
+   "rrp": "vault-gateway",
+   "mode": "retrieve",
+   "kind": "absent-epoch",
+   "case": "retrieve-absent-epoch",
+   "at_once": {
+    "at": 1791727051.845,
+    "status": 200,
+    "answer": "{\"container\":\"hpke-base-signed\",\"suite\":{\"kem\":\"MLKEM768-P256\",\"kdf\":\"HKDF-SHA256\",\"aead\":\"AES-256-GCM\",\"sig\":\"ECDSA-P256-SHA256\"},\"enc\":\"wgzM6BZnIeRw54Dcqb6BpAcxDJp_PozkFO4UyTig_Qf1ODKRqCEHsxOCoNbW6BN8MABP9jd1SR7E9d6NSqQgackrdd3H6N1QX4Iukq9cyMmwS_gqp9hMQVMsfELsurxqnNjgPd1WtBFwQxybRmcN3Xfh87KAIpKNLc"
+   },
+   "rrp_log": [
+    "2026/10/11 08:57:31 released: target=https://ledger-lepoch.tacra.example kind=absent-epoch group=83fdb961ce365fd1 container=hpke-base-signed kem=MLKEM768-P256 caller=[est-server.bench.tacra.example]"
+   ]
+  },
+  {
+   "set": "ahead",
+   "target": "https://ledger-none.tacra.example",
+   "rrp": "vault-gateway",
+   "mode": "retrieve",
+   "kind": "absent-none",
+   "case": "retrieve-absent-none",
+   "at_once": {
+    "at": 1791727051.851,
+    "status": 200,
+    "answer": "{\"container\":\"hpke-base-signed\",\"suite\":{\"kem\":\"MLKEM768-P256\",\"kdf\":\"HKDF-SHA256\",\"aead\":\"AES-256-GCM\",\"sig\":\"ECDSA-P256-SHA256\"},\"enc\":\"fmRlHYf_EE4-xV0CzeXPmtgsgaUUlsJFWlbKlcNiuYJBXC_Dkkr3Z9kJhO0Kdy6LCc6N_AyUuwb5RvOZlZEGRq0wkHGWq8T7uLr4IcVTzY86BKJoXkk5Sjdk1WCNOP9isCeHF3ci-TDjfGI4dbwqGNPaJWg_-5NPo3"
+   },
+   "rrp_log": [
+    "2026/10/11 08:57:31 released: target=https://ledger-none.tacra.example kind=absent-none group=6a0f86cea156cd8e container=hpke-base-signed kem=MLKEM768-P256 caller=[est-server.bench.tacra.example]"
+   ]
+  },
+  {
+   "set": "ahead",
+   "target": "https://ledger-time.tacra.example",
+   "rrp": "vault-gateway",
+   "mode": "retrieve",
+   "kind": "absent-timestamp",
+   "case": "retrieve-absent-timestamp",
+   "timestamp": 1791727316,
+   "max_age_s": 120,
+   "clock_skew_s": 5,
+   "at_once": {
+    "at": 1791727051.856,
+    "status": 409,
+    "answer": "409 RRP vault: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T14:01:56Z outside [now-2m0s, now+5s]"
+   },
+   "opened": {
+    "at": 1791727313.022,
+    "status": 200,
+    "answer": "{\"container\":\"hpke-base-signed\",\"suite\":{\"kem\":\"MLKEM768-P256\",\"kdf\":\"HKDF-SHA256\",\"aead\":\"AES-256-GCM\",\"sig\":\"ECDSA-P256-SHA256\"},\"enc\":\"A_02ArZQJXI2-H3Vt23aa4hwTXrVRdwd5VMWYc2qIMhYnMnV7BlKrmSAeQdcgNO0Avv03lKmPjcOIyukw0VgiaKRCQgY3Mb4KuSyjRX7LJswjiLeKobunlQEBFhbizFcUoZn8DWjkDntHdtBHTzyuSZFcCQiW8o6hb"
+   },
+   "before_close": {
+    "at": 1791727434.034,
+    "status": 200,
+    "answer": "{\"container\":\"hpke-base-signed\",\"suite\":{\"kem\":\"MLKEM768-P256\",\"kdf\":\"HKDF-SHA256\",\"aead\":\"AES-256-GCM\",\"sig\":\"ECDSA-P256-SHA256\"},\"enc\":\"8z08FikPiicSlapALPv_XcYUQ_adScEVpsAttKtCBb5tOUkMxJXXx9xRViOldyYS6JaitzhuLJHa_NxTXXig13EVYM7mUmYaQ2bOJr6Uw99zuRWzBQ4rcXWcEW8JrLFpkC_VoHCUfGfpTgCeBeKMwB7AssRGLs3W3c"
+   },
+   "after_close": {
+    "at": 1791727438.026,
+    "status": 409,
+    "answer": "409 RRP vault: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T14:01:56Z outside [now-2m0s, now+5s]"
+   },
+   "rrp_log": [
+    "2026/10/11 08:57:31 retrieve refused: target=https://ledger-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T14:01:56Z outside [now-2m0s, now+5s]",
+    "2026/10/11 08:57:31 retrieve refused: target=https://ledger-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T13:51:56Z outside [now-2m0s, now+5s]",
+    "2026/10/11 09:01:53 released: target=https://ledger-time.tacra.example kind=absent-timestamp group=b15eb9c4c1f4320d container=hpke-base-signed kem=MLKEM768-P256 caller=[est-server.bench.tacra.example]",
+    "2026/10/11 09:03:54 released: target=https://ledger-time.tacra.example kind=absent-timestamp group=b15eb9c4c1f4320d container=hpke-base-signed kem=MLKEM768-P256 caller=[est-server.bench.tacra.example]",
+    "2026/10/11 09:03:58 retrieve refused: target=https://ledger-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T14:01:56Z outside [now-2m0s, now+5s]",
+    "2026/10/11 09:03:58 retrieve refused: target=https://ledger-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T13:51:56Z outside [now-2m0s, now+5s]"
+   ]
+  },
+  {
+   "set": "ahead",
+   "target": "https://ledger-epoch.tacra.example",
+   "rrp": "vault-gateway",
+   "mode": "retrieve",
+   "kind": "present-epoch",
+   "case": "retrieve-present-epoch",
+   "at_once": {
+    "at": 1791727051.86,
+    "status": 200,
+    "answer": "{\"container\":\"hpke-base-signed\",\"suite\":{\"kem\":\"MLKEM768-P256\",\"kdf\":\"HKDF-SHA256\",\"aead\":\"AES-256-GCM\",\"sig\":\"ECDSA-P256-SHA256\"},\"enc\":\"-4y8-ctJYp950T7V3oqdq21FqsxoC4el8xZIed48PYlP4O8hVx2WrCQgyVG0B8_MJ-0826205OEU1xaJ7J9emVeyx106wZ3knLhQAPMgIrBg_8GyzSk4YpdC84Jzf4WHxo7iCRwEtdl-9DvvGKaxUrQWjmJ-arvr3a"
+   },
+   "rrp_log": [
+    "2026/10/11 08:57:31 released: target=https://ledger-epoch.tacra.example kind=present-epoch group=30273b1b28b9ca75 container=hpke-base-signed kem=MLKEM768-P256 caller=[est-server.bench.tacra.example]"
+   ]
+  },
+  {
+   "set": "ahead",
+   "target": "https://ledger-nonce.tacra.example",
+   "rrp": "vault-gateway",
+   "mode": "retrieve",
+   "kind": "present-nonce",
+   "case": "retrieve-present-nonce",
+   "at_once": {
+    "at": 1791727051.865,
+    "status": 200,
+    "answer": "{\"container\":\"hpke-base-signed\",\"suite\":{\"kem\":\"MLKEM768-P256\",\"kdf\":\"HKDF-SHA256\",\"aead\":\"AES-256-GCM\",\"sig\":\"ECDSA-P256-SHA256\"},\"enc\":\"1Nk4kvUj4rxFD4zla9yThzEL79xaHCEasHKZpD-94a_AX50KySKpkpn6xFCkgbPOe1YShEilN3r-zcIoCJiPJKGVB6-dfGGZSldES8C_nFX1jqA7bKOiJJ9iyrojK7QDRmHzo7bh-1s7kPrKGhtNhoL2-NdjTqr1vw"
+   },
+   "rrp_log": [
+    "2026/10/11 08:57:31 released: target=https://ledger-nonce.tacra.example kind=present-nonce group=53c3043b1d35b933 container=hpke-base-signed kem=MLKEM768-P256 caller=[est-server.bench.tacra.example]"
+   ]
+  },
+  {
+   "set": "behind",
+   "target": "https://db-time.tacra.example",
+   "rrp": "ca-gateway",
+   "mode": "enroll",
+   "kind": "absent-timestamp",
+   "case": "enroll-absent-timestamp",
+   "timestamp": 1791726716,
+   "max_age_s": 120,
+   "clock_skew_s": 5,
+   "at_once": {
+    "at": 1791727051.87,
+    "status": 409,
+    "answer": "409 RRP ca: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T13:51:56Z outside [now-2m0s, now+5s]"
+   },
+   "again": {
+    "at": 1791727438.034,
+    "status": 409,
+    "answer": "409 RRP ca: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T13:51:56Z outside [now-2m0s, now+5s]"
+   },
+   "rrp_log": [
+    "2026/10/11 08:57:31 enroll refused: target=https://db-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T14:01:56Z outside [now-2m0s, now+5s]",
+    "2026/10/11 08:57:31 enroll refused: target=https://db-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T13:51:56Z outside [now-2m0s, now+5s]",
+    "2026/10/11 09:01:53 enrolled: target=https://db-time.tacra.example kind=absent-timestamp hint=\"payments.workload.tacra.example\" caller=[est-server.bench.tacra.example]",
+    "2026/10/11 09:03:54 enrolled: target=https://db-time.tacra.example kind=absent-timestamp hint=\"payments.workload.tacra.example\" caller=[est-server.bench.tacra.example]",
+    "2026/10/11 09:03:58 enroll refused: target=https://db-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T14:01:56Z outside [now-2m0s, now+5s]",
+    "2026/10/11 09:03:58 enroll refused: target=https://db-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T13:51:56Z outside [now-2m0s, now+5s]"
+   ]
+  },
+  {
+   "set": "behind",
+   "target": "https://ledger-time.tacra.example",
+   "rrp": "vault-gateway",
+   "mode": "retrieve",
+   "kind": "absent-timestamp",
+   "case": "retrieve-absent-timestamp",
+   "timestamp": 1791726716,
+   "max_age_s": 120,
+   "clock_skew_s": 5,
+   "at_once": {
+    "at": 1791727051.874,
+    "status": 409,
+    "answer": "409 RRP vault: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T13:51:56Z outside [now-2m0s, now+5s]"
+   },
+   "again": {
+    "at": 1791727438.041,
+    "status": 409,
+    "answer": "409 RRP vault: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T13:51:56Z outside [now-2m0s, now+5s]"
+   },
+   "rrp_log": [
+    "2026/10/11 08:57:31 retrieve refused: target=https://ledger-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T14:01:56Z outside [now-2m0s, now+5s]",
+    "2026/10/11 08:57:31 retrieve refused: target=https://ledger-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T13:51:56Z outside [now-2m0s, now+5s]",
+    "2026/10/11 09:01:53 released: target=https://ledger-time.tacra.example kind=absent-timestamp group=b15eb9c4c1f4320d container=hpke-base-signed kem=MLKEM768-P256 caller=[est-server.bench.tacra.example]",
+    "2026/10/11 09:03:54 released: target=https://ledger-time.tacra.example kind=absent-timestamp group=b15eb9c4c1f4320d container=hpke-base-signed kem=MLKEM768-P256 caller=[est-server.bench.tacra.example]",
+    "2026/10/11 09:03:58 retrieve refused: target=https://ledger-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T14:01:56Z outside [now-2m0s, now+5s]",
+    "2026/10/11 09:03:58 retrieve refused: target=https://ledger-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-11T13:51:56Z outside [now-2m0s, now+5s]"
+   ]
+  }
+ ]
+}

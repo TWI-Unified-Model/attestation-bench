@@ -17,6 +17,12 @@ What changed, newest first. Dates are UTC.
 
 ### Added
 
+- **The new default, run on hardware** (11 October 2026): the EST server of the group's code with both identifiers gone
+  (`7e4224c`) in the trust zone binding none: the demo on GCP SEV-SNP, AWS SEV-SNP and GCP TDX in both RATS models, 10 of 10
+  Targets in each of the 6 runs, and the substitution suite on the three platforms, 232, 232 and 142 checks, every attack
+  refused for its own reason (the "other RRP identifier" case is the honest one again and is left out); then the bench's own
+  tree (patch 0017), the demo in Passport on the three platforms, 10 of 10 each. Each run's EST source record names its tree
+  ([docs/verification.md](docs/verification.md)); `make check` holds the 12 runs (`NO_ID_DEFAULT_RUNS`, `NO_ID_BENCH_TREE_RUNS`).
 - **The wire is the draft's**: the attest-* wire this bench runs (EST patch 0014, [e2e/est-attest.cddl](e2e/est-attest.cddl)) was
   merged into draft-novak-lamps-tacra-est's master on 10 October 2026 (TheBankster/lamps-tacra-est#10, `4fa3883`); `UPSTREAM` and
   [docs/verification.md](docs/verification.md) say so.

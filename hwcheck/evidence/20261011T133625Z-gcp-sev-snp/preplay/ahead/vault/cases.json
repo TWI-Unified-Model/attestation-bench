@@ -1,0 +1,71 @@
+[
+ {
+  "case": "retrieve-present-nonce",
+  "mode": "retrieve",
+  "freshness_kind": "present-nonce",
+  "target": "https://ledger-nonce.tacra.example",
+  "relying_party": "",
+  "freshness_element_b64": "aDigqz44jO7Iv4mhoqCdNtDp9-8NySiw8bX87l6kY0A",
+  "binding_value_hex": "34a8432e51eeb6792cdbe15635af34f1b8ec9a73b7a92604a381d0c3844ebdaeebbf8150052282671b3391a53e84f3e40ed40f2174a0003e8f37b403a60af39c",
+  "evidence_ms": 8.343,
+  "token_bytes": 5989,
+  "report_sha256": "d2ba97cf68a050ae8459dd8d840abad2d25da1642000902f37751ece78527847",
+  "signing_key": "VCEK",
+  "chip_id_prefix": "d0876de8176e7a44"
+ },
+ {
+  "case": "retrieve-present-epoch",
+  "mode": "retrieve",
+  "freshness_kind": "present-epoch",
+  "target": "https://ledger-epoch.tacra.example",
+  "relying_party": "",
+  "freshness_element_b64": "L5hhaj491WWv4172c2u2dULKAkeyr7L3uY_UwP85u88",
+  "binding_value_hex": "536e5497d296d9bdeabca608081fcd0f7383ca5fdc2651a17ec0db2bef0b18fa028adabe2f8e5cc5b78941bad9a6056dcf47bd0966cf46b2694f17d31ab5697c",
+  "evidence_ms": 8.317,
+  "token_bytes": 5989,
+  "report_sha256": "0d189b368ffb7719350b12e45811951549d5c04095ed70eef0da2f006cc76954",
+  "signing_key": "VCEK",
+  "chip_id_prefix": "d0876de8176e7a44"
+ },
+ {
+  "case": "retrieve-absent-epoch",
+  "mode": "retrieve",
+  "freshness_kind": "absent-epoch",
+  "target": "https://ledger-lepoch.tacra.example",
+  "relying_party": "",
+  "freshness_element_b64": "L5hhaj491WWv4172c2u2dULKAkeyr7L3uY_UwP85u88",
+  "binding_value_hex": "aa0f824947ade53108a6bfb1eb6a596d11b841eb19514ef17a86ac6ce57018e33d9cb1e89a132a229c7bf73a1b75b0efa39c227745e37283a57d3848bde55c0c",
+  "evidence_ms": 8.064,
+  "token_bytes": 5989,
+  "report_sha256": "c1858937124ce675c3dc0e201e21a6437ee8bbc215360102c5cd87dd29819408",
+  "signing_key": "VCEK",
+  "chip_id_prefix": "d0876de8176e7a44"
+ },
+ {
+  "case": "retrieve-absent-timestamp",
+  "mode": "retrieve",
+  "freshness_kind": "absent-timestamp",
+  "target": "https://ledger-time.tacra.example",
+  "relying_party": "",
+  "freshness_element_b64": "AAAAAGrLktw",
+  "binding_value_hex": "2103c553f2e85470334aefe4199b14d0365fcca1cfaa9547c97baed8d6468b7ecdcaa484670d030ccf174507d2e75ea09311652df3af0f2bcecc313f26a48e98",
+  "evidence_ms": 8.43,
+  "token_bytes": 5989,
+  "report_sha256": "dc8ee208f2842ead34989b173e7ddc088bfde707ea5c9de010ec895485de2d8f",
+  "signing_key": "VCEK",
+  "chip_id_prefix": "d0876de8176e7a44"
+ },
+ {
+  "case": "retrieve-absent-none",
+  "mode": "retrieve",
+  "freshness_kind": "absent-none",
+  "target": "https://ledger-none.tacra.example",
+  "relying_party": "",
+  "binding_value_hex": "cf99f749f5fc1e101e6b828dcf4a65621720c1e062b25ed1fee37cf0dba603ed88bb8248aa35b2ab465d60320b3c71d41e782e650fa7b98b270646189e617187",
+  "evidence_ms": 8.362,
+  "token_bytes": 5989,
+  "report_sha256": "4296bff58b217d5cea8904129cb5b00a4f7c8e55830bef603753b0e36cc1009c",
+  "signing_key": "VCEK",
+  "chip_id_prefix": "d0876de8176e7a44"
+ }
+]
