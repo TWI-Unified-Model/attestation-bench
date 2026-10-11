@@ -2,7 +2,8 @@
 # The tests that need the running bench, and no hardware (make test-live):
 #   - the EST server's wire format through the live server (e2e/scripts/est-wire-check.py);
 #   - the Evidence of every committed attack run from 6 October 2026 on, appraised again by the live verifiers, with
-#     the run's own records as the RRP's (rrpverify service): Veraison for SEV-SNP, which fetches AMD's CRL, and the
+#     the run's own records as the RRP's (rrpverify service; the RRP identifier each run bound, or none, comes from its
+#     cases.json): Veraison for SEV-SNP, which fetches AMD's CRL, and the
 #     TDX verifier for TDX, which fetches Intel's collateral. Each run's honest Evidence must pass and each of its
 #     changed bindings must fail, as when it ran. The runs of September bound their Evidence with the RRP identifier
 #     before the Target, the order TACRA later reversed, so today's RRP refuses them all: they are left out.
@@ -34,11 +35,11 @@ print(v["url"], v["ca"])' "$BENCH_HOME/config/est-server.json")
 runs=0 checks=0
 for d in hwcheck/evidence/*; do
   r="$(basename "$d")"
-  case "$r" in *-gcp-sev-snp | *-aws-sev-snp | *-gcp-tdx) ;; *) continue ;; esac
+  case "$r" in *-gcp-sev-snp | *-aws-sev-snp | *-gcp-tdx | *-no-rrp-id | *-bind-rrp-id) ;; *) continue ;; esac
   [ "${r:0:8}" -ge 20261006 ] || continue # the run directory begins with its date, YYYYMMDD
   read -r nb na <"$d/rrp-clock-window.txt"
   verifier=()
-  case "$r" in *-gcp-tdx) verifier=(-url "$tdx_url" -submod TDX -ca "$tdx_ca") ;; esac
+  case "$r" in *-gcp-tdx | *-gcp-tdx-*) verifier=(-url "$tdx_url" -submod TDX -ca "$tdx_ca") ;; esac # the TDX runs, suffixed or not
   if ! "$tmp/rrpverify" service -in "$d" -handles "$d/handles.json" -not-before "$nb" -not-after "$na" \
     -out "$tmp/$r.json" ${verifier[@]+"${verifier[@]}"} >"$tmp/$r.txt" 2>&1; then
     printf '  FAIL  %-30s %s\n' "$r" "$(tail -1 "$tmp/$r.txt")"

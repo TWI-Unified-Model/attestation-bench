@@ -212,8 +212,8 @@ func serviceVerify(args []string) {
 	certPath := fs.String("cert", filepath.Join(benchHome(), "tls", "clients", "ca-gateway.crt"), "this RRP's client certificate (mutual TLS)")
 	keyPath := fs.String("key", filepath.Join(benchHome(), "tls", "clients", "ca-gateway.key"), "its private key")
 	target := fs.String("target", "https://db.tacra.example", "the Target this RRP answered Initiate for")
-	rrpCA := fs.String("rrp-ca", "", "this Credential Authority's identifier, if the run bound it (empty: none bound)")
-	rrpVault := fs.String("rrp-vault", "", "this Secret Vault's identifier, if the run bound it (empty: none bound)")
+	rrpCA := fs.String("rrp-ca", "", "this Credential Authority's identifier (empty: the one the run's record says its Evidence bound, none by default)")
+	rrpVault := fs.String("rrp-vault", "", "this Secret Vault's identifier (empty: the one the run's record says its Evidence bound, none by default)")
 	notBefore := fs.Int64("not-before", 0, "unix seconds: run started (RRP clock)")
 	notAfter := fs.Int64("not-after", 0, "unix seconds: run ended (RRP clock)")
 	window := fs.Int64("window", 300, "absent-timestamp acceptance window, seconds")
@@ -238,6 +238,7 @@ func serviceVerify(args []string) {
 	must(err)
 	must(json.Unmarshal(b, &metas))
 
+	boundCA, boundVault := boundIdentifiers(metas, *rrpCA, *rrpVault)
 	var results []result
 	for _, m := range metas {
 		dir := filepath.Join(*in, m.Case)
@@ -245,9 +246,9 @@ func serviceVerify(args []string) {
 		must(err)
 		subject, err := os.ReadFile(filepath.Join(dir, "subject.der"))
 		must(err)
-		rrp, otherRRP := *rrpCA, *rrpVault
+		rrp, otherRRP := boundCA, boundVault
 		if m.Mode == "retrieve" {
-			rrp, otherRRP = *rrpVault, *rrpCA
+			rrp, otherRRP = boundVault, boundCA
 		}
 		elem, otherElem, err := expectedElement(m, h, *notBefore, *notAfter, *window)
 		if err != nil {
@@ -268,7 +269,7 @@ func serviceVerify(args []string) {
 			{"other freshness element", "fail", platform.BindingValue(otherElem, *target, rrp, subject)},
 		} {
 			if c.name == otherRRPCase && rrp == otherRRP {
-				continue // no identifier bound (the #20 variant): the case would be the honest one again, and prove nothing
+				continue // no identifier bound (the default since 11 October 2026): the case would be the honest one again, and prove nothing
 			}
 			t0 := time.Now()
 			ear, err := v.verify(token, c.bv[:])
@@ -301,8 +302,8 @@ func serviceVerify(args []string) {
 	if *out == "" {
 		*out = filepath.Join(*in, "rrpverify-service.json")
 	}
-	summary := map[string]any{"veraison": *base, "results": results, "target": *target, "rrp_ca": *rrpCA,
-		"rrp_vault": *rrpVault, "window_s": *window, "not_before": *notBefore, "not_after": *notAfter}
+	summary := map[string]any{"veraison": *base, "results": results, "target": *target, "rrp_ca": boundCA,
+		"rrp_vault": boundVault, "window_s": *window, "not_before": *notBefore, "not_after": *notAfter}
 	b, _ = json.MarshalIndent(summary, "", " ")
 	must(os.WriteFile(*out, b, 0o644))
 	bad := 0

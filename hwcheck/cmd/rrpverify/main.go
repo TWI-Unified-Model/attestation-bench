@@ -52,7 +52,38 @@ type caseMeta struct {
 	FreshnessKind    string `json:"freshness_kind"`
 	FreshnessElement string `json:"freshness_element_b64,omitempty"`
 	BindingValueHex  string `json:"binding_value_hex,omitempty"` // what the Attester bound (hwrun)
+	RelyingParty     string `json:"relying_party"`               // the RRP identifier the Attester bound, "" for none (hwrun)
 	Error            string `json:"error,omitempty"`
+}
+
+// boundIdentifiers is the Credential Authority's and the Secret Vault's identifiers this RRP binds when it recomputes
+// the binding: the flags, when given, else the run's own record of what its Evidence bound (relying_party of its
+// enroll and retrieve cases; "" when it bound none, the default since 11 October 2026). A run whose cases of one mode
+// bound different identifiers is refused: its record does not say what the RRP was.
+func boundIdentifiers(metas []caseMeta, flagCA, flagVault string) (string, string) {
+	ca, vault := flagCA, flagVault
+	for _, mode := range []struct {
+		name string
+		dst  *string
+		flag string
+	}{{"enroll", &ca, flagCA}, {"retrieve", &vault, flagVault}} {
+		if mode.flag != "" {
+			continue
+		}
+		seen := map[string]bool{}
+		for _, m := range metas {
+			if m.Mode == mode.name && m.Error == "" {
+				seen[m.RelyingParty] = true
+			}
+		}
+		if len(seen) > 1 {
+			must(fmt.Errorf("the run's %s cases bound different RRP identifiers: %v", mode.name, seen))
+		}
+		for id := range seen {
+			*mode.dst = id
+		}
+	}
+	return ca, vault
 }
 
 type result struct {
@@ -109,8 +140,8 @@ func verify(args []string) {
 	handlesPath := fs.String("handles", "handles.json", "the handles this RRP minted")
 	arkPath := fs.String("ark", "", "AMD certificate chain from the KDS (PEM; the ARK is the self-signed one)")
 	target := fs.String("target", "https://db.tacra.example", "the Target this RRP answered Initiate for")
-	rrpCA := fs.String("rrp-ca", "", "this Credential Authority's identifier, if the run bound it (empty: none bound)")
-	rrpVault := fs.String("rrp-vault", "", "this Secret Vault's identifier, if the run bound it (empty: none bound)")
+	rrpCA := fs.String("rrp-ca", "", "this Credential Authority's identifier (empty: the one the run's record says its Evidence bound, none by default)")
+	rrpVault := fs.String("rrp-vault", "", "this Secret Vault's identifier (empty: the one the run's record says its Evidence bound, none by default)")
 	notBefore := fs.Int64("not-before", 0, "unix seconds: run started (RRP clock)")
 	notAfter := fs.Int64("not-after", 0, "unix seconds: run ended (RRP clock)")
 	window := fs.Int64("window", 300, "absent-timestamp acceptance window, seconds")
@@ -153,6 +184,7 @@ func verify(args []string) {
 	}
 	var passed []passing
 
+	boundCA, boundVault := boundIdentifiers(metas, *rrpCA, *rrpVault)
 	for _, m := range metas {
 		if m.Error != "" {
 			results = append(results, result{Case: m.Case, Check: "evidence", Want: "pass", Got: "fail", Error: m.Error})
@@ -163,9 +195,9 @@ func verify(args []string) {
 		must(err)
 		subject, err := os.ReadFile(filepath.Join(dir, "subject.der"))
 		must(err)
-		rrp, otherRRP := *rrpCA, *rrpVault
+		rrp, otherRRP := boundCA, boundVault
 		if m.Mode == "retrieve" {
-			rrp, otherRRP = *rrpVault, *rrpCA
+			rrp, otherRRP = boundVault, boundCA
 		}
 		elem, otherElem, err := expectedElement(m, h, *notBefore, *notAfter, *window)
 		if err != nil {
@@ -207,7 +239,7 @@ func verify(args []string) {
 					bv(elem, rrp, *target, subject), tdxOtherRoots},
 			} {
 				if c.name == otherRRPCase && rrp == otherRRP {
-					continue // no identifier bound (the #20 variant): the case would be the honest one again, and prove nothing
+					continue // no identifier bound (the default since 11 October 2026): the case would be the honest one again, and prove nothing
 				}
 				t0 := time.Now()
 				err := verifyTDX(token, c.bv, c.roots)
@@ -277,7 +309,7 @@ func verify(args []string) {
 			honestPassed := false
 			for _, c := range checks {
 				if c.name == otherRRPCase && rrp == otherRRP {
-					continue // no identifier bound (the #20 variant): the case would be the honest one again, and prove nothing
+					continue // no identifier bound (the default since 11 October 2026): the case would be the honest one again, and prove nothing
 				}
 				ev := &appraisal.Evidence{Data: tok, MediaType: sevsnp.EvidenceMediaTypeTSMCbor, Nonce: c.bv[:]}
 				t0 := time.Now()
@@ -372,7 +404,7 @@ func verify(args []string) {
 		*out = filepath.Join(*in, "rrpverify-"+strings.ReplaceAll(filepath.Base(strings.Fields(build)[0]), "/", "_")+".json")
 	}
 	summary := map[string]any{"veraison": build, "results": results, "golden_from": goldenFrom,
-		"target": *target, "rrp_ca": *rrpCA, "rrp_vault": *rrpVault, "window_s": *window,
+		"target": *target, "rrp_ca": boundCA, "rrp_vault": boundVault, "window_s": *window,
 		"not_before": *notBefore, "not_after": *notAfter}
 	b, _ = json.MarshalIndent(summary, "", " ")
 	must(os.WriteFile(*out, b, 0o644))
