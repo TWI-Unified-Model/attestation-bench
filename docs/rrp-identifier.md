@@ -262,8 +262,11 @@ only what's needed. Keeps the code clean." The code follows:
   still appraised as they ran (`make test-live`).
 
 The measurement of sections 3 to 7 stands as the comparison the decision can be read against; the side with the identifier
-is reproducible from the code of 11 October morning (`2a3777a3`, `BIND_RRP_ID=1`). The runs of 11 and 12 October on the new
-code are listed in `docs/verification.md`.
+is reproducible from the code of 11 October morning (`2a3777a3`, `BIND_RRP_ID=1`). The runs of 11 October evening on the new
+code are listed in `docs/verification.md`: the demo in both RATS models and the attacks on the three platforms as before, and
+the conduit's redirect drill (attacks.md, 6.3), which measures what carries the pin now: with a second RRP issuing under the
+PKI, or sealing under the keys, the Attester already trusts, the CAI admits; with keys of its own, it refuses. The pin is the
+Attester's anchors and the Target's name, as 3.3 of the threat model and the text of section 5 say.
 
 ## 9. How to repeat
 

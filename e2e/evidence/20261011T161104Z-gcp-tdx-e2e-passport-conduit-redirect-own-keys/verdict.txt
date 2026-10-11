@@ -1,0 +1,12 @@
+the conduit's drill: redirect; the EST server routed 12 Targets to the copies ['ca-2', 'vault-2']; the copies with keys of their own
+ok  https://db-nonce.tacra.example         x509     TACRA bench CA Intermediate CA
+ok  https://db-epoch.tacra.example         x509     TACRA bench CA Intermediate CA
+ok  https://db-lepoch.tacra.example        x509     TACRA bench CA Intermediate CA
+ok  https://db-time.tacra.example          x509     TACRA bench CA Intermediate CA
+ok  https://db-none.tacra.example          x509     TACRA bench CA Intermediate CA
+no  https://ledger-nonce.tacra.example     api-key                                           cai: failed to unwrap retrieved credential: bundle: not signed by the trusted Vault key ov
+no  https://ledger-epoch.tacra.example     api-key                                           cai: failed to unwrap retrieved credential: bundle: not signed by the trusted Vault key ov
+no  https://ledger-lepoch.tacra.example    api-key                                           cai: failed to unwrap retrieved credential: bundle: not signed by the trusted Vault key ov
+no  https://ledger-time.tacra.example      api-key                                           cai: failed to unwrap retrieved credential: bundle: not signed by the trusted Vault key ov
+no  https://ledger-none.tacra.example      api-key                                           cai: failed to unwrap retrieved credential: bundle: not signed by the trusted Vault key ov
+VERDICT PASS: 5 Enrollments served by the second Credential Authority, each admitted: it issues under the PKI the first shares, and a certificate names its issuer, not the RRP; 5 Retrievals served by the second Secret Vault, each refused by the CAI for its origin: the keys are the second Vault's own

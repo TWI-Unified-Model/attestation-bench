@@ -259,6 +259,19 @@ Verifier": in Passport nothing but the RRP's provisioned verifier keys bounds wh
 Authority takes. Runs of 8 October 2026 at `3b6a74ba`, each 10 Targets, the 5 Enrollments refused and the 5
 Retrievals admitted: [GCP SEV-SNP](../e2e/evidence/20261008T234813Z-gcp-sev-snp-e2e-passport-conduit-verifier), [AWS SEV-SNP](../e2e/evidence/20261008T235252Z-aws-sev-snp-e2e-passport-conduit-verifier), [GCP TDX](../e2e/evidence/20261008T235455Z-gcp-tdx-e2e-passport-conduit-verifier).
 
+### 6.3 The conduit's choice of RRP: the redirect drill (11 October 2026)
+
+`CONDUIT_ATTACK=redirect make config && make start`, then `make demo`: the EST server routes every request to the second
+Credential Authority and the second Secret Vault of the pack (ca-2, vault-2), the RRPs the Attester did not ask for; the run
+records the routing it ran under (`bench-logs/est-routing.json`) and is judged by what the CAI does with what comes back
+(`scripts/verdict.py conduit --attack redirect`). Two regimes: the copies sharing the first RRPs' PKI and keys (the default),
+and the second Vault with keys of its own (`COPIES_OWN_KEYS=1`). Measured on the three platforms, 7 runs
+([verification.md](verification.md)): with the shared PKI and keys the CAI admits every credential, 5 certificates and 5
+containers per run, because a certificate names its issuer and a container its sealing key, not the RRP; with the second
+Vault's own keys every container is refused for its origin. A second Credential Authority with a PKI of its own is the
+remaining regime, not run yet (it needs a second issuing CA in the trust zone); the CAI's anchor check that would refuse it
+is the one that admits the first regime's certificates.
+
 ## 7. What the conduit sees
 
 ```bash

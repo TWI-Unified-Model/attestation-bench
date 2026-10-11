@@ -1,0 +1,12 @@
+the conduit's drill: redirect; the EST server routed 12 Targets to the copies ['ca-2', 'vault-2']; the copies sharing the first RRPs' PKI and keys
+ok  https://db-nonce.tacra.example         x509     TACRA bench CA Intermediate CA
+ok  https://db-epoch.tacra.example         x509     TACRA bench CA Intermediate CA
+ok  https://db-lepoch.tacra.example        x509     TACRA bench CA Intermediate CA
+ok  https://db-time.tacra.example          x509     TACRA bench CA Intermediate CA
+ok  https://db-none.tacra.example          x509     TACRA bench CA Intermediate CA
+ok  https://ledger-nonce.tacra.example     api-key
+ok  https://ledger-epoch.tacra.example     api-key
+ok  https://ledger-lepoch.tacra.example    api-key
+ok  https://ledger-time.tacra.example      api-key
+ok  https://ledger-none.tacra.example      api-key
+VERDICT PASS: 5 Enrollments served by the second Credential Authority, each admitted: it issues under the PKI the first shares, and a certificate names its issuer, not the RRP; 5 Retrievals served by the second Secret Vault, each admitted: the copy seals under the first Vault's keys

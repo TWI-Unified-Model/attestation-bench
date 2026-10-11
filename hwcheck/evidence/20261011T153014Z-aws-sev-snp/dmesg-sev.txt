@@ -1,0 +1,7 @@
+[    2.414211] Memory Encryption Features active: AMD SEV SEV-ES SEV-SNP
+[    2.416062] SEV: Status: SEV SEV-ES SEV-SNP 
+[    2.531072] SEV: APIC: wakeup_secondary_cpu() replaced with wakeup_cpu_via_vmgexit()
+[    2.737560] SEV: Using SNP CPUID table, 38 entries present.
+[    2.737569] SEV: SNP running at VMPL0.
+[    2.883378] SEV: SNP guest platform devices initialized.
+[    8.764089] sev-guest sev-guest: Initialized SEV guest driver (using VMPCK0 communication key)

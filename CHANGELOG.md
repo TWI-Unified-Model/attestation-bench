@@ -23,6 +23,15 @@ What changed, newest first. Dates are UTC.
 
 ### Added
 
+- **The ripped-out trees, run on hardware** (11 October 2026, evening): the EST server of the group's code with a three-field
+  binding (`b531556`) in the trust zone binding the same: the demo on GCP SEV-SNP, AWS SEV-SNP and GCP TDX in both RATS models,
+  10 of 10 Targets in each of the 6 runs (the AWS Background Check run made again on a fresh instance after a host's fault, kept
+  with its README), and the substitution suite on the three platforms, 232, 232 and 142 checks, every attack refused for its own
+  reason, every case recording `binding_layout`; then the bench's own tree (patch 0018), the demo in Passport on the three
+  platforms, 10 of 10 each. The present-nonce Enrollment of the first attack run is the hardware vector of the three-field binding.
+- **The redirect drill, run on hardware**: 7 runs on the three platforms; with the copies sharing the first RRPs' PKI and keys
+  the CAI admits every certificate and container the second RRPs return; with the second Vault's own keys every container is
+  refused for its origin ([docs/attacks.md](docs/attacks.md), 6.3; [docs/verification.md](docs/verification.md)).
 - **The new default, run on hardware** (11 October 2026): the EST server of the group's code with both identifiers gone
   (`7e4224c`) in the trust zone binding none: the demo on GCP SEV-SNP, AWS SEV-SNP and GCP TDX in both RATS models, 10 of 10
   Targets in each of the 6 runs, and the substitution suite on the three platforms, 232, 232 and 142 checks, every attack

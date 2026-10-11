@@ -50,6 +50,23 @@ func TestBindingValueRRPMatchesDraftTestVector(t *testing.T) {
 	}
 }
 
+// The binding of 11 October 2026 on hardware: the GCP SEV-SNP report of the first run of the three-field layout carries
+// SHA-512(binding_input) in REPORT_DATA; the four-field layout with an empty identifier does not match it.
+func TestBindingValueThreeFieldsHardwareVector(t *testing.T) {
+	handle, _ := hex.DecodeString(tv3HandleHex)
+	subject, _ := hex.DecodeString(tv3SubjectHex)
+	want, _ := hex.DecodeString(tv3ReportDataHex)
+	if len(subject) != 223 || len(want) != 64 {
+		t.Fatalf("vector: subject %d octets, REPORT_DATA %d", len(subject), len(want))
+	}
+	if got := BindingValue(handle, tv3Target, subject); !bytes.Equal(got[:], want) {
+		t.Fatalf("SHA-512(binding_input) = %x, want REPORT_DATA %x", got, want)
+	}
+	if got := BindingValueRRP(handle, tv3Target, "", subject); bytes.Equal(got[:], want) {
+		t.Fatal("the four-field layout with an empty identifier matches the report: the layouts must differ")
+	}
+}
+
 // The binding of 11 October 2026: three fields, and the Target bound.
 func TestBindingValueThreeFields(t *testing.T) {
 	handle, _ := hex.DecodeString(tvHandleHex)

@@ -1,0 +1,17 @@
+rrpverify-platform: 30 checks, 0 not as expected
+rrpverify-service: 40 checks, 0 not as expected
+rrpverify-tdx: 72 checks, 0 not as expected
+pre-play ahead enroll-absent-epoch: at once 200
+pre-play ahead enroll-absent-none: at once 200
+pre-play ahead enroll-absent-timestamp: at once 409; 292 s or more after it was made 200, 413 s 200, 417 s 409 (max_age 120 s, clock_skew 5 s)
+pre-play ahead enroll-present-epoch: at once 200
+pre-play ahead enroll-present-nonce: at once 200
+pre-play ahead retrieve-absent-epoch: at once 200
+pre-play ahead retrieve-absent-none: at once 200
+pre-play ahead retrieve-absent-timestamp: at once 409; 292 s or more after it was made 200, 413 s 200, 417 s 409 (max_age 120 s, clock_skew 5 s)
+pre-play ahead retrieve-present-epoch: at once 200
+pre-play ahead retrieve-present-nonce: at once 200
+pre-play behind enroll-absent-timestamp: at once 409; 417 s or more after it was made 409
+pre-play behind retrieve-absent-timestamp: at once 409; 417 s or more after it was made 409
+guest minus RRP: +1.267 s, within 1.433 s
+VERDICT PASS: 142 checks: the honest Evidence passed, every attack refused for its own reason; exposure, the guest's clock: https://db-time.tacra.example accepted Evidence 292 s old or more, and again 413 s old or more (max_age 120 s); https://ledger-time.tacra.example accepted Evidence 292 s old or more, and again 413 s old or more (max_age 120 s); absent-timestamp Evidence made with the clock behind refused; the other four kinds' Evidence made with it ahead taken at once

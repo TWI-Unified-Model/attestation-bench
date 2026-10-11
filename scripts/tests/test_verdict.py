@@ -184,6 +184,42 @@ NO_ID_BENCH_TREE_RUNS = [
     "20261011T140722Z-aws-sev-snp-e2e-passport",
     "20261011T140930Z-gcp-tdx-e2e-passport",
 ]
+# the identifiers ripped out (11 October 2026, Mark Novak 14:31Z; rats-tacra#20): the EST server built from the transfer branch at
+# b5315560178f (a three-field binding, no rrp_id anywhere) in the trust zone binding the same three fields; the demo on the three
+# platforms in both RATS models (the AWS Background Check run once more on a fresh instance after a host's fault, below) and the
+# substitution suite on the three platforms, every attack run recording binding_layout = freshness-target-subject; then the bench's
+# own tree (patch 0018, tree 09762d19ebc6, the tested tree), the Passport demo on the three platforms
+RIPOUT_RUNS = [
+    "20261011T150339Z-gcp-sev-snp-e2e-passport",
+    "20261011T150637Z-aws-sev-snp-e2e-passport",
+    "20261011T150841Z-gcp-tdx-e2e-passport",
+    "20261011T151137Z-gcp-sev-snp-e2e-background-check",
+    "20261011T161559Z-aws-sev-snp-e2e-background-check",
+    "20261011T151633Z-gcp-tdx-e2e-background-check",
+    "20261011T151929Z-gcp-sev-snp",
+    "20261011T153014Z-aws-sev-snp",
+    "20261011T153829Z-gcp-tdx",
+]
+RIPOUT_BENCH_TREE_RUNS = [
+    "20261011T154708Z-gcp-sev-snp-e2e-passport",
+    "20261011T155003Z-aws-sev-snp-e2e-passport",
+    "20261011T155209Z-gcp-tdx-e2e-passport",
+]
+# a host's fault, kept with its README: the guest could not read the report's auxblob (the certificate table) on one AWS
+# instance; every Target failed before the protocol began; the run above on a fresh instance came out 10 of 10
+AWS_AUXBLOB_HOST_RUN = "20261011T151431Z-aws-sev-snp-e2e-background-check"
+# the conduit's redirect drill (docs/attacks.md, section 6): the EST server routed every request to the second Credential
+# Authority and the second Secret Vault; with the copies sharing the first RRPs' PKI and keys the CAI admits what they return,
+# with the second Vault's own keys (COPIES_OWN_KEYS=1) it refuses the container for its origin
+REDIRECT_DRILL_RUNS = {
+    "20261011T155450Z-gcp-sev-snp-e2e-passport-conduit-redirect": False,
+    "20261011T155756Z-aws-sev-snp-e2e-passport-conduit-redirect": False,
+    "20261011T160001Z-gcp-tdx-e2e-passport-conduit-redirect": False,
+    "20261011T160255Z-gcp-sev-snp-e2e-background-check-conduit-redirect": False,
+    "20261011T160608Z-gcp-sev-snp-e2e-passport-conduit-redirect-own-keys": True,
+    "20261011T160900Z-aws-sev-snp-e2e-passport-conduit-redirect-own-keys": True,
+    "20261011T161104Z-gcp-tdx-e2e-passport-conduit-redirect-own-keys": True,
+}
 # the conduit's verifier drill (docs/attacks.md, section 6): the EST server, as the attacking conduit in Passport, signed
 # each Enrollment's Attestation Results again with a key of its own; 8 October 2026 at 3b6a74ba
 VERIFIER_DRILL_RUNS = [
@@ -518,6 +554,67 @@ class CommittedRuns(unittest.TestCase):
         code, last = verdict("conduit", wrong, "--attack", "redirect")
         self.assertNotEqual(code, 0)
         self.assertIn("expected refused for the Vault key", last)
+
+    def test_the_identifiers_ripped_out(self):
+        """The runs of 11 October 2026 on the trees with the identifiers ripped out: a three-field binding, the group's EST tree and
+        the bench's own; every attack run's cases record the layout and no identifier."""
+        for run in RIPOUT_RUNS + RIPOUT_BENCH_TREE_RUNS:
+            with self.subTest(run=run):
+                if "-e2e-" in run:
+                    code, last = verdict("demo", E2E / run)
+                    self.assertTrue(
+                        last.startswith("VERDICT PASS: all 10 Targets: credential acquired and admitted"), last
+                    )
+                    record = (E2E / run / "code-revs.txt").read_text()
+                    cfg = json.loads((E2E / run / "e2e-attester.json").read_text())
+                    self.assertFalse(
+                        [k for k in cfg if "rrp_id" in k], "no identifier switch in the workload's configuration"
+                    )
+                else:
+                    code, last = verdict("attacks", HW / run)
+                    self.assertIn("every attack refused for its own reason", last)
+                    revs = HW / run / "veraison-revs.txt"
+                    record = (revs if revs.exists() else HW / run / "est-source.txt").read_text()
+                    cases = json.loads((HW / run / "cases.json").read_text())
+                    self.assertEqual({m["binding_layout"] for m in cases}, {"freshness-target-subject"})
+                    self.assertFalse([m for m in cases if m.get("relying_party")], "no identifier bound")
+                self.assertEqual(code, 0, last)
+                self.assertIn("estserver built from", record)
+                if run in RIPOUT_RUNS:
+                    self.assertIn("globalsign-est-transfer", record)
+                    self.assertIn("b5315560178f", record)
+                    self.assertIn("worktree clean", record)
+                else:
+                    self.assertIn("third_party/globalsign-est/src", record)
+                    self.assertIn("+ 18 patch(es), tree 09762d19ebc6: tested tree", record)
+
+    def test_aws_auxblob_host_fault_kept(self):
+        """The host's fault of 11 October, kept with its README: every Target failed before the protocol began."""
+        run = E2E / AWS_AUXBLOB_HOST_RUN
+        code, last = verdict("demo", run)
+        self.assertNotEqual(code, 0)
+        self.assertTrue(last.startswith("VERDICT FAIL: 10 of 10 Targets not admitted"), last)
+        results = json.loads((run / "results.json").read_text())
+        self.assertTrue(all("could not read report auxblob" in r.get("error", "") for r in results))
+        self.assertIn("A host's fault, kept", (run / "README.md").read_text())
+
+    def test_conduit_redirect_drill_runs(self):
+        """The redirect drill on hardware: the copies sharing the first RRPs' PKI and keys are admitted; the second Vault's own
+        keys are refused for their origin; each run records the routing it ran under."""
+        for run, own_keys in REDIRECT_DRILL_RUNS.items():
+            with self.subTest(run=run):
+                code, last = verdict("conduit", E2E / run, "--attack", "redirect")
+                self.assertEqual(code, 0, last)
+                self.assertIn("5 Enrollments served by the second Credential Authority, each admitted", last)
+                if own_keys:
+                    self.assertIn("each refused by the CAI for its origin: the keys are the second Vault's own", last)
+                else:
+                    self.assertIn("each admitted: the copy seals under the first Vault's keys", last)
+                routing = json.loads((E2E / run / "bench-logs" / "est-routing.json").read_text())
+                self.assertEqual(routing["copies_own_keys"], own_keys)
+                self.assertEqual({v["rrp"] for v in routing["targets"].values()}, {"ca-2", "vault-2"})
+                record = (E2E / run / "code-revs.txt").read_text()
+                self.assertIn("b5315560178f", record)
 
     def test_conduit_verifier_drill(self):
         for run in VERIFIER_DRILL_RUNS:

@@ -1,0 +1,54 @@
+{
+ "attack": "redirect",
+ "copies_own_keys": false,
+ "targets": {
+  "https://db-nonce.tacra.example": {
+   "rrp": "ca-2",
+   "url": "https://127.0.0.1:9103"
+  },
+  "https://db-epoch.tacra.example": {
+   "rrp": "ca-2",
+   "url": "https://127.0.0.1:9103"
+  },
+  "https://db-lepoch.tacra.example": {
+   "rrp": "ca-2",
+   "url": "https://127.0.0.1:9103"
+  },
+  "https://db-time.tacra.example": {
+   "rrp": "ca-2",
+   "url": "https://127.0.0.1:9103"
+  },
+  "https://db-none.tacra.example": {
+   "rrp": "ca-2",
+   "url": "https://127.0.0.1:9103"
+  },
+  "https://db-snp-only.tacra.example": {
+   "rrp": "ca-2",
+   "url": "https://127.0.0.1:9103"
+  },
+  "https://db-tdx-only.tacra.example": {
+   "rrp": "ca-2",
+   "url": "https://127.0.0.1:9103"
+  },
+  "https://ledger-nonce.tacra.example": {
+   "rrp": "vault-2",
+   "url": "https://127.0.0.1:9104"
+  },
+  "https://ledger-epoch.tacra.example": {
+   "rrp": "vault-2",
+   "url": "https://127.0.0.1:9104"
+  },
+  "https://ledger-lepoch.tacra.example": {
+   "rrp": "vault-2",
+   "url": "https://127.0.0.1:9104"
+  },
+  "https://ledger-time.tacra.example": {
+   "rrp": "vault-2",
+   "url": "https://127.0.0.1:9104"
+  },
+  "https://ledger-none.tacra.example": {
+   "rrp": "vault-2",
+   "url": "https://127.0.0.1:9104"
+  }
+ }
+}

@@ -1,0 +1,112 @@
+[
+ {
+  "target": "https://db-nonce.tacra.example",
+  "type": "x509",
+  "ok": false,
+  "error": "cai: generate evidence: platform: configfs-tsm report: could not read report auxblob: could not read report property \"auxblob\": read /sys/kernel/config/tsm/report/entry1915631183/auxblob: invalid argument",
+  "attempts": 1,
+  "acquire_ms": 315.83,
+  "initiate_ms": 311.464,
+  "second_leg_ms": 0,
+  "rup_status": 0
+ },
+ {
+  "target": "https://db-epoch.tacra.example",
+  "type": "x509",
+  "ok": false,
+  "error": "cai: generate evidence: platform: configfs-tsm report: could not read report auxblob: could not read report property \"auxblob\": read /sys/kernel/config/tsm/report/entry1539441835/auxblob: invalid argument",
+  "attempts": 1,
+  "acquire_ms": 337.014,
+  "initiate_ms": 332.577,
+  "second_leg_ms": 0,
+  "rup_status": 0
+ },
+ {
+  "target": "https://db-lepoch.tacra.example",
+  "type": "x509",
+  "ok": false,
+  "error": "cai: generate evidence: platform: configfs-tsm report: could not read report auxblob: could not read report property \"auxblob\": read /sys/kernel/config/tsm/report/entry2999867149/auxblob: invalid argument",
+  "attempts": 1,
+  "acquire_ms": 326.713,
+  "initiate_ms": 321.762,
+  "second_leg_ms": 0,
+  "rup_status": 0
+ },
+ {
+  "target": "https://db-time.tacra.example",
+  "type": "x509",
+  "ok": false,
+  "error": "cai: generate evidence: platform: configfs-tsm report: could not read report auxblob: could not read report property \"auxblob\": read /sys/kernel/config/tsm/report/entry3994433031/auxblob: invalid argument",
+  "attempts": 1,
+  "acquire_ms": 353.052,
+  "initiate_ms": 348.963,
+  "second_leg_ms": 0,
+  "rup_status": 0
+ },
+ {
+  "target": "https://db-none.tacra.example",
+  "type": "x509",
+  "ok": false,
+  "error": "cai: generate evidence: platform: configfs-tsm report: could not read report auxblob: could not read report property \"auxblob\": read /sys/kernel/config/tsm/report/entry2140634736/auxblob: invalid argument",
+  "attempts": 1,
+  "acquire_ms": 419.103,
+  "initiate_ms": 414.735,
+  "second_leg_ms": 0,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-nonce.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: generate evidence: platform: configfs-tsm report: could not read report auxblob: could not read report property \"auxblob\": read /sys/kernel/config/tsm/report/entry1446008366/auxblob: invalid argument",
+  "attempts": 1,
+  "acquire_ms": 278.713,
+  "initiate_ms": 274.533,
+  "second_leg_ms": 0,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-epoch.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: generate evidence: platform: configfs-tsm report: could not read report auxblob: could not read report property \"auxblob\": read /sys/kernel/config/tsm/report/entry658958895/auxblob: invalid argument",
+  "attempts": 1,
+  "acquire_ms": 408.217,
+  "initiate_ms": 404.258,
+  "second_leg_ms": 0,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-lepoch.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: generate evidence: platform: configfs-tsm report: could not read report auxblob: could not read report property \"auxblob\": read /sys/kernel/config/tsm/report/entry3563852012/auxblob: invalid argument",
+  "attempts": 1,
+  "acquire_ms": 361.761,
+  "initiate_ms": 357.051,
+  "second_leg_ms": 0,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-time.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: generate evidence: platform: configfs-tsm report: could not read report auxblob: could not read report property \"auxblob\": read /sys/kernel/config/tsm/report/entry1651735606/auxblob: invalid argument",
+  "attempts": 1,
+  "acquire_ms": 319.775,
+  "initiate_ms": 315.278,
+  "second_leg_ms": 0,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-none.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: generate evidence: platform: configfs-tsm report: could not read report auxblob: could not read report property \"auxblob\": read /sys/kernel/config/tsm/report/entry1187514080/auxblob: invalid argument",
+  "attempts": 1,
+  "acquire_ms": 361.384,
+  "initiate_ms": 358.016,
+  "second_leg_ms": 0,
+  "rup_status": 0
+ }
+]

@@ -1,0 +1,14 @@
+0 of 10 Targets: credential acquired and admitted by the relying party
+no  https://db-nonce.tacra.example         x509        315.8 ms 0 cai: generate evidence: platform: configfs-tsm report: could not read report auxblob: could not read report property "au
+no  https://db-epoch.tacra.example         x509        337.0 ms 0 cai: generate evidence: platform: configfs-tsm report: could not read report auxblob: could not read report property "au
+no  https://db-lepoch.tacra.example        x509        326.7 ms 0 cai: generate evidence: platform: configfs-tsm report: could not read report auxblob: could not read report property "au
+no  https://db-time.tacra.example          x509        353.1 ms 0 cai: generate evidence: platform: configfs-tsm report: could not read report auxblob: could not read report property "au
+no  https://db-none.tacra.example          x509        419.1 ms 0 cai: generate evidence: platform: configfs-tsm report: could not read report auxblob: could not read report property "au
+no  https://ledger-nonce.tacra.example     api-key     278.7 ms 0 cai: generate evidence: platform: configfs-tsm report: could not read report auxblob: could not read report property "au
+no  https://ledger-epoch.tacra.example     api-key     408.2 ms 0 cai: generate evidence: platform: configfs-tsm report: could not read report auxblob: could not read report property "au
+no  https://ledger-lepoch.tacra.example    api-key     361.8 ms 0 cai: generate evidence: platform: configfs-tsm report: could not read report auxblob: could not read report property "au
+no  https://ledger-time.tacra.example      api-key     319.8 ms 0 cai: generate evidence: platform: configfs-tsm report: could not read report auxblob: could not read report property "au
+no  https://ledger-none.tacra.example      api-key     361.4 ms 0 cai: generate evidence: platform: configfs-tsm report: could not read report auxblob: could not read report property "au
+the platform rule's waiver: Milan bit 4: admitted without bit 4, AMD-SB-3034
+guest minus RRP: +0.492 s, within 0.484 s
+VERDICT FAIL: 10 of 10 Targets not admitted

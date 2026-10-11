@@ -368,3 +368,59 @@ identifier is bound, as it would be the honest case again (docs/attacks.md, sect
 | `20261011T140930Z-gcp-tdx-e2e-passport` | demo, Passport | 10 of 10 Targets | [run](../e2e/evidence/20261011T140930Z-gcp-tdx-e2e-passport) |
 
 `make cloud-check` found both clouds empty at the end. Log: the bench's working notes, `tm-logs/drop-ids-verify-20261011.txt`.
+
+## The identifiers ripped out (11 October 2026, evening)
+
+At 14:31Z Mark Novak asked, in TWI-Unified-Model/globalsign-est#4, to rip the RRP identifier and the EST Server's identifier out
+altogether: the binding is three length-prefixed fields, the freshness element, the Target and the subject, in the group's EST
+server (the transfer branch's `b531556`; EST patch 0018 here) and in every component of this bench
+([rrp-identifier.md](rrp-identifier.md), section 8). Run the same evening, each with its EST source recorded; every attack run's
+cases record the layout (`binding_layout`), and the present-nonce Enrollment of the first attack run is the hardware vector of
+the three-field binding (`platform/testvector_test.go`; the transfer branch's test). `make check` holds every run.
+
+**The group's tree, `b531556`, in the trust zone binding the same three fields.**
+
+| run | kind | outcome | |
+|---|---|---|---|
+| `20261011T150339Z-gcp-sev-snp-e2e-passport` | demo, Passport | 10 of 10 Targets | [run](../e2e/evidence/20261011T150339Z-gcp-sev-snp-e2e-passport) |
+| `20261011T150637Z-aws-sev-snp-e2e-passport` | demo, Passport | 10 of 10 Targets | [run](../e2e/evidence/20261011T150637Z-aws-sev-snp-e2e-passport) |
+| `20261011T150841Z-gcp-tdx-e2e-passport` | demo, Passport | 10 of 10 Targets | [run](../e2e/evidence/20261011T150841Z-gcp-tdx-e2e-passport) |
+| `20261011T151137Z-gcp-sev-snp-e2e-background-check` | demo, Background Check | 10 of 10 Targets | [run](../e2e/evidence/20261011T151137Z-gcp-sev-snp-e2e-background-check) |
+| `20261011T161559Z-aws-sev-snp-e2e-background-check` | demo, Background Check | 10 of 10 Targets | [run](../e2e/evidence/20261011T161559Z-aws-sev-snp-e2e-background-check) |
+| `20261011T151633Z-gcp-tdx-e2e-background-check` | demo, Background Check | 10 of 10 Targets | [run](../e2e/evidence/20261011T151633Z-gcp-tdx-e2e-background-check) |
+| `20261011T151929Z-gcp-sev-snp` | attacks | 232 checks, every attack refused for its own reason | [run](../hwcheck/evidence/20261011T151929Z-gcp-sev-snp) |
+| `20261011T153014Z-aws-sev-snp` | attacks | 232 checks, every attack refused for its own reason | [run](../hwcheck/evidence/20261011T153014Z-aws-sev-snp) |
+| `20261011T153829Z-gcp-tdx` | attacks | 142 checks, every attack refused for its own reason | [run](../hwcheck/evidence/20261011T153829Z-gcp-tdx) |
+
+The AWS Background Check run of 15:14Z, `20261011T151431Z-aws-sev-snp-e2e-background-check`, is kept with its README: a host's
+fault, the guest could not read the report's certificate table (`auxblob: invalid argument`) on that instance, every Target
+failed before the protocol began; the run of 16:15Z above, on a fresh instance, is the one of the matrix.
+
+**The bench's own tree, patch 0018 (tree `09762d19ebc6`, the tested tree).**
+
+| run | kind | outcome | |
+|---|---|---|---|
+| `20261011T154708Z-gcp-sev-snp-e2e-passport` | demo, Passport | 10 of 10 Targets | [run](../e2e/evidence/20261011T154708Z-gcp-sev-snp-e2e-passport) |
+| `20261011T155003Z-aws-sev-snp-e2e-passport` | demo, Passport | 10 of 10 Targets | [run](../e2e/evidence/20261011T155003Z-aws-sev-snp-e2e-passport) |
+| `20261011T155209Z-gcp-tdx-e2e-passport` | demo, Passport | 10 of 10 Targets | [run](../e2e/evidence/20261011T155209Z-gcp-tdx-e2e-passport) |
+
+**The conduit's redirect drill** (`CONDUIT_ATTACK=redirect`; [attacks.md](attacks.md), section 6): the EST server routed every
+request to the second Credential Authority and the second Secret Vault, the RRPs the Attester did not ask for.
+
+| run | regime | outcome | |
+|---|---|---|---|
+| `20261011T155450Z-gcp-sev-snp-e2e-passport-conduit-redirect` | Passport; the copies sharing the first RRPs’ PKI and keys | 5 Enrollments admitted (issued under the shared PKI); 5 Retrievals admitted (sealed under the first Vault’s keys) | [run](../e2e/evidence/20261011T155450Z-gcp-sev-snp-e2e-passport-conduit-redirect) |
+| `20261011T155756Z-aws-sev-snp-e2e-passport-conduit-redirect` | Passport; the copies sharing the first RRPs’ PKI and keys | 5 Enrollments admitted (issued under the shared PKI); 5 Retrievals admitted (sealed under the first Vault’s keys) | [run](../e2e/evidence/20261011T155756Z-aws-sev-snp-e2e-passport-conduit-redirect) |
+| `20261011T160001Z-gcp-tdx-e2e-passport-conduit-redirect` | Passport; the copies sharing the first RRPs’ PKI and keys | 5 Enrollments admitted (issued under the shared PKI); 5 Retrievals admitted (sealed under the first Vault’s keys) | [run](../e2e/evidence/20261011T160001Z-gcp-tdx-e2e-passport-conduit-redirect) |
+| `20261011T160255Z-gcp-sev-snp-e2e-background-check-conduit-redirect` | Background Check; the copies sharing the first RRPs’ PKI and keys | 5 Enrollments admitted (issued under the shared PKI); 5 Retrievals admitted (sealed under the first Vault’s keys) | [run](../e2e/evidence/20261011T160255Z-gcp-sev-snp-e2e-background-check-conduit-redirect) |
+| `20261011T160608Z-gcp-sev-snp-e2e-passport-conduit-redirect-own-keys` | Passport; the second Vault with keys of its own | 5 Enrollments admitted (issued under the shared PKI); 5 Retrievals refused by the CAI for their origin | [run](../e2e/evidence/20261011T160608Z-gcp-sev-snp-e2e-passport-conduit-redirect-own-keys) |
+| `20261011T160900Z-aws-sev-snp-e2e-passport-conduit-redirect-own-keys` | Passport; the second Vault with keys of its own | 5 Enrollments admitted (issued under the shared PKI); 5 Retrievals refused by the CAI for their origin | [run](../e2e/evidence/20261011T160900Z-aws-sev-snp-e2e-passport-conduit-redirect-own-keys) |
+| `20261011T161104Z-gcp-tdx-e2e-passport-conduit-redirect-own-keys` | Passport; the second Vault with keys of its own | 5 Enrollments admitted (issued under the shared PKI); 5 Retrievals refused by the CAI for their origin | [run](../e2e/evidence/20261011T161104Z-gcp-tdx-e2e-passport-conduit-redirect-own-keys) |
+
+What the drill measures: without an identifier in the binding, a credential from an RRP the Attester did not ask for is
+admitted when that RRP issues under the PKI, or seals under the keys, the Attester already trusts; a certificate names its
+issuer, not the RRP that asked for it. The Attester's pin is its trust anchors and the Target's name, which is what the threat
+model's 3.3 and the text proposed for 4.5 and the Security Considerations on 8 October say.
+
+`make cloud-check` found both clouds empty at the end. Logs: the bench's working notes, `tm-logs/ripout-verify-20261011.txt`
+and `ripout-verify-20261011-rerun-aws-bc.txt`.
