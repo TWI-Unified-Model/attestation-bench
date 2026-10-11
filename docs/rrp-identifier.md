@@ -4,9 +4,9 @@
 run kept in this repository, named where it is stated; `make check` holds each of them (`scripts/tests/test_verdict.py`).
 
 **11 October 2026.** The group's decision of 6 October, to leave the identifier out until the threat model is agreed,
-is now the code: the EST server of the group's repository binds none (TWI-Unified-Model/globalsign-est#4, commit
-`7e4224c`; EST patch 0017 here), and this bench binds none by default, the CAI and the RRPs alike. `BIND_RRP_ID=1`
-reproduces the side with the identifier, against an EST tree from before 11 October (section 8).
+is now the code, and on 11 October Mark Novak asked for it all to go: the EST server of the group's repository binds the
+freshness element, the Target and the subject and carries no RRP or server identifier anywhere (TWI-Unified-Model/globalsign-est#4,
+commit `b531556`; EST patch 0018 here), and this bench does the same, with no switch left (section 8).
 
 ## 1. The question
 
@@ -15,9 +15,10 @@ subject (the CSR or CEKpub). Issue #20 asks whether the identifier belongs there
 demos, substitutions, second offers, container drills and redirections, on GCP SEV-SNP, AWS SEV-SNP and GCP TDX, in
 Background Check and in Passport.
 
-## 2. How "without it" was run
+## 2. How "without it" was run (8 October 2026)
 
-`OMIT_RRP_ID=1 make config && make start` configures the whole trust zone to bind no identifier, end to end:
+On the code of 8 October, `OMIT_RRP_ID=1 make config && make start` configured the whole trust zone to bind no identifier,
+end to end (the switch exists no more: since 12 October the code binds none, section 8):
 
 - the workload's CAI leaves the identifier out of the binding (`cai.WithoutRelyingPartyBinding`); the identifiers it
   holds still name the Credential Authority's and the Vault's trust anchors;
@@ -239,33 +240,41 @@ can be backed by the runs.
 Neither is a finding about the protocol; both are kept because a bench that hides its own faults cannot be trusted
 with a protocol's.
 
-## 8. How to repeat
+## 8. The decision and the code (11 October 2026)
+
+Mark Novak, reviewing the transfer of this backend to the group's repository (TWI-Unified-Model/globalsign-est#4, 11 October,
+02:19Z and 06:14Z): the decision of 6 October was to drop the RRP identifier and the EST Server's identifier alike, and to look
+at adding them back after the threat model is agreed and documented; at 14:31Z, on the question whether an empty field should
+stay in the layout: "Let's rip it all out. For now: once we have a comprehensive end to end understanding, then we put in
+only what's needed. Keeps the code clean." The code follows:
+
+- the EST server computes the Verifier session's nonce over three length-prefixed fields, the freshness element, the Target
+  and the subject (the transfer branch's `b531556`; EST patch 0018 here); its configuration names no `rrp_id` and the server
+  checks none against the RRP's attest-initiate answer; the per-RRP switch of the day before is gone;
+- the mock CA of the group's repository drops `server_id` from its binding digest and from the EncryptedCredentialBundle
+  (`7e4224c`), and its digest is now the same octets as the backend's;
+- this bench binds the same three fields: the CAI (`platform.EvidenceRequest` carries no Relying Party), the RRP gateways
+  (whose attest-initiate answer names no identifier either), hwrun and rrpverify, the pre-play and the redirection
+  experiment, now one pass; the Secret Vault's container carries no `rrp_id` in its associated data or HPKE info, the Vault's
+  key being its identity to the Attester; `BIND_RRP_ID` and `omit_rrp_id_in_binding` exist no more;
+- every run from 12 October records its layout (`binding_layout` in `cases.json`), and rrpverify appraises each committed run
+  by the layout its record names, so the runs of 6 to 11 October (with the identifier, or with an empty fourth field) are
+  still appraised as they ran (`make test-live`).
+
+The measurement of sections 3 to 7 stands as the comparison the decision can be read against; the side with the identifier
+is reproducible from the code of 11 October morning (`2a3777a3`, `BIND_RRP_ID=1`). The runs of 11 and 12 October on the new
+code are listed in `docs/verification.md`.
+
+## 9. How to repeat
 
 ```bash
 make demo                                   # the mock trust zone on a laptop, free, in minutes
-OMIT_RRP_ID=1 make config && make start     # the trust zone without the identifier
-OMIT_RRP_ID=1 make demo PLATFORM=gcp-snp    # also aws-snp, gcp-tdx; RATS_MODEL=passport; make attacks
+make config && make start                   # the trust zone: no identifier in the binding (the code since 12 October 2026)
+make demo PLATFORM=gcp-snp                  # also aws-snp, gcp-tdx; RATS_MODEL=passport; make attacks
+git checkout 2a3777a3                       # the side with the identifier: the code of 11 October morning, BIND_RRP_ID=1
 REDIRECT_VARIANT=replay make redirect PLATFORM=gcp-snp   # both passes in one run; also replay-vault, own-epochs, start-ca2, vault
 CONDUIT_ATTACK=seal make demo PLATFORM=gcp-snp           # also swap, hint, hint-group
-make config && make start                   # back as it was
 ```
 
 The hardware runs use your own cloud account and delete the VM they create ([docs/getting-started.md](getting-started.md));
 the mock reproduces the protocol logic without hardware. Reading a run: [docs/results.md](results.md).
-
-## 8. The decision and the code (11 October 2026)
-
-Mark Novak, reviewing the transfer of this backend to the group's repository (TWI-Unified-Model/globalsign-est#4, 11 October,
-02:19Z): the decision of 6 October was to drop the RRP identifier and the EST Server's identifier alike, and to look at
-adding them back after the threat model is agreed and documented. The code follows:
-
-- the EST server computes the Verifier session's nonce with an empty identifier field, the layout of Section 4.5 kept
-  (commit `7e4224c` of the transfer branch; EST patch 0017 of this bench); the per-RRP switch `omit_rrp_id_in_binding` is
-  gone, and the server's strict configuration refuses it;
-- the mock CA of the group's repository drops `server_id` from its binding digest and from the EncryptedCredentialBundle;
-- this bench binds none by default: the CAI (`cai.WithRelyingPartyBinding` is the opt-in), the RRP gateways
-  (`bind_rrp_id_in_binding`), hwrun and rrpverify (`-rrp-ca`/`-rrp-vault` empty by default), the pre-play and the
-  redirection experiment; `BIND_RRP_ID=1` is the measured variant, which needs an EST tree from before 11 October.
-
-The measurement of sections 3 to 7 stands as the comparison the decision can be read against; the runs of 11 October
-on the new default are listed in `docs/verification.md`.

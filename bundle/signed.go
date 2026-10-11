@@ -6,8 +6,8 @@ package bundle
 // modes, and the post-quantum KEMs have no AuthEncap (draft-ietf-hpke-pq-05, Section 7.2), so the origin of the
 // bundle is the Vault's signature, under a key the CAI holds for the Target and Retrieval. One suite, not negotiated.
 //
-//	info          len32-prefixed: "tacra-est bundle v1", the RRP identifier, the Target, the freshness element
-//	aad           Canonical({group_id, rrp_id, target, handle?, credential_hint?})
+//	info          len32-prefixed: "tacra-est bundle v1", the Target, the freshness element
+//	aad           Canonical({group_id, target, handle?, credential_hint?})
 //	to be signed  len32-prefixed: "tacra-est bundle signature v1", the HPKE suite_id, "ecdsa-p256-sha256",
 //	              CEKpub, info, aad, enc, ciphertext
 //
@@ -60,8 +60,8 @@ func lp(b []byte, parts ...[]byte) []byte {
 }
 
 // InfoSigned is the HPKE info of ContainerSigned.
-func InfoSigned(rrpID, target string, freshness []byte) []byte {
-	return lp(nil, []byte(infoLabel), []byte(rrpID), []byte(target), freshness)
+func InfoSigned(target string, freshness []byte) []byte {
+	return lp(nil, []byte(infoLabel), []byte(target), freshness)
 }
 
 // ToBeSigned is what the Vault signs.
@@ -91,7 +91,7 @@ func SealSigned(signKey *ecdsa.PrivateKey, cekPub []byte, aad AAD, content Conte
 	if err != nil {
 		return nil, fmt.Errorf("bundle: CEKpub is not an MLKEM768-P256 encapsulation key: %w", err)
 	}
-	info := InfoSigned(aad.RRPID, aad.Target, aad.Handle)
+	info := InfoSigned(aad.Target, aad.Handle)
 	enc, s, err := hpke.NewSender(pk, kdf, aead, info)
 	if err != nil {
 		return nil, err
@@ -118,7 +118,6 @@ func SealSigned(signKey *ecdsa.PrivateKey, cekPub []byte, aad AAD, content Conte
 
 // ExpectSigned is what the Attester bound into its Evidence, its CEK, and the Vault key it holds for the Target.
 type ExpectSigned struct {
-	RRPID          string
 	Target         string
 	Handle         []byte // the freshness element
 	CredentialHint string
@@ -134,15 +133,14 @@ func OpenSigned(b *Bundle, exp ExpectSigned) (*Content, error) {
 	if b.Container != ContainerSigned || b.Suite != SuiteSigned {
 		return nil, ErrContainer
 	}
-	if b.AAD.RRPID != exp.RRPID || b.AAD.Target != exp.Target || !bytes.Equal(b.AAD.Handle, exp.Handle) ||
-		b.AAD.CredentialHint != exp.CredentialHint {
+	if b.AAD.Target != exp.Target || !bytes.Equal(b.AAD.Handle, exp.Handle) || b.AAD.CredentialHint != exp.CredentialHint {
 		return nil, ErrAAD
 	}
 	if exp.VaultKey == nil || len(b.Signature) == 0 {
 		return nil, ErrSignature
 	}
 	cekPub := exp.CEK.PublicKey().Bytes()
-	info := InfoSigned(exp.RRPID, exp.Target, exp.Handle)
+	info := InfoSigned(exp.Target, exp.Handle)
 	aadBytes, err := Canonical(b.AAD)
 	if err != nil {
 		return nil, err

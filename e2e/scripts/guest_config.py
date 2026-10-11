@@ -4,16 +4,15 @@
 hpke-base-signed container's trust anchor, from 01.10 on, so Retrieval on AWS failed (evidence
 20261006T160234Z-aws-sev-snp-e2e). Public material only: trust anchors, the Vault's public keys, the epoch marker.
 
-    TEE=sev-snp|tdx B=$BENCH_HOME BIN=<dir holding origin-keys.json> [TARGETS=all|other-platform] [BIND_RRP_ID=1] \
+    TEE=sev-snp|tdx B=$BENCH_HOME BIN=<dir holding origin-keys.json> [TARGETS=all|other-platform] \
         python3 e2e/scripts/guest_config.py
 
 The Targets, the RRP identifiers and the workload's name come from the bench's pack (packs/tacra-bench/pack.json).
 TARGETS=all (the default): the Targets every platform's verifier serves. TARGETS=other-platform: the Targets that
 take other platforms' verifiers only, which must refuse this platform's Evidence (tacra-est N24). Each Target is
-asked for the credential its RRP issues. The workload's Evidence binds no RRP identifier, the group's decision of
-6 October 2026 (TheBankster/rats-tacra#20). BIND_RRP_ID=1: the measured variant, the Evidence binds the identifier
-held; the bench's RRPs must bind it too (BIND_RRP_ID=1 e2e/scripts/bench.sh config), and so must the EST server,
-which the group's code no longer does (an EST tree from before 11 October 2026).
+asked for the credential its RRP issues. The workload's Evidence binds the freshness element, the Target and the subject,
+no identifier of any party (the group's decision of 6 and 11 October 2026, TheBankster/rats-tacra#20); the RRP names in
+relying_parties key the trust anchors the workload holds.
 """
 
 import json
@@ -42,7 +41,6 @@ cfg = {
     "hint": pack["workload"]["hint"],
     "targets": targets,
     "relying_parties": rp,
-    "bind_rrp_id": os.environ.get("BIND_RRP_ID") == "1",
     "vault_origins": {vault: {k: v for k, v in keys.items() if k.startswith("DHKEM")}},
     # the hpke-base-signed container's trust anchor: the Vault's signature key, held for its RRP identifier
     "vault_signers": {vault: keys["ECDSA-P256-SHA256"]},

@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # The #19/#20 conduit experiment on real hardware, through the deployed gateways. In a confidential guest, the
 # Attester produces Evidence for a Target that the honest EST server routes to ca1. The conduit (rrp-issue) then offers
-# it to ca1 and to a second Credential Authority, ca2, and we record which issues. Two passes: with the RRP identifier
-# in the binding (both CAs bind their own), and without it (BIND_RRP_ID unset, both bind none: the default since 11 October 2026). This measures, per
-# Freshness Kind, what the RRP identifier prevents (#20). Then the conduit rewrites, one at a time, what it relays to
+# it to ca1 and to a second Credential Authority, ca2, and we record which issues. One pass since 12 October 2026, the
+# binding without any identifier (the group's decision of 6 and 11 October, rats-tacra#20); the runs of 6 to 11 October
+# have a second pass with the RRP identifier bound, which the code no longer makes (docs/rrp-identifier.md). This measures,
+# per Freshness Kind, what freshness alone prevents. Then the conduit rewrites, one at a time, what it relays to
 # ca1 on Evidence made for ca1 (#19): a made-up Handle, the Freshness Kind, a credential type the Target does not
 # offer, another workload's Credential Hint, and the other credential type the Target offers; each outcome is recorded.
 #
@@ -16,19 +17,19 @@
 #                 ca1 as in the default run, with ca1's Handles and the deployment's epoch marker
 #     start-ca2   ca2 keeps an epoch marker of its own, and the conduit starts the exchange there: the present-nonce and
 #                 present-epoch Handles are ca2's, from its attest-initiate; the Attester holds the deployment's epoch
-#                 marker (absent-epoch) and, in the pass with the RRP identifier, binds ca1's, the RRP it serves
+#                 marker (absent-epoch)
 #     vault       the default run on the Secret Vaults: Retrieval Evidence for a ledger Target of vault1, offered to
-#                 vault1 and to vault2, its copy with another RRP identifier (packs/tacra-bench); each asked for the
+#                 vault1 and to vault2, its copy (packs/tacra-bench); each asked for the
 #                 workload's group's key, in the hpke-base-signed container to an MLKEM768-P256 CEK
-#     replay      the same request twice at ca1, in both passes: what a conduit that holds a request gets by offering
+#     replay      the same request twice at ca1: what a conduit that holds a request gets by offering
 #                 it again. The RRP keeps no record of a CSR it served, so only the freshness element can refuse the
 #                 second offer: a present-nonce Handle serves once; an epoch marker serves while it is current, a
-#                 timestamp while its window holds, absent-none always; the RRP identifier has no bearing on it
+#                 timestamp while its window holds, absent-none always
 #     replay-vault  the same on the Secret Vaults: Retrieval twice at vault1
 #
 # The guest only runs hwrun (offline); all gateway interaction is on this machine, where the bench runs. The bench runs
-# every pass in Background Check (or Passport), reconfigured between them (BIND_RRP_ID, and OWN_EPOCHS in a variant; the pass with the identifier needs an EST server that binds it, EST_REPO from before 11 October 2026),
-# and is put back as it was however the run ends: its RATS model, the RRP identifier in the binding, one epoch marker.
+# the pass in Background Check (or Passport), reconfigured for it (OWN_EPOCHS in a variant), and is put back as it
+# was however the run ends: its RATS model, one epoch marker.
 #
 # GCP_PROJECT, GCP_ZONE, AWS_REGION, AWS_AZ: where the VM goes (scripts/lib.sh). RUNS_DIR: where the run directory
 # goes (default BENCH_HOME/runs). The run ends with its verdict (scripts/verdict.py) and exits 1 unless every outcome
@@ -62,15 +63,14 @@ OUT="$RUNS_DIR/${STAMP}-${CLOUD}-redirect"; [ "$MODEL" = passport ] && OUT="$OUT
 if [ "$VARIANT" != default ]; then OUT="$OUT-$VARIANT"; fi
 BIN="$(mktemp -d)"
 CA1=https://127.0.0.1:9101; CA2=https://127.0.0.1:9103
-CA1_ID=https://ca1.tacra.example   # the RRP identifier the honest EST server's Credential Authority binds
 # The RRP pair the conduit plays: the Credential Authorities (Enrollment), or, in the vault variant, the Secret Vaults
 # (Retrieval of the workload's group's key, sealed in the hpke-base-signed container to an MLKEM768-P256 CEK, the only
 # one the ledger Targets take)
 if [ "$VARIANT" = vault ] || [ "$VARIANT" = replay-vault ]; then
   MODE=retrieve; RRP1=vault1; RRP2=vault2; URL1=https://127.0.0.1:9102; URL2=https://127.0.0.1:9104
-  ID1=https://vault1.tacra.example; TPRE=ledger; CTYPE=api-key
+  TPRE=ledger; CTYPE=api-key
 else
-  MODE=enroll; RRP1=ca1; RRP2=ca2; URL1="$CA1"; URL2="$CA2"; ID1="$CA1_ID"; TPRE=db; CTYPE=x509
+  MODE=enroll; RRP1=ca1; RRP2=ca2; URL1="$CA1"; URL2="$CA2"; TPRE=db; CTYPE=x509
 fi
 B="$BENCH_HOME"; CERT="$B/tls/clients/est-server.crt"; KEY_C="$B/tls/clients/est-server.key"; ROOT="$B/tls/root.crt"
 mkdir -p "$OUT"
@@ -83,7 +83,7 @@ RECONFIGURED=""
 restore_bench() { # the bench as it was before the experiment; nothing to do until reconfigure has run
   [ -n "$RECONFIGURED" ] || return 0
   bash "$REPO/e2e/scripts/bench.sh" stop >/dev/null 2>&1 || true
-  RATS_MODEL="$MODEL_BEFORE" BIND_RRP_ID="" OWN_EPOCHS="" bash "$REPO/e2e/scripts/bench.sh" config >/dev/null 2>&1
+  RATS_MODEL="$MODEL_BEFORE" OWN_EPOCHS="" bash "$REPO/e2e/scripts/bench.sh" config >/dev/null 2>&1
   bash "$REPO/e2e/scripts/bench.sh" start >/dev/null 2>&1
   RECONFIGURED=""
 }
@@ -172,12 +172,12 @@ initiate() {
 }
 START="$URL1"; [ "$VARIANT" = start-ca2 ] && START="$CA2"   # where the conduit starts the exchange
 
-# make_evidence PASS RRPID : mint a present-nonce Handle where the conduit starts (the first RRP; ca2 in start-ca2),
-# make Evidence in the guest bound to RRPID and copy it back; in Passport, also the Attestation Results the verifier
+# make_evidence PASS : mint a present-nonce Handle where the conduit starts (the first RRP; ca2 in start-ca2),
+# make Evidence in the guest and copy it back; in Passport, also the Attestation Results the verifier
 # issues for each case, as an honest CAS gets them. In start-ca2 the present-epoch Handle is ca2's epoch marker, from
 # its attest-initiate. The Credential Authorities' cases are Enrollments; in the vault variant, Retrievals alone.
 make_evidence() {
-  local PASS="$1" RRPID="$2" d="$OUT/$1"; mkdir -p "$d"
+  local PASS="$1" d="$OUT/$1"; mkdir -p "$d"
   local nonce epoch epoch_handle="" guest_args
   nonce="$(initiate "$START" "https://$TPRE-nonce.tacra.example" "$CTYPE")"
   epoch="$(tr -d '[:space:]' < "$B/epoch.hex")"
@@ -197,8 +197,8 @@ short = {"present-nonce": "nonce", "present-epoch": "epoch", "absent-epoch": "le
          "absent-none": "none"}
 json.dump({k: f"https://{tpre}-{n}.tacra.example" for k, n in short.items()}, open(os.path.join(d, "targets.json"), "w"))
 PY
-  guest_args="-rrp-ca '$RRPID' -csr-cn payments.workload.tacra.example"
-  [ "$MODE" = retrieve ] && guest_args="-modes retrieve -cek mlkem768-p256 -rrp-vault '$RRPID'"
+  guest_args="-csr-cn payments.workload.tacra.example"
+  [ "$MODE" = retrieve ] && guest_args="-modes retrieve -cek mlkem768-p256"
   guest_in "$BIN/hwrun" "$d/handles.json" "$d/targets.json" "$HW/scripts/guest-clock.sh"
   bench_guest_run "$OUT/run-ssh.stderr" "set -e
 sudo ~/hwrun -tee $TEE -targets ~/targets.json -handles ~/handles.json $guest_args -out /root/redir 2>&1
@@ -291,34 +291,28 @@ offer_rewrites() {
   done
 }
 
-reconfigure() { # $1 = "bind" (the RRPs bind their identifier: needs an EST server that binds it too, EST_REPO from before 11 October 2026) or "none"
-  local bind=""; [ "$1" = bind ] && bind=1
+reconfigure() { # the bench for the run: its RATS model, and OWN_EPOCHS in a variant
   RECONFIGURED=1
   bash "$REPO/e2e/scripts/bench.sh" stop >/dev/null 2>&1 || true
-  RATS_MODEL="$MODEL" BIND_RRP_ID="$bind" OWN_EPOCHS="$OWN" bash "$REPO/e2e/scripts/bench.sh" config >/dev/null 2>&1
+  RATS_MODEL="$MODEL" OWN_EPOCHS="$OWN" bash "$REPO/e2e/scripts/bench.sh" config >/dev/null 2>&1
   bash "$REPO/e2e/scripts/bench.sh" start >/dev/null 2>&1
 }
 
-echo "== bench: $MODEL, RRP identifier IN the binding (variant: $VARIANT)"
-reconfigure bind
+echo "== bench: $MODEL, the binding without any identifier (variant: $VARIANT)"
+reconfigure
 vm_create
 wait_ssh || { echo "ssh never came up" >&2; exit 1; }
 guest_ssh "$PROVISION" 2>>"$OUT/run-ssh.stderr"
-make_evidence with-rrp-id "$ID1"
-case "$VARIANT" in replay|replay-vault) offer_replay with-rrp-id;; *) offer_redirect with-rrp-id;; esac
+make_evidence no-rrp-id
+case "$VARIANT" in replay|replay-vault) offer_replay no-rrp-id;; *) offer_redirect no-rrp-id;; esac
 if [ "$VARIANT" = default ]; then
   echo "== the conduit's rewrites (#19), at ca1, on Evidence made for ca1"
-  make_evidence rewrites "$ID1"; offer_rewrites rewrites
-  make_evidence type-offered "$ID1"; offer_rewrites type-offered
+  make_evidence rewrites; offer_rewrites rewrites
+  make_evidence type-offered; offer_rewrites type-offered
 fi
 
-echo "== bench: $MODEL, NO RRP identifier in the binding (variant: $VARIANT)"
-reconfigure none
-make_evidence no-rrp-id ""
-case "$VARIANT" in replay|replay-vault) offer_replay no-rrp-id;; *) offer_redirect no-rrp-id;; esac
-
 vm_delete; trap 'restore_bench; rm -rf "$BIN"' EXIT
-echo "== bench: back as it was ($MODEL_BEFORE, the RRP identifier in the binding)"
+echo "== bench: back as it was ($MODEL_BEFORE)"
 restore_bench
 
 cat "$OUT"/*/results.jsonl > "$OUT/results.jsonl"

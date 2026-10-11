@@ -38,13 +38,13 @@ func TestSignedRoundTripAndRefusals(t *testing.T) {
 	if len(cekPub) != 1249 {
 		t.Fatalf("CEKpub is %d octets, want 1249", len(cekPub))
 	}
-	aad := AAD{GroupID: "g1", RRPID: "https://vault1.tacra.example", Target: "https://ledger.tacra.example",
+	aad := AAD{GroupID: "g1", Target: "https://ledger.tacra.example",
 		Handle: []byte("0123456789abcdef0123456789abcdef"), CredentialHint: "workload.tacra.example"}
 	b, err := SealSigned(vault, cekPub, aad, testContent())
 	if err != nil {
 		t.Fatal(err)
 	}
-	exp := ExpectSigned{RRPID: aad.RRPID, Target: aad.Target, Handle: aad.Handle, CredentialHint: aad.CredentialHint,
+	exp := ExpectSigned{Target: aad.Target, Handle: aad.Handle, CredentialHint: aad.CredentialHint,
 		CEK: cek, VaultKey: &vault.PublicKey}
 	c, err := OpenSigned(b, exp)
 	if err != nil {
@@ -108,13 +108,12 @@ func TestCheckItems(t *testing.T) {
 	}
 }
 
-// vector is the test vector of tacra-est scripts/bundle_vector.py.
+// vector is a test vector of the signed container (testdata/go-hpke-base-signed.json, written by TestWriteVector).
 type vector struct {
 	CEKSeed        string          `json:"cek_seed"`
 	CEKPub         string          `json:"cek_pub"`
 	VaultSPKI      string          `json:"vault_signing_spki"`
 	VaultPKCS8     string          `json:"vault_signing_key_pkcs8"`
-	RRPID          string          `json:"rrp_id"`
 	Target         string          `json:"target"`
 	Freshness      string          `json:"freshness"`
 	CredentialHint string          `json:"credential_hint"`
@@ -136,10 +135,10 @@ func unhex(t *testing.T, s string) []byte {
 	return b
 }
 
-// TestOpenReferenceVector opens a bundle the reference implementation (Python, tacra-est impl/bundle.py) sealed and
-// signed, and checks info, the associated data and the to-be-signed octets byte for byte.
-func TestOpenReferenceVector(t *testing.T) {
-	raw, err := os.ReadFile("testdata/ref-hpke-base-signed.json")
+// TestOpenVector opens the committed vector (sealed and signed by this package on 11 October 2026, after the Vault's
+// identifier left the container) and checks info, the associated data and the to-be-signed octets byte for byte.
+func TestOpenVector(t *testing.T) {
+	raw, err := os.ReadFile("testdata/go-hpke-base-signed.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,7 +162,7 @@ func TestOpenReferenceVector(t *testing.T) {
 		t.Fatal(err)
 	}
 	fresh := unhex(t, v.Freshness)
-	info := InfoSigned(v.RRPID, v.Target, fresh)
+	info := InfoSigned(v.Target, fresh)
 	if hex.EncodeToString(info) != v.Info {
 		t.Fatal("info differs")
 	}
@@ -174,7 +173,7 @@ func TestOpenReferenceVector(t *testing.T) {
 	if hex.EncodeToString(ToBeSigned(unhex(t, v.CEKPub), info, aad, b.Enc, b.Ciphertext)) != v.ToBeSigned {
 		t.Fatal("to-be-signed octets differ")
 	}
-	c, err := OpenSigned(&b, ExpectSigned{RRPID: v.RRPID, Target: v.Target, Handle: fresh, CredentialHint: v.CredentialHint,
+	c, err := OpenSigned(&b, ExpectSigned{Target: v.Target, Handle: fresh, CredentialHint: v.CredentialHint,
 		CEK: cek, VaultKey: pub.(*ecdsa.PublicKey)})
 	if err != nil {
 		t.Fatalf("open: %v", err)
@@ -188,8 +187,7 @@ func TestOpenReferenceVector(t *testing.T) {
 	}
 }
 
-// TestWriteVector writes a vector sealed and signed here, for the reference implementation to check
-// (python3 scripts/bundle_vector.py check <file>): TACRA_WRITE_VECTOR=<file> go test -run TestWriteVector.
+// TestWriteVector writes the vector TestOpenVector reads: TACRA_WRITE_VECTOR=testdata/go-hpke-base-signed.json go test -run TestWriteVector.
 func TestWriteVector(t *testing.T) {
 	path := os.Getenv("TACRA_WRITE_VECTOR")
 	if path == "" {
@@ -202,8 +200,7 @@ func TestWriteVector(t *testing.T) {
 	}
 	fresh := make([]byte, 32)
 	rand.Read(fresh)
-	aad := AAD{GroupID: "1111111111111111111111111111111111111111111111111111111111111111", RRPID: "https://vault1.tacra.example",
-		Target: "https://ledger.tacra.example", Handle: fresh, CredentialHint: "workload.tacra.example"}
+	aad := AAD{GroupID: "1111111111111111111111111111111111111111111111111111111111111111", Target: "https://ledger.tacra.example", Handle: fresh, CredentialHint: "workload.tacra.example"}
 	content := testContent()
 	b, err := SealSigned(vault, cekPub, aad, content)
 	if err != nil {
@@ -212,13 +209,13 @@ func TestWriteVector(t *testing.T) {
 	seed, _ := cek.Bytes()
 	spki, _ := x509.MarshalPKIXPublicKey(&vault.PublicKey)
 	pkcs8, _ := x509.MarshalPKCS8PrivateKey(vault)
-	info := InfoSigned(aad.RRPID, aad.Target, fresh)
+	info := InfoSigned(aad.Target, fresh)
 	aadBytes, _ := Canonical(aad)
 	pt, _ := Canonical(content)
 	braw, _ := json.Marshal(b)
 	out, _ := json.MarshalIndent(vector{Description: "hpke-base-signed bundle sealed and signed by TWI bundle.SealSigned (Go crypto/hpke); test keys",
 		Suite: SuiteSigned, CEKSeed: hex.EncodeToString(seed), CEKPub: hex.EncodeToString(cekPub), VaultSPKI: hex.EncodeToString(spki),
-		VaultPKCS8: hex.EncodeToString(pkcs8), RRPID: aad.RRPID, Target: aad.Target, Freshness: hex.EncodeToString(fresh),
+		VaultPKCS8: hex.EncodeToString(pkcs8), Target: aad.Target, Freshness: hex.EncodeToString(fresh),
 		CredentialHint: aad.CredentialHint, Info: hex.EncodeToString(info), AAD: string(aadBytes),
 		ToBeSigned: hex.EncodeToString(ToBeSigned(cekPub, info, aadBytes, b.Enc, b.Ciphertext)), Bundle: braw,
 		Plaintext: string(pt)}, "", " ")

@@ -10,8 +10,6 @@
 #                                  (packs/tacra-bench) and the approved launches (trust/approved-launches.json), with
 #                                  scripts/trustzone.py, the program the Demo Bank's trust zone uses too.
 #                                  RATS_MODEL=background-check: the gateways ask the verifiers themselves;
-#                                  BIND_RRP_ID=1: the RRPs bind their identifier, the variant measured against the
-#                                  default (no identifier since 11 October 2026; docs/rrp-identifier.md);
 #                                  OWN_EPOCHS=1: the copies of an RRP (ca-2, vault-2: the redirection experiment's
 #                                  other bank, hwcheck/scripts/redirect.sh) keep an epoch marker of their own;
 #                                  CONDUIT_ATTACK=verifier: the EST server is the attacking conduit of that drill
@@ -35,9 +33,9 @@ config() {
   mkdir -p "$B/config" "$BIN" "$B/tls/clients" "$B/gateways" "$B/secrets"
   [ -f "$B/epoch.hex" ] || (umask 077; openssl rand -hex 32 > "$B/epoch.hex")
   local flags=(--rats-model "${RATS_MODEL:-passport}")
-  if [ "${BIND_RRP_ID:-}" = 1 ]; then flags+=(--bind-rrp-id); fi
   if [ "${OWN_EPOCHS:-}" = 1 ]; then flags+=(--own-epochs); fi
-  if [ "${CONDUIT_ATTACK:-}" = verifier ]; then flags+=(--conduit-attack verifier); fi
+  case "${CONDUIT_ATTACK:-}" in verifier | redirect) flags+=(--conduit-attack "$CONDUIT_ATTACK") ;; esac
+  if [ "${COPIES_OWN_KEYS:-}" = 1 ]; then flags+=(--copies-own-keys); fi
   python3 "$HERE/scripts/trustzone.py" --home "$B" --veraison "$VERAISON_DEPLOYMENT" --pack "$PACK" "${flags[@]}"
   (cd "$HERE/rrp" && GOWORK=off go build -o "$BIN/ca-gateway" ./cmd/ca-gateway && GOWORK=off go build -o "$BIN/vault-gateway" ./cmd/vault-gateway \
     && GOWORK=off go build -o "$BIN/tdx-verifier" ./cmd/tdx-verifier)

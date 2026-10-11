@@ -1,0 +1,275 @@
+tacra: rip the identifiers out, as asked on 11 October: a three-field binding, no rrp_id in the configuration
+
+The binding value is SHA-512 over the freshness element, the Target and the subject, each length-prefixed: no field
+for a Relying Party identifier, empty or otherwise, and no server identifier (TheBankster/rats-tacra#20; Mark Novak in
+TWI-Unified-Model/globalsign-est#4, 11 October 2026: rip it all out, put back only what is needed once the end-to-end
+understanding is there). The RRP entries of the configuration carry no rrp_id and the server checks none against the
+RRP's attest-initiate answer; the mock's est.BindingDigest computes the same octets. The same change as the transfer
+branch's b531556, and the bench's sample configuration (-sampleconfig) without rrp_id.
+
+diff --git a/cmd/estserver/config.go b/cmd/estserver/config.go
+index b4b6e2e..63a9c7f 100644
+--- a/cmd/estserver/config.go
++++ b/cmd/estserver/config.go
+@@ -114,7 +114,6 @@ const sample = `{
+             "ca": {
+                 "url": "https://localhost:9101",
+                 "ca": "/path/to/CA/gateway/TLS/CA/certificate.pem",
+-                "rrp_id": "https://ca1.tacra.example",
+                 "mode": "enroll",
+                 "rats_model": "passport",
+                 "verifiers": [
+@@ -124,7 +123,6 @@ const sample = `{
+             "vault": {
+                 "url": "https://localhost:9102",
+                 "ca": "/path/to/vault/gateway/TLS/CA/certificate.pem",
+-                "rrp_id": "https://vault1.tacra.example",
+                 "mode": "retrieve",
+                 "rats_model": "background-check"
+             }
+diff --git a/estserver.json.example b/estserver.json.example
+index 521d847..d4aef6a 100644
+--- a/estserver.json.example
++++ b/estserver.json.example
+@@ -25,7 +25,6 @@
+       "ca": {
+         "url": "https://ca-gateway:9101",
+         "ca": "/etc/est/certs/ca-gateway-ca.pem",
+-        "rrp_id": "https://ca1.tacra.example",
+         "mode": "enroll",
+         "rats_model": "passport",
+         "verifiers": ["veraison"]
+@@ -33,7 +32,6 @@
+       "vault": {
+         "url": "https://vault-gateway:9102",
+         "ca": "/etc/est/certs/vault-gateway-ca.pem",
+-        "rrp_id": "https://vault1.tacra.example",
+         "mode": "retrieve",
+         "rats_model": "background-check"
+       }
+diff --git a/internal/tacra/backend.go b/internal/tacra/backend.go
+index c5a6d88..4612d62 100644
+--- a/internal/tacra/backend.go
++++ b/internal/tacra/backend.go
+@@ -60,13 +60,9 @@ type Verifier struct {
+ 
+ // RRP is a Credential Authority or Secret Vault gateway.
+ type RRP struct {
+-	URL string `json:"url"`
+-	CA  string `json:"ca"` // CA of its TLS certificate
+-	// RRPID is the identifier the RRP reports at attest-initiate, which this server checks. It is not bound into the
+-	// Evidence: the group decided on 6 October 2026 to leave the RRP identifier out (TheBankster/rats-tacra#20) until
+-	// the threat model is agreed, so the binding value carries an empty identifier field (bindingValue).
+-	RRPID string `json:"rrp_id"`
+-	Mode  string `json:"mode"` // "enroll" or "retrieve"
++	URL  string `json:"url"`
++	CA   string `json:"ca"`   // CA of its TLS certificate
++	Mode string `json:"mode"` // "enroll" or "retrieve"
+ 	// RATSModel: "passport" (the default), this server obtains the Attestation Results; "background-check", the
+ 	// RRP does, from the Evidence this server forwards
+ 	RATSModel string `json:"rats_model,omitempty"`
+@@ -261,12 +257,11 @@ func (b *Backend) route(target string) (string, RRP, error) {
+ 	return name, b.cfg.RRPs[name], nil
+ }
+ 
+-// gatewayInitiation is an RRP gateway's answer to attest-initiate. RRPID is checked against this server's
+-// configuration and goes no further: the Attester binds the identifier it holds itself.
++// gatewayInitiation is an RRP gateway's answer to attest-initiate. No identifier of the RRP is in it, or anywhere in
++// this server, since 11 October 2026 (TheBankster/rats-tacra#20).
+ type gatewayInitiation struct {
+ 	FreshnessKind string   `json:"freshness_kind"`
+ 	Handle        string   `json:"handle"`
+-	RRPID         string   `json:"rrp_id"`
+ 	ExpiresIn     int      `json:"expires_in"`
+ 	MaxAge        int      `json:"max_age"`
+ 	Mode          string   `json:"mode"`
+@@ -284,8 +279,8 @@ func (b *Backend) InitiateRemoteAttestation(ctx context.Context, target, credent
+ 	if _, err := b.post(ctx, name, "/tacra/v1/initiate", map[string]string{"target": target, "credential_type": credentialType}, &g); err != nil {
+ 		return nil, err
+ 	}
+-	if g.RRPID != rrp.RRPID || g.Mode != rrp.Mode {
+-		return nil, fail(http.StatusBadGateway, "RRP %s answered as %s/%s, configured as %s/%s", name, g.RRPID, g.Mode, rrp.RRPID, rrp.Mode)
++	if g.Mode != rrp.Mode {
++		return nil, fail(http.StatusBadGateway, "RRP %s answered for %s, configured for %s", name, g.Mode, rrp.Mode)
+ 	}
+ 	resp, err := initiation(g, b.cfg.AcceptableEvidence)
+ 	if err != nil {
+diff --git a/internal/tacra/binding.go b/internal/tacra/binding.go
+index 9107a49..06878fe 100644
+--- a/internal/tacra/binding.go
++++ b/internal/tacra/binding.go
+@@ -5,33 +5,20 @@ import (
+ 	"encoding/binary"
+ )
+ 
+-// bindingValue is SHA-512 of the binding input of TACRA Section 4.5 (master 912bd50 and later) and of
+-// draft-novak-lamps-tacra-est, Section 9.1.5 (pull request head 183bedd): the freshness element, the Target, the
+-// identifier of the RATS Relying Party and the subject, each preceded by its length as a 32-bit big-endian integer.
++// bindingValue is SHA-512 of the binding input of TACRA Section 4.5 as the group decided on 6 and 11 October 2026
++// (TheBankster/rats-tacra#20; TWI-Unified-Model/globalsign-est#4): the freshness element, the Target and the subject,
++// each preceded by its length as a 32-bit big-endian integer; no Relying Party identifier and no server identifier.
+ //
+-//	binding_input = len32(handle) || handle || len32(target) || target
+-//	             || len32(rrp_id) || rrp_id || len32(subject) || subject
++//	binding_input = len32(handle) || handle || len32(target) || target || len32(subject) || subject
+ //
+-// Since the group's decision of 6 October 2026 (TheBankster/rats-tacra#20) the RRP identifier is left out: the field
+-// is empty, len32(0) and nothing, until the threat model is agreed and the identifier may return. The Evidence of the
+-// bench's runs without the identifier (8 October 2026) carries exactly this value in REPORT_DATA (binding_test.go).
+-// It is the nonce of the Verifier's session, which the Verifier finds in the Evidence and the RRP recomputes.
+-// est.BindingDigest of this repository puts the server identity before the Target, the order before 30 September
+-// 2026; it is not used here.
++// It is the nonce of the Verifier's session, which the Verifier finds in the Evidence and the RRP recomputes. The
++// mock's est.BindingDigest computes the same octets (binding_test.go).
+ func bindingValue(handle []byte, target string, subject []byte) []byte {
+ 	var in []byte
+-	// the third field, the RRP identifier, is empty: the group's decision of 6 October 2026 (TheBankster/rats-tacra#20)
+-	// leaves it out until the threat model is agreed; the layout of Section 4.5 is kept so that it can return
+-	for _, v := range [][]byte{handle, []byte(target), nil, subject} {
++	for _, v := range [][]byte{handle, []byte(target), subject} {
+ 		in = binary.BigEndian.AppendUint32(in, uint32(len(v)))
+ 		in = append(in, v...)
+ 	}
+ 	sum := sha512.Sum512(in)
+ 	return sum[:]
+ }
+-
+-// sha512Sum is SHA-512 of in; the tests use it to spell the layout out.
+-func sha512Sum(in []byte) []byte {
+-	sum := sha512.Sum512(in)
+-	return sum[:]
+-}
+diff --git a/internal/tacra/binding_test.go b/internal/tacra/binding_test.go
+index 997fca5..c1447be 100644
+--- a/internal/tacra/binding_test.go
++++ b/internal/tacra/binding_test.go
+@@ -2,44 +2,31 @@ package tacra
+ 
+ import (
+ 	"bytes"
+-	"encoding/hex"
++	"crypto/sha512"
++	"encoding/binary"
+ 	"testing"
+ 
+ 	"github.com/globalsign/est"
+ )
+ 
+-// A hardware test vector of the binding without the RRP identifier: the present-nonce Enrollment case of the bench's
+-// GCP SEV-SNP run 20261008T205230Z-gcp-sev-snp-no-rrp-id (nikolaichuk7/attestation-bench, hwcheck/evidence), whose
+-// SHA-512(binding_input) with an empty identifier field equals REPORT_DATA of the hardware report (offset 0x50), and
+-// whose value with the Credential Authority's identifier does not.
+-func TestBindingValueHardwareVector(t *testing.T) {
+-	handle, _ := hex.DecodeString("2550eda6542e3466031c0f27e11172dba8b8a793327cb3ba0c1e45529b0b1766")
+-	subject, _ := hex.DecodeString("3081dc3081830201003021311f301d06035504031316776f726b6c6f61642e74616372612e6578616d706c653059301306072a8648ce3d020106082a8648ce3d03010703420004d0ac20c555d1ed5bbd290a175a8781abfe2349f9145894e10061f4857f79d4ad9aa22d02619323708103d3cd3335a5b79127d325154601d35195566042cd99d9a000300a06082a8648ce3d0403020348003045022100a11c21faec75689d10bd28d37e785e21f76e43a84c58c17e8176947c0e678b9a0220013be8138ce258355ab354df531ff840d3c34bf8322d68d27e50385a679022d0")
+-	reportData, _ := hex.DecodeString("2c9ff509e7312ca53bc61ce96a03e73323d9b12e076ee0333aadc5123eaff848523a6615ff9ea27cd9681b0dd60c60a2631776c7d230c88f63a70e3fd37c4e04")
+-	const target = "https://db.tacra.example"
+-	if len(subject) != 223 || len(reportData) != 64 {
+-		t.Fatalf("vector: subject %d octets, REPORT_DATA %d", len(subject), len(reportData))
+-	}
+-	if got := bindingValue(handle, target, subject); !bytes.Equal(got, reportData) {
+-		t.Fatalf("binding value %x, want REPORT_DATA %x", got, reportData)
+-	}
+-	// the repository's own encoder has another layout (no identifier field at all), and so another value
+-	if bytes.Equal(est.BindingDigest(handle, target, subject), reportData) {
+-		t.Fatal("est.BindingDigest now gives the TACRA layout: this backend can use it again")
+-	}
+-}
+-
+-// The layout of Section 4.5 is kept: the identifier field is present and empty, so that the value equals the one an
+-// RRP computes with an empty identifier, as the bench's RRPs did in the runs of 8 October 2026.
+-func TestBindingValueEmptyIdentifierField(t *testing.T) {
+-	handle, subject := []byte("h"), []byte("a CSR")
++// The binding of 11 October 2026: three length-prefixed fields, the freshness element, the Target and the subject; the
++// same octets the mock's est.BindingDigest computes. (A hardware vector follows the first run of this layout.)
++func TestBindingValueThreeFields(t *testing.T) {
++	handle, subject := []byte("a Handle"), []byte("a CSR")
+ 	const target = "https://db.tacra.example"
+ 	var in []byte
+-	for _, v := range [][]byte{handle, []byte(target), nil, subject} {
+-		in = append(in, byte(len(v)>>24), byte(len(v)>>16), byte(len(v)>>8), byte(len(v)))
++	for _, v := range [][]byte{handle, []byte(target), subject} {
++		in = binary.BigEndian.AppendUint32(in, uint32(len(v)))
+ 		in = append(in, v...)
+ 	}
+-	if got := bindingValue(handle, target, subject); !bytes.Equal(got, sha512Sum(in)) {
+-		t.Errorf("binding value %x, want the layout with an empty third field", got)
++	want := sha512.Sum512(in)
++	if got := bindingValue(handle, target, subject); !bytes.Equal(got, want[:]) {
++		t.Fatalf("binding value %x, want %x", got, want)
++	}
++	if got := est.BindingDigest(handle, target, subject); !bytes.Equal(got, want[:]) {
++		t.Fatalf("est.BindingDigest %x differs from the backend's %x: one layout is meant", got, want)
++	}
++	if bytes.Equal(bindingValue(handle, target, subject), bindingValue(handle, "https://other.tacra.example", subject)) {
++		t.Fatal("the Target is not bound")
+ 	}
+ }
+diff --git a/internal/tacra/conduit_test.go b/internal/tacra/conduit_test.go
+index 0205789..a61211e 100644
+--- a/internal/tacra/conduit_test.go
++++ b/internal/tacra/conduit_test.go
+@@ -104,7 +104,7 @@ func TestNewTakesTheDrillInPassportAlone(t *testing.T) {
+ 	cfg := func(attack, model string) Config {
+ 		return Config{
+ 			Verifiers: map[string]Verifier{"veraison": {URL: "https://" + closedPort(t), CA: ca, Provider: "sev_guest"}},
+-			RRPs: map[string]RRP{"ca": {URL: "https://" + closedPort(t), CA: ca, RRPID: "https://ca1.tacra.example",
++			RRPs: map[string]RRP{"ca": {URL: "https://" + closedPort(t), CA: ca,
+ 				Mode: est.MechanismEnroll, Verifiers: []string{"veraison"}, RATSModel: model, ConduitAttack: attack}},
+ 			Targets:            map[string]string{"https://db-none.tacra.example": "ca"},
+ 			AcceptableEvidence: []string{"application/vnd.veraison.tsm-report+cbor"},
+diff --git a/internal/tacra/initiation_test.go b/internal/tacra/initiation_test.go
+index e7e451b..2f170f4 100644
+--- a/internal/tacra/initiation_test.go
++++ b/internal/tacra/initiation_test.go
+@@ -22,19 +22,19 @@ func TestInitiationResponse(t *testing.T) {
+ 		members []string // of the response, or none for a refusal
+ 	}{
+ 		{"present-nonce, enroll", gatewayInitiation{FreshnessKind: "present-nonce", Handle: handle,
+-			RRPID: "https://ca1.tacra.example", ExpiresIn: 300, MaxAge: 120, Mode: "enroll", AcceptableCSK: csk,
++			ExpiresIn: 300, MaxAge: 120, Mode: "enroll", AcceptableCSK: csk,
+ 			AcceptableCEK: cek},
+ 			[]string{"acceptable_csk", "acceptable_evidence", "expires_in", "freshness_kind", "handle", "mode"}},
+ 		{"present-epoch, retrieve", gatewayInitiation{FreshnessKind: "present-epoch", Handle: handle,
+-			RRPID: "https://vault1.tacra.example", ExpiresIn: 300, Mode: "retrieve", AcceptableCSK: csk, AcceptableCEK: cek},
++			ExpiresIn: 300, Mode: "retrieve", AcceptableCSK: csk, AcceptableCEK: cek},
+ 			[]string{"acceptable_cek", "acceptable_evidence", "expires_in", "freshness_kind", "handle", "mode"}},
+ 		{"absent-timestamp, retrieve", gatewayInitiation{FreshnessKind: "absent-timestamp",
+-			RRPID: "https://vault1.tacra.example", ExpiresIn: 300, MaxAge: 120, Mode: "retrieve", AcceptableCEK: cek},
++			ExpiresIn: 300, MaxAge: 120, Mode: "retrieve", AcceptableCEK: cek},
+ 			[]string{"acceptable_cek", "acceptable_evidence", "freshness_kind", "max_age", "mode"}},
+-		{"absent-epoch, enroll", gatewayInitiation{FreshnessKind: "absent-epoch", RRPID: "https://ca1.tacra.example",
++		{"absent-epoch, enroll", gatewayInitiation{FreshnessKind: "absent-epoch",
+ 			ExpiresIn: 300, MaxAge: 120, Mode: "enroll", AcceptableCSK: csk},
+ 			[]string{"acceptable_csk", "acceptable_evidence", "freshness_kind", "mode"}},
+-		{"absent-none, enroll", gatewayInitiation{FreshnessKind: "absent-none", RRPID: "https://ca1.tacra.example",
++		{"absent-none, enroll", gatewayInitiation{FreshnessKind: "absent-none",
+ 			Mode: "enroll", AcceptableCSK: csk}, []string{"acceptable_csk", "acceptable_evidence", "freshness_kind", "mode"}},
+ 		{"present-nonce without a Handle", gatewayInitiation{FreshnessKind: "present-nonce", Mode: "enroll"}, nil},
+ 		{"present-epoch without a Handle", gatewayInitiation{FreshnessKind: "present-epoch", Mode: "retrieve"}, nil},
+diff --git a/internal/tacra/session_test.go b/internal/tacra/session_test.go
+index 0e9cf77..ef8c773 100644
+--- a/internal/tacra/session_test.go
++++ b/internal/tacra/session_test.go
+@@ -82,7 +82,7 @@ func TestExpiredOrUnknown(t *testing.T) {
+ func TestFormatRefusalLeavesTheHandle(t *testing.T) {
+ 	const target = "https://db-nonce.tacra.example"
+ 	b := &Backend{sessions: map[string][]session{},
+-		cfg: Config{RRPs: map[string]RRP{"ca": {RRPID: "https://ca1.tacra.example", Mode: est.MechanismEnroll}},
++		cfg: Config{RRPs: map[string]RRP{"ca": {Mode: est.MechanismEnroll}},
+ 			Targets: map[string]string{target: "ca"}, AcceptableEvidence: []string{"application/vnd.veraison.tsm-report+cbor"}}}
+ 	handle := []byte("a present-nonce Handle of 32 o.")
+ 	b.remember(hex.EncodeToString(handle), session{target, "x509", "ca", est.FreshnessPresentNonce, time.Now().Add(time.Minute)})
+diff --git a/internal/tacra/unreachable_test.go b/internal/tacra/unreachable_test.go
+index 5287995..acfaa36 100644
+--- a/internal/tacra/unreachable_test.go
++++ b/internal/tacra/unreachable_test.go
+@@ -69,7 +69,7 @@ func TestUnreachable(t *testing.T) {
+ 	const target = "https://db-none.tacra.example"
+ 	b, err := New(Config{
+ 		Verifiers: map[string]Verifier{"veraison": {URL: "https://" + closedPort(t), CA: ca, Provider: "sev_guest"}},
+-		RRPs: map[string]RRP{"ca": {URL: "https://" + closedPort(t), CA: ca, RRPID: "https://ca1.tacra.example",
++		RRPs: map[string]RRP{"ca": {URL: "https://" + closedPort(t), CA: ca,
+ 			Mode: est.MechanismEnroll, Verifiers: []string{"veraison"}}},
+ 		Targets:            map[string]string{target: "ca"},
+ 		AcceptableEvidence: []string{"application/vnd.veraison.tsm-report+cbor"},

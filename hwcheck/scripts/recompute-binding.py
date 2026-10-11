@@ -3,11 +3,12 @@
 
     recompute-binding.py EVIDENCE_DIR sev-snp|tdx
 
-For every Enrollment case of both passes, recompute SHA-512 over (len32||freshness element, len32||Target,
-len32||RRP identifier, len32||CSR DER) with each candidate identifier: ca1's, ca2's and none. Compare it with the
+For every Enrollment case of the passes present, recompute SHA-512 over the binding input of the case's layout: three
+fields (len32||freshness element, len32||Target, len32||CSR DER) for the runs from 12 October 2026 on (binding_layout in
+meta.json), or, for the runs before, four fields with each candidate identifier: ca1's, ca2's and none. Compare it with the
 report's own REPORT_DATA: SEV-SNP report offset 0x50; TDX quote 48+520 (hwcheck/cmd/rrpverify/tdx.go:90).
-Expected: the with-rrp-id pass matches ca1's identifier only, and the no-rrp-id pass matches no identifier only
-(redirect.sh binds "" there). It also checks that hwrun's recorded binding_value_hex is the matching value. Exit
+Expected: a three-field case matches its layout; in the earlier layout the with-rrp-id pass matches ca1's identifier
+only, and the no-rrp-id pass matches no identifier only. It also checks that hwrun's recorded binding_value_hex is the matching value. Exit
 status 0 only when every case is as expected.
 """
 
@@ -25,6 +26,7 @@ import cbor2
 DIR, TEE = sys.argv[1], sys.argv[2]
 IDS = {"ca1": "https://ca1.tacra.example", "ca2": "https://ca2.tacra.example", "none": ""}
 EXPECT = {"with-rrp-id": "ca1", "no-rrp-id": "none"}
+THREE_FIELDS = "freshness-target-subject"  # the binding of 11 October 2026 (platform.BindingLayout)
 
 
 def lp(*parts):
@@ -41,7 +43,11 @@ def report_data(token):
 
 
 bad = 0
-for pass_name, want in EXPECT.items():
+passes = [p for p in EXPECT if os.path.isdir(os.path.join(DIR, p))]
+if not passes:
+    sys.exit(f"no pass directory under {DIR}")
+for pass_name in passes:
+    want = EXPECT[pass_name]
     cases = sorted(glob.glob(os.path.join(DIR, pass_name, "redir", "enroll-*")))
     if not cases:
         sys.exit(f"no Enrollment cases under {DIR}/{pass_name}/redir")
@@ -51,7 +57,10 @@ for pass_name, want in EXPECT.items():
         elem = base64.urlsafe_b64decode(e + "=" * (-len(e) % 4)) if e else b""
         subject = Path(case, "subject.der").read_bytes()
         rd = report_data(Path(case, "evidence.tsm.cbor").read_bytes())
-        bvs = {n: hashlib.sha512(lp(elem, meta["target"], i, subject)).digest() for n, i in IDS.items()}
+        if meta.get("binding_layout") == THREE_FIELDS:
+            bvs, want = {"three fields": hashlib.sha512(lp(elem, meta["target"], subject)).digest()}, "three fields"
+        else:
+            bvs = {n: hashlib.sha512(lp(elem, meta["target"], i, subject)).digest() for n, i in IDS.items()}
         matches = [n for n, bv in bvs.items() if bv == rd]
         ok = matches == [want] and meta["binding_value_hex"] == bvs[want].hex()
         bad += not ok

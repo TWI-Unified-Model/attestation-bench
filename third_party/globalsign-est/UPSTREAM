@@ -14,8 +14,10 @@
 #   0017 no RRP identifier in the binding (an empty field in the Section 4.5 layout) and no server_id in the fork's
 #   digest or bundle: the group's decision of 6 October 2026 (rats-tacra#20), as the transfer branch's 7e4224c; the
 #   fork's constants block as it was (4175988).
+#   0018 the identifiers ripped out (Mark, 11 October 14:31Z): a three-field binding, freshness, Target, subject, and
+#   no rrp_id in the configuration or checked at attest-initiate; as the transfer branch's b531556.
 NAME=globalsign-est
 REPO=https://github.com/TWI-Unified-Model/globalsign-est.git
 BASE=04ffa468b167eb36d8b1af0e354c4af41427a02e   # sudar_feature_01, sudarsh4495, 2026-09-27
 LICENSE=MIT
-VARIANTS="src:17:3b2cb1f71b2aaa82d1ea0e1eeed7dde17f24b361"
+VARIANTS="src:18:09762d19ebc68101b4ec198fae51c0b78d981f21"

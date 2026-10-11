@@ -235,6 +235,7 @@ without it. Then the intermediary rewrites, one at a time, what it relays to `ca
 Kind, the credential type, another workload's Credential Hint. It ends with:
 
 ```
+(a run of October 2026 before the 12th, with both passes; since 12 October the experiment makes the no-rrp-id pass alone)
 pass         kind               ca1      ca2
 with-rrp-id  present-nonce      ISSUED   refused
 with-rrp-id  present-epoch      ISSUED   refused

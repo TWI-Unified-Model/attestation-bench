@@ -27,13 +27,9 @@ HW="$(cd "$(dirname "$0")/.." && pwd)"
 REPO="$(cd "$HW/.." && pwd)"
 CODE_REV="$(git -C "$REPO" rev-parse --short=12 HEAD)$(git -C "$REPO" diff --quiet HEAD -- platform cai hwcheck/cmd || echo -dirty)"
 RUNS_DIR="${RUNS_DIR:-$BENCH_HOME/runs}"
-OUT="$RUNS_DIR/${STAMP}-gcp-tdx${BIND_RRP_ID:+-bind-rrp-id}"
-# The guest binds no RRP identifier: the group's decision of 6 October 2026 (rats-tacra#20), the default since 11 October.
-# BIND_RRP_ID=1: the measured variant, the identifiers bound (the bench's RRPs must bind them too, BIND_RRP_ID=1
-# e2e/scripts/bench.sh config, and so must the EST server, which the group's code no longer does). rrpverify takes the
-# identifiers from the run's own record (cases.json, relying_party), so it gets no flags here.
-RRP_FLAGS=""; RRPV=(); PREPLAY_BIND=""
-if [ -n "${BIND_RRP_ID:-}" ]; then RRP_FLAGS="-rrp-ca https://ca1.tacra.example -rrp-vault https://vault1.tacra.example"; PREPLAY_BIND=with-rrp-id; fi
+OUT="$RUNS_DIR/${STAMP}-gcp-tdx"
+# The Evidence binds the freshness element, the Target and the subject, and no identifier of any party (the group's
+# decision of 6 and 11 October 2026, rats-tacra#20); rrpverify reads the binding's layout from the run's own record.
 BIN="$(mktemp -d)"
 mkdir -p "$OUT"
 echo "$CODE_REV" > "$OUT/code-rev.txt"
@@ -88,7 +84,7 @@ NB="$(date -u +%s)"
 # detached from the SSH session: one that breaks costs a call, not the run (scripts/lib.sh)
 bench_guest_run "$OUT/run-ssh.stderr" "
 set -e
-sudo ~/hwrun -tee tdx -handles ~/handles.json -out /root/hwrun-out -burst 30 $RRP_FLAGS 2>&1
+sudo ~/hwrun -tee tdx -handles ~/handles.json -out /root/hwrun-out -burst 30 2>&1
 sudo sh -c 'cd /root/hwrun-out && uname -a > kernel.txt && (dmesg 2>/dev/null | grep -i -E \"tdx|tsm|confidential\" > dmesg-tdx.txt || true) && (curl -s -H Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/machine-type > machine-type.txt || true) && date -u +%s > guest-clock.txt'
 sudo bash ~/guest-clock.sh /root/hwrun-out
 sudo chmod -R a+rX /root/hwrun-out; rm -rf ~/hwrun-out; sudo cp -r /root/hwrun-out ~/hwrun-out; sudo chown -R \$(id -u):\$(id -g) ~/hwrun-out
@@ -105,8 +101,8 @@ bench_retry "$OUT/run-ssh.stderr" gcloud compute scp "$BIN"/preplay-*.json "$NAM
 PB="$(date -u +%s)"
 bench_guest_run "$OUT/run-ssh.stderr" "
 set -e
-sudo bash ~/preplay-guest.sh $AHEAD /root/preplay/ahead tdx all $PREPLAY_BIND 2>&1
-sudo bash ~/preplay-guest.sh -$AHEAD /root/preplay/behind tdx absent-timestamp $PREPLAY_BIND 2>&1
+sudo bash ~/preplay-guest.sh $AHEAD /root/preplay/ahead tdx all 2>&1
+sudo bash ~/preplay-guest.sh -$AHEAD /root/preplay/behind tdx absent-timestamp 2>&1
 sudo chmod -R a+rX /root/preplay; rm -rf ~/preplay; sudo cp -r /root/preplay ~/preplay; sudo chown -R \$(id -u):\$(id -g) ~/preplay
 " gcloud compute ssh "$NAME" --project="$PROJECT" --zone="$ZONE" --command | tee "$OUT/preplay-stdout.txt"
 PA="$(date -u +%s)"
@@ -125,13 +121,13 @@ trap 'rm -rf "$BIN"' EXIT
 cleanup
 
 echo "== RRP verification (go-tdx-guest, Intel PCS collateral)"
-"$BIN/rrpverify" verify -in "$OUT" -handles "$OUT/handles.json" -not-before "$NB" -not-after "$NA" ${RRPV[@]+"${RRPV[@]}"} \
+"$BIN/rrpverify" verify -in "$OUT" -handles "$OUT/handles.json" -not-before "$NB" -not-after "$NA" \
   -out "$OUT/rrpverify-tdx.json" > "$OUT/rrpverify-tdx.txt" 2> "$OUT/rrpverify-tdx.stderr.log"
 echo "== RRP verification through the deployed TDX verifier"
 read -r TDX_URL TDX_CA < <(python3 -c 'import json, sys
 v = json.load(open(sys.argv[1]))["tacra"]["verifiers"]["tdx"]
 print(v["url"], v["ca"])' "$BENCH_HOME/config/est-server.json")
-"$BIN/rrpverify" service -in "$OUT" -handles "$OUT/handles.json" -not-before "$NB" -not-after "$NA" -url "$TDX_URL" ${RRPV[@]+"${RRPV[@]}"} \
+"$BIN/rrpverify" service -in "$OUT" -handles "$OUT/handles.json" -not-before "$NB" -not-after "$NA" -url "$TDX_URL" \
   -submod TDX -ca "$TDX_CA" -out "$OUT/rrpverify-service.json" -save-ears "$OUT/ears" | tee "$OUT/rrpverify-service.txt"
 echo "== the RRPs' platform rule on the honest Attestation Results: the bench's, a bank's, one step stricter"
 # the platform rule the RRPs apply (trust/platform-policy.json, as scripts/trustzone.py gave it to them)

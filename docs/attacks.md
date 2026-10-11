@@ -288,24 +288,15 @@ reproduces it from any committed run.
 
 ## 8. The same attacks without the RRP identifier
 
-Since 11 October 2026 the bench binds no RRP identifier by default: the group decided on 6 October to leave it out
-(TACRA issue #20) until the threat model is agreed, and the EST server of the group's repository binds none (EST patch
-0017; TWI-Unified-Model/globalsign-est#4). The runs of this section were made on 8 October with the switch of the
-time, `OMIT_RRP_ID=1`, against the then default with the identifier. The variant with the identifier is still
-measurable, as the comparison needs both sides:
-
-```bash
-BIND_RRP_ID=1 EST_REPO=<a tree from before 11 October> make config && make start   # the CAI and the RRPs bind the identifier
-BIND_RRP_ID=1 make demo PLATFORM=gcp-snp          # also make attacks; the runs end in -bind-rrp-id
-make config && make start                         # back to the default, no identifier
-```
-
-The bench measured the protocol both ways with the same events: the switch reached the workload's CAI (the identifier
-left out of the Evidence's binding; the identifiers the CAI holds still name the Vault's and the Credential
-Authority's trust anchors), the EST server (its Verifier session nonce in Passport computed without the identifier)
-and the RRPs. Leaving the identifier out of TACRA is therefore a change to the CAS Server as well as to the text: the
-server's nonce has to match what the RRP recomputes. The EST server of the group's code now binds none, so the
-`BIND_RRP_ID=1` side needs an EST tree from before 11 October (`EST_REPO`), where the switch still exists.
+Since 12 October 2026 the binding carries no identifier of any party: the group decided on 6 October to leave the RRP
+identifier out (TACRA issue #20) and on 11 October to rip it out of the code altogether, with the EST Server's identifier,
+until an end-to-end understanding says what to put back (Mark Novak in TWI-Unified-Model/globalsign-est#4). The EST server
+of the group's code binds the freshness element, the Target and the subject (EST patch 0018), and so does this bench: the
+CAI, the RRP gateways, hwrun and rrpverify, the pre-play and the redirection experiment. There is no switch left; the side
+with the identifier is history, measured on 8 October against the then default, and reproducible from the code of that day
+(`2a3777a3`, `BIND_RRP_ID=1`; before it, `OMIT_RRP_ID=1` on the code of 8 October). rrpverify appraises every committed run
+by the layout its own record names (`binding_layout` in `cases.json`, the earlier four-field layout otherwise), so `make
+test-live` holds the runs of both layouts.
 
 Runs of 8 October 2026, each as the run of its kind with the identifier (sections 1, 2 and 6 above): the replay
 variants and the Passport demos at `153eb2f`; the attacks on GCP, the drills and the Background Check demos at

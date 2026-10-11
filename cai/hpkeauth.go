@@ -73,7 +73,7 @@ func (c *Client) openHPKEAuth(raw []byte, cekPriv crypto.PrivateKey, req Acquisi
 	default:
 		return nil, fmt.Errorf("%w: CEK type %T", ErrUnwrap, cekPriv)
 	}
-	content, err := bundle.Open(&b, cek, bundle.Expect{RRPID: req.RelyingParty, Target: req.Target, Handle: element,
+	content, err := bundle.Open(&b, cek, bundle.Expect{Target: req.Target, Handle: element,
 		CredentialHint: req.Hint, VaultSPKI: origin})
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrUnwrap, err)
@@ -116,7 +116,7 @@ func (c *Client) openSigned(raw []byte, cekPriv crypto.PrivateKey, req Acquisiti
 	if !ok {
 		return nil, fmt.Errorf("%w: a signed container needs an MLKEM768-P256 CEK, not %T", ErrUnwrap, cekPriv)
 	}
-	content, err := bundle.OpenSigned(&b, bundle.ExpectSigned{RRPID: req.RelyingParty, Target: req.Target, Handle: element,
+	content, err := bundle.OpenSigned(&b, bundle.ExpectSigned{Target: req.Target, Handle: element,
 		CredentialHint: req.Hint, CEK: cek, VaultKey: vaultKey})
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrUnwrap, err)

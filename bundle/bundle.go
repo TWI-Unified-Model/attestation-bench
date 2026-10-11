@@ -1,11 +1,12 @@
 // Package bundle is the EncryptedCredentialBundle of draft-novak-lamps-tacra-est (the mandatory "hpke-auth"
 // container): the Secret Vault seals a credential bundle to the Attester's CEKpub with HPKE in mode_auth (RFC 9180,
-// Section 5.1.3) under its static KEM key, with the RRP identifier and the freshness element in info and the
-// associated data {group_id, rrp_id, target, handle, credential_hint} authenticated; the Attester opens it only under
-// the Vault key it trusts and only if the associated data names what its Evidence bound.
+// Section 5.1.3) under its static KEM key, with the freshness element in info and the associated data
+// {group_id, target, handle, credential_hint} authenticated; the Attester opens it only under the Vault key it trusts
+// and only if the associated data names what its Evidence bound. No identifier of the Vault is in it since 11 October
+// 2026 (rats-tacra#20): the Vault's key, which the Attester holds, is its identity.
 //
-// The encoding follows the reference implementation (tacra-est): info = len32(rrp_id) || rrp_id || len32(handle) ||
-// handle; the associated data and the plaintext are deterministic JSON (sorted keys, no spaces); byte strings in JSON
+// The encoding: info = len32(handle) || handle; the associated data and the plaintext are deterministic JSON (sorted
+// keys, no spaces); byte strings in JSON
 // are unpadded base64url. The DHKEM follows the key type of CEKpub: X25519 (mandatory to implement) or P-256.
 package bundle
 
@@ -62,7 +63,6 @@ func (b *B64) UnmarshalJSON(d []byte) error {
 // AAD is the associated data of the bundle.
 type AAD struct {
 	GroupID        string `json:"group_id"`
-	RRPID          string `json:"rrp_id"`
 	Target         string `json:"target"`
 	Handle         B64    `json:"handle,omitempty"`
 	CredentialHint string `json:"credential_hint,omitempty"`
@@ -107,11 +107,9 @@ type Content struct {
 	Metadata        map[string]any `json:"metadata,omitempty"`
 }
 
-// Info is the HPKE info parameter.
-func Info(rrpID string, handle []byte) []byte {
-	b := binary.BigEndian.AppendUint32(nil, uint32(len(rrpID)))
-	b = append(b, rrpID...)
-	b = binary.BigEndian.AppendUint32(b, uint32(len(handle)))
+// Info is the HPKE info parameter: the freshness element, length-prefixed.
+func Info(handle []byte) []byte {
+	b := binary.BigEndian.AppendUint32(nil, uint32(len(handle)))
 	return append(b, handle...)
 }
 
@@ -324,7 +322,7 @@ func Seal(sender *SenderKeys, cekSPKI []byte, aad AAD, content Content) (*Bundle
 		return nil, err
 	}
 	suite := hpke.NewSuite(kemID, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES256GCM)
-	s, err := suite.NewSender(pkR, Info(aad.RRPID, aad.Handle))
+	s, err := suite.NewSender(pkR, Info(aad.Handle))
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +348,6 @@ func Seal(sender *SenderKeys, cekSPKI []byte, aad AAD, content Content) (*Bundle
 
 // Expect is what the Attester bound into its Evidence, and the Vault key it trusts.
 type Expect struct {
-	RRPID          string
 	Target         string
 	Handle         []byte
 	CredentialHint string
@@ -369,8 +366,7 @@ func Open(b *Bundle, cek *ecdh.PrivateKey, exp Expect) (*Content, error) {
 	if b.Container != Container || b.Suite.KDF != KDF || b.Suite.AEAD != AEAD {
 		return nil, ErrContainer
 	}
-	if b.AAD.RRPID != exp.RRPID || b.AAD.Target != exp.Target || !bytes.Equal(b.AAD.Handle, exp.Handle) ||
-		b.AAD.CredentialHint != exp.CredentialHint {
+	if b.AAD.Target != exp.Target || !bytes.Equal(b.AAD.Handle, exp.Handle) || b.AAD.CredentialHint != exp.CredentialHint {
 		return nil, ErrAAD
 	}
 	var kemID hpke.KEM
@@ -395,7 +391,7 @@ func Open(b *Bundle, cek *ecdh.PrivateKey, exp Expect) (*Content, error) {
 	if err != nil {
 		return nil, err
 	}
-	r, err := hpke.NewSuite(kemID, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES256GCM).NewReceiver(skR, Info(exp.RRPID, exp.Handle))
+	r, err := hpke.NewSuite(kemID, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES256GCM).NewReceiver(skR, Info(exp.Handle))
 	if err != nil {
 		return nil, err
 	}

@@ -20,7 +20,6 @@ import (
 // hpke-base-signed container's signature covers the Target, in its HPKE info, and refuses it without that check.
 
 const (
-	keptRRP    = "https://vault1.tacra.example"
 	keptLedger = "https://ledger.tacra.example"
 	keptDB     = "https://db.tacra.example"
 )
@@ -34,7 +33,7 @@ func keptContent(secret string) Content {
 }
 
 func keptAAD(target string) AAD {
-	return AAD{GroupID: "g", RRPID: keptRRP, Target: target, Handle: keptEpoch}
+	return AAD{GroupID: "g", Target: target, Handle: keptEpoch}
 }
 
 func TestAuthContainerNewCEKForEachRetrieval(t *testing.T) {
@@ -54,7 +53,7 @@ func TestAuthContainerNewCEKForEachRetrieval(t *testing.T) {
 		t.Fatal(err)
 	}
 	// B's CAI, comparing nothing: it takes the RRP identifier, Target and Handle the container itself names
-	_, err = Open(a, cekB, Expect{RRPID: a.AAD.RRPID, Target: a.AAD.Target, Handle: a.AAD.Handle, VaultSPKI: anchor})
+	_, err = Open(a, cekB, Expect{Target: a.AAD.Target, Handle: a.AAD.Handle, VaultSPKI: anchor})
 	if !errors.Is(err, ErrOrigin) {
 		t.Fatalf("A's container opened with B's CEK: %v, want %v", err, ErrOrigin)
 	}
@@ -75,7 +74,7 @@ func TestAuthContainerKeptCEKOnlyTheTargetCheck(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectDB := Expect{RRPID: keptRRP, Target: keptDB, Handle: keptEpoch, VaultSPKI: anchor}
+	expectDB := Expect{Target: keptDB, Handle: keptEpoch, VaultSPKI: anchor}
 	if _, err := Open(a, cek, expectDB); !errors.Is(err, ErrAAD) {
 		t.Fatalf("the ledger's container given for db: %v, want %v", err, ErrAAD)
 	}
@@ -101,7 +100,7 @@ func TestSignedContainerSignatureCoversTheTarget(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := OpenSigned(a, ExpectSigned{RRPID: keptRRP, Target: keptDB, Handle: keptEpoch, CEK: sk,
+	if _, err := OpenSigned(a, ExpectSigned{Target: keptDB, Handle: keptEpoch, CEK: sk,
 		VaultKey: &signer.PublicKey}); !errors.Is(err, ErrAAD) {
 		t.Fatalf("the ledger's container given for db: %v, want %v", err, ErrAAD)
 	}
@@ -111,7 +110,7 @@ func TestSignedContainerSignatureCoversTheTarget(t *testing.T) {
 		t.Fatal(err)
 	}
 	verifies := func(target string) bool {
-		d := sha256.Sum256(ToBeSigned(cekPub, InfoSigned(keptRRP, target, keptEpoch), aadBytes, a.Enc, a.Ciphertext))
+		d := sha256.Sum256(ToBeSigned(cekPub, InfoSigned(target, keptEpoch), aadBytes, a.Enc, a.Ciphertext))
 		return ecdsa.VerifyASN1(&signer.PublicKey, d[:], a.Signature)
 	}
 	if !verifies(keptLedger) {
@@ -125,7 +124,7 @@ func TestSignedContainerSignatureCoversTheTarget(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d := sha256.Sum256(ToBeSigned(otherPub, InfoSigned(keptRRP, keptLedger, keptEpoch), aadBytes, a.Enc, a.Ciphertext))
+	d := sha256.Sum256(ToBeSigned(otherPub, InfoSigned(keptLedger, keptEpoch), aadBytes, a.Enc, a.Ciphertext))
 	if ecdsa.VerifyASN1(&signer.PublicKey, d[:], a.Signature) {
 		t.Fatal("the Vault's signature verifies for another CEK")
 	}

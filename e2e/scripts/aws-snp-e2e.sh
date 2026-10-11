@@ -14,9 +14,9 @@
 # not approve (trust/approved-launches.json): Veraison does not affirm it, and every Target must be refused for it.
 # The run ends with its verdict (scripts/verdict.py) and exits 1 unless every Target was admitted (refused, with
 # OTHER_PLATFORM or UNAPPROVED).
-# BIND_RRP_ID=1: the measured variant, the Evidence binds the RRP identifier held (by default, since 11 October 2026,
-# it binds none: rats-tacra#20); the bench must be configured the same way (BIND_RRP_ID=1 e2e/scripts/bench.sh config)
-# and the EST server must bind it too; the run directory ends in -bind-rrp-id.
+# CONDUIT_ATTACK=redirect: the EST server, as the conduit, routes every request to the second Credential Authority and
+# the second Secret Vault, the RRPs the Attester did not ask for (CONDUIT_ATTACK=redirect make config; COPIES_OWN_KEYS=1
+# gives the second Vault keys of its own); the run is judged by what the CAI does with what comes back (verdict conduit).
 # CONDUIT_ATTACK=seal|swap|hint|hint-group: the CAS Client is the attacker of docs/attacks.md, section 6, in the
 # Retrieval container (caapi-est -attack): seal returns a container it sealed itself, swap the Vault's container of
 # the Retrieval before, hint and hint-group ask the Vault with another Credential Hint. The run is judged by what the CAI does with
@@ -39,7 +39,7 @@ MODEL="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('ra
 OTHER_PLATFORM="${OTHER_PLATFORM:-}"
 UNAPPROVED="${UNAPPROVED:-}"
 CONDUIT_ATTACK="${CONDUIT_ATTACK:-}"
-case "$CONDUIT_ATTACK" in "" | seal | swap | hint | hint-group | verifier) ;; *) bench_die "CONDUIT_ATTACK=$CONDUIT_ATTACK: seal, swap, hint, hint-group or verifier" ;; esac
+case "$CONDUIT_ATTACK" in "" | seal | swap | hint | hint-group | verifier | redirect) ;; *) bench_die "CONDUIT_ATTACK=$CONDUIT_ATTACK: seal, swap, hint, hint-group, verifier or redirect" ;; esac
 [ -z "$CONDUIT_ATTACK" ] || [ -z "$OTHER_PLATFORM$UNAPPROVED" ] || bench_die "CONDUIT_ATTACK runs on its own, without OTHER_PLATFORM or UNAPPROVED"
 GUEST_ATTACK="" # the CAS Client is the attacker of the container drills; of verifier, the EST server is (bench.sh config)
 case "$CONDUIT_ATTACK" in seal | swap | hint | hint-group) GUEST_ATTACK=" -attack $CONDUIT_ATTACK" ;; esac
@@ -57,9 +57,21 @@ EXPECT=(--expect admitted) # what the run must show (scripts/verdict.py)
 # UNAPPROVED=1: a c6a.xlarge, whose launch (four vCPUs) the bench does not approve; every Target must be refused for it
 [ -z "$UNAPPROVED" ] || { TYPE=c6a.xlarge; EXPECT=(--expect refused --reason "ear: not affirming: SEVSNP is"); }
 RUNS_DIR="${RUNS_DIR:-$B/runs}"
-OUT="$RUNS_DIR/${STAMP}-aws-${TEE}-e2e-${MODEL}${BIND_RRP_ID:+-bind-rrp-id}${OTHER_PLATFORM:+-other-platform}${UNAPPROVED:+-unapproved}${CONDUIT_ATTACK:+-conduit-$CONDUIT_ATTACK}"
+OUT="$RUNS_DIR/${STAMP}-aws-${TEE}-e2e-${MODEL}${OTHER_PLATFORM:+-other-platform}${UNAPPROVED:+-unapproved}${CONDUIT_ATTACK:+-conduit-$CONDUIT_ATTACK}${COPIES_OWN_KEYS:+-own-keys}"
 BIN="$(mktemp -d)"
 mkdir -p "$OUT/bench-logs"
+if [ "$CONDUIT_ATTACK" = redirect ]; then
+  # the EST server, as the conduit, routes every Target to the copies of the RRPs (bench.sh config, CONDUIT_ATTACK=redirect);
+  # the run keeps the routing it ran under, and whether the copies had keys of their own (COPIES_OWN_KEYS=1)
+  python3 - "$B/config/est-server.json" "$OUT/bench-logs/est-routing.json" "${COPIES_OWN_KEYS:-}" <<'PY' || bench_die "CONDUIT_ATTACK=redirect: the EST server is not configured as the redirecting conduit (CONDUIT_ATTACK=redirect make config)"
+import json, sys
+c = json.load(open(sys.argv[1]))["tacra"]
+targets = {t: {"rrp": r, "url": c["rrps"][r]["url"]} for t, r in c["targets"].items()}
+if not all(r.endswith("-2") for r in c["targets"].values()):
+    sys.exit("not every Target is routed to a copy: " + json.dumps(c["targets"]))
+json.dump({"attack": "redirect", "copies_own_keys": sys.argv[3] == "1", "targets": targets}, open(sys.argv[2], "w"), indent=1)
+PY
+fi
 ID="" SG="" KEY="$NAME"
 echo "== bench"
 "$HERE/e2e/scripts/bench.sh" status | tee "$OUT/bench-status.txt"
@@ -77,7 +89,7 @@ python3 -c "import json,sys; json.dump(json.load(open(sys.argv[1])).get('platfor
 [ -f "$B/est-wire.log" ] || bench_die "no EST wire log in $B: the EST server runs with an older configuration;" \
   "make config, then make stop start"
 [ -f "$B/est-conduit.log" ] || : > "$B/est-conduit.log"
-for f in est-server est-wire est-conduit ca-gateway vault-gateway rup tdx-verifier; do wc -l < "$B/$f.log" > "$OUT/bench-logs/.$f.start"; done
+for f in est-server est-wire est-conduit ca-gateway ca-gateway-2 vault-gateway vault-gateway-2 rup tdx-verifier; do { [ -f "$B/$f.log" ] && wc -l < "$B/$f.log" || echo 0; } > "$OUT/bench-logs/.$f.start"; done
 wc -l < "$VERAISON_DEPLOYMENT/logs/vts.log" > "$OUT/bench-logs/.vts.start"
 wc -l < "$VERAISON_DEPLOYMENT/logs/verification.log" > "$OUT/bench-logs/.verification.start"
 
@@ -90,7 +102,7 @@ echo "== guest configuration (public material only)"
 # the Vault gateway takes callers with a certificate of the bench (mutual TLS): the operator's
 curl -sf --cacert "$B/tls/root.crt" --cert "$B/tls/clients/operator.crt" --key "$B/tls/clients/operator.key" https://127.0.0.1:9102/tacra/v1/origin-keys > "$BIN/origin-keys.json"
 cp "$B/tls/root.crt" "$BIN/bench-tls-root.crt"
-TEE="$TEE" B="$B" BIN="$BIN" TARGETS="${OTHER_PLATFORM:+other-platform}" BIND_RRP_ID="${BIND_RRP_ID:-}" python3 "$HERE/e2e/scripts/guest_config.py"
+TEE="$TEE" B="$B" BIN="$BIN" TARGETS="${OTHER_PLATFORM:+other-platform}" python3 "$HERE/e2e/scripts/guest_config.py"
 cp "$BIN/e2e-attester.json" "$OUT/e2e-attester.json"
 
 cleanup() {
@@ -185,7 +197,7 @@ trap 'rm -rf "$BIN"' EXIT
 cleanup
 
 echo "== bench logs for the run"
-for f in est-server est-wire est-conduit ca-gateway vault-gateway rup tdx-verifier; do tail -n +"$(( $(cat "$OUT/bench-logs/.$f.start") + 1 ))" "$B/$f.log" | grep -v "TLS handshake error" > "$OUT/bench-logs/$f.log" || true; done
+for f in est-server est-wire est-conduit ca-gateway ca-gateway-2 vault-gateway vault-gateway-2 rup tdx-verifier; do [ -f "$B/$f.log" ] || continue; tail -n +"$(( $(cat "$OUT/bench-logs/.$f.start") + 1 ))" "$B/$f.log" | grep -v "TLS handshake error" > "$OUT/bench-logs/$f.log" || true; done
 tail -n +"$(( $(cat "$OUT/bench-logs/.vts.start") + 1 ))" "$VERAISON_DEPLOYMENT/logs/vts.log" | grep -v DEBUG > "$OUT/bench-logs/veraison-vts.log" || true
 # Veraison's verification API: who asked for each session (client-ca)
 tail -n +"$(( $(cat "$OUT/bench-logs/.verification.start") + 1 ))" "$VERAISON_DEPLOYMENT/logs/verification.log" | grep -v DEBUG \

@@ -35,16 +35,34 @@ func recorded(t *testing.T, run string) tsmReport {
 	return tok
 }
 
-func TestBindingValueMatchesDraftTestVector(t *testing.T) {
+// The layout of before 12 October 2026, with the RRP identifier: the draft's test vector of 30 September still holds
+// for BindingValueRRP, which appraises the committed runs of 6 to 11 October.
+func TestBindingValueRRPMatchesDraftTestVector(t *testing.T) {
 	handle, _ := hex.DecodeString(tvHandleHex)
 	subject, _ := hex.DecodeString(tvSubjectHex)
 	want, _ := hex.DecodeString(tvDigestHex)
-	got := BindingValue(handle, tvTarget, tvRRPID, subject)
+	got := BindingValueRRP(handle, tvTarget, tvRRPID, subject)
 	if !bytes.Equal(got[:], want) {
 		t.Fatalf("SHA-512(binding_input) = %x, want the draft's %x", got, want)
 	}
-	if n := len(BindingInput(handle, tvTarget, tvRRPID, subject)); n != tvBindingInputLen {
+	if n := len(BindingInputRRP(handle, tvTarget, tvRRPID, subject)); n != tvBindingInputLen {
 		t.Fatalf("binding_input is %d octets, the draft's vector is %d", n, tvBindingInputLen)
+	}
+}
+
+// The binding of 11 October 2026: three fields, and the Target bound.
+func TestBindingValueThreeFields(t *testing.T) {
+	handle, _ := hex.DecodeString(tvHandleHex)
+	subject, _ := hex.DecodeString(tvSubjectHex)
+	in := BindingInput(handle, tvTarget, subject)
+	if n := len(in); n != tvBindingInputLen-4-len(tvRRPID) {
+		t.Fatalf("binding_input is %d octets, want the draft's %d less the identifier field", n, tvBindingInputLen-4-len(tvRRPID))
+	}
+	if BindingValue(handle, tvTarget, subject) == BindingValue(handle, "https://other.tacra.example", subject) {
+		t.Fatal("the Target is not bound")
+	}
+	if BindingValue(handle, tvTarget, subject) == BindingValueRRP(handle, tvTarget, "", subject) {
+		t.Fatal("the three-field value equals the four-field one with an empty identifier: the layouts must differ")
 	}
 }
 

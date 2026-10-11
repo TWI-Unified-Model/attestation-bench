@@ -52,24 +52,34 @@ type caseMeta struct {
 	FreshnessKind    string `json:"freshness_kind"`
 	FreshnessElement string `json:"freshness_element_b64,omitempty"`
 	BindingValueHex  string `json:"binding_value_hex,omitempty"` // what the Attester bound (hwrun)
-	RelyingParty     string `json:"relying_party"`               // the RRP identifier the Attester bound, "" for none (hwrun)
+	RelyingParty     string `json:"relying_party"`               // the runs before 12 October 2026: the RRP identifier bound, "" for none
+	BindingLayout    string `json:"binding_layout"`              // platform.BindingLayout from 12 October 2026 on
 	Error            string `json:"error,omitempty"`
 }
 
-// boundIdentifiers is the Credential Authority's and the Secret Vault's identifiers this RRP binds when it recomputes
-// the binding: the flags, when given, else the run's own record of what its Evidence bound (relying_party of its
-// enroll and retrieve cases; "" when it bound none, the default since 11 October 2026). A run whose cases of one mode
-// bound different identifiers is refused: its record does not say what the RRP was.
-func boundIdentifiers(metas []caseMeta, flagCA, flagVault string) (string, string) {
-	ca, vault := flagCA, flagVault
+// bindingLayout is how a run's Evidence bound its values, from the run's own record (cases.json): the three-field
+// binding of 11 October 2026 (binding_layout = platform.BindingLayout: the freshness element, the Target, the subject),
+// or, for the runs of 6 to 11 October, the layout with the RRP identifier as a fourth field, bound (relying_party of
+// the cases) or empty. The "other RRP identifier" case exists only where an identifier was bound.
+type bindingLayout struct {
+	threeField bool
+	ca, vault  string // the identifiers the earlier layout bound, "" for none
+}
+
+func layoutOf(metas []caseMeta) bindingLayout {
+	l := bindingLayout{threeField: true}
+	for _, m := range metas {
+		if m.BindingLayout != platform.BindingLayout {
+			l.threeField = false
+		}
+	}
+	if l.threeField {
+		return l
+	}
 	for _, mode := range []struct {
 		name string
 		dst  *string
-		flag string
-	}{{"enroll", &ca, flagCA}, {"retrieve", &vault, flagVault}} {
-		if mode.flag != "" {
-			continue
-		}
+	}{{"enroll", &l.ca}, {"retrieve", &l.vault}} {
 		seen := map[string]bool{}
 		for _, m := range metas {
 			if m.Mode == mode.name && m.Error == "" {
@@ -83,7 +93,22 @@ func boundIdentifiers(metas []caseMeta, flagCA, flagVault string) (string, strin
 			*mode.dst = id
 		}
 	}
-	return ca, vault
+	return l
+}
+
+func (l bindingLayout) name() string {
+	if l.threeField {
+		return platform.BindingLayout
+	}
+	return "freshness-target-rrp-subject"
+}
+
+// value is the binding value of the run's layout; rrpID is used by the earlier layout alone.
+func (l bindingLayout) value(elem []byte, target, rrpID string, subject []byte) [64]byte {
+	if l.threeField {
+		return platform.BindingValue(elem, target, subject)
+	}
+	return platform.BindingValueRRP(elem, target, rrpID, subject)
 }
 
 type result struct {
@@ -140,8 +165,6 @@ func verify(args []string) {
 	handlesPath := fs.String("handles", "handles.json", "the handles this RRP minted")
 	arkPath := fs.String("ark", "", "AMD certificate chain from the KDS (PEM; the ARK is the self-signed one)")
 	target := fs.String("target", "https://db.tacra.example", "the Target this RRP answered Initiate for")
-	rrpCA := fs.String("rrp-ca", "", "this Credential Authority's identifier (empty: the one the run's record says its Evidence bound, none by default)")
-	rrpVault := fs.String("rrp-vault", "", "this Secret Vault's identifier (empty: the one the run's record says its Evidence bound, none by default)")
 	notBefore := fs.Int64("not-before", 0, "unix seconds: run started (RRP clock)")
 	notAfter := fs.Int64("not-after", 0, "unix seconds: run ended (RRP clock)")
 	window := fs.Int64("window", 300, "absent-timestamp acceptance window, seconds")
@@ -184,7 +207,7 @@ func verify(args []string) {
 	}
 	var passed []passing
 
-	boundCA, boundVault := boundIdentifiers(metas, *rrpCA, *rrpVault)
+	layout := layoutOf(metas)
 	for _, m := range metas {
 		if m.Error != "" {
 			results = append(results, result{Case: m.Case, Check: "evidence", Want: "pass", Got: "fail", Error: m.Error})
@@ -195,9 +218,9 @@ func verify(args []string) {
 		must(err)
 		subject, err := os.ReadFile(filepath.Join(dir, "subject.der"))
 		must(err)
-		rrp, otherRRP := boundCA, boundVault
+		rrp, otherRRP := layout.ca, layout.vault
 		if m.Mode == "retrieve" {
-			rrp, otherRRP = boundVault, boundCA
+			rrp, otherRRP = layout.vault, layout.ca
 		}
 		elem, otherElem, err := expectedElement(m, h, *notBefore, *notAfter, *window)
 		if err != nil {
@@ -221,7 +244,7 @@ func verify(args []string) {
 				tdxOtherRoots = otherRoots()
 			}
 			bv := func(e []byte, r, t string, subj []byte) []byte {
-				v := platform.BindingValue(e, t, r, subj)
+				v := layout.value(e, t, r, subj)
 				return v[:]
 			}
 			honestPassed := false
@@ -238,7 +261,7 @@ func verify(args []string) {
 				{"trust anchor = a root not Intel's", "fail", "certificate signed by unknown authority",
 					bv(elem, rrp, *target, subject), tdxOtherRoots},
 			} {
-				if c.name == otherRRPCase && rrp == otherRRP {
+				if c.name == otherRRPCase && (layout.threeField || rrp == otherRRP) {
 					continue // no identifier bound (the default since 11 October 2026): the case would be the honest one again, and prove nothing
 				}
 				t0 := time.Now()
@@ -296,19 +319,19 @@ func verify(args []string) {
 				bv     [64]byte
 				ta     []*comid.KeyTriple
 			}{
-				{"honest", "pass", "", platform.BindingValue(elem, *target, rrp, subject), ta},
+				{"honest", "pass", "", layout.value(elem, *target, rrp, subject), ta},
 				{"other Target", "fail", nonceRefusal,
-					platform.BindingValue(elem, "https://other.tacra.example", rrp, subject), ta},
-				{otherRRPCase, "fail", nonceRefusal, platform.BindingValue(elem, *target, otherRRP, subject), ta},
-				{"other CSR / CEKpub", "fail", nonceRefusal, platform.BindingValue(elem, *target, rrp, flipped), ta},
+					layout.value(elem, "https://other.tacra.example", rrp, subject), ta},
+				{otherRRPCase, "fail", nonceRefusal, layout.value(elem, *target, otherRRP, subject), ta},
+				{"other CSR / CEKpub", "fail", nonceRefusal, layout.value(elem, *target, rrp, flipped), ta},
 				{"other freshness element", "fail", nonceRefusal,
-					platform.BindingValue(otherElem, *target, rrp, subject), ta},
+					layout.value(otherElem, *target, rrp, subject), ta},
 				{"trust anchor = ASK, not ARK", "fail", taRefusal,
-					platform.BindingValue(elem, *target, rrp, subject), otherTA},
+					layout.value(elem, *target, rrp, subject), otherTA},
 			}
 			honestPassed := false
 			for _, c := range checks {
-				if c.name == otherRRPCase && rrp == otherRRP {
+				if c.name == otherRRPCase && (layout.threeField || rrp == otherRRP) {
 					continue // no identifier bound (the default since 11 October 2026): the case would be the honest one again, and prove nothing
 				}
 				ev := &appraisal.Evidence{Data: tok, MediaType: sevsnp.EvidenceMediaTypeTSMCbor, Nonce: c.bv[:]}
@@ -404,7 +427,7 @@ func verify(args []string) {
 		*out = filepath.Join(*in, "rrpverify-"+strings.ReplaceAll(filepath.Base(strings.Fields(build)[0]), "/", "_")+".json")
 	}
 	summary := map[string]any{"veraison": build, "results": results, "golden_from": goldenFrom,
-		"target": *target, "rrp_ca": boundCA, "rrp_vault": boundVault, "window_s": *window,
+		"target": *target, "binding_layout": layout.name(), "rrp_ca": layout.ca, "rrp_vault": layout.vault, "window_s": *window,
 		"not_before": *notBefore, "not_after": *notAfter}
 	b, _ = json.MarshalIndent(summary, "", " ")
 	must(os.WriteFile(*out, b, 0o644))

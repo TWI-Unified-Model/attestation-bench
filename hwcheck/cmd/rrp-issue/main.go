@@ -8,7 +8,7 @@
 //	rrp-issue enroll   -url https://127.0.0.1:9103 -target T -ctype x509 -kind present-nonce -handle B64 -evidence E.cbor -csr C.der
 //	rrp-issue retrieve -url https://127.0.0.1:9104 -target T -ctype api-key -kind present-nonce -handle B64 -evidence E.cbor -cek K.der -hint H
 //
-// mint prints the attest-initiate answer (handle, freshness_kind, rrp_id). enroll and retrieve post a second leg, in
+// mint prints the attest-initiate answer (handle, freshness_kind). enroll and retrieve post a second leg, in
 // Background Check the Evidence as the Attester produced it (-evidence), in Passport the Attestation Results a
 // verifier issued for it (-ear), with any field as the conduit chooses to send it (the #19 rewrites), and print
 // whether the gateway issued (a certificate; for retrieve, a container), the status and the reason. Each prints one
@@ -152,12 +152,11 @@ func secondLeg(mode string, args []string) {
 		var out struct {
 			Container string `json:"container"`
 			AAD       struct {
-				RRPID  string `json:"rrp_id"`
 				Target string `json:"target"`
 			} `json:"aad"`
 		}
 		if json.Unmarshal(raw, &out) == nil {
-			res["container"], res["container_rrp_id"], res["container_target"] = out.Container, out.AAD.RRPID, out.AAD.Target
+			res["container"], res["container_target"] = out.Container, out.AAD.Target
 		}
 	default:
 		var e struct{ Error, Detail string }

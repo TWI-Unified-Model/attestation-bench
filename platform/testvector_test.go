@@ -1,6 +1,7 @@
 package platform
 
-// Test vector of draft-novak-lamps-tacra-est ("Test Vector for the Binding Input"), in the order of the TACRA section
+// Test vector of draft-novak-lamps-tacra-est ("Test Vector for the Binding Input") of 30 September 2026, the layout with
+// the RRP identifier (BindingValueRRP; the runs before 12 October), in the order of the TACRA section
 // "Binding Credential Keys to Evidence": the enrollment of SEV-SNP run 20260930T172002Z, where
 // SHA-512(binding_input) equals REPORT_DATA of the hardware report (github.com/nikolaichuk7/tacra-est, commit
 // 5661be5). tvBindingInputLen is the length of binding_input the draft gives.

@@ -212,8 +212,6 @@ func serviceVerify(args []string) {
 	certPath := fs.String("cert", filepath.Join(benchHome(), "tls", "clients", "ca-gateway.crt"), "this RRP's client certificate (mutual TLS)")
 	keyPath := fs.String("key", filepath.Join(benchHome(), "tls", "clients", "ca-gateway.key"), "its private key")
 	target := fs.String("target", "https://db.tacra.example", "the Target this RRP answered Initiate for")
-	rrpCA := fs.String("rrp-ca", "", "this Credential Authority's identifier (empty: the one the run's record says its Evidence bound, none by default)")
-	rrpVault := fs.String("rrp-vault", "", "this Secret Vault's identifier (empty: the one the run's record says its Evidence bound, none by default)")
 	notBefore := fs.Int64("not-before", 0, "unix seconds: run started (RRP clock)")
 	notAfter := fs.Int64("not-after", 0, "unix seconds: run ended (RRP clock)")
 	window := fs.Int64("window", 300, "absent-timestamp acceptance window, seconds")
@@ -238,7 +236,7 @@ func serviceVerify(args []string) {
 	must(err)
 	must(json.Unmarshal(b, &metas))
 
-	boundCA, boundVault := boundIdentifiers(metas, *rrpCA, *rrpVault)
+	layout := layoutOf(metas)
 	var results []result
 	for _, m := range metas {
 		dir := filepath.Join(*in, m.Case)
@@ -246,9 +244,9 @@ func serviceVerify(args []string) {
 		must(err)
 		subject, err := os.ReadFile(filepath.Join(dir, "subject.der"))
 		must(err)
-		rrp, otherRRP := boundCA, boundVault
+		rrp, otherRRP := layout.ca, layout.vault
 		if m.Mode == "retrieve" {
-			rrp, otherRRP = boundVault, boundCA
+			rrp, otherRRP = layout.vault, layout.ca
 		}
 		elem, otherElem, err := expectedElement(m, h, *notBefore, *notAfter, *window)
 		if err != nil {
@@ -262,13 +260,13 @@ func serviceVerify(args []string) {
 			name, want string
 			bv         [64]byte
 		}{
-			{"honest", "pass", platform.BindingValue(elem, *target, rrp, subject)},
-			{"other Target", "fail", platform.BindingValue(elem, "https://other.tacra.example", rrp, subject)},
-			{otherRRPCase, "fail", platform.BindingValue(elem, *target, otherRRP, subject)},
-			{"other CSR / CEKpub", "fail", platform.BindingValue(elem, *target, rrp, flipped)},
-			{"other freshness element", "fail", platform.BindingValue(otherElem, *target, rrp, subject)},
+			{"honest", "pass", layout.value(elem, *target, rrp, subject)},
+			{"other Target", "fail", layout.value(elem, "https://other.tacra.example", rrp, subject)},
+			{otherRRPCase, "fail", layout.value(elem, *target, otherRRP, subject)},
+			{"other CSR / CEKpub", "fail", layout.value(elem, *target, rrp, flipped)},
+			{"other freshness element", "fail", layout.value(otherElem, *target, rrp, subject)},
 		} {
-			if c.name == otherRRPCase && rrp == otherRRP {
+			if c.name == otherRRPCase && (layout.threeField || rrp == otherRRP) {
 				continue // no identifier bound (the default since 11 October 2026): the case would be the honest one again, and prove nothing
 			}
 			t0 := time.Now()
@@ -302,8 +300,8 @@ func serviceVerify(args []string) {
 	if *out == "" {
 		*out = filepath.Join(*in, "rrpverify-service.json")
 	}
-	summary := map[string]any{"veraison": *base, "results": results, "target": *target, "rrp_ca": boundCA,
-		"rrp_vault": boundVault, "window_s": *window, "not_before": *notBefore, "not_after": *notAfter}
+	summary := map[string]any{"veraison": *base, "results": results, "target": *target, "binding_layout": layout.name(), "rrp_ca": layout.ca,
+		"rrp_vault": layout.vault, "window_s": *window, "not_before": *notBefore, "not_after": *notAfter}
 	b, _ = json.MarshalIndent(summary, "", " ")
 	must(os.WriteFile(*out, b, 0o644))
 	bad := 0

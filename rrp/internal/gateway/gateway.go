@@ -1,5 +1,5 @@
 // Package gateway is what the test bench's two RATS Relying Parties share: the per-Target policy, the answer to
-// attest-initiate (Freshness Kind, Handle, rrp_id, mode, algorithms), and the checks a second-leg request passes
+// attest-initiate (Freshness Kind, Handle, mode, algorithms), and the checks a second-leg request passes
 // before the Credential Authority issues or the Secret Vault releases: the Target's policy, freshness, and the
 // binding value recomputed with this RRP's own identifier and reported by verified, affirming Attestation Results.
 package gateway
@@ -26,15 +26,12 @@ import (
 
 // Config is a gateway's configuration file.
 type Config struct {
-	RRPID string `json:"rrp_id"` // the identifier Evidence binds for this RRP
-	// BindRRPIDInBinding, when set, makes this RRP recompute the binding value with its RRP identifier, as TACRA
-	// Section 4.5 read before the group's decision of 6 October 2026 to leave the identifier out
-	// (TheBankster/rats-tacra#20): the measured variant (docs/rrp-identifier.md). By default (false) the binding
-	// value carries an empty identifier. RRPID is still reported at attest-initiate either way.
-	BindRRPIDInBinding bool   `json:"bind_rrp_id_in_binding,omitempty"`
-	Listen             string `json:"listen"`
-	TLSCert            string `json:"tls_cert"`
-	TLSKey             string `json:"tls_key"`
+	// RRPID is the name this RRP is known by in the bench (the Attester holds its trust anchors under it); it is
+	// not bound into the Evidence and not on the wire since 11 October 2026 (rats-tacra#20).
+	RRPID   string `json:"rrp_id"`
+	Listen  string `json:"listen"`
+	TLSCert string `json:"tls_cert"`
+	TLSKey  string `json:"tls_key"`
 	// Mutual TLS (N23). ClientCA certifies the callers this RRP takes; Clients are the identities among them (a DNS
 	// name or URI of the certificate) that may run the protocol, the EST server's; any other caller of ClientCA may
 	// read public material only (the Vault's origin keys). ClientCert and ClientKey are this RRP's own certificate
@@ -316,7 +313,6 @@ type InitiateRequest struct {
 type InitiateResponse struct {
 	FreshnessKind fresh.Kind `json:"freshness_kind"`
 	Handle        bundle.B64 `json:"handle,omitempty"`
-	RRPID         string     `json:"rrp_id"`
 	ExpiresIn     int        `json:"expires_in,omitempty"`
 	MaxAge        int        `json:"max_age,omitempty"`
 	Mode          string     `json:"mode"`
@@ -354,7 +350,7 @@ func (g *Gateway) Initiate(req InitiateRequest) (*InitiateResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp := &InitiateResponse{FreshnessKind: t.FreshnessKind, RRPID: g.Config.RRPID, Mode: g.Mode}
+	resp := &InitiateResponse{FreshnessKind: t.FreshnessKind, Mode: g.Mode}
 	switch t.FreshnessKind {
 	case fresh.PresentNonce:
 		resp.Handle = g.Fresh.MintNonce(req.Target, req.CredentialType, time.Duration(t.ExpiresInS)*time.Second)
@@ -390,11 +386,7 @@ func (g *Gateway) Check(req *SecondLeg, subject []byte) (*ear.Result, *Target, e
 		}
 		return nil, nil, refuse(http.StatusBadRequest, "freshness", err)
 	}
-	bindRRPID := "" // the decision of 6 October 2026 (rats-tacra#20): no RRP identifier in the binding
-	if g.Config.BindRRPIDInBinding {
-		bindRRPID = g.Config.RRPID // the measured variant: the identifier bound, as Section 4.5 read before
-	}
-	bv := platform.BindingValue(req.Handle, req.Target, bindRRPID, subject)
+	bv := platform.BindingValue(req.Handle, req.Target, subject) // no identifier of any party (rats-tacra#20, 11 October 2026)
 	jws := req.EAR
 	if g.Config.RATSModel == BackgroundCheck {
 		// the RRP asks the verifier itself; Attestation Results that arrive with the request are not taken

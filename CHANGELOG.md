@@ -6,14 +6,20 @@ What changed, newest first. Dates are UTC.
 
 ### Changed
 
-- **No RRP identifier in the binding, by default** (11 October 2026): the group decided on 6 October to leave the identifier
-  out until the threat model is agreed (TheBankster/rats-tacra#20; Mark Novak in TWI-Unified-Model/globalsign-est#4), and the
-  EST server of the group's code binds none (EST patch 0017: an empty identifier field in the Section 4.5 layout; the
-  `omit_rrp_id_in_binding` switch gone; the mock without `server_id`). The bench follows: the CAI, the RRP gateways
-  (`bind_rrp_id_in_binding`), hwrun and rrpverify, the pre-play and the redirection experiment bind none unless
-  `BIND_RRP_ID=1` asks for the measured variant, which needs an EST tree from before 11 October. The runs of 8 October
-  without the identifier (`-no-rrp-id`) are unchanged; new runs with the identifier end in `-bind-rrp-id`
-  ([docs/rrp-identifier.md](docs/rrp-identifier.md), section 8).
+- **The identifiers ripped out** (11 October 2026): the group decided on 6 October to leave the RRP identifier out of the
+  binding (TheBankster/rats-tacra#20) and Mark Novak asked on 11 October, in TWI-Unified-Model/globalsign-est#4, to rip the RRP
+  identifier and the EST Server's identifier out altogether, with no empty field kept. The binding is now three length-prefixed
+  fields, the freshness element, the Target and the subject, in the group's EST server (EST patch 0018, after 0017's empty
+  field) and in every component of this bench: the CAI, the RRP gateways (whose attest-initiate answer names no identifier),
+  hwrun and rrpverify, the pre-play and the redirection experiment, now one pass; the Secret Vault's container carries no
+  `rrp_id` in its associated data or HPKE info. No switch is left (`BIND_RRP_ID`, `omit_rrp_id_in_binding`, `-rrp-ca`,
+  `-rrp-vault` are gone); the side with the identifier is history, reproducible from `2a3777a3`. Every run from 12 October
+  records its layout (`binding_layout` in `cases.json`); rrpverify appraises each committed run by the layout its record names,
+  so `make test-live` holds the runs of 6 to 11 October as they ran ([docs/rrp-identifier.md](docs/rrp-identifier.md), section 8).
+- **The conduit's redirect drill** (`CONDUIT_ATTACK=redirect make config`; `COPIES_OWN_KEYS=1` for the second Vault's own keys):
+  the EST server routes every request to the second Credential Authority and the second Secret Vault, the RRPs the Attester did
+  not ask for; the run is judged by what the CAI does with what comes back (`scripts/verdict.py conduit --attack redirect`,
+  from the routing the run records in `bench-logs/est-routing.json`).
 
 ### Added
 

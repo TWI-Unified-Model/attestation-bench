@@ -77,10 +77,10 @@ type AcquisitionRequest struct {
 	Handle              []byte
 	SigningAlgorithm    SigningAlgorithm
 	EncryptionAlgorithm EncryptionAlgorithm
-	// RelyingParty is the RRP identifier the Evidence binds: the one the CAI
-	// holds for the Target and mode (TACRA Section 4.5: "The Credential
-	// Acquisition Interface holds this identifier in its configuration for each
-	// Target and Credential Acquisition Mode; it does not take it from the CAS").
+	// RelyingParty names the RRP the CAI holds for the Target and mode: the
+	// key of its trust anchors (the Credential Authority's certificates, the
+	// Secret Vault's keys). It is not bound into the Evidence and not on the
+	// wire (the group's decision of 6 and 11 October 2026, rats-tacra#20).
 	RelyingParty string
 }
 
@@ -90,8 +90,8 @@ type Client struct {
 	plugin platform.Plugin
 	caapi  caapiv1.CredentialAcquisitionServiceClient
 
-	// relyingParties holds, per Target and mode, the identifier of the RRP
-	// the deployment intends; Evidence binds it, and nothing else.
+	// relyingParties holds, per Target and mode, the name of the RRP the
+	// deployment intends, under which its trust anchors are held.
 	relyingParties map[rpKey]string
 	// vaultOrigins holds, per RRP identifier and DHKEM, the Secret Vault's
 	// static KEM key (SubjectPublicKeyInfo DER) the hpke-auth container must
@@ -104,11 +104,6 @@ type Client struct {
 	// csrNamesHint makes the CSR name the Credential Hint instead of the
 	// Target, leaving the certificate's names to the CA's policy.
 	csrNamesHint bool
-	// bindRelyingParty makes the Evidence bind the RRP identifier the CAI holds, as TACRA Section 4.5 read before the
-	// group's decision of 6 October 2026 to leave it out (TheBankster/rats-tacra#20): the measured variant, kept for
-	// the comparison (docs/rrp-identifier.md). By default the Evidence binds none; the identifiers the CAI holds still
-	// name the trust anchors it checks a credential against.
-	bindRelyingParty bool
 	// caAnchors holds, per RRP identifier, the Credential Authority's certificates the CAI holds for Enrollment, and
 	// certMaxValidity the longest an issued certificate may remain valid (cert.go; tacra-est N15).
 	caAnchors       map[string]*x509.CertPool
@@ -119,12 +114,6 @@ type Client struct {
 // common name, for a Credential Authority that assigns the certificate's
 // names by policy (the test bench's CA gateway does).
 func WithCSRNamingHint() Option { return func(c *Client) { c.csrNamesHint = true } }
-
-// WithRelyingPartyBinding makes the Evidence bind the RRP identifier the CAI holds for the Target and mode, as TACRA
-// Section 4.5 read before 6 October 2026 (TheBankster/rats-tacra#20); the bench's RRPs and EST server must bind it
-// too. Without it the Evidence binds no identifier, the group's decision; the identifiers the CAI holds still name
-// the Secret Vault's and the Credential Authority's trust anchors.
-func WithRelyingPartyBinding() Option { return func(c *Client) { c.bindRelyingParty = true } }
 
 // Option configures a Client.
 type Option func(*Client)
@@ -287,14 +276,6 @@ func (c *Client) heldRelyingParty(target string, mode Mode) (string, error) {
 	return held, nil
 }
 
-// boundRelyingParty is the identifier the Evidence binds: none, or the one held with WithRelyingPartyBinding.
-func (c *Client) boundRelyingParty(held string) string {
-	if c.bindRelyingParty {
-		return held
-	}
-	return ""
-}
-
 func (c *Client) retrieve(ctx context.Context, req AcquisitionRequest) (*Credential, error) {
 	cek, err := c.plugin.GenerateCEK(platform.EncryptionAlgorithm(req.EncryptionAlgorithm))
 	if err != nil {
@@ -306,7 +287,6 @@ func (c *Client) retrieve(ctx context.Context, req AcquisitionRequest) (*Credent
 		BoundKey:        cek.Public(),
 		BoundKeyUse:     platform.BoundKeyUseEncrypt,
 		Target:          req.Target,
-		RelyingParty:    c.boundRelyingParty(req.RelyingParty),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("cai: generate evidence: %w", err)
@@ -375,7 +355,6 @@ func (c *Client) enroll(ctx context.Context, req AcquisitionRequest) (*Credentia
 		CSR:             csr,
 		BoundKeyUse:     platform.BoundKeyUseSign,
 		Target:          req.Target,
-		RelyingParty:    c.boundRelyingParty(req.RelyingParty),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("cai: generate evidence: %w", err)

@@ -118,7 +118,6 @@ def main():
         est_rrps[r["name"]] = {
             "url": f"https://{r['listen']}",
             "ca": root,
-            "rrp_id": r["rrp_id"],
             "mode": "enroll" if r["kind"] == "credential-authority" else "retrieve",
             "rats_model": a.rats_model,
             "verifiers": everyone,
@@ -129,7 +128,9 @@ def main():
     for r in pack["rrps"]:
         if "same_as" in r:
             rrps[r["name"]] = dict(rrps[r["same_as"]], rrp_id=r["rrp_id"], listen=r["listen"])
-    redirection_variants(pack, rrps, bind_rrp_id=a.bind_rrp_id, own_epochs=a.own_epochs)
+    redirection_variants(pack, rrps, own_epochs=a.own_epochs, own_keys=a.copies_own_keys, home=home)
+    if a.conduit_attack == "redirect":
+        redirect_to_copies(pack, est_rrps, est_targets, a.rats_model, everyone, root)
     if a.conduit_attack == "verifier":
         if a.rats_model != "passport":
             sys.exit(
@@ -204,16 +205,18 @@ def parse_args():
         help="who asks the verifiers: the EST server (passport) or the gateways (background-check)",
     )
     p.add_argument(
-        "--bind-rrp-id",
-        action="store_true",
-        help="the measured variant: the RRPs bind their identifier (TACRA 4.5 as read before 6 October 2026); the EST "
-        "server must bind it too, which the group's code no longer does. By default no RRP binds an identifier",
+        "--conduit-attack",
+        choices=("verifier", "redirect"),
+        help="a drill in which the EST server is the attacking conduit (docs/attacks.md, section 6): verifier, in "
+        "Passport it signs the Attestation Results again with a key of its own before the Credential Authority sees them; "
+        "redirect, it routes every request to the second Credential Authority and the second Secret Vault (the copies "
+        "ca-2 and vault-2 of the pack), the RRPs the Attester did not ask for",
     )
     p.add_argument(
-        "--conduit-attack",
-        choices=("verifier",),
-        help="a drill in which the EST server is the attacking conduit (docs/attacks.md, section 6): verifier, in "
-        "Passport it signs the Attestation Results again with a key of its own before the Credential Authority sees them",
+        "--copies-own-keys",
+        action="store_true",
+        help="the copies of the RRPs (same_as) with keys of their own: the second Secret Vault seals under KEM and signature "
+        "keys that are not the first's (another bank's Vault), where by default the copies share the first's files",
     )
     p.add_argument(
         "--own-epochs",
@@ -318,18 +321,33 @@ def rrp_kind(pack, r):
     return by_name(pack, r["same_as"])["kind"] if "same_as" in r else r["kind"]
 
 
-def redirection_variants(pack, rrps, bind_rrp_id=False, own_epochs=False):
-    """The variants of the redirection experiment (hwcheck/scripts/redirect.sh), applied to the RRPs' configurations in
-    place. bind_rrp_id: the RRPs, Credential Authorities and Secret Vaults, bind their identifier, as TACRA 4.5 read
-    before the group's decision of 6 October 2026 (rats-tacra#20); by default none does. The EST server's Passport nonce
-    must match: the group's code binds none, so the variant needs an EST tree from before 11 October 2026 (EST_REPO).
-    own_epochs: each copy of an RRP ("same_as", another bank) keeps an epoch marker of its own, as a gateway does
-    without an epoch file, instead of the one the deployment's RRPs share."""
+def redirection_variants(pack, rrps, own_epochs=False, own_keys=False, home=""):
+    """The variants of the redirection experiment (hwcheck/scripts/redirect.sh) and of the redirect drill, applied to
+    the RRPs' configurations in place. own_epochs: each copy of an RRP ("same_as", another bank) keeps an epoch marker
+    of its own, as a gateway does without an epoch file, instead of the one the deployment's RRPs share. own_keys: each
+    copy of a Secret Vault seals under KEM and signature keys of its own (files of its own under home/gateways, created
+    by the gateway when absent), where by default a copy shares the first Vault's key files."""
     for r in pack["rrps"]:
-        if bind_rrp_id:
-            rrps[r["name"]]["bind_rrp_id_in_binding"] = True
         if own_epochs and "same_as" in r:
             rrps[r["name"]].pop("epoch_file", None)
+        if own_keys and "same_as" in r and "kem_keys" in rrps[r["name"]]:
+            rrps[r["name"]]["kem_keys"] = f"{home}/gateways/{r['name']}-kem.json"
+            rrps[r["name"]]["sign_key"] = f"{home}/gateways/{r['name']}-sign.key"
+
+
+def redirect_to_copies(pack, est_rrps, est_targets, rats_model, verifiers, root):
+    """The redirect drill: the EST server, as the conduit, routes every Target to the copy of its RRP (ca-2, vault-2:
+    the second bank's Credential Authority and Secret Vault, which trust the same Verifier and serve the same Target
+    names) instead of the RRP the Attester asked for. Returns {target: copy name}."""
+    copies = {r["same_as"]: r for r in pack["rrps"] if "same_as" in r}
+    routed = {}
+    for name, copy in copies.items():
+        est_rrps[copy["name"]] = dict(est_rrps[name], url=f"https://{copy['listen']}")
+        for t, rrp in list(est_targets.items()):
+            if rrp == name:
+                est_targets[t] = copy["name"]
+                routed[t] = copy["name"]
+    return routed
 
 
 def check_corim(snp, corim_path):

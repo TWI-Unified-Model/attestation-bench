@@ -41,7 +41,6 @@ const (
 	TSMClaimFreshnessKind    = "freshness-kind"
 	TSMClaimFreshnessElement = "freshness-element"
 	TSMClaimTarget           = "target"
-	TSMClaimRelyingParty     = "relying-party"
 	TSMClaimBindingValue     = "binding-value"
 	// TSMClaimCertTableCompleted (SEV-SNP) is true when the plug-in appended
 	// AMD's ASK or ASVK and ARK to the host's certificate table.
@@ -134,8 +133,8 @@ func newTSMConfig(opts []TSMOption) (tsmConfig, error) {
 }
 
 // SEVSNP is the AMD SEV-SNP back-end. Evidence is a configfs-tsm report whose
-// REPORT_DATA is BindingValue(freshness element, Target, RelyingParty,
-// subject), with the host's certificate table as auxblob, encoded as a
+// REPORT_DATA is BindingValue(freshness element, Target, subject), with the
+// host's certificate table as auxblob, encoded as a
 // Veraison TSM report. Keys are generated in guest memory.
 type SEVSNP struct {
 	tsmConfig
@@ -248,7 +247,7 @@ func Subject(req EvidenceRequest) ([]byte, error) {
 
 // GenerateEvidence implements Plugin. Claims carries, unsigned, what the
 // Relying Party needs to recompute the binding: the freshness element (which
-// for absent-timestamp originates here), the Target and the RelyingParty.
+// for absent-timestamp originates here) and the Target.
 func (p *SEVSNP) GenerateEvidence(req EvidenceRequest) (*Evidence, error) {
 	elem, err := p.FreshnessElement(req)
 	if err != nil {
@@ -258,7 +257,7 @@ func (p *SEVSNP) GenerateEvidence(req EvidenceRequest) (*Evidence, error) {
 	if err != nil {
 		return nil, err
 	}
-	bv := BindingValue(elem, req.Target, req.RelyingParty, subject)
+	bv := BindingValue(elem, req.Target, subject)
 
 	resp, err := report.Get(p.client, &report.Request{InBlob: bv[:], GetAuxBlob: true})
 	if err != nil {
@@ -337,7 +336,6 @@ func tsmEvidence(req EvidenceRequest, elem []byte, bv [sha512.Size]byte, rep tsm
 		TSMClaimFreshnessKind:    int32(req.FreshnessKind),
 		TSMClaimFreshnessElement: elem,
 		TSMClaimTarget:           req.Target,
-		TSMClaimRelyingParty:     req.RelyingParty,
 		TSMClaimBindingValue:     bv[:],
 	}
 	for k, v := range extra {

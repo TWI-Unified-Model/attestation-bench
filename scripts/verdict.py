@@ -64,6 +64,12 @@ REDIRECT_REFUSALS = {
 }
 
 
+def passes_made(got):
+    """The passes a redirection run made, in REDIRECT_PASSES order: both until 11 October 2026 (with the RRP identifier
+    bound, and without it); from 12 October the one without (the identifier was ripped out of the code, rats-tacra#20)."""
+    return [p for p in REDIRECT_PASSES if any(key[0] == p for key in got)]
+
+
 REDIRECT_VARIANT_RRPS = {"own-epochs": ("ca1", "ca2"), "start-ca2": ("ca1", "ca2"), "vault": ("vault1", "vault2")}
 # the replay variants: the same request offered twice at the first RRP, and what a second offer gets there
 REPLAY_RRP = {"replay": ("ca1", "issued"), "replay-vault": ("vault1", "released")}
@@ -310,8 +316,9 @@ def redirect(run):
     rewrites = [r for r in rows if "rewrite" in r]
     rows = [r for r in rows if "rewrite" not in r]
     got = {(r["pass"], r["kind"], r["rrp"]): r["result"]["issued"] for r in rows}
+    passes = passes_made(got)
     lines, wrong = [f"{'pass':12} {'kind':18} {'ca1':8} ca2"], []
-    for p in REDIRECT_PASSES:
+    for p in passes:
         for k in FRESHNESS_KINDS:
             want = {"ca1": True, "ca2": p == "no-rrp-id" and k != "present-nonce"}
             cells = []
@@ -321,7 +328,7 @@ def redirect(run):
                 if issued is not want[rrp]:
                     wrong.append(f"{p} {k} {rrp}: {cells[-1]}, expected {'ISSUED' if want[rrp] else 'refused'}")
             lines.append(f"{p:12} {k:18} {cells[0]:8} {cells[1]}")
-    outcomes = len(REDIRECT_PASSES) * len(FRESHNESS_KINDS) * 2
+    outcomes = len(passes) * len(FRESHNESS_KINDS) * 2
     if rewrites:
         more, bad = rewrite_lines(rewrites)
         lines += more
@@ -330,7 +337,9 @@ def redirect(run):
     lines += clock_lines(run)
     if wrong:
         return lines + wrong, False, f"{len(wrong)} of {outcomes} outcomes not as expected"
-    summary = "with the RRP identifier, ca2 refused all 5 Freshness Kinds; without it, all but present-nonce"
+    summary = "without the RRP identifier, ca2 issued for every Freshness Kind but present-nonce"
+    if "with-rrp-id" in passes:
+        summary = "with the RRP identifier, ca2 refused all 5 Freshness Kinds; " + summary
     if rewrites:
         summary += (
             f"; of the conduit's {len(rewrites_wanted())} rewrites at ca1, the other credential type the Target "
@@ -348,9 +357,11 @@ def redirect_variant(run, variant):
     got = {(r["pass"], r["kind"], r["rrp"]): r["result"] for r in rows if "rewrite" not in r}
     want = redirect_variant_expected(variant)
     first, second = REDIRECT_VARIANT_RRPS[variant]
+    passes = passes_made(got)
+    want = {k: v for k, v in want.items() if k[0] in passes}
     lines, wrong = [f"variant {variant}", f"{'pass':12} {'kind':18} {first:20} {second}"], []
     extra = [f"a #19 rewrite, which a variant's run does not make: {r['rewrite']}" for r in rows if "rewrite" in r]
-    for p in REDIRECT_PASSES:
+    for p in passes:
         for k in FRESHNESS_KINDS:
             cells = []
             for rrp in (first, second):
@@ -416,7 +427,7 @@ def redirect_replay(run, variant):
         if "rewrite" in r or r.get("pass") not in REDIRECT_PASSES or r.get("rrp") != rrp
     ]
     # the runs of 8 October before 4a5c270 made the pass with the identifier alone; later ones both
-    passes = [p for p in REDIRECT_PASSES if p == "with-rrp-id" or any(key[0] == p for key in got)]
+    passes = passes_made(got)
     served = verb.upper()
     lines, wrong = [f"variant {variant}", f"{'pass':12} {'kind':18} {'first offer':28} second offer at {rrp}"], []
     for p, k in ((p, k) for p in passes for k in FRESHNESS_KINDS):
@@ -515,10 +526,70 @@ CONDUIT = {
     "hint": ("credential-hint",),
     "hint-group": ("associated data does not name what the Evidence bound",),
     "verifier": ("not signed by the verifier's key",),
+    "redirect": (
+        "is not issued under a CA the CAI holds for",
+        "not signed by the trusted Vault key",
+        "not sealed by the trusted Vault key",
+    ),
 }
 
 
+def conduit_redirect(run):
+    """The redirect drill: the EST server routed every request to the second Credential Authority and the second Secret
+    Vault (bench-logs/est-routing.json, written by the run from the trust zone's configuration). What the CAI does with
+    what comes back is the measurement: with the copies sharing the first RRPs' PKI and keys (the default), the CAI
+    cannot tell the credentials apart and admits them; with keys of their own (COPIES_OWN_KEYS=1), the second Vault's
+    container is refused for its origin, and a certificate under another PKI would be refused for its issuer."""
+    results = json.loads((run / "results.json").read_text())
+    routing = json.loads((run / "bench-logs" / "est-routing.json").read_text())
+    routed, own_keys = routing["targets"], routing.get("copies_own_keys", False)
+    lines = [
+        f"the conduit's drill: redirect; the EST server routed {len(routed)} Targets to the copies {sorted({v['rrp'] for v in routed.values()})}"
+        + ("; the copies with keys of their own" if own_keys else "; the copies sharing the first RRPs' PKI and keys")
+    ]
+    bad = []
+    for r in results:
+        copy = routed.get(r["target"])
+        err = r.get("error", "")
+        lines.append(" ".join(["ok " if r["ok"] else "no ", r["target"].ljust(38), r["type"].ljust(8), (r.get("cert_issuer") or "")[:40].ljust(40), err[:90]]).rstrip())  # fmt: skip
+        if copy is None:
+            bad.append(f"{r['target']}: not routed to a copy")
+            continue
+        if r["type"] == "x509":  # a certificate: the CAI judges the issuer against the CA it holds for the RRP it asked
+            if not r["ok"]:
+                bad.append(
+                    f"{r['target']}: refused ({err[:80]}); the copy signs under the first CA's PKI, so the CAI admits"
+                )
+        elif own_keys:  # a container sealed under the second Vault's own keys: refused for its origin
+            if r["ok"] or not any(
+                x in err for x in ("not signed by the trusted Vault key", "not sealed by the trusted Vault key")
+            ):
+                bad.append(
+                    f"{r['target']}: {'admitted' if r['ok'] else 'refused for ' + err[:80]}, expected refused for the Vault key"
+                )
+        elif not r["ok"]:
+            bad.append(
+                f"{r['target']}: refused ({err[:80]}); the copy seals under the first Vault's keys, so the CAI admits"
+            )
+    if bad:
+        return lines, False, "; ".join(bad)
+    certs = sum(1 for r in results if r["type"] == "x509")
+    conts = len(results) - certs
+    say = (
+        f"{certs} Enrollments served by the second Credential Authority, each admitted: it issues under the PKI the first "
+        f"shares, and a certificate names its issuer, not the RRP; {conts} Retrievals served by the second Secret Vault, "
+        + (
+            "each refused by the CAI for its origin: the keys are the second Vault's own"
+            if own_keys
+            else "each admitted: the copy seals under the first Vault's keys"
+        )
+    )
+    return lines, True, say
+
+
 def conduit(run, attack):
+    if attack == "redirect":
+        return conduit_redirect(run)
     results = json.loads((run / "results.json").read_text())
     acts = {}  # Target -> what the conduit did to each Retrieval for it, in order
     first = None

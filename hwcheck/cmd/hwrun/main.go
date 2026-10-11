@@ -47,7 +47,7 @@ type caseMeta struct {
 	Mode             string  `json:"mode"`
 	FreshnessKind    string  `json:"freshness_kind"`
 	Target           string  `json:"target"`
-	RelyingParty     string  `json:"relying_party"`
+	BindingLayout    string  `json:"binding_layout"` // platform.BindingLayout: the binding of 11 October 2026 (three fields)
 	FreshnessElement string  `json:"freshness_element_b64,omitempty"`
 	BindingValueHex  string  `json:"binding_value_hex"`
 	EvidenceMs       float64 `json:"evidence_ms"`
@@ -64,10 +64,6 @@ func main() {
 	// targetsPath, when given, is a JSON object {freshness-kind: Target} so one run can bind each kind to the Target
 	// the bench configures for it (db-nonce is present-nonce, db-epoch present-epoch, ...); kinds it omits use -target.
 	targetsPath := flag.String("targets", "", "per-kind Targets (JSON {kind: target}); -target is the fallback")
-	// the RRP identifiers the Evidence binds: none by default (the group's decision of 6 October 2026, rats-tacra#20); given,
-	// the measured variant in which the Evidence binds them (the RRPs must bind them too)
-	rrpCA := flag.String("rrp-ca", "", "RRP identifier for Enrollment to bind (empty: bind none)")
-	rrpVault := flag.String("rrp-vault", "", "RRP identifier for Retrieval to bind (empty: bind none)")
 	// csrCN is the CSR's common name, the identity the Credential Authority is asked to certify. It has to be one the
 	// Target's policy grants the attested launch (the bench's db-* Targets grant payments.workload.tacra.example).
 	csrCN := flag.String("csr-cn", "workload.tacra.example", "the CSR's common name (the identity to certify)")
@@ -172,7 +168,6 @@ func main() {
 			}
 			var subject []byte
 			if mode == "enroll" {
-				m.RelyingParty, req.RelyingParty = *rrpCA, *rrpCA
 				csk, err := p.GenerateCSK(platform.SigningAlgorithmECDSAP256)
 				must(err)
 				signer, err := csk.Signer()
@@ -182,7 +177,6 @@ func main() {
 				must(err)
 				req.BoundKey, req.CSR, req.BoundKeyUse, subject = csk.Public(), csr, platform.BoundKeyUseSign, csr
 			} else {
-				m.RelyingParty, req.RelyingParty = *rrpVault, *rrpVault
 				cek, err := p.GenerateCEK(cekAlgorithm)
 				must(err)
 				req.BoundKey, req.BoundKeyUse = cek.Public(), platform.BoundKeyUseEncrypt
@@ -197,8 +191,9 @@ func main() {
 			if k.kind == platform.FreshnessKindAbsentTimestamp {
 				req.FreshnessHandle = elem // the element the request would carry in its handle field
 			}
-			bv := platform.BindingValue(elem, req.Target, req.RelyingParty, subject)
+			bv := platform.BindingValue(elem, req.Target, subject)
 			m.BindingValueHex = hex.EncodeToString(bv[:])
+			m.BindingLayout = platform.BindingLayout
 			t0 := time.Now()
 			ev, err := p.GenerateEvidence(req)
 			m.EvidenceMs = float64(time.Since(t0).Microseconds()) / 1000
@@ -222,7 +217,7 @@ func main() {
 	b, _ := json.MarshalIndent(all, "", " ")
 	must(os.WriteFile(filepath.Join(*out, "cases.json"), b, 0o644))
 	if *burst > 0 {
-		timeBurst(p, *burst, *target, *rrpCA, filepath.Join(*out, "burst.json"))
+		timeBurst(p, *burst, *target, filepath.Join(*out, "burst.json"))
 	}
 	if pub := p.AttestationPublicKey(); pub != nil {
 		der, _ := x509.MarshalPKIXPublicKey(pub)
@@ -231,7 +226,7 @@ func main() {
 }
 
 // timeBurst times n GenerateEvidence calls (present-nonce, Enrollment, a fresh nonce and CSR each time).
-func timeBurst(p backend, n int, target, rrp, path string) {
+func timeBurst(p backend, n int, target, path string) {
 	csk, err := p.GenerateCSK(platform.SigningAlgorithmECDSAP256)
 	must(err)
 	signer, err := csk.Signer()
@@ -242,7 +237,7 @@ func timeBurst(p backend, n int, target, rrp, path string) {
 			Subject: pkix.Name{CommonName: "workload.tacra.example"}}, signer) // burst only times report generation, not issuance
 		must(err)
 		req := platform.EvidenceRequest{FreshnessKind: platform.FreshnessKindPresentNonce, FreshnessHandle: random(32),
-			Target: target, RelyingParty: rrp, BoundKey: csk.Public(), CSR: csr, BoundKeyUse: platform.BoundKeyUseSign}
+			Target: target, BoundKey: csk.Public(), CSR: csr, BoundKeyUse: platform.BoundKeyUseSign}
 		t0 := time.Now()
 		_, err = p.GenerateEvidence(req)
 		must(err)

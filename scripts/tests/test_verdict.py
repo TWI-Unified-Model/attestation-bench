@@ -7,6 +7,7 @@ The runs are the committed ones under e2e/evidence and hwcheck/evidence; a chang
 directory, so the evidence is only read.
 """
 
+import importlib.util
 import json
 import shutil
 import subprocess
@@ -17,6 +18,9 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 VERDICT = REPO / "scripts" / "verdict.py"
+spec = importlib.util.spec_from_file_location("verdict_mod", VERDICT)
+verdict_mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(verdict_mod)
 E2E = REPO / "e2e" / "evidence"
 HW = REPO / "hwcheck" / "evidence"
 BANK = E2E / "20261006T230714Z-demo-bank" / "runs"
@@ -455,6 +459,65 @@ class CommittedRuns(unittest.TestCase):
                 else:
                     self.assertIn("third_party/globalsign-est/src", record)
                     self.assertIn("+ 17 patch(es), tree 3b2cb1f71b2a: tested tree", record)
+
+    def test_passes_made(self):
+        """A redirection run is judged on the passes it made: both until 11 October 2026, the one without the identifier
+        from 12 October (the identifier was ripped out of the code)."""
+        both = {("with-rrp-id", "present-nonce", "ca1"): True, ("no-rrp-id", "present-nonce", "ca1"): True}
+        self.assertEqual(verdict_mod.passes_made(both), ["with-rrp-id", "no-rrp-id"])
+        self.assertEqual(verdict_mod.passes_made({("no-rrp-id", "absent-none", "ca2"): True}), ["no-rrp-id"])
+        self.assertEqual(verdict_mod.passes_made({}), [])
+
+    def test_conduit_redirect_drill(self):
+        """The redirect drill is judged from the routing the run recorded and the CAI's results: with the copies sharing
+        the first RRPs' PKI and keys the CAI admits what they return; with the second Vault's own keys it refuses the
+        container for its origin; a certificate refused for its issuer would be the own-PKI regime, not measured yet."""
+        import tempfile
+
+        def run_dir(own_keys, results):
+            d = Path(tempfile.mkdtemp())
+            (d / "bench-logs").mkdir()
+            routing = {
+                "attack": "redirect",
+                "copies_own_keys": own_keys,
+                "targets": {
+                    "https://db-nonce.tacra.example": {"rrp": "ca-2", "url": "https://127.0.0.1:9103"},
+                    "https://ledger-nonce.tacra.example": {"rrp": "vault-2", "url": "https://127.0.0.1:9104"},
+                },
+            }
+            (d / "bench-logs" / "est-routing.json").write_text(json.dumps(routing))
+            (d / "results.json").write_text(json.dumps(results))
+            return d
+
+        cert = {
+            "target": "https://db-nonce.tacra.example",
+            "type": "x509",
+            "ok": True,
+            "cert_issuer": "TACRA bench CA Intermediate CA",
+        }
+        shared = run_dir(False, [cert, {"target": "https://ledger-nonce.tacra.example", "type": "api-key", "ok": True}])
+        code, last = verdict("conduit", shared, "--attack", "redirect")
+        self.assertEqual(code, 0, last)
+        self.assertIn("each admitted: it issues under the PKI the first shares", last)
+        own = run_dir(
+            True,
+            [
+                cert,
+                {
+                    "target": "https://ledger-nonce.tacra.example",
+                    "type": "api-key",
+                    "ok": False,
+                    "error": "cai: bundle: not signed by the trusted Vault key",
+                },
+            ],
+        )
+        code, last = verdict("conduit", own, "--attack", "redirect")
+        self.assertEqual(code, 0, last)
+        self.assertIn("refused by the CAI for its origin", last)
+        wrong = run_dir(True, [cert, {"target": "https://ledger-nonce.tacra.example", "type": "api-key", "ok": True}])
+        code, last = verdict("conduit", wrong, "--attack", "redirect")
+        self.assertNotEqual(code, 0)
+        self.assertIn("expected refused for the Vault key", last)
 
     def test_conduit_verifier_drill(self):
         for run in VERIFIER_DRILL_RUNS:

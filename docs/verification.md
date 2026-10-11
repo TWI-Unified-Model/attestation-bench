@@ -338,7 +338,9 @@ The group decided on 6 October to leave the RRP identifier out of the binding un
 (TheBankster/rats-tacra#20; Mark Novak in TWI-Unified-Model/globalsign-est#4, 11 October). The code follows: the EST server
 of the group's code computes the binding with an empty identifier field and carries no server_id (the transfer branch's
 `7e4224c`; EST patch 0017 here), and this bench binds none by default ([rrp-identifier.md](rrp-identifier.md), section 8).
-Run the same day, each with its EST source recorded (`code-revs.txt`, `veraison-revs.txt` or `est-source.txt`):
+Run the same day, each with its EST source recorded (`code-revs.txt`, `veraison-revs.txt` or `est-source.txt`). These runs
+bound the layout of that morning, four fields with an empty identifier (`7e4224c`); the three-field layout Mark asked for at
+14:31Z (`b531556`, patch 0018) is the next section's.
 
 **The group's tree, `7e4224c`, in the trust zone.**
 

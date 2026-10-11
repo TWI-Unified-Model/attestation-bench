@@ -105,7 +105,7 @@ func (s *server) retrieve(req *RetrieveRequest) (*bundle.Bundle, []string, error
 	content := bundle.Content{CredentialItems: []bundle.Item{{Type: secret["type"], Format: secret["format"],
 		Value: secret["value"], Kid: gid[:16], Purpose: grp.Purpose, Algorithm: grp.Algorithm, Exportable: &no, Shared: shared}},
 		Metadata: map[string]any{"secret_version": strconv.Itoa(version), "validity_seconds": validity}}
-	aad := bundle.AAD{GroupID: gid, RRPID: s.g.Config.RRPID, Target: req.Target, Handle: req.Handle, CredentialHint: req.CredentialHint}
+	aad := bundle.AAD{GroupID: gid, Target: req.Target, Handle: req.Handle, CredentialHint: req.CredentialHint}
 	var b *bundle.Bundle
 	if bundle.IsSignedCEK(req.CEKPub) {
 		if !slices.Contains(t.Acceptable, bundle.AcceptableSigned) {
