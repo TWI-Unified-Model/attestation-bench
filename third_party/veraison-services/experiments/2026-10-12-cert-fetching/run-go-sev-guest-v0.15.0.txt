@@ -1,0 +1,23 @@
+=== RUN   Test_E3_ProductChainCacheAcrossSigners
+    exp_fetching_test.go:170: E3 fixtures: GCP report signed by VCEK, AWS report signed by VLEK
+=== RUN   Test_E3_ProductChainCacheAcrossSigners/VCEK_then_VLEK
+    exp_fetching_test.go:85: KDS GET https://kdsintf.amd.com/vcek/v1/Milan/cert_chain -> 4602 bytes, err=<nil>
+    exp_fetching_test.go:186: E3 VCEK then VLEK: first (VCEK alone): err=<nil> urls=[https://kdsintf.amd.com/vcek/v1/Milan/cert_chain]
+    exp_fetching_test.go:190: E3 VCEK then VLEK: second (VLEK alone, same process): err=VLEK could not be verified by any trusted roots. Last error: root of trust missing intermediate certificate authority certificate for key VLEK urls=[]
+=== RUN   Test_E3_ProductChainCacheAcrossSigners/VLEK_then_VCEK
+    exp_fetching_test.go:85: KDS GET https://kdsintf.amd.com/vlek/v1/Milan/cert_chain -> 4611 bytes, err=<nil>
+    exp_fetching_test.go:186: E3 VLEK then VCEK: first (VLEK alone): err=VLEK could not be verified by any trusted roots. Last error: root of trust missing intermediate certificate authority certificate for key VLEK urls=[https://kdsintf.amd.com/vlek/v1/Milan/cert_chain]
+    exp_fetching_test.go:190: E3 VLEK then VCEK: second (VCEK alone, same process): err=<nil> urls=[]
+=== RUN   Test_E3_ProductChainCacheAcrossSigners/VCEK_alone,_fresh_cache
+    exp_fetching_test.go:85: KDS GET https://kdsintf.amd.com/vcek/v1/Milan/cert_chain -> 4602 bytes, err=<nil>
+    exp_fetching_test.go:204: E3 control VCEK alone, fresh cache: err=<nil> urls=[https://kdsintf.amd.com/vcek/v1/Milan/cert_chain]
+=== RUN   Test_E3_ProductChainCacheAcrossSigners/VLEK_alone,_fresh_cache
+    exp_fetching_test.go:85: KDS GET https://kdsintf.amd.com/vlek/v1/Milan/cert_chain -> 4611 bytes, err=<nil>
+    exp_fetching_test.go:204: E3 control VLEK alone, fresh cache: err=VLEK could not be verified by any trusted roots. Last error: root of trust missing intermediate certificate authority certificate for key VLEK urls=[https://kdsintf.amd.com/vlek/v1/Milan/cert_chain]
+--- PASS: Test_E3_ProductChainCacheAcrossSigners (0.35s)
+    --- PASS: Test_E3_ProductChainCacheAcrossSigners/VCEK_then_VLEK (0.17s)
+    --- PASS: Test_E3_ProductChainCacheAcrossSigners/VLEK_then_VCEK (0.09s)
+    --- PASS: Test_E3_ProductChainCacheAcrossSigners/VCEK_alone,_fresh_cache (0.05s)
+    --- PASS: Test_E3_ProductChainCacheAcrossSigners/VLEK_alone,_fresh_cache (0.03s)
+PASS
+ok  	github.com/veraison/services/scheme/sevsnp	0.858s

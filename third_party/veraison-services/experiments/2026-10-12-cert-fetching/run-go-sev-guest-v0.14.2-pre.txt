@@ -1,0 +1,34 @@
+=== RUN   Test_E1_FetchingFlagAlone
+    exp_fetching_test.go:70: E1 GetTrustAnchorIDs: ids=[] err={"detail":["can't read ARK to compose TA ID: empty certificate","empty certificate"],"detail-type":"error","error":"bad evidence"}
+    exp_fetching_test.go:73: E1 ValidateEvidenceIntegrity: err={"detail":["{\"detail\":[\"missing ARK certificate in evidence\"],\"detail-type\":\"error\",\"error\":\"bad evidence\"}","missing ARK certificate in evidence"],"detail-type":"error","error":"bad evidence"} (ErrNoARK=true)
+--- PASS: Test_E1_FetchingFlagAlone (0.00s)
+=== RUN   Test_E2_FetchingWithVLEKAlone
+    exp_fetching_test.go:104: E2 VLEK entry: 1319 bytes, PEM? false
+    exp_fetching_test.go:85: KDS GET https://kdsintf.amd.com/vlek/v1/Milan/cert_chain -> 4611 bytes, err=<nil>
+    exp_fetching_test.go:115: E2 verify.SnpAttestation (VLEK alone, fetching on): err=<nil>; KDS calls=1
+    exp_fetching_test.go:116: E2 chain after fill: ASK/ASVK=1683 bytes ARK=1639 bytes
+    exp_fetching_test.go:124: E2 second run: err=<nil>; KDS calls=0
+--- PASS: Test_E2_FetchingWithVLEKAlone (0.22s)
+=== RUN   Test_E3_ProductChainCacheAcrossSigners
+    exp_fetching_test.go:170: E3 fixtures: GCP report signed by VCEK, AWS report signed by VLEK
+=== RUN   Test_E3_ProductChainCacheAcrossSigners/VCEK_then_VLEK
+    exp_fetching_test.go:85: KDS GET https://kdsintf.amd.com/vcek/v1/Milan/cert_chain -> 4602 bytes, err=<nil>
+    exp_fetching_test.go:186: E3 VCEK then VLEK: first (VCEK alone): err=<nil> urls=[https://kdsintf.amd.com/vcek/v1/Milan/cert_chain]
+    exp_fetching_test.go:190: E3 VCEK then VLEK: second (VLEK alone, same process): err=trusted root must have ASVK certificate for VLEK chain urls=[]
+=== RUN   Test_E3_ProductChainCacheAcrossSigners/VLEK_then_VCEK
+    exp_fetching_test.go:85: KDS GET https://kdsintf.amd.com/vlek/v1/Milan/cert_chain -> 4611 bytes, err=<nil>
+    exp_fetching_test.go:186: E3 VLEK then VCEK: first (VLEK alone): err=<nil> urls=[https://kdsintf.amd.com/vlek/v1/Milan/cert_chain]
+    exp_fetching_test.go:190: E3 VLEK then VCEK: second (VCEK alone, same process): err=trusted root must have ASK certificate for VCEK chain urls=[]
+=== RUN   Test_E3_ProductChainCacheAcrossSigners/VCEK_alone,_fresh_cache
+    exp_fetching_test.go:85: KDS GET https://kdsintf.amd.com/vcek/v1/Milan/cert_chain -> 4602 bytes, err=<nil>
+    exp_fetching_test.go:204: E3 control VCEK alone, fresh cache: err=<nil> urls=[https://kdsintf.amd.com/vcek/v1/Milan/cert_chain]
+=== RUN   Test_E3_ProductChainCacheAcrossSigners/VLEK_alone,_fresh_cache
+    exp_fetching_test.go:85: KDS GET https://kdsintf.amd.com/vlek/v1/Milan/cert_chain -> 4611 bytes, err=<nil>
+    exp_fetching_test.go:204: E3 control VLEK alone, fresh cache: err=<nil> urls=[https://kdsintf.amd.com/vlek/v1/Milan/cert_chain]
+--- PASS: Test_E3_ProductChainCacheAcrossSigners (0.21s)
+    --- PASS: Test_E3_ProductChainCacheAcrossSigners/VCEK_then_VLEK (0.06s)
+    --- PASS: Test_E3_ProductChainCacheAcrossSigners/VLEK_then_VCEK (0.04s)
+    --- PASS: Test_E3_ProductChainCacheAcrossSigners/VCEK_alone,_fresh_cache (0.07s)
+    --- PASS: Test_E3_ProductChainCacheAcrossSigners/VLEK_alone,_fresh_cache (0.04s)
+PASS
+ok  	github.com/veraison/services/scheme/sevsnp	0.871s
