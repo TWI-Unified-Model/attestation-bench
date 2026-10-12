@@ -1,0 +1,22 @@
+    cache_test.go:169: verify: err=<nil>; fetched []; intermediate filled in: ""
+    cache_test.go:171: this version does not fetch the product chain during verification (888c4d1); see TestGetAttestationFromReportCache
+    cache_test.go:169: verify: err=VLEK could not be verified by any trusted roots. Last error: root of trust missing intermediate certificate authority certificate for key VLEK; fetched []; intermediate filled in: ""
+    cache_test.go:171: this version does not fetch the product chain during verification (888c4d1); see TestGetAttestationFromReportCache
+--- PASS: TestEachReportAlone (0.00s)
+    --- SKIP: TestEachReportAlone/GCP_Milan_VCEK (0.00s)
+    --- SKIP: TestEachReportAlone/AWS_Milan_VLEK (0.00s)
+    cache_test.go:191: first,  GCP Milan VCEK: err=<nil>; fetched []; intermediate filled in: ""
+    cache_test.go:193: this version does not fetch the product chain during verification (888c4d1); see TestGetAttestationFromReportCache
+    cache_test.go:191: first,  AWS Milan VLEK: err=VLEK could not be verified by any trusted roots. Last error: root of trust missing intermediate certificate authority certificate for key VLEK; fetched []; intermediate filled in: ""
+    cache_test.go:193: this version does not fetch the product chain during verification (888c4d1); see TestGetAttestationFromReportCache
+--- PASS: TestProductChainCacheIgnoresSigner (0.00s)
+    --- SKIP: TestProductChainCacheIgnoresSigner/GCP_Milan_VCEK,_then_AWS_Milan_VLEK (0.00s)
+    --- SKIP: TestProductChainCacheIgnoresSigner/AWS_Milan_VLEK,_then_GCP_Milan_VCEK (0.00s)
+    cache_test.go:236: control, GCP Milan VCEK alone: err=<nil>; fetched [https://kdsintf.amd.com/vcek/v1/Milan/cert_chain https://kdsintf.amd.com/vcek/v1/Milan/d0876de8176e7a4401f8761d5455cd1889329846ddbe9eea8a84a19e18fa2c3b8feb56dc9df7bcd90d318642077b01de9cafa347a0a623b8525c98a3afd22b1e?blSPL=4&snpSPL=29&teeSPL=0&ucodeSPL=222]; intermediate: "SEV-Milan"
+    cache_test.go:243: first, AWS Milan VLEK: err=report signed with VLEK, but VLEK certificate is missing; fetched [https://kdsintf.amd.com/vlek/v1/Milan/cert_chain]; intermediate: ""
+    cache_test.go:245: second, GCP Milan VCEK: err=<nil>; fetched [https://kdsintf.amd.com/vcek/v1/Milan/d0876de8176e7a4401f8761d5455cd1889329846ddbe9eea8a84a19e18fa2c3b8feb56dc9df7bcd90d318642077b01de9cafa347a0a623b8525c98a3afd22b1e?blSPL=4&snpSPL=29&teeSPL=0&ucodeSPL=222]; intermediate: "SEV-VLEK-Milan"
+    cache_test.go:247: GCP Milan VCEK after AWS Milan VLEK: GetAttestationFromReport returned the intermediate "SEV-VLEK-Milan", want "SEV-Milan" (fetched for it: [https://kdsintf.amd.com/vcek/v1/Milan/d0876de8176e7a4401f8761d5455cd1889329846ddbe9eea8a84a19e18fa2c3b8feb56dc9df7bcd90d318642077b01de9cafa347a0a623b8525c98a3afd22b1e?blSPL=4&snpSPL=29&teeSPL=0&ucodeSPL=222])
+--- FAIL: TestGetAttestationFromReportCache (20.57s)
+FAIL
+FAIL	example.com/gsg-cache-repro	20.943s
+FAIL
