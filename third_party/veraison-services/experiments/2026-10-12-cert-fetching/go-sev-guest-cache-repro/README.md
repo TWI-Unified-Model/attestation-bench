@@ -14,4 +14,4 @@ Runs of 12 October 2026 (`gsg-cache-repro-<version>.txt`):
 | v0.15.0 | verification uses the embedded defaults (726e291), but the chain filled in carries the wrong intermediate | same |
 | main 9c5dffc (verification no longer fetches the chain, 888c4d1) | skipped by the test | same |
 
-Filed as a go-sev-guest issue on 12 October 2026 (see the library, `rats-ietf.md`); the gist with the module is linked there.
+Filed as google/go-sev-guest#209 on 12 October 2026 (21:01:58Z); the module as published: https://gist.github.com/nikolaichuk7/995b2f4f0cb5d0fe0efc84f9d1149c96.
