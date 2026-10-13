@@ -15,7 +15,7 @@ internal/mockca stays for the upstream tests that use it; the server no longer i
 group's: patch 0009 of the series the bench carried until 11 October 2026, on the group's master since then.
 
 diff --git a/cmd/estserver/config.go b/cmd/estserver/config.go
-index 263df6c..63a9c7f 100644
+index ddd6a0a..63a9c7f 100644
 --- a/cmd/estserver/config.go
 +++ b/cmd/estserver/config.go
 @@ -23,21 +23,17 @@ import (
@@ -129,7 +129,7 @@ index 263df6c..63a9c7f 100644
          "[::1]"
      ],
 -    "attest": {
--		"trusted_provider_public_key": "/path/to/mock/provider-public-key.pem",
+-        "trusted_provider_public_key": "/path/to/mock/provider-public-key.pem",
 -        "targets": [
 -            {
 -                "name": "RUP-workload-1",
@@ -578,3 +578,5 @@ index 9b3a738..383ed15 100644
  		Handler:   r,
  		TLSConfig: tlsCfg,
  	}
+-- 
+2.54.0

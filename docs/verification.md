@@ -425,6 +425,15 @@ model's 3.3 and the text proposed for 4.5 and the Security Considerations on 8 O
 `make cloud-check` found both clouds empty at the end. Logs: the bench's working notes, `tm-logs/ripout-verify-20261011.txt`
 and `ripout-verify-20261011-rerun-aws-bc.txt`.
 
+## The bench on the group's master of 13 October (`623c197`)
+
+Mark Novak merged our pull request #6 at 06:43Z on 13 October (`623c197`; #5 on 12 October). `third_party/globalsign-est` pins
+that master with one patch, 0001 (regenerated: #6 re-indented one line of the sample configuration the patch replaces); patch 0002
+is retired, since the group's mock now carries #5 and #6 and `make check` holds the bench's rule without it ("no program the
+bench builds links a mock": the EST tree's 2 programs). Tested tree `86de667a`. `make check`: every linter clean; our 18 tests in
+9 files of the EST tree; 79 Python tests. The wire, the binding and the backend are those of `6f80871`, so the runs of 11 October
+below are the runs of this tree too.
+
 ## The bench on the group's master (11 October 2026, late evening)
 
 Mark Novak merged pull request #4 at 18:49Z (`6f80871`, a merge commit of its 22 commits). Since `8a000861` the bench's

@@ -21,6 +21,14 @@ What changed, newest first. Dates are UTC.
 
 ### Changed
 
+- **The bench builds the group's master of 13 October** (`623c197`: our pull request #6, the x.509 retrieval test and the README
+  section on attested credential acquisition, merged by Mark Novak at 06:43Z; before it #5, the mock's absent-timestamp Handle).
+  Patch 0001 (no mock CA, a strict configuration) is regenerated on that master, since #6 re-indented one line of the sample
+  configuration the patch replaces; patch 0002 (the mock TEE and mock attested CA out of the tree) is retired: the group's mock
+  now carries our own #5 and #6, which the patch cut, and the bench's rule holds without it by the check of `make check` that no
+  program the bench builds links a mock. Tested tree `86de667a`; `make check` at this commit: every linter, our 18 tests in 9
+  files of the EST tree, 79 Python tests, and "no program links a mock" (the EST tree: 2 programs). The wire and the binding did
+  not change between `6f80871` and `623c197`, so the hardware runs of 11 October stand for this tree.
 - **The bench builds the group's EST server** (11 October 2026, evening): Mark Novak merged our pull request #4 into the master of
   TWI-Unified-Model/globalsign-est at 18:49Z (`6f80871`, a merge commit of its 22 commits: the TACRA backend, the attest-* wire of
   the draft, the three-field binding, the hardware vector, the reference vectors without `rrp_id`). `third_party/globalsign-est`

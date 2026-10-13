@@ -1,15 +1,17 @@
-# The EST server: GlobalSign's EST (MIT) as forked by the TWI SIG, at the fork's master of 11 October 2026 (6f80871, Mark
-# Novak's merge of our pull request #4: the TACRA backend, the attest-* wire of the draft, a three-field binding without
-# identifiers, the hardware vector, the reference vectors without rrp_id). The series of 18 patches the bench carried until
-# that evening (0001-0018) is in that master and retired; the bench at 9d3e74b3 reproduces it. Our patches now, the bench's
-# rules the group's server does not need:
+# The EST server: GlobalSign's EST (MIT) as forked by the TWI SIG, at the fork's master of 13 October 2026 (623c197, Mark
+# Novak's merge of our pull request #6: the x.509 retrieval test and the README section on attested credential acquisition;
+# before it #5, the mock's absent-timestamp Handle, and #4, the TACRA backend, the attest-* wire of the draft, a three-field
+# binding without identifiers, the hardware vector). One patch of ours remains, the bench's rule the group's server does not need:
 #   0001 the server without the fork's mock CA: the TACRA backend alone, a strict configuration (the series' 0009),
-#   0002 the fork's mock TEE and mock attested CA out of the tree, with the dependencies only they needed (the series' 0011).
-# The tests of cmd/estserver, internal/refvectors and internal/tacra are ours, merged with the pull request: scripts/test.sh
-# runs them (TESTS_OURS_IN_UPSTREAM), with the test files the two patches add, and no other test of the tree.
+#        regenerated on 623c197 (pull request #6 re-indented one line of the sample configuration this patch replaces).
+# Patch 0002 (the fork's mock TEE and mock attested CA out of the tree) is retired on 13 October 2026: the group's own mock
+# now carries our pull requests #5 and #6, which that patch cut, and the bench's rule holds without it, by the check of
+# `make check` that no program the bench builds links a mock (the EST tree: 2 programs, none does).
+# The tests of cmd/estserver, internal/refvectors and internal/tacra are ours, merged with the pull requests: scripts/test.sh
+# runs them (TESTS_OURS_IN_UPSTREAM), with the test files patch 0001 adds, and no other test of the tree.
 NAME=globalsign-est
 REPO=https://github.com/TWI-Unified-Model/globalsign-est.git
-BASE=6f8087199539d4206ad96252c08fb945d66c0f79   # master: Merge pull request #4 from TWI-Unified-Model/tacra-wire-and-backend, 2026-10-11
+BASE=623c19764b16fa697523a6d116b4b9bc65b24e82   # master: Merge pull request #6 from TWI-Unified-Model/x509-retrieval, 2026-10-13
 LICENSE=MIT
-VARIANTS="src:2:bfd8d3aa3ec6cb7076a30f2fb17ac82c216e7744"
+VARIANTS="src:1:86de667a4abf7c7ecba3946ebf819d973da05b18"
 TESTS_OURS_IN_UPSTREAM="cmd/estserver internal/refvectors internal/tacra"
