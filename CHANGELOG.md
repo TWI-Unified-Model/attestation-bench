@@ -4,6 +4,21 @@ What changed, newest first. Dates are UTC.
 
 ## Unreleased: the data the group's open questions need
 
+### Added
+
+- **The Veraison upstream work and the measurements behind it** (12 October 2026). Two fixes of the bench's Veraison patches went
+  upstream as our own pull requests: veraison/services#488 (DER certificates in the host's table, as Google Cloud writes it; issue
+  #487; approved) and #490 (the chain verified up to AMD's roots held by the scheme, so the host's table need only carry the VLEK
+  or VCEK; issue #489; under discussion). The evidence behind the discussion is in
+  `third_party/veraison-services/experiments/2026-10-12-cert-fetching/`: E1–E3, the reviewer's alternative (certificate fetching
+  on) measured on Veraison main with the AWS Milan VLEK and GCP Milan VCEK reports (the flag alone never reaches go-sev-guest;
+  with the scheme rewritten it works on the pinned pre-release but go-sev-guest's product-chain cache is keyed by product line
+  alone; on go-sev-guest v0.15.0 a VLEK cannot be verified with the default roots at all); `matrix/`, one test against five
+  variants of their code and two go-sev-guest versions, 70 cells, reproduced on GitHub's runner from the fork branch
+  `sevsnp-matrix` (run 38306181232, identical rows); `go-sev-guest-cache-repro/`, the standalone module behind
+  google/go-sev-guest#209 (the cache keyed by product line), run on the pin, v0.15.0 and main. The reports are the bench's own
+  captures of 6 and 7 October ([docs/hardware](docs/hardware/)).
+
 ### Changed
 
 - **The bench builds the group's EST server** (11 October 2026, evening): Mark Novak merged our pull request #4 into the master of
