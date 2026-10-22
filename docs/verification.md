@@ -425,6 +425,24 @@ model's 3.3 and the text proposed for 4.5 and the Security Considerations on 8 O
 `make cloud-check` found both clouds empty at the end. Logs: the bench's working notes, `tm-logs/ripout-verify-20261011.txt`
 and `ripout-verify-20261011-rerun-aws-bc.txt`.
 
+## The text of the draft matches the code (22 October 2026)
+
+On 22 October Mark Novak merged pull requests #23 (Trust Model) and #24 (Freshness) into TheBankster/rats-tacra (master `c2c378e`).
+With #24, Section 4.5 binds three values, the freshness element, the Target and the subject, each with a 32-bit big-endian length
+prefix, under SHA-512: the binding the group's EST server has computed since 11 October (`internal/tacra/binding.go` at `623c197`,
+the bench's `third_party/globalsign-est`, tested tree `86de667a4abf`). To record that the text and the code now agree, the bench ran
+on Google Cloud SEV-SNP from this tree (`c4b34ddb`), the trust zone set up from zero (`make setup`, `make check-mtls`: 40 of 40):
+
+| run | kind | outcome | |
+|---|---|---|---|
+| `20261022T222734Z-gcp-sev-snp-e2e-passport` | demo, Passport | 10 of 10 Targets | [run](../e2e/evidence/20261022T222734Z-gcp-sev-snp-e2e-passport) |
+| `20261022T223108Z-gcp-sev-snp` | attacks, GCP SEV-SNP | 232 checks, the honest Evidence passed, every attack refused for its own reason; the service verifier's 40: 10 honest passed, three substitutions refused 10 each (no identifier left to substitute) | [run](../hwcheck/evidence/20261022T223108Z-gcp-sev-snp) |
+| `20261022T224242Z-gcp-sev-snp-e2e-background-check` | demo, Background Check | 10 of 10 Targets | [run](../e2e/evidence/20261022T224242Z-gcp-sev-snp-e2e-background-check) |
+
+Each run's record names the code (`code-revs.txt`, `code-rev.txt`) and the VM's deletion (`vm-deleted.txt`); `make cloud-check` found
+both clouds empty before and after. The outcomes are those of 11 October on the same code: what changed on 22 October is the text.
+Logs: `tm-logs/text-equals-code-*.log` (not committed).
+
 ## The bench on the group's master of 13 October (`623c197`)
 
 Mark Novak merged our pull request #6 at 06:43Z on 13 October (`623c197`; #5 on 12 October). `third_party/globalsign-est` pins
