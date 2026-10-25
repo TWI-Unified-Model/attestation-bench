@@ -425,6 +425,45 @@ model's 3.3 and the text proposed for 4.5 and the Security Considerations on 8 O
 `make cloud-check` found both clouds empty at the end. Logs: the bench's working notes, `tm-logs/ripout-verify-20261011.txt`
 and `ripout-verify-20261011-rerun-aws-bc.txt`.
 
+## The prototype, run again on three platforms (25 October 2026)
+
+Before answering a question from the group on the end-to-end prototype, the bench ran the whole path again from this tree
+(`750d5abf`; the group's EST server at `623c197`), the trust zone already set up: `make check-mtls`, 40 of 40;
+`make test-live`, the EST wire format as expected.
+
+| run | kind | outcome | |
+|---|---|---|---|
+| `20261025T225030Z-gcp-tdx-e2e-passport` | demo, Passport, Google Cloud TDX | 10 of 10 Targets | [run](../e2e/evidence/20261025T225030Z-gcp-tdx-e2e-passport) |
+| `20261025T225259Z-aws-sev-snp-e2e-passport` | demo, Passport, AWS SEV-SNP | 10 of 10 Targets | [run](../e2e/evidence/20261025T225259Z-aws-sev-snp-e2e-passport) |
+| `20261025T223843Z-gcp-sev-snp-e2e-passport` | demo, Passport, Google Cloud SEV-SNP | 0 of 10: every Target refused, `SEVSNP is "contraindicated"` | [run](../e2e/evidence/20261025T223843Z-gcp-sev-snp-e2e-passport) |
+| `20261025T224154Z-gcp-sev-snp-e2e-background-check` | demo, Background Check, Google Cloud SEV-SNP | 0 of 10, the same refusal | [run](../e2e/evidence/20261025T224154Z-gcp-sev-snp-e2e-background-check) |
+| `20261025T224459Z-gcp-sev-snp` | attacks, Google Cloud SEV-SNP | the offline verifiers as on 22 October (142, 142; the fork's 50 reported, not judged); the service verifier refused all 40 | [run](../hwcheck/evidence/20261025T224459Z-gcp-sev-snp) |
+
+**Why Google Cloud SEV-SNP refused.** The guest's launch measurement had changed: `ccdc5cf0…26fa` on 22 October,
+`e79ebb5b…984d` on 25 October, on the same chip (`1d1f823a…`), with the same guest policy (`0x30000`) and platform info
+(`0x25`): Google had moved the host to another UEFI build. The Verifier knew the approved launches only and refused the one
+it did not know, as it must (`docs/attacks.md`, "Unapproved launch"). Google's signed endorsement of the new measurement
+verifies to the pinned root (`GCE-uefi-signer`, SVN 2, built 2026-08-28;
+[`refvals/`](../hwcheck/evidence/20261025T224459Z-gcp-sev-snp/refvals/)), so the launch was approved as
+[`trust/README.md`](../trust/README.md) says: an entry in `approved-launches.json`, a new `veraison-corim-milan.cbor` with
+three launches, `make trust-check` passing. The earlier Google launch stays approved: Google runs both builds.
+
+**A second refusal, the bench's own.** The new CoRIM was first submitted to Veraison's existing store, which then held two
+trust anchors for the same ARK. The scheme requires exactly one (`expected exactly 1 trust anchor; found 2`) and answered
+every session with HTTP 500: `20261025T230344Z-gcp-sev-snp-e2e-passport`, `20261025T230657Z-gcp-sev-snp-e2e-background-check`
+(0 of 10 each) and `20261025T231000Z-gcp-sev-snp` (the service verifier's 40 not as expected). The store was recreated and the
+CoRIM submitted once: one trust anchor, three reference values. `trust/README.md`, "Approving a new launch", now carries that
+step.
+
+| run | kind | outcome | |
+|---|---|---|---|
+| `20261025T232331Z-gcp-sev-snp-e2e-passport` | demo, Passport, Google Cloud SEV-SNP | 10 of 10 Targets | [run](../e2e/evidence/20261025T232331Z-gcp-sev-snp-e2e-passport) |
+| `20261025T232650Z-gcp-sev-snp-e2e-background-check` | demo, Background Check, Google Cloud SEV-SNP | 10 of 10 Targets | [run](../e2e/evidence/20261025T232650Z-gcp-sev-snp-e2e-background-check) |
+| `20261025T232947Z-gcp-sev-snp` | attacks, Google Cloud SEV-SNP | 232 checks: the honest Evidence passed, every attack refused for its own reason; the service verifier's 40 as expected | [run](../hwcheck/evidence/20261025T232947Z-gcp-sev-snp) |
+
+`make test-live` afterwards: the EST wire format as expected, and the 57 committed runs appraised again, 2,690 checks as
+expected, the run of the new launch among them. `make cloud-check` found both clouds empty after each stage.
+
 ## The text of the draft matches the code (22 October 2026)
 
 On 22 October Mark Novak merged pull requests #23 (Trust Model) and #24 (Freshness) into TheBankster/rats-tacra (master `c2c378e`).

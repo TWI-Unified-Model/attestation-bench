@@ -1,0 +1,13 @@
+{
+ "case": "retrieve-absent-none",
+ "mode": "retrieve",
+ "freshness_kind": "absent-none",
+ "target": "https://db.tacra.example",
+ "binding_layout": "freshness-target-subject",
+ "binding_value_hex": "2f6068752ed45233c9f867e4af7fdd90750c746f2f205503cda797cd87bfc4bdbc9df6ec919a15ff111607ca6f4006fea231f92ab774ad04dd3aca3a96dff330",
+ "evidence_ms": 8.897,
+ "token_bytes": 5989,
+ "report_sha256": "33eaf39ffb324efdc6d04edb4d278d603c4158354a23f3313c62da6e3cd71e4e",
+ "signing_key": "VCEK",
+ "chip_id_prefix": "1d1f823a4c3294e2"
+}

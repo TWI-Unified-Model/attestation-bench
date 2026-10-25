@@ -1,0 +1,252 @@
+{
+ "made": {
+  "not_before": 1792968512,
+  "not_after": 1792968526
+ },
+ "guest_clock": {
+  "ahead": "the time service stopped: chrony; the clock set at 1792968514 (guest), to 1792968814, by 300 s\nthe clock set back at 1792968814 (guest), to 1792968514; the time service started again: chrony\n",
+  "behind": "the time service stopped: chrony; the clock set at 1792968514 (guest), to 1792968214, by -300 s\nthe clock set back at 1792968224 (guest), to 1792968524; the time service started again: chrony\n"
+ },
+ "results": [
+  {
+   "set": "ahead",
+   "target": "https://db-lepoch.tacra.example",
+   "rrp": "ca-gateway",
+   "mode": "enroll",
+   "kind": "absent-epoch",
+   "case": "enroll-absent-epoch",
+   "at_once": {
+    "at": 1792968556.476,
+    "status": 403,
+    "answer": "403 RRP ca: attestation: ear: not affirming: SEVSNP is \"contraindicated\""
+   },
+   "rrp_log": []
+  },
+  {
+   "set": "ahead",
+   "target": "https://db-none.tacra.example",
+   "rrp": "ca-gateway",
+   "mode": "enroll",
+   "kind": "absent-none",
+   "case": "enroll-absent-none",
+   "at_once": {
+    "at": 1792968556.53,
+    "status": 403,
+    "answer": "403 RRP ca: attestation: ear: not affirming: SEVSNP is \"contraindicated\""
+   },
+   "rrp_log": [
+    "2026/10/25 17:54:13 enrolled: target=https://db-none.tacra.example kind=absent-none hint=\"payments.workload.tacra.example\" caller=[est-server.bench.tacra.example]; under the platform rule's waiver: admitted without bit 4, AMD-SB-3034: Milan mitigation bit 4 (AMD-SB-3034 (CVE-2025-54510)) is not set (LAUNCH_MIT_VECTOR 0xfef, CURRENT_MIT_VECTOR 0xfef)"
+   ]
+  },
+  {
+   "set": "ahead",
+   "target": "https://db-time.tacra.example",
+   "rrp": "ca-gateway",
+   "mode": "enroll",
+   "kind": "absent-timestamp",
+   "case": "enroll-absent-timestamp",
+   "timestamp": 1792968814,
+   "max_age_s": 120,
+   "clock_skew_s": 5,
+   "at_once": {
+    "at": 1792968556.559,
+    "status": 409,
+    "answer": "409 RRP ca: freshness: fresh: freshness element is not valid now: timestamp 2026-10-25T22:53:34Z outside [now-2m0s, now+5s]"
+   },
+   "opened": {
+    "at": 1792968811.009,
+    "status": 403,
+    "answer": "403 RRP ca: attestation: ear: not affirming: SEVSNP is \"contraindicated\""
+   },
+   "before_close": {
+    "at": 1792968932.006,
+    "status": 403,
+    "answer": "403 RRP ca: attestation: ear: not affirming: SEVSNP is \"contraindicated\""
+   },
+   "after_close": {
+    "at": 1792968936.009,
+    "status": 409,
+    "answer": "409 RRP ca: freshness: fresh: freshness element is not valid now: timestamp 2026-10-25T22:53:34Z outside [now-2m0s, now+5s]"
+   },
+   "rrp_log": [
+    "2026/10/25 17:55:32 enroll refused: target=https://db-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: attestation: ear: not affirming: SEVSNP is \"contraindicated\"",
+    "2026/10/25 17:55:36 enroll refused: target=https://db-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-25T22:53:34Z outside [now-2m0s, now+5s]",
+    "2026/10/25 17:55:36 enroll refused: target=https://db-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-25T22:43:34Z outside [now-2m0s, now+5s]"
+   ]
+  },
+  {
+   "set": "ahead",
+   "target": "https://db-epoch.tacra.example",
+   "rrp": "ca-gateway",
+   "mode": "enroll",
+   "kind": "present-epoch",
+   "case": "enroll-present-epoch",
+   "at_once": {
+    "at": 1792968556.562,
+    "status": 403,
+    "answer": "403 RRP ca: attestation: ear: not affirming: SEVSNP is \"contraindicated\""
+   },
+   "rrp_log": []
+  },
+  {
+   "set": "ahead",
+   "target": "https://db-nonce.tacra.example",
+   "rrp": "ca-gateway",
+   "mode": "enroll",
+   "kind": "present-nonce",
+   "case": "enroll-present-nonce",
+   "at_once": {
+    "at": 1792968556.592,
+    "status": 403,
+    "answer": "403 RRP ca: attestation: ear: not affirming: SEVSNP is \"contraindicated\""
+   },
+   "rrp_log": []
+  },
+  {
+   "set": "ahead",
+   "target": "https://ledger-lepoch.tacra.example",
+   "rrp": "vault-gateway",
+   "mode": "retrieve",
+   "kind": "absent-epoch",
+   "case": "retrieve-absent-epoch",
+   "at_once": {
+    "at": 1792968556.621,
+    "status": 403,
+    "answer": "403 RRP vault: attestation: ear: not affirming: SEVSNP is \"contraindicated\""
+   },
+   "rrp_log": []
+  },
+  {
+   "set": "ahead",
+   "target": "https://ledger-none.tacra.example",
+   "rrp": "vault-gateway",
+   "mode": "retrieve",
+   "kind": "absent-none",
+   "case": "retrieve-absent-none",
+   "at_once": {
+    "at": 1792968556.659,
+    "status": 403,
+    "answer": "403 RRP vault: attestation: ear: not affirming: SEVSNP is \"contraindicated\""
+   },
+   "rrp_log": [
+    "2026/10/25 17:54:17 released: target=https://ledger-none.tacra.example kind=absent-none group=9727eddd77d3955e container=hpke-base-signed kem=MLKEM768-P256 caller=[est-server.bench.tacra.example]; under the platform rule's waiver: admitted without bit 4, AMD-SB-3034: Milan mitigation bit 4 (AMD-SB-3034 (CVE-2025-54510)) is not set (LAUNCH_MIT_VECTOR 0xfef, CURRENT_MIT_VECTOR 0xfef)"
+   ]
+  },
+  {
+   "set": "ahead",
+   "target": "https://ledger-time.tacra.example",
+   "rrp": "vault-gateway",
+   "mode": "retrieve",
+   "kind": "absent-timestamp",
+   "case": "retrieve-absent-timestamp",
+   "timestamp": 1792968814,
+   "max_age_s": 120,
+   "clock_skew_s": 5,
+   "at_once": {
+    "at": 1792968556.706,
+    "status": 409,
+    "answer": "409 RRP vault: freshness: fresh: freshness element is not valid now: timestamp 2026-10-25T22:53:34Z outside [now-2m0s, now+5s]"
+   },
+   "opened": {
+    "at": 1792968811.38,
+    "status": 403,
+    "answer": "403 RRP vault: attestation: ear: not affirming: SEVSNP is \"contraindicated\""
+   },
+   "before_close": {
+    "at": 1792968932.068,
+    "status": 403,
+    "answer": "403 RRP vault: attestation: ear: not affirming: SEVSNP is \"contraindicated\""
+   },
+   "after_close": {
+    "at": 1792968936.054,
+    "status": 409,
+    "answer": "409 RRP vault: freshness: fresh: freshness element is not valid now: timestamp 2026-10-25T22:53:34Z outside [now-2m0s, now+5s]"
+   },
+   "rrp_log": [
+    "2026/10/25 17:55:32 retrieve refused: target=https://ledger-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: attestation: ear: not affirming: SEVSNP is \"contraindicated\"",
+    "2026/10/25 17:55:36 retrieve refused: target=https://ledger-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-25T22:53:34Z outside [now-2m0s, now+5s]",
+    "2026/10/25 17:55:36 retrieve refused: target=https://ledger-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-25T22:43:44Z outside [now-2m0s, now+5s]"
+   ]
+  },
+  {
+   "set": "ahead",
+   "target": "https://ledger-epoch.tacra.example",
+   "rrp": "vault-gateway",
+   "mode": "retrieve",
+   "kind": "present-epoch",
+   "case": "retrieve-present-epoch",
+   "at_once": {
+    "at": 1792968556.712,
+    "status": 403,
+    "answer": "403 RRP vault: attestation: ear: not affirming: SEVSNP is \"contraindicated\""
+   },
+   "rrp_log": []
+  },
+  {
+   "set": "ahead",
+   "target": "https://ledger-nonce.tacra.example",
+   "rrp": "vault-gateway",
+   "mode": "retrieve",
+   "kind": "present-nonce",
+   "case": "retrieve-present-nonce",
+   "at_once": {
+    "at": 1792968556.746,
+    "status": 403,
+    "answer": "403 RRP vault: attestation: ear: not affirming: SEVSNP is \"contraindicated\""
+   },
+   "rrp_log": []
+  },
+  {
+   "set": "behind",
+   "target": "https://db-time.tacra.example",
+   "rrp": "ca-gateway",
+   "mode": "enroll",
+   "kind": "absent-timestamp",
+   "case": "enroll-absent-timestamp",
+   "timestamp": 1792968214,
+   "max_age_s": 120,
+   "clock_skew_s": 5,
+   "at_once": {
+    "at": 1792968556.777,
+    "status": 409,
+    "answer": "409 RRP ca: freshness: fresh: freshness element is not valid now: timestamp 2026-10-25T22:43:34Z outside [now-2m0s, now+5s]"
+   },
+   "again": {
+    "at": 1792968936.086,
+    "status": 409,
+    "answer": "409 RRP ca: freshness: fresh: freshness element is not valid now: timestamp 2026-10-25T22:43:34Z outside [now-2m0s, now+5s]"
+   },
+   "rrp_log": [
+    "2026/10/25 17:55:32 enroll refused: target=https://db-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: attestation: ear: not affirming: SEVSNP is \"contraindicated\"",
+    "2026/10/25 17:55:36 enroll refused: target=https://db-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-25T22:53:34Z outside [now-2m0s, now+5s]",
+    "2026/10/25 17:55:36 enroll refused: target=https://db-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-25T22:43:34Z outside [now-2m0s, now+5s]"
+   ]
+  },
+  {
+   "set": "behind",
+   "target": "https://ledger-time.tacra.example",
+   "rrp": "vault-gateway",
+   "mode": "retrieve",
+   "kind": "absent-timestamp",
+   "case": "retrieve-absent-timestamp",
+   "timestamp": 1792968224,
+   "max_age_s": 120,
+   "clock_skew_s": 5,
+   "at_once": {
+    "at": 1792968556.779,
+    "status": 409,
+    "answer": "409 RRP vault: freshness: fresh: freshness element is not valid now: timestamp 2026-10-25T22:43:44Z outside [now-2m0s, now+5s]"
+   },
+   "again": {
+    "at": 1792968936.113,
+    "status": 409,
+    "answer": "409 RRP vault: freshness: fresh: freshness element is not valid now: timestamp 2026-10-25T22:43:44Z outside [now-2m0s, now+5s]"
+   },
+   "rrp_log": [
+    "2026/10/25 17:55:32 retrieve refused: target=https://ledger-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: attestation: ear: not affirming: SEVSNP is \"contraindicated\"",
+    "2026/10/25 17:55:36 retrieve refused: target=https://ledger-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-25T22:53:34Z outside [now-2m0s, now+5s]",
+    "2026/10/25 17:55:36 retrieve refused: target=https://ledger-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: freshness: fresh: freshness element is not valid now: timestamp 2026-10-25T22:43:44Z outside [now-2m0s, now+5s]"
+   ]
+  }
+ ]
+}

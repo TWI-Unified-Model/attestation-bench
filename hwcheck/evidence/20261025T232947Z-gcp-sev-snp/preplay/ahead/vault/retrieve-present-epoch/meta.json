@@ -1,0 +1,14 @@
+{
+ "case": "retrieve-present-epoch",
+ "mode": "retrieve",
+ "freshness_kind": "present-epoch",
+ "target": "https://ledger-epoch.tacra.example",
+ "binding_layout": "freshness-target-subject",
+ "freshness_element_b64": "L5hhaj491WWv4172c2u2dULKAkeyr7L3uY_UwP85u88",
+ "binding_value_hex": "6ee537fc960d5735207797ec97b676c0be2b59b78259a0f376b06e79c684f4eaf0798669d8f005bfb8347d67ff88f7df80377c7264519d1d4492272818f23fed",
+ "evidence_ms": 9.052,
+ "token_bytes": 5989,
+ "report_sha256": "0c07f665b1b9721678fa6fa5ed55c91ec09c9a0b120df33057ad65572ddada97",
+ "signing_key": "VCEK",
+ "chip_id_prefix": "72096f47f0c0900a"
+}

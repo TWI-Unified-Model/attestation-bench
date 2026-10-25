@@ -1,0 +1,14 @@
+0 of 10 Targets: credential acquired and admitted by the relying party
+no  https://db-nonce.tacra.example         x509        787.0 ms 0 cai: EnrollCredential: 403 RRP ca: attestation: ear: not affirming: SEVSNP is "contraindicated"
+no  https://db-epoch.tacra.example         x509        645.0 ms 0 cai: EnrollCredential: 403 RRP ca: attestation: ear: not affirming: SEVSNP is "contraindicated"
+no  https://db-lepoch.tacra.example        x509        525.3 ms 0 cai: EnrollCredential: 403 RRP ca: attestation: ear: not affirming: SEVSNP is "contraindicated"
+no  https://db-time.tacra.example          x509        523.9 ms 0 cai: EnrollCredential: 403 RRP ca: attestation: ear: not affirming: SEVSNP is "contraindicated"
+no  https://db-none.tacra.example          x509        524.9 ms 0 cai: EnrollCredential: 403 RRP ca: attestation: ear: not affirming: SEVSNP is "contraindicated"
+no  https://ledger-nonce.tacra.example     api-key     522.6 ms 0 cai: RetrieveCredential: 403 RRP vault: attestation: ear: not affirming: SEVSNP is "contraindicated"
+no  https://ledger-epoch.tacra.example     api-key     524.7 ms 0 cai: RetrieveCredential: 403 RRP vault: attestation: ear: not affirming: SEVSNP is "contraindicated"
+no  https://ledger-lepoch.tacra.example    api-key     562.3 ms 0 cai: RetrieveCredential: 403 RRP vault: attestation: ear: not affirming: SEVSNP is "contraindicated"
+no  https://ledger-time.tacra.example      api-key     550.6 ms 0 cai: RetrieveCredential: 403 RRP vault: attestation: ear: not affirming: SEVSNP is "contraindicated"
+no  https://ledger-none.tacra.example      api-key     571.5 ms 0 cai: RetrieveCredential: 403 RRP vault: attestation: ear: not affirming: SEVSNP is "contraindicated"
+the platform rule's waiver: Milan bit 4: admitted without bit 4, AMD-SB-3034
+guest minus RRP: +1.095 s, within 1.244 s
+VERDICT FAIL: 10 of 10 Targets not admitted

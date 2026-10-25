@@ -7,6 +7,12 @@
    "checked": "e2e/evidence/20260928T212732Z-demo-bank/refvals/initial-snp-ccdc5cf01ba25526bd65503d95931b787b4385a3277cfe4448addf9c3e894948ae8cf7b099620e3e22717de2fb5d26fa.json"
   },
   {
+   "measurement": "e79ebb5b789ddb6b7a9897f663a655a65c69445aa482c4e1a5ff9fdeb4af1a2c8d5d30fcad5f4f0e04f1a13885eb984d",
+   "launch": "Google Cloud n2d-standard-2 (AMD Milan, 2 vCPUs), confidential VM with SEV-SNP: Google's UEFI build met from 25 October 2026",
+   "endorsement": "Google's signed launch endorsement (GCE-uefi-signer), SVN 2, 2026-08-28T12:54:59Z",
+   "checked": "hwcheck/evidence/20261025T224459Z-gcp-sev-snp/refvals/snp-e79ebb5b789ddb6b7a9897f663a655a65c69445aa482c4e1a5ff9fdeb4af1a2c8d5d30fcad5f4f0e04f1a13885eb984d.json"
+  },
+  {
    "measurement": "7a89cceaaba0bbdddc4f775acca3ef15d1f9bf8abccdc6115cfad7fb8eae113df3ee0bb50efa34db9c53ae065b1dc766",
    "launch": "AWS EC2 c6a.large (AMD Milan, 2 vCPUs), AmdSevSnp enabled",
    "endorsement": "none from AWS, which signs no launch endorsement; the measurement of AWS's published EC2 SEV-SNP UEFI, release 20260814, computed again from the binary (firmware): trust/check.sh repeats it",

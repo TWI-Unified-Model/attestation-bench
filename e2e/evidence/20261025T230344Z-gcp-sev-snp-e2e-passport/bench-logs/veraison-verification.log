@@ -1,0 +1,90 @@
+INFO	session requested	{"caller": ["est-server.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/10/25 - 18:05:26 | 201 |   36.785792ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=ZFjJ-CwcLlBXL6rYTaSPRXstFX89-oV2T-9ggZIaSOOLyowwrP_ChvFOo0UuVPGYcgCGoK2bOrXVpyglrLH3oA%3D%3D"
+INFO	gin	
+ERROR	api-handler	rpc error: code = Unknown desc = expected exactly 1 trust anchor; found 2
+ERROR	api	problem encountered	{"title": "Internal Server Error", "detail": "error encountered while processing evidence"}
+INFO	gin	[GIN] 2026/10/25 - 18:05:26 | 500 |    20.26925ms |       127.0.0.1 | POST     "/challenge-response/v1/session/90b05f1e-d0c8-11f1-a5ff-313543423532"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/25 - 18:05:26 | 204 |       2.792µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/90b05f1e-d0c8-11f1-a5ff-313543423532"
+INFO	gin	
+INFO	session requested	{"caller": ["est-server.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/10/25 - 18:05:27 | 201 |   41.571875ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=LE4SdYNN_HxF1oMs96u1kWO4B6PdIUrGwctg--v3VpKwmKHD6Cx2cQHyAjCib3Chd7C-OBBXD4X8RhGz6AyznQ%3D%3D"
+INFO	gin	
+ERROR	api-handler	rpc error: code = Unknown desc = expected exactly 1 trust anchor; found 2
+ERROR	api	problem encountered	{"title": "Internal Server Error", "detail": "error encountered while processing evidence"}
+INFO	gin	[GIN] 2026/10/25 - 18:05:27 | 500 |    9.243958ms |       127.0.0.1 | POST     "/challenge-response/v1/session/91026c28-d0c8-11f1-a5ff-313543423532"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/25 - 18:05:27 | 204 |       3.042µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/91026c28-d0c8-11f1-a5ff-313543423532"
+INFO	gin	
+INFO	session requested	{"caller": ["est-server.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/10/25 - 18:05:27 | 201 |   38.355458ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=5jXoc94cWpL8RBTJ0LUlHNKXszKWFq6iGmC_xKOa5cwpTIA9vYOxuJ1jayo4UoEP4aecf4m_7SEfZ_IjafMQuQ%3D%3D"
+INFO	gin	
+ERROR	api-handler	rpc error: code = Unknown desc = expected exactly 1 trust anchor; found 2
+ERROR	api	problem encountered	{"title": "Internal Server Error", "detail": "error encountered while processing evidence"}
+INFO	gin	[GIN] 2026/10/25 - 18:05:27 | 500 |      11.365ms |       127.0.0.1 | POST     "/challenge-response/v1/session/91594426-d0c8-11f1-a5ff-313543423532"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/25 - 18:05:27 | 204 |       2.875µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/91594426-d0c8-11f1-a5ff-313543423532"
+INFO	gin	
+INFO	session requested	{"caller": ["est-server.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/10/25 - 18:05:28 | 201 |   38.626792ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=XnCjVhRzIO2xVKEOy8bdfjCkggCJ_0QpvhjpFHRdx-f8dLRkeM6darTgvOaNV8nBdeFIaKxym_AaDAaOplBfVQ%3D%3D"
+INFO	gin	
+ERROR	api-handler	rpc error: code = Unknown desc = expected exactly 1 trust anchor; found 2
+ERROR	api	problem encountered	{"title": "Internal Server Error", "detail": "error encountered while processing evidence"}
+INFO	gin	[GIN] 2026/10/25 - 18:05:28 | 500 |   10.327667ms |       127.0.0.1 | POST     "/challenge-response/v1/session/91aa3782-d0c8-11f1-a5ff-313543423532"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/25 - 18:05:28 | 204 |       1.917µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/91aa3782-d0c8-11f1-a5ff-313543423532"
+INFO	gin	
+INFO	session requested	{"caller": ["est-server.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/10/25 - 18:05:28 | 201 |    20.41175ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=iVtAw2cwBb1wnbIr0MFzHPAm1JMkfT_W8qeiV2ehe8AZUGa-AxC_OwhjT_qYh4fQoOxeKp1O4wGpUvX4ILFF-w%3D%3D"
+INFO	gin	
+ERROR	api-handler	rpc error: code = Unknown desc = expected exactly 1 trust anchor; found 2
+ERROR	api	problem encountered	{"title": "Internal Server Error", "detail": "error encountered while processing evidence"}
+INFO	gin	[GIN] 2026/10/25 - 18:05:28 | 500 |    7.200959ms |       127.0.0.1 | POST     "/challenge-response/v1/session/91f704f4-d0c8-11f1-a5ff-313543423532"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/25 - 18:05:28 | 204 |       6.042µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/91f704f4-d0c8-11f1-a5ff-313543423532"
+INFO	gin	
+INFO	session requested	{"caller": ["est-server.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/10/25 - 18:05:29 | 201 |   38.354125ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=FELOhax7hfuy0OORuDc3KyB7Z0JnwEXgsuAVq2MUCCwKM05GtvBQwICnN5XJM1Skpbs62ZOl0PL0etUi1wOaXg%3D%3D"
+INFO	gin	
+ERROR	api-handler	rpc error: code = Unknown desc = expected exactly 1 trust anchor; found 2
+ERROR	api	problem encountered	{"title": "Internal Server Error", "detail": "error encountered while processing evidence"}
+INFO	gin	[GIN] 2026/10/25 - 18:05:29 | 500 |    8.782333ms |       127.0.0.1 | POST     "/challenge-response/v1/session/924a9484-d0c8-11f1-a5ff-313543423532"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/25 - 18:05:29 | 204 |       5.625µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/924a9484-d0c8-11f1-a5ff-313543423532"
+INFO	gin	
+INFO	session requested	{"caller": ["est-server.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/10/25 - 18:05:29 | 201 |   34.945375ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=PiG1yMCBcRLhigW5GxLG1NlDCbUT3fjIKJOcdmDbpquqW-moVmqGqEv4BSAzHtaLEc4LTK2l-_00KK6RplTC2g%3D%3D"
+INFO	gin	
+ERROR	api-handler	rpc error: code = Unknown desc = expected exactly 1 trust anchor; found 2
+ERROR	api	problem encountered	{"title": "Internal Server Error", "detail": "error encountered while processing evidence"}
+INFO	gin	[GIN] 2026/10/25 - 18:05:29 | 500 |     9.43325ms |       127.0.0.1 | POST     "/challenge-response/v1/session/929979fa-d0c8-11f1-a5ff-313543423532"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/25 - 18:05:29 | 204 |       2.333µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/929979fa-d0c8-11f1-a5ff-313543423532"
+INFO	gin	
+INFO	session requested	{"caller": ["est-server.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/10/25 - 18:05:30 | 201 |   38.192583ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=XGm5QD85I6yLahXRq42HhF-qdnva6jLtf5gBggBKkucHDam2eH4O5e2tcdmqQ9KadqHmHaZifQglxJQLgY_bWQ%3D%3D"
+INFO	gin	
+ERROR	api-handler	rpc error: code = Unknown desc = expected exactly 1 trust anchor; found 2
+ERROR	api	problem encountered	{"title": "Internal Server Error", "detail": "error encountered while processing evidence"}
+INFO	gin	[GIN] 2026/10/25 - 18:05:30 | 500 |    8.777334ms |       127.0.0.1 | POST     "/challenge-response/v1/session/92f0a900-d0c8-11f1-a5ff-313543423532"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/25 - 18:05:30 | 204 |       4.208µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/92f0a900-d0c8-11f1-a5ff-313543423532"
+INFO	gin	
+INFO	session requested	{"caller": ["est-server.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/10/25 - 18:05:30 | 201 |   30.681167ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=jtASOA1YdQiCmFRWWGypaGR-pQzHNX8T_y8rMjdRjseVpYYXz0vPBiyy5XB7qpY-FjlwJbs9QLwTuNe_L9vxlw%3D%3D"
+INFO	gin	
+ERROR	api-handler	rpc error: code = Unknown desc = expected exactly 1 trust anchor; found 2
+ERROR	api	problem encountered	{"title": "Internal Server Error", "detail": "error encountered while processing evidence"}
+INFO	gin	[GIN] 2026/10/25 - 18:05:30 | 500 |    9.209375ms |       127.0.0.1 | POST     "/challenge-response/v1/session/93345362-d0c8-11f1-a5ff-313543423532"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/25 - 18:05:30 | 204 |       6.042µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/93345362-d0c8-11f1-a5ff-313543423532"
+INFO	gin	
+INFO	session requested	{"caller": ["est-server.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/10/25 - 18:05:31 | 201 |   20.203541ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=7MT_j0EF_OLQYaP5V-aK0sqx305TM-JraCYEWI36MWQDGDMycLkyn8AxcYOyE094ZRrvASgLdCTviX2ehAayww%3D%3D"
+INFO	gin	
+ERROR	api-handler	rpc error: code = Unknown desc = expected exactly 1 trust anchor; found 2
+ERROR	api	problem encountered	{"title": "Internal Server Error", "detail": "error encountered while processing evidence"}
+INFO	gin	[GIN] 2026/10/25 - 18:05:31 | 500 |    8.489958ms |       127.0.0.1 | POST     "/challenge-response/v1/session/937c3754-d0c8-11f1-a5ff-313543423532"
+INFO	gin	
+INFO	gin	[GIN] 2026/10/25 - 18:05:31 | 204 |      12.167µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/937c3754-d0c8-11f1-a5ff-313543423532"
+INFO	gin	

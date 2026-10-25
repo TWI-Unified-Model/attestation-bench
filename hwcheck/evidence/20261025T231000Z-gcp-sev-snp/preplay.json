@@ -1,0 +1,232 @@
+{
+ "made": {
+  "not_before": 1792970014,
+  "not_after": 1792970028
+ },
+ "guest_clock": {
+  "ahead": "the time service stopped: chrony; the clock set at 1792970017 (guest), to 1792970317, by 300 s\nthe clock set back at 1792970317 (guest), to 1792970017; the time service started again: chrony\n",
+  "behind": "the time service stopped: chrony; the clock set at 1792970017 (guest), to 1792969717, by -300 s\nthe clock set back at 1792969727 (guest), to 1792970027; the time service started again: chrony\n"
+ },
+ "results": [
+  {
+   "set": "ahead",
+   "target": "https://db-lepoch.tacra.example",
+   "rrp": "ca-gateway",
+   "mode": "enroll",
+   "kind": "absent-epoch",
+   "case": "enroll-absent-epoch",
+   "at_once": {
+    "at": 1792970058.681,
+    "status": 403,
+    "answer": "403 RRP ca: attestation: verifier https://localhost:8443 produced no Attestation Results (HTTP 500)"
+   },
+   "rrp_log": []
+  },
+  {
+   "set": "ahead",
+   "target": "https://db-none.tacra.example",
+   "rrp": "ca-gateway",
+   "mode": "enroll",
+   "kind": "absent-none",
+   "case": "enroll-absent-none",
+   "at_once": {
+    "at": 1792970058.766,
+    "status": 403,
+    "answer": "403 RRP ca: attestation: verifier https://localhost:8443 produced no Attestation Results (HTTP 500)"
+   },
+   "rrp_log": []
+  },
+  {
+   "set": "ahead",
+   "target": "https://db-time.tacra.example",
+   "rrp": "ca-gateway",
+   "mode": "enroll",
+   "kind": "absent-timestamp",
+   "case": "enroll-absent-timestamp",
+   "timestamp": 1792970317,
+   "max_age_s": 120,
+   "clock_skew_s": 5,
+   "at_once": {
+    "at": 1792970058.798,
+    "status": 409,
+    "answer": "409 RRP ca: freshness: fresh: freshness element is not valid now: timestamp 2026-10-25T23:18:37Z outside [now-2m0s, now+5s]"
+   },
+   "opened": {
+    "at": 1792970314.002,
+    "status": 403,
+    "answer": "403 the verifier produced no Attestation Results (HTTP 500)"
+   },
+   "before_close": {
+    "at": 1792970435.003,
+    "status": 403,
+    "answer": "403 the verifier produced no Attestation Results (HTTP 500)"
+   },
+   "after_close": {
+    "at": 1792970439.008,
+    "status": 403,
+    "answer": "403 the verifier produced no Attestation Results (HTTP 500)"
+   },
+   "rrp_log": []
+  },
+  {
+   "set": "ahead",
+   "target": "https://db-epoch.tacra.example",
+   "rrp": "ca-gateway",
+   "mode": "enroll",
+   "kind": "present-epoch",
+   "case": "enroll-present-epoch",
+   "at_once": {
+    "at": 1792970058.8,
+    "status": 403,
+    "answer": "403 RRP ca: attestation: verifier https://localhost:8443 produced no Attestation Results (HTTP 500)"
+   },
+   "rrp_log": []
+  },
+  {
+   "set": "ahead",
+   "target": "https://db-nonce.tacra.example",
+   "rrp": "ca-gateway",
+   "mode": "enroll",
+   "kind": "present-nonce",
+   "case": "enroll-present-nonce",
+   "at_once": {
+    "at": 1792970058.832,
+    "status": 403,
+    "answer": "403 RRP ca: attestation: verifier https://localhost:8443 produced no Attestation Results (HTTP 500)"
+   },
+   "rrp_log": []
+  },
+  {
+   "set": "ahead",
+   "target": "https://ledger-lepoch.tacra.example",
+   "rrp": "vault-gateway",
+   "mode": "retrieve",
+   "kind": "absent-epoch",
+   "case": "retrieve-absent-epoch",
+   "at_once": {
+    "at": 1792970058.863,
+    "status": 403,
+    "answer": "403 RRP vault: attestation: verifier https://localhost:8443 produced no Attestation Results (HTTP 500)"
+   },
+   "rrp_log": []
+  },
+  {
+   "set": "ahead",
+   "target": "https://ledger-none.tacra.example",
+   "rrp": "vault-gateway",
+   "mode": "retrieve",
+   "kind": "absent-none",
+   "case": "retrieve-absent-none",
+   "at_once": {
+    "at": 1792970058.894,
+    "status": 403,
+    "answer": "403 RRP vault: attestation: verifier https://localhost:8443 produced no Attestation Results (HTTP 500)"
+   },
+   "rrp_log": []
+  },
+  {
+   "set": "ahead",
+   "target": "https://ledger-time.tacra.example",
+   "rrp": "vault-gateway",
+   "mode": "retrieve",
+   "kind": "absent-timestamp",
+   "case": "retrieve-absent-timestamp",
+   "timestamp": 1792970317,
+   "max_age_s": 120,
+   "clock_skew_s": 5,
+   "at_once": {
+    "at": 1792970058.924,
+    "status": 409,
+    "answer": "409 RRP vault: freshness: fresh: freshness element is not valid now: timestamp 2026-10-25T23:18:37Z outside [now-2m0s, now+5s]"
+   },
+   "opened": {
+    "at": 1792970314.138,
+    "status": 403,
+    "answer": "403 the verifier produced no Attestation Results (HTTP 500)"
+   },
+   "before_close": {
+    "at": 1792970435.064,
+    "status": 403,
+    "answer": "403 the verifier produced no Attestation Results (HTTP 500)"
+   },
+   "after_close": {
+    "at": 1792970439.044,
+    "status": 403,
+    "answer": "403 the verifier produced no Attestation Results (HTTP 500)"
+   },
+   "rrp_log": []
+  },
+  {
+   "set": "ahead",
+   "target": "https://ledger-epoch.tacra.example",
+   "rrp": "vault-gateway",
+   "mode": "retrieve",
+   "kind": "present-epoch",
+   "case": "retrieve-present-epoch",
+   "at_once": {
+    "at": 1792970058.928,
+    "status": 403,
+    "answer": "403 RRP vault: attestation: verifier https://localhost:8443 produced no Attestation Results (HTTP 500)"
+   },
+   "rrp_log": []
+  },
+  {
+   "set": "ahead",
+   "target": "https://ledger-nonce.tacra.example",
+   "rrp": "vault-gateway",
+   "mode": "retrieve",
+   "kind": "present-nonce",
+   "case": "retrieve-present-nonce",
+   "at_once": {
+    "at": 1792970058.96,
+    "status": 403,
+    "answer": "403 RRP vault: attestation: verifier https://localhost:8443 produced no Attestation Results (HTTP 500)"
+   },
+   "rrp_log": []
+  },
+  {
+   "set": "behind",
+   "target": "https://db-time.tacra.example",
+   "rrp": "ca-gateway",
+   "mode": "enroll",
+   "kind": "absent-timestamp",
+   "case": "enroll-absent-timestamp",
+   "timestamp": 1792969717,
+   "max_age_s": 120,
+   "clock_skew_s": 5,
+   "at_once": {
+    "at": 1792970058.991,
+    "status": 409,
+    "answer": "409 RRP ca: freshness: fresh: freshness element is not valid now: timestamp 2026-10-25T23:08:37Z outside [now-2m0s, now+5s]"
+   },
+   "again": {
+    "at": 1792970439.077,
+    "status": 403,
+    "answer": "403 the verifier produced no Attestation Results (HTTP 500)"
+   },
+   "rrp_log": []
+  },
+  {
+   "set": "behind",
+   "target": "https://ledger-time.tacra.example",
+   "rrp": "vault-gateway",
+   "mode": "retrieve",
+   "kind": "absent-timestamp",
+   "case": "retrieve-absent-timestamp",
+   "timestamp": 1792969727,
+   "max_age_s": 120,
+   "clock_skew_s": 5,
+   "at_once": {
+    "at": 1792970058.993,
+    "status": 409,
+    "answer": "409 RRP vault: freshness: fresh: freshness element is not valid now: timestamp 2026-10-25T23:08:47Z outside [now-2m0s, now+5s]"
+   },
+   "again": {
+    "at": 1792970439.115,
+    "status": 403,
+    "answer": "403 the verifier produced no Attestation Results (HTTP 500)"
+   },
+   "rrp_log": []
+  }
+ ]
+}

@@ -1,0 +1,112 @@
+[
+ {
+  "target": "https://db-nonce.tacra.example",
+  "type": "x509",
+  "ok": false,
+  "error": "cai: EnrollCredential: 403 the verifier produced no Attestation Results (HTTP 500)\n",
+  "attempts": 1,
+  "acquire_ms": 564.365,
+  "initiate_ms": 197.317,
+  "second_leg_ms": 356.236,
+  "rup_status": 0
+ },
+ {
+  "target": "https://db-epoch.tacra.example",
+  "type": "x509",
+  "ok": false,
+  "error": "cai: EnrollCredential: 403 the verifier produced no Attestation Results (HTTP 500)\n",
+  "attempts": 1,
+  "acquire_ms": 525.997,
+  "initiate_ms": 194.15,
+  "second_leg_ms": 321.164,
+  "rup_status": 0
+ },
+ {
+  "target": "https://db-lepoch.tacra.example",
+  "type": "x509",
+  "ok": false,
+  "error": "cai: EnrollCredential: 403 the verifier produced no Attestation Results (HTTP 500)\n",
+  "attempts": 1,
+  "acquire_ms": 571.847,
+  "initiate_ms": 211.139,
+  "second_leg_ms": 350.845,
+  "rup_status": 0
+ },
+ {
+  "target": "https://db-time.tacra.example",
+  "type": "x509",
+  "ok": false,
+  "error": "cai: EnrollCredential: 403 the verifier produced no Attestation Results (HTTP 500)\n",
+  "attempts": 1,
+  "acquire_ms": 528.995,
+  "initiate_ms": 177.294,
+  "second_leg_ms": 342.45,
+  "rup_status": 0
+ },
+ {
+  "target": "https://db-none.tacra.example",
+  "type": "x509",
+  "ok": false,
+  "error": "cai: EnrollCredential: 403 the verifier produced no Attestation Results (HTTP 500)\n",
+  "attempts": 1,
+  "acquire_ms": 500.554,
+  "initiate_ms": 206.745,
+  "second_leg_ms": 284.379,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-nonce.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: RetrieveCredential: 403 the verifier produced no Attestation Results (HTTP 500)\n",
+  "attempts": 1,
+  "acquire_ms": 548.644,
+  "initiate_ms": 187.998,
+  "second_leg_ms": 351.906,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-epoch.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: RetrieveCredential: 403 the verifier produced no Attestation Results (HTTP 500)\n",
+  "attempts": 1,
+  "acquire_ms": 529.523,
+  "initiate_ms": 209.631,
+  "second_leg_ms": 310.252,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-lepoch.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: RetrieveCredential: 403 the verifier produced no Attestation Results (HTTP 500)\n",
+  "attempts": 1,
+  "acquire_ms": 559.016,
+  "initiate_ms": 211.27,
+  "second_leg_ms": 339.01,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-time.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: RetrieveCredential: 403 the verifier produced no Attestation Results (HTTP 500)\n",
+  "attempts": 1,
+  "acquire_ms": 444.347,
+  "initiate_ms": 175.556,
+  "second_leg_ms": 260.101,
+  "rup_status": 0
+ },
+ {
+  "target": "https://ledger-none.tacra.example",
+  "type": "api-key",
+  "ok": false,
+  "error": "cai: RetrieveCredential: 403 the verifier produced no Attestation Results (HTTP 500)\n",
+  "attempts": 1,
+  "acquire_ms": 470.533,
+  "initiate_ms": 209.127,
+  "second_leg_ms": 251.358,
+  "rup_status": 0
+ }
+]

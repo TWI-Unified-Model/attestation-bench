@@ -6,6 +6,12 @@ What changed, newest first. Dates are UTC.
 
 ### Added
 
+- **A third approved Google Cloud SEV-SNP launch, and the runs of 25 October 2026.** Google moved its n2d hosts to another UEFI build
+  between 22 and 25 October (measurement `e79ebb5b…984d`, endorsed by Google on 2026-08-28, SVN 2); the Verifier refused it until it was
+  approved on that signed endorsement (`trust/approved-launches.json`, a new `trust/veraison-corim-milan.cbor` with three launches).
+  The runs: Google Cloud SEV-SNP 10 of 10 in Passport and in Background Check and 232 attack checks; Google Cloud TDX and AWS SEV-SNP
+  10 of 10; the refusals before the approval are kept as evidence ([docs/verification.md](docs/verification.md)).
+
 - **The Veraison upstream work and the measurements behind it** (12 October 2026). Two fixes of the bench's Veraison patches went
   upstream as our own pull requests: veraison/services#488 (DER certificates in the host's table, as Google Cloud writes it; issue
   #487; approved) and #490 (the chain verified up to AMD's roots held by the scheme, so the host's table need only carry the VLEK
@@ -20,6 +26,10 @@ What changed, newest first. Dates are UTC.
   captures of 6 and 7 October ([docs/hardware](docs/hardware/)).
 
 ### Changed
+
+- **`trust/README.md`, approving a new launch:** the CoRIM is made with the patched module file (`go run -modfile=go.patched.mod
+  ./cmd/mkcorim`; upstream go-gen-ref rejects AWS's VLEK-signed report), and Veraison takes a changed CoRIM from a fresh store only: a
+  second submission to a store that holds one leaves two trust anchors for the same ARK, and the scheme then refuses every report.
 
 - **The bench builds the group's master of 13 October** (`623c197`: our pull request #6, the x.509 retrieval test and the README
   section on attested credential acquisition, merged by Mark Novak at 06:43Z; before it #5, the mock's absent-timestamp Handle).

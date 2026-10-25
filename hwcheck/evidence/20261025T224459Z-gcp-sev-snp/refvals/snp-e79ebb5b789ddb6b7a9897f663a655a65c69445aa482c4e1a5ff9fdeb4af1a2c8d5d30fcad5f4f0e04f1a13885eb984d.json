@@ -1,0 +1,14 @@
+{
+ "technology": "sev-snp",
+ "measurement": "e79ebb5b789ddb6b7a9897f663a655a65c69445aa482c4e1a5ff9fdeb4af1a2c8d5d30fcad5f4f0e04f1a13885eb984d",
+ "endorsed": true,
+ "object": "ovmf_x64_csm/sevsnp/e79ebb5b789ddb6b7a9897f663a655a65c69445aa482c4e1a5ff9fdeb4af1a2c8d5d30fcad5f4f0e04f1a13885eb984d.binarypb",
+ "uefi_sha384": "abd40f8b110602404abcf39cbf215fc0897587c92194f4d7b692754d5459ae112265df306e7f08b32657cdf5a28b96d8",
+ "svn": 2,
+ "timestamp": "2026-08-28T12:54:59Z",
+ "cl_spec": 972529506,
+ "launch_vmsas": 2,
+ "signer": "SERIALNUMBER=33,CN=GCE-uefi-signer,OU=Engineering,O=Google,L=Kirkland,ST=WA,C=USA",
+ "root_sha256": "e876bc6978bf4f3da445f98a0a82363c8c0bae5a1fc033c6df65846a6cb0f18c",
+ "checked_at": "2026-10-25T22:59:22Z"
+}

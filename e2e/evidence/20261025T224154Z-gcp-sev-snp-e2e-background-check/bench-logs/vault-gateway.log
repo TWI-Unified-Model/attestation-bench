@@ -1,0 +1,10 @@
+2026/10/25 17:43:45 background-check: this RRP asks https://localhost:8443 (veraison), 5989 octets of Evidence (application/vnd.veraison.tsm-report+cbor)
+2026/10/25 17:43:45 retrieve refused: target=https://ledger-nonce.tacra.example kind=present-nonce caller=[est-server.bench.tacra.example]: attestation: ear: not affirming: SEVSNP is "contraindicated"
+2026/10/25 17:43:46 background-check: this RRP asks https://localhost:8443 (veraison), 5989 octets of Evidence (application/vnd.veraison.tsm-report+cbor)
+2026/10/25 17:43:46 retrieve refused: target=https://ledger-epoch.tacra.example kind=present-epoch caller=[est-server.bench.tacra.example]: attestation: ear: not affirming: SEVSNP is "contraindicated"
+2026/10/25 17:43:46 background-check: this RRP asks https://localhost:8443 (veraison), 5989 octets of Evidence (application/vnd.veraison.tsm-report+cbor)
+2026/10/25 17:43:46 retrieve refused: target=https://ledger-lepoch.tacra.example kind=absent-epoch caller=[est-server.bench.tacra.example]: attestation: ear: not affirming: SEVSNP is "contraindicated"
+2026/10/25 17:43:47 background-check: this RRP asks https://localhost:8443 (veraison), 5989 octets of Evidence (application/vnd.veraison.tsm-report+cbor)
+2026/10/25 17:43:47 retrieve refused: target=https://ledger-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: attestation: ear: not affirming: SEVSNP is "contraindicated"
+2026/10/25 17:43:47 background-check: this RRP asks https://localhost:8443 (veraison), 5989 octets of Evidence (application/vnd.veraison.tsm-report+cbor)
+2026/10/25 17:43:47 retrieve refused: target=https://ledger-none.tacra.example kind=absent-none caller=[est-server.bench.tacra.example]: attestation: ear: not affirming: SEVSNP is "contraindicated"

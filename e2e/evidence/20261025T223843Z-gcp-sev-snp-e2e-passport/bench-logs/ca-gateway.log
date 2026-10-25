@@ -1,0 +1,5 @@
+2026/10/25 17:40:23 enroll refused: target=https://db-nonce.tacra.example kind=present-nonce caller=[est-server.bench.tacra.example]: attestation: ear: not affirming: SEVSNP is "contraindicated"
+2026/10/25 17:40:24 enroll refused: target=https://db-epoch.tacra.example kind=present-epoch caller=[est-server.bench.tacra.example]: attestation: ear: not affirming: SEVSNP is "contraindicated"
+2026/10/25 17:40:24 enroll refused: target=https://db-lepoch.tacra.example kind=absent-epoch caller=[est-server.bench.tacra.example]: attestation: ear: not affirming: SEVSNP is "contraindicated"
+2026/10/25 17:40:25 enroll refused: target=https://db-time.tacra.example kind=absent-timestamp caller=[est-server.bench.tacra.example]: attestation: ear: not affirming: SEVSNP is "contraindicated"
+2026/10/25 17:40:25 enroll refused: target=https://db-none.tacra.example kind=absent-none caller=[est-server.bench.tacra.example]: attestation: ear: not affirming: SEVSNP is "contraindicated"

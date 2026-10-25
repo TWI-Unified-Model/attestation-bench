@@ -1,0 +1,14 @@
+0 of 10 Targets: credential acquired and admitted by the relying party
+no  https://db-nonce.tacra.example         x509        564.4 ms 0 cai: EnrollCredential: 403 the verifier produced no Attestation Results (HTTP 500)
+no  https://db-epoch.tacra.example         x509        526.0 ms 0 cai: EnrollCredential: 403 the verifier produced no Attestation Results (HTTP 500)
+no  https://db-lepoch.tacra.example        x509        571.8 ms 0 cai: EnrollCredential: 403 the verifier produced no Attestation Results (HTTP 500)
+no  https://db-time.tacra.example          x509        529.0 ms 0 cai: EnrollCredential: 403 the verifier produced no Attestation Results (HTTP 500)
+no  https://db-none.tacra.example          x509        500.6 ms 0 cai: EnrollCredential: 403 the verifier produced no Attestation Results (HTTP 500)
+no  https://ledger-nonce.tacra.example     api-key     548.6 ms 0 cai: RetrieveCredential: 403 the verifier produced no Attestation Results (HTTP 500)
+no  https://ledger-epoch.tacra.example     api-key     529.5 ms 0 cai: RetrieveCredential: 403 the verifier produced no Attestation Results (HTTP 500)
+no  https://ledger-lepoch.tacra.example    api-key     559.0 ms 0 cai: RetrieveCredential: 403 the verifier produced no Attestation Results (HTTP 500)
+no  https://ledger-time.tacra.example      api-key     444.3 ms 0 cai: RetrieveCredential: 403 the verifier produced no Attestation Results (HTTP 500)
+no  https://ledger-none.tacra.example      api-key     470.5 ms 0 cai: RetrieveCredential: 403 the verifier produced no Attestation Results (HTTP 500)
+the platform rule's waiver: Milan bit 4: admitted without bit 4, AMD-SB-3034
+guest minus RRP: +1.296 s, within 1.381 s
+VERDICT FAIL: 10 of 10 Targets not admitted
