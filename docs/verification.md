@@ -425,6 +425,67 @@ model's 3.3 and the text proposed for 4.5 and the Security Considerations on 8 O
 `make cloud-check` found both clouds empty at the end. Logs: the bench's working notes, `tm-logs/ripout-verify-20261011.txt`
 and `ripout-verify-20261011-rerun-aws-bc.txt`.
 
+## The repository under TWI-Unified-Model, run by a newcomer (27 October 2026)
+
+The repository's home is TWI-Unified-Model/attestation-bench. Two newcomer's runs were made from it the same day. The
+first on the Mac, from a fresh clone and an empty `BENCH_HOME`, with Go's caches already there. The second on a
+fresh Ubuntu 24.04 VM in Google Cloud (e2-standard-4, 40 GB disk), under the VM's service account, with nothing
+but the guide, the code from a bundle of `main` (`31e367ee`, then `45a9a543` and `b6daa506` as the day's changes
+landed) and Go 1.27.3 from go.dev.
+
+**On the Mac**, at `31e367ee`:
+
+| Step | Result | Time |
+|---|---|---|
+| 3, `make doctor` | `Ready for make setup` | 1 s |
+| 4, `make setup` | ok, 10/10 | 216 s |
+| 5, 6: `make status`, `make check-mtls` | 13 services; `VERDICT PASS: 40 of 40` | 2 s |
+| 6, `make test-live` | the wire format as expected; 59 committed runs appraised again, 2770 checks | 66 s |
+
+The Mac's hardware run of the day came with the guest's new login, at `b6daa506`: `make demo PLATFORM=gcp-snp`,
+`VERDICT PASS: all 10 Targets` ([run](../e2e/evidence/20261027T213803Z-gcp-sev-snp-e2e-passport)).
+
+**On the fresh VM:**
+
+| Step | Result | Time | Disk used |
+|---|---|---|---|
+| the machine as it came | git 2.43, python3 3.12.3, curl present; make, gcc, Go absent | | 2.4 GB |
+| 1, Go 1.27.3 from go.dev, checked against its SHA-256; git and make | ok | 60 s | |
+| 3, `make doctor` | `MISSING`: python3-venv, gcc, unzip, sqlite3, protobuf-compiler, each with its apt command | 2 s | |
+| installing what it asked for | ok | 19 s | |
+| 3, `make doctor` again | `Ready for make setup`, one warning: no AWS CLI (hardware only) | 3 s | |
+| 4, `make setup` | ok, 10/10 | 529 s | |
+| 5, 6: `make status`, `make check-mtls` | 13 services; `VERDICT PASS: 40 of 40` ([run](../e2e/evidence/20261027T205057Z-bench-mtls-passport)) | 4 s | |
+| 6, `make test-live` | the wire format as expected; 59 committed runs appraised again, 2770 checks | 80 s | |
+| 7, `make demo PLATFORM=gcp-snp`, at `45a9a543` | stopped: the guest never answered over ssh, the first finding below ([run](../e2e/evidence/20261027T210239Z-gcp-sev-snp-e2e-passport)) | 500 s | |
+| 4, `make setup` again, at `b6daa506` | ok, 10/10 | 29 s | |
+| 7, `make demo PLATFORM=gcp-snp` | `VERDICT PASS: all 10 Targets` ([run](../e2e/evidence/20261027T214303Z-gcp-sev-snp-e2e-passport)) | 176 s | |
+| 8, `make attacks PLATFORM=gcp-snp` | `VERDICT PASS: 232 checks` ([run](../hwcheck/evidence/20261027T214559Z-gcp-sev-snp)) | 643 s | |
+| 9, `make redirect PLATFORM=gcp-snp` | `VERDICT PASS` ([run](../hwcheck/evidence/20261027T215644Z-gcp-snp-redirect)) | 231 s | |
+| 7, `make demo PLATFORM=gcp-tdx` | `VERDICT PASS: all 10 Targets` ([run](../e2e/evidence/20261027T220033Z-gcp-tdx-e2e-passport)) | 138 s | |
+| 11, Background Check, `make demo PLATFORM=gcp-snp`, back to Passport | `VERDICT PASS: all 10 Targets` ([run](../e2e/evidence/20261027T220308Z-gcp-sev-snp-e2e-background-check)) | 171 s | |
+| `make report`, `make cloud-check` | 6 PASS, 0 FAIL, 3 stopped; nothing left in the cloud | 15 s | 12 GB |
+
+**What the VM's run found, and what changed:**
+
+1. The project check ran `gcloud projects describe`, which needs the Cloud Resource Manager API, and the service
+   account's project did not have it on. The check now goes through the Compute Engine API, which every account
+   that creates VMs has (`45a9a543`).
+2. The guest was made with OS Login, and a service account cannot import its ssh key into OS Login: the API answers
+   `INVALID_ARGUMENT`, to `gcloud compute ssh` and to `gcloud compute os-login ssh-keys add` alike. The guest now
+   takes the bench's ssh key in its own metadata, with OS Login off and project-wide keys blocked (`b6daa506`). The
+   three runs that stopped on it are kept with their README
+   ([demo](../e2e/evidence/20261027T210239Z-gcp-sev-snp-e2e-passport),
+   [attacks](../hwcheck/evidence/20261027T211104Z-gcp-sev-snp),
+   [redirect](../hwcheck/evidence/20261027T211915Z-gcp-snp-redirect)).
+3. On the way, the checks at the new home. The GNU sort check in `make doctor` raced under `pipefail`
+   (`31e367ee`). `govulncheck` named vulnerabilities the bench's servers reach, closed by Go 1.27.3, x/net 0.62.0 and
+   golangci-lint 2.15.0 (`a77e0011`). go-chi 5.4.0 for the alert Dependabot raised (`98d7ffb9`).
+
+```bash
+make report RUNS="e2e/evidence/20261027T* hwcheck/evidence/20261027T*"   # 11 runs: 8 PASS, 0 FAIL, 3 stopped
+```
+
 ## The prototype, run again on three platforms (25 October 2026)
 
 Before answering a question from the group on the end-to-end prototype, the bench ran the whole path again from this tree

@@ -1,0 +1,96 @@
+{
+ "tee": "sev-snp",
+ "caapi": "127.0.0.1:50061",
+ "hint": "payments.workload.tacra.example",
+ "targets": [
+  {
+   "target": "https://db-nonce.tacra.example",
+   "type": "x509"
+  },
+  {
+   "target": "https://db-epoch.tacra.example",
+   "type": "x509"
+  },
+  {
+   "target": "https://db-lepoch.tacra.example",
+   "type": "x509"
+  },
+  {
+   "target": "https://db-time.tacra.example",
+   "type": "x509"
+  },
+  {
+   "target": "https://db-none.tacra.example",
+   "type": "x509"
+  },
+  {
+   "target": "https://ledger-nonce.tacra.example",
+   "type": "api-key"
+  },
+  {
+   "target": "https://ledger-epoch.tacra.example",
+   "type": "api-key"
+  },
+  {
+   "target": "https://ledger-lepoch.tacra.example",
+   "type": "api-key"
+  },
+  {
+   "target": "https://ledger-time.tacra.example",
+   "type": "api-key"
+  },
+  {
+   "target": "https://ledger-none.tacra.example",
+   "type": "api-key"
+  }
+ ],
+ "relying_parties": {
+  "https://db-nonce.tacra.example": {
+   "enroll": "https://ca1.tacra.example"
+  },
+  "https://db-epoch.tacra.example": {
+   "enroll": "https://ca1.tacra.example"
+  },
+  "https://db-lepoch.tacra.example": {
+   "enroll": "https://ca1.tacra.example"
+  },
+  "https://db-time.tacra.example": {
+   "enroll": "https://ca1.tacra.example"
+  },
+  "https://db-none.tacra.example": {
+   "enroll": "https://ca1.tacra.example"
+  },
+  "https://ledger-nonce.tacra.example": {
+   "retrieve": "https://vault1.tacra.example"
+  },
+  "https://ledger-epoch.tacra.example": {
+   "retrieve": "https://vault1.tacra.example"
+  },
+  "https://ledger-lepoch.tacra.example": {
+   "retrieve": "https://vault1.tacra.example"
+  },
+  "https://ledger-time.tacra.example": {
+   "retrieve": "https://vault1.tacra.example"
+  },
+  "https://ledger-none.tacra.example": {
+   "retrieve": "https://vault1.tacra.example"
+  }
+ },
+ "vault_origins": {
+  "https://vault1.tacra.example": {
+   "DHKEM(P-256, HKDF-SHA256)": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmBKzsdTei_lU9gOgS1M7ZxYwhZE7mzcDevz-nz-9CsWpF7qBEFpECDhD9Qfgh3qFfQvSVrdfrRcbnzHysdKzMg",
+   "DHKEM(X25519, HKDF-SHA256)": "MCowBQYDK2VuAyEAcMAbWGfjodFKm4miWPNis3-Daegfe06j_Hvtfb6aH1c"
+  }
+ },
+ "vault_signers": {
+  "https://vault1.tacra.example": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEpOCmuMf0BkqLbdJ_40eZeBlcbcaHjdVaCkRNvPc_mJrcV6gOYg_JVDOzN48cbMcJikXPJA5YDm5b3j8ZX21Hpw"
+ },
+ "ca_anchors": {
+  "https://ca1.tacra.example": "-----BEGIN CERTIFICATE-----\nMIIB4jCCAYegAwIBAgIRAKmCMdEsq3xAGssHR42YYNEwCgYIKoZIzj0EAwIwOjEX\nMBUGA1UEChMOVEFDUkEgYmVuY2ggQ0ExHzAdBgNVBAMTFlRBQ1JBIGJlbmNoIENB\nIFJvb3QgQ0EwHhcNMjYxMDI3MjA0NTA3WhcNMzYxMDI0MjA0NTA3WjBCMRcwFQYD\nVQQKEw5UQUNSQSBiZW5jaCBDQTEnMCUGA1UEAxMeVEFDUkEgYmVuY2ggQ0EgSW50\nZXJtZWRpYXRlIENBMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEAIVO8lltSk1v\nsYxOO8NXJ369JM0iadli2mbOK5V0xbXdfBAFyM21N9k28o/3UwKBMFprPNQnK7kn\nCG+Olf7eb6NmMGQwDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYBAf8CAQAw\nHQYDVR0OBBYEFBwCN8D7oJFX2s3jYsoYduV8bqg6MB8GA1UdIwQYMBaAFEtPax8X\nJZy34v2zB07jh/wfLW51MAoGCCqGSM49BAMCA0kAMEYCIQCCZkjwsGKEZax5zcn3\nwiwQ6EJu4alTscWDbTk8dLW03QIhALJRdm2cgnw98Zl/sI0tqTBJjJ9KD5GfoWEH\n5e+3y26o\n-----END CERTIFICATE-----\n"
+ },
+ "local_epoch_hex": "5f74e64f456ee329a900e5a48abbfd83c6fd207a7e17e518f57ad6227a7af49b",
+ "rup": {
+  "url": "https://localhost:19443",
+  "anchor_pem": "-----BEGIN CERTIFICATE-----\nMIIBgTCCASigAwIBAgIRAIuFv9ajwQPAP6u/1RsGOKcwCgYIKoZIzj0EAwIwHzEd\nMBsGA1UEAxMUVEFDUkEgYmVuY2ggVExTIHJvb3QwHhcNMjYxMDI3MjA0NTA1WhcN\nMjcxMDI3MjA0NTA1WjAfMR0wGwYDVQQDExRUQUNSQSBiZW5jaCBUTFMgcm9vdDBZ\nMBMGByqGSM49AgEGCCqGSM49AwEHA0IABKZR6sT0uUMqLO9kXnqkzL3Psw+843U3\n8LRmyBrIxi4N6Fp+y8PC2NLk45ag7V+EpvgIvNlIPfIsvU1kWKmBkJqjRTBDMA4G\nA1UdDwEB/wQEAwIBBjASBgNVHRMBAf8ECDAGAQH/AgEBMB0GA1UdDgQWBBRSiTua\nfBR2Yc1T6C7HD5Fhfa6SRjAKBggqhkjOPQQDAgNHADBEAiAWXRjGlEKrb5N4UQxq\n/AOvyzs1D0L6fRHzoaNgz+NycAIgYD7er4QyMjRFos0CVyoZ0NDb8SebIsHL8gut\nFC8hox0=\n-----END CERTIFICATE-----\n"
+ }
+}

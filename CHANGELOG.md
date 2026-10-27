@@ -6,6 +6,12 @@ What changed, newest first. Dates are UTC.
 
 ### Added
 
+- **The repository's home under TWI-Unified-Model, and a newcomer's run from it (27 October 2026).** On a fresh Ubuntu
+  24.04 VM under its service account, with nothing but the guide: setup from zero in 529 s, `make check-mtls` 40 of 40,
+  `make test-live` 2770 checks, `make demo` 10 of 10 on SEV-SNP in both RATS models and on TDX, 232 attack checks and the
+  redirection; and on a Mac from a fresh clone. What the VM found is under Changed. The runs: `e2e/evidence/20261027T*`,
+  `hwcheck/evidence/20261027T*` ([docs/verification.md](docs/verification.md)).
+
 - **A third approved Google Cloud SEV-SNP launch, and the runs of 25 October 2026.** Google moved its n2d hosts to another UEFI build
   between 22 and 25 October (measurement `e79ebb5b…984d`, endorsed by Google on 2026-08-28, SVN 2); the Verifier refused it until it was
   approved on that signed endorsement (`trust/approved-launches.json`, a new `trust/veraison-corim-milan.cbor` with three launches).

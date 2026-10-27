@@ -1,0 +1,14 @@
+{
+ "case": "retrieve-present-nonce",
+ "mode": "retrieve",
+ "freshness_kind": "present-nonce",
+ "target": "https://db-nonce.tacra.example",
+ "binding_layout": "freshness-target-subject",
+ "freshness_element_b64": "rIsJjqB1vtG2ooi9OUunm5YaoAKByFmI1MlNC4WetBU",
+ "binding_value_hex": "1b87ffe0072c6e555a5e5d2887570b0262464e7fe6c16b9947619ca783cc3427f2b498784fba43990d6fb84ddc06149a701ba71cb83163b80585927701fe9c29",
+ "evidence_ms": 8.325,
+ "token_bytes": 5989,
+ "report_sha256": "5105be7640601b573a713a5d39eee5d615b41a7c3a129b146161ec4c07ebc199",
+ "signing_key": "VCEK",
+ "chip_id_prefix": "75bbd2bb8dfeeb00"
+}

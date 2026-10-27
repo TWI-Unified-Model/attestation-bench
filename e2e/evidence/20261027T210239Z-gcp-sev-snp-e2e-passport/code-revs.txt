@@ -1,0 +1,10 @@
+attestation-bench 45a9a543e574
+globalsign-est/src upstream 623c19764b16 + 1 patch(es), tree 86de667a4abf: tested tree
+veraison-services/src upstream f997c5275c30 + 8 patch(es), tree e7a04b43faf9: tested tree
+go-gen-ref/src upstream aa3740de6b00 + 3 patch(es), tree 5f74ee0c1309: tested tree
+veraison verification-service rev f997c5275c30 modified true go-sev-guest - sha256 cf0367efa4d41721
+veraison vts-service rev f997c5275c30 modified true go-sev-guest v0.15.0 sha256 917c7790d6d2e346
+veraison scheme-sevsnp.plugin rev f997c5275c30 modified true go-sev-guest v0.15.0 sha256 592ee9711e890981
+estserver built from /home/serhiinikolaichuk/attestation-bench/third_party/globalsign-est/src
+  commit 623c19764b16fa697523a6d116b4b9bc65b24e82 Merge pull request #6 from TWI-Unified-Model/x509-retrieval
+  worktree modified

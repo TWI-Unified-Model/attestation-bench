@@ -1,0 +1,18 @@
+{
+ "https://db-nonce.tacra.example": {
+  "status": 200,
+  "answer": "{\"freshness_kind\":\"present-nonce\",\"handle\":\"5u90gwD8WbGeczufCpVZL0oYBjstea_8Pk6GVK9_uT0\",\"expires_in\":300,\"acceptable_evidence\":[\"application/vnd.veraison.tsm-report+cbor\"],\"acceptable_csk\":[\"ecdsa-p256-sha256\"],\"mode\":\"enroll\"}"
+ },
+ "https://db-epoch.tacra.example": {
+  "status": 200,
+  "answer": "{\"freshness_kind\":\"present-epoch\",\"handle\":\"X3TmT0Vu4ympAOWkirv9g8b9IHp-F-UY9XrWInp69Js\",\"expires_in\":300,\"acceptable_evidence\":[\"application/vnd.veraison.tsm-report+cbor\"],\"acceptable_csk\":[\"ecdsa-p256-sha256\"],\"mode\":\"enroll\"}"
+ },
+ "https://ledger-nonce.tacra.example": {
+  "status": 200,
+  "answer": "{\"freshness_kind\":\"present-nonce\",\"handle\":\"nWC3V2Ce_cXoyRAvnv4RIgKUvvFQu2aUvEsuKWp0jTg\",\"expires_in\":300,\"acceptable_evidence\":[\"application/vnd.veraison.tsm-report+cbor\"],\"acceptable_cek\":[\"MLKEM768-P256+HKDF-SHA256+AES-256-GCM\"],\"mode\":\"retrieve\"}"
+ },
+ "https://ledger-epoch.tacra.example": {
+  "status": 200,
+  "answer": "{\"freshness_kind\":\"present-epoch\",\"handle\":\"X3TmT0Vu4ympAOWkirv9g8b9IHp-F-UY9XrWInp69Js\",\"expires_in\":300,\"acceptable_evidence\":[\"application/vnd.veraison.tsm-report+cbor\"],\"acceptable_cek\":[\"MLKEM768-P256+HKDF-SHA256+AES-256-GCM\"],\"mode\":\"retrieve\"}"
+ }
+}
