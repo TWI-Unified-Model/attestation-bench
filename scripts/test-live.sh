@@ -37,6 +37,10 @@ for d in hwcheck/evidence/*; do
   r="$(basename "$d")"
   case "$r" in *-gcp-sev-snp | *-aws-sev-snp | *-gcp-tdx | *-no-rrp-id | *-bind-rrp-id) ;; *) continue ;; esac
   [ "${r:0:8}" -ge 20261006 ] || continue # the run directory begins with its date, YYYYMMDD
+  if [ ! -f "$d/rrp-clock-window.txt" ]; then # a run that stopped before its results, kept with its README
+    printf '  skip  %-30s stopped before its results\n' "$r"
+    continue
+  fi
   read -r nb na <"$d/rrp-clock-window.txt"
   verifier=()
   case "$r" in *-gcp-tdx | *-gcp-tdx-*) verifier=(-url "$tdx_url" -submod TDX -ca "$tdx_ca") ;; esac # the TDX runs, suffixed or not
