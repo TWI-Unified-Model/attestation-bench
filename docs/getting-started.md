@@ -11,7 +11,7 @@ for the hardware.
 - **git and make**, to get the code and run its commands. On macOS they come with the Xcode Command Line Tools
   (`xcode-select --install`); on Debian or Ubuntu, `sudo apt-get install -y git make` (a fresh Ubuntu 24.04 has git,
   not make).
-- **Go 1.26.5 or later**: <https://go.dev/dl/>.
+- **Go 1.27.3 or later**: <https://go.dev/dl/>.
 - **Python 3.10 or later**, with its `venv` module.
 - **About 8 GB of free disk.** On a fresh Ubuntu 24.04, `make setup` took 7.3 GB: the bench's home 1.4 GB, Go's
   module cache 2.6 GB and build cache 1.8 GB, and the third-party sources in the clone; `make check` takes 1.7 GB

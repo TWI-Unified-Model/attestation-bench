@@ -28,7 +28,7 @@ With this repository you can:
 
 ## Quick start
 
-You need macOS or Linux, Go 1.26.5 or later and Python 3.10 or later. `make doctor` checks the rest and says how to
+You need macOS or Linux, Go 1.27.3 or later and Python 3.10 or later. `make doctor` checks the rest and says how to
 install what is missing. The first four commands below need no cloud account. The three after them each create one
 small confidential VM in a Google Cloud project or an AWS account that can create them, with its CLI signed in
 ([docs/hardware/](docs/hardware/README.md)).

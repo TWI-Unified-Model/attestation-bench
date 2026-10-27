@@ -27,6 +27,14 @@ What changed, newest first. Dates are UTC.
 
 ### Changed
 
+- **Go 1.27.3 and x/net 0.62.0.** `govulncheck` named vulnerabilities that the bench's servers reach. In Go: crypto/x509's
+  distrust of compromised intermediate certificates (GO-2026-6809, closed in 1.27.3) and the HTTP/1 CONNECT
+  desynchronization (GO-2026-6613, closed in 1.27.2). In x/net: the HTTP/2 HPACK encoder race, the double flow-control
+  refund, the CPU use from repeated initial window changes and the memory exhaustion from Trailer headers (GO-2026-6617,
+  GO-2026-6612, GO-2026-6611, GO-2026-6603, closed in 0.60.0). The modules, `make doctor` and CI now ask for Go 1.27.3, and
+  `govulncheck ./...` finds nothing in any module. With them golangci-lint 2.15.0, the first that reads this Go's export data,
+  and `make lint` builds its Go tools again whenever the Go in use is not the one that built them.
+
 - **`trust/README.md`, approving a new launch:** the CoRIM is made with the patched module file (`go run -modfile=go.patched.mod
   ./cmd/mkcorim`; upstream go-gen-ref rejects AWS's VLEK-signed report), and Veraison takes a changed CoRIM from a fresh store only: a
   second submission to a store that holds one leaves two trust anchors for the same ARK, and the scheme then refuses every report.

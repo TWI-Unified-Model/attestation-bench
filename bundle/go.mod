@@ -1,6 +1,6 @@
 module github.com/TWI-Unified-Model/tacra/bundle
 
-go 1.26.5
+go 1.27.3
 
 require github.com/cloudflare/circl v1.6.5
 

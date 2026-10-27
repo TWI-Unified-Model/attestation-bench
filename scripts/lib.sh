@@ -194,7 +194,10 @@ bench_seal() {
 # there already; says which
 bench_go_tool() {
   local name=$1 spec=$2 dir=$3 ver="${2##*@}" out
-  if [ -x "$dir/$name" ] && go version -m "$dir/$name" 2>/dev/null | awk '$1 == "mod" {print $3}' | grep -qx "$ver"; then
+  # present only when built by the Go in use as well: a linter built by another Go cannot read its export data
+  if [ -x "$dir/$name" ] &&
+    [ "$(go version -m "$dir/$name" 2>/dev/null | awk 'NR == 1 {print $2}')" = "$(go env GOVERSION)" ] &&
+    go version -m "$dir/$name" 2>/dev/null | awk '$1 == "mod" {print $3}' | grep -qx "$ver"; then
     echo "  $name $ver: present"
     return 0
   fi

@@ -1,11 +1,6 @@
 module github.com/TWI-Unified-Model/tacra/rrp
 
-go 1.26.5
-
-require (
-	github.com/fxamacker/cbor/v2 v2.9.4
-	github.com/veraison/corim v1.1.3-0.20260430132037-b8653a7359da
-)
+go 1.27.3
 
 require (
 	fortio.org/safecast v1.0.0 // indirect
@@ -35,8 +30,10 @@ replace github.com/TWI-Unified-Model/tacra/platform => ../platform
 require (
 	github.com/TWI-Unified-Model/tacra/bundle v0.0.0
 	github.com/TWI-Unified-Model/tacra/platform v0.0.0-00010101000000-000000000000
+	github.com/fxamacker/cbor/v2 v2.9.4
 	github.com/google/gce-tcb-verifier v0.3.1
 	github.com/google/go-tdx-guest v0.3.1
+	github.com/veraison/corim v1.1.3-0.20260430132037-b8653a7359da
 	google.golang.org/protobuf v1.33.0
 )
 
