@@ -41,7 +41,7 @@ which each SEV-SNP demo's verdict repeats. A pack can waive a required mitigatio
 |---|---|
 | `name` | how Targets refer to it |
 | `kind` | `credential-authority` or `secret-vault`; one of each at most |
-| `rrp_id` | the RRP identifier it binds into the Evidence |
+| `rrp_id` | the RRP identifier: the name by which the Targets, the trust anchors and the run records refer to it. The binding carries no RRP identifier |
 | `listen` | its address, `127.0.0.1:<port>` |
 | `same_as`, `service` | instead of `kind`: a copy of another RRP with its own `rrp_id`, `listen` and service name, which the EST server never routes to (a second bank, for the redirection experiment) |
 
