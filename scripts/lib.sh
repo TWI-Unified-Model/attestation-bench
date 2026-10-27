@@ -236,8 +236,10 @@ bench_gcp() {
     bench_die "no Google Cloud project: set GCP_PROJECT=<project id>, or run: gcloud config set project <project id>"
   [ -n "$(gcloud auth list --filter=status:ACTIVE --format='value(account)' 2>/dev/null)" ] ||
     bench_die "gcloud is not signed in: run gcloud auth login"
-  [ "$(gcloud projects describe "$GCP_PROJECT" --format='value(projectId)' 2>/dev/null)" = "$GCP_PROJECT" ] ||
-    bench_die "Google Cloud project $GCP_PROJECT does not exist or your account cannot see it: gcloud projects list"
+  # through the Compute Engine API, which every account the bench runs with has on: gcloud projects describe needs the
+  # Cloud Resource Manager API as well, which a service account's project may not have
+  [ "$(gcloud compute project-info describe --project="$GCP_PROJECT" --format='value(name)' 2>/dev/null)" = "$GCP_PROJECT" ] ||
+    bench_die "Google Cloud project $GCP_PROJECT does not exist, or your account cannot see it: gcloud projects list"
   CLOUDSDK_CORE_DISABLE_PROMPTS=1
   export GCP_PROJECT GCP_ZONE CLOUDSDK_CORE_DISABLE_PROMPTS
   bench_say "Google Cloud: project $GCP_PROJECT, zone $GCP_ZONE"
