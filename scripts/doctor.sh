@@ -73,7 +73,9 @@ tool protoc protobuf protobuf-compiler "Veraison's build"
 tool envsubst gettext gettext-base "Veraison's deployment"
 if [ "$BENCH_OS" = darwin ]; then
   tool gsort coreutils coreutils "GNU sort for Veraison's deployment"
-elif ! sort --help 2>/dev/null | grep -q -- -V; then
+elif ! printf '1\n' | sort -V >/dev/null 2>&1; then
+  # a run of sort -V, not a read of its help: grep -q leaves the help's second 4 KB chunk unread, and under
+  # pipefail the SIGPIPE that gives sort makes the check fail now and then (CI, 27 October 2026)
   need sort "$(hint coreutils coreutils) (GNU sort)"
 else
   ok sort "GNU sort"
