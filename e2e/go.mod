@@ -16,7 +16,7 @@ require (
 	github.com/cloudflare/circl v1.6.5 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.3 // indirect
-	github.com/go-chi/chi/v5 v5.3.2 // indirect
+	github.com/go-chi/chi/v5 v5.4.0 // indirect
 	github.com/google/go-configfs-tsm v0.3.2 // indirect
 	github.com/google/go-sev-guest v0.15.0 // indirect
 	github.com/google/go-tpm v0.9.6 // indirect

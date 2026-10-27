@@ -38,7 +38,8 @@ What changed, newest first. Dates are UTC.
   refund, the CPU use from repeated initial window changes and the memory exhaustion from Trailer headers (GO-2026-6617,
   GO-2026-6612, GO-2026-6611, GO-2026-6603, closed in 0.60.0). The modules, `make doctor` and CI now ask for Go 1.27.3, and
   `govulncheck ./...` finds nothing in any module. With them golangci-lint 2.15.0, the first that reads this Go's export data,
-  and `make lint` builds its Go tools again whenever the Go in use is not the one that built them.
+  and `make lint` builds its Go tools again whenever the Go in use is not the one that built them. go-chi 5.4.0 as well,
+  for the client IP spoofing through X-Forwarded-For that Dependabot names, in a function the bench does not call.
 
 - **`trust/README.md`, approving a new launch:** the CoRIM is made with the patched module file (`go run -modfile=go.patched.mod
   ./cmd/mkcorim`; upstream go-gen-ref rejects AWS's VLEK-signed report), and Veraison takes a changed CoRIM from a fresh store only: a
