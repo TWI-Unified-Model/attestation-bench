@@ -9,13 +9,13 @@ make redirect PLATFORM=gcp-tdx
 ## What you need
 
 As for [gcp-snp.md](gcp-snp.md), with quota for 4 C3 vCPUs instead of N2D: a Google Cloud project with billing and
-the Compute Engine API, `gcloud` signed in with the project set (or `GCP_PROJECT`), and administrator login to the VM
-through OS Login.
+the Compute Engine API, `gcloud` signed in with the project set (or `GCP_PROJECT`), and the same login: the bench's
+ssh key in the guest's metadata.
 
 ## What a run creates
 
 One VM: `c3-standard-4`, confidential compute type `TDX`, maintenance policy `TERMINATE`, Ubuntu 24.04 LTS, a 20 GB
-disk, OS Login, labelled `purpose=tacra-*`. The guest's TD quote is signed by its Quoting Enclave and certified by
+disk, the bench's ssh key in its metadata, labelled `purpose=tacra-*`. The guest's TD quote is signed by its Quoting Enclave and certified by
 Intel (the PCK chain). It is deleted at the end and the deletion is checked.
 
 ## The TDX verifier

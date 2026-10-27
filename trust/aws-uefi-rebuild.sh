@@ -34,7 +34,7 @@ trap cleanup EXIT
 echo "== create $NAME (e2-standard-8, Ubuntu 24.04, 80 GB) in $GCP_PROJECT/$GCP_ZONE"
 gcloud compute instances create "$NAME" --project="$GCP_PROJECT" --zone="$GCP_ZONE" --machine-type=e2-standard-8 \
   --image-family=ubuntu-2404-lts-amd64 --image-project=ubuntu-os-cloud --boot-disk-size=80GB \
-  --labels=purpose=tacra-awsuefi --metadata=enable-oslogin=TRUE >/dev/null 2>>"$OUT/ssh.stderr"
+  --labels=purpose=tacra-awsuefi "${GCP_GUEST_METADATA[@]}" >/dev/null 2>>"$OUT/ssh.stderr"
 echo "== wait for ssh"
 for _ in $(seq 1 30); do "${SSH[@]}" --command=true >/dev/null 2>&1 && break; sleep 10; done
 

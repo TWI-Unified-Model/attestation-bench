@@ -27,6 +27,11 @@ What changed, newest first. Dates are UTC.
 
 ### Changed
 
+- **The guest takes the bench's ssh key in its own metadata**, with OS Login off and project-wide keys blocked. A service
+  account, as on a cloud VM that runs the bench, cannot import its key into OS Login (the API answers INVALID_ARGUMENT), and
+  a user account needs no OS Login role. The key is `~/.ssh/google_compute_engine`, made if missing. Found by the
+  newcomer's run from a fresh VM.
+
 - **Go 1.27.3 and x/net 0.62.0.** `govulncheck` named vulnerabilities that the bench's servers reach. In Go: crypto/x509's
   distrust of compromised intermediate certificates (GO-2026-6809, closed in 1.27.3) and the HTTP/1 CONNECT
   desynchronization (GO-2026-6613, closed in 1.27.2). In x/net: the HTTP/2 HPACK encoder race, the double flow-control

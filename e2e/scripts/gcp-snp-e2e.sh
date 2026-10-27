@@ -125,7 +125,7 @@ fi
 echo "== create $NAME ($ZONE, $TEE)"
 gcloud compute instances create "$NAME" --project="$PROJECT" --zone="$ZONE" "${MACHINE[@]}" \
   --maintenance-policy=TERMINATE --image-family=ubuntu-2404-lts-amd64 --image-project=ubuntu-os-cloud \
-  --boot-disk-size=20GB --labels=purpose=tacra-e2e,stamp="$(echo "$STAMP" | tr -d 'TZ')" --metadata=enable-oslogin=TRUE >/dev/null
+  --boot-disk-size=20GB --labels=purpose=tacra-e2e,stamp="$(echo "$STAMP" | tr -d 'TZ')" "${GCP_GUEST_METADATA[@]}" >/dev/null
 TUNNEL=""
 CAS_PID=""
 cleanup() {

@@ -118,7 +118,7 @@ create_gcp() { # name machine-args...
   local name="$1"; shift
   gcloud compute instances create "$name" --project="$PROJECT" --zone="$ZONE" "$@" \
     --image-family=ubuntu-2404-lts-amd64 --image-project=ubuntu-os-cloud --boot-disk-size=30GB \
-    --labels=purpose=demo-bank,stamp="$(echo "$STAMP" | tr -d 'TZ')" --metadata=enable-oslogin=TRUE >/dev/null 2>>"$OUT/ssh.stderr"
+    --labels=purpose=demo-bank,stamp="$(echo "$STAMP" | tr -d 'TZ')" "${GCP_GUEST_METADATA[@]}" >/dev/null 2>>"$OUT/ssh.stderr"
 }
 
 up() {

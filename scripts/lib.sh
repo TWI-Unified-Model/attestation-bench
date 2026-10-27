@@ -242,6 +242,18 @@ bench_gcp() {
     bench_die "Google Cloud project $GCP_PROJECT does not exist, or your account cannot see it: gcloud projects list"
   CLOUDSDK_CORE_DISABLE_PROMPTS=1
   export GCP_PROJECT GCP_ZONE CLOUDSDK_CORE_DISABLE_PROMPTS
+  # the guest takes one ssh key, this account's, in its own metadata, with OS Login off and project-wide keys blocked:
+  # a user account and a service account then log in the same way, and the project's metadata stays as it was
+  local key="$HOME/.ssh/google_compute_engine"
+  if [ ! -f "$key" ]; then
+    mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+    ssh-keygen -q -t rsa -b 3072 -N "" -f "$key" -C "$(id -un)@$(hostname -s)" || bench_die "ssh-keygen could not make $key"
+  fi
+  GCP_GUEST_KEYS="$BENCH_HOME/guest-ssh-keys"
+  printf '%s:%s\n' "$(id -un)" "$(cat "$key.pub")" > "$GCP_GUEST_KEYS"
+  # shellcheck disable=SC2034  # the scripts that create a guest pass it to gcloud compute instances create
+  GCP_GUEST_METADATA=("--metadata=enable-oslogin=FALSE,block-project-ssh-keys=TRUE" "--metadata-from-file=ssh-keys=$GCP_GUEST_KEYS")
+  export GCP_GUEST_KEYS
   bench_say "Google Cloud: project $GCP_PROJECT, zone $GCP_ZONE"
 }
 bench_aws() {

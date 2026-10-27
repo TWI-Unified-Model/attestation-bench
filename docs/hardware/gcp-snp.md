@@ -12,15 +12,17 @@ make redirect PLATFORM=gcp-snp
 - The `gcloud` CLI, signed in (`gcloud auth login`), with the project set (`gcloud config set project <id>`) or given
   as `GCP_PROJECT`.
 - Quota for 2 N2D vCPUs in the zone's region (`us-central1` by default).
-- The right to log in to the VM with administrator rights through OS Login: the scripts run the workload with `sudo`.
-  A project owner has it.
+- Nothing more for the login. The guest takes the ssh key of the account that runs the bench,
+  `~/.ssh/google_compute_engine`, made if missing, in its own metadata, with OS Login off and project-wide keys
+  blocked. The scripts run the workload with `sudo`, which that user has on a fresh Ubuntu guest.
 
 `make doctor` checks that `gcloud` and `ssh` are installed.
 
 ## What a run creates
 
 One VM: `n2d-standard-2`, minimum CPU platform AMD Milan, confidential compute type `SEV_SNP`, maintenance policy
-`TERMINATE`, Ubuntu 24.04 LTS (image family `ubuntu-2404-lts-amd64`), a 20 GB disk, OS Login, labelled
+`TERMINATE`, Ubuntu 24.04 LTS (image family `ubuntu-2404-lts-amd64`), a 20 GB disk, the bench's ssh key in its
+metadata, labelled
 `purpose=tacra-e2e`, `tacra-hwcheck` or `tacra-redir`. Its reports are signed by the chip's VCEK. It is deleted at the
 end and the deletion is checked.
 

@@ -54,7 +54,7 @@ gcloud compute instances create "$NAME" --project="$PROJECT" --zone="$ZONE" \
   --confidential-compute-type=SEV_SNP --maintenance-policy=TERMINATE \
   --image-family=ubuntu-2404-lts-amd64 --image-project=ubuntu-os-cloud \
   --boot-disk-size=20GB --labels=purpose=tacra-hwcheck,stamp="$(echo "$STAMP" | tr -d 'TZ')" \
-  --metadata=enable-oslogin=TRUE >/dev/null
+  "${GCP_GUEST_METADATA[@]}" >/dev/null
 cleanup() {
   echo "== delete $NAME"
   gcloud compute instances delete "$NAME" --project="$PROJECT" --zone="$ZONE" --quiet >/dev/null 2>&1 || true

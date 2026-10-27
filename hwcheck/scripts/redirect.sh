@@ -112,7 +112,7 @@ if [ "${CLOUD#gcp}" != "$CLOUD" ]; then
     echo "== create $NAME ($ZONE, $TEE)"
     gcloud compute instances create "$NAME" --project="$GCP_PROJECT" --zone="$ZONE" "${MACHINE[@]}" \
       --maintenance-policy=TERMINATE --image-family=ubuntu-2404-lts-amd64 --image-project=ubuntu-os-cloud \
-      --boot-disk-size=20GB --labels=purpose=tacra-redir --metadata=enable-oslogin=TRUE >/dev/null
+      --boot-disk-size=20GB --labels=purpose=tacra-redir "${GCP_GUEST_METADATA[@]}" >/dev/null
   }
   vm_delete() {
     gcloud compute instances delete "$NAME" --project="$GCP_PROJECT" --zone="$ZONE" --quiet >/dev/null 2>&1 || true
