@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Report it privately to the repository's owner, [@nikolaichuk7](https://github.com/nikolaichuk7), not in an issue or a
+Report it privately to its maintainer, [@nikolaichuk7](https://github.com/nikolaichuk7), not in an issue or a
 pull request. Say what you found, how to reproduce it (a run directory, if you have one), and what it lets an attacker
 do. You will get an answer, and credit if you want it.
 

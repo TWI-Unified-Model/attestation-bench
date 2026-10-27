@@ -19,14 +19,14 @@ for the hardware.
 - **For steps 7 to 9, a cloud account that can create confidential VMs:** a Google Cloud project (AMD SEV-SNP and
   Intel TDX) or an AWS account (AMD SEV-SNP), with its CLI signed in. How to set it up, the quotas and the cost:
   [hardware/](hardware/README.md).
-- Access to the repository. It is private: ask its owner to invite your GitHub account.
+- Access to the repository. It is private: ask for an invitation for your GitHub account.
 
 `make doctor` (step 3) checks everything else and prints the command that installs what is missing.
 
 ## 2. Get the code
 
 ```bash
-git clone git@github.com:nikolaichuk7/attestation-bench.git    # or: gh repo clone nikolaichuk7/attestation-bench
+git clone git@github.com:TWI-Unified-Model/attestation-bench.git    # or: gh repo clone TWI-Unified-Model/attestation-bench
 cd attestation-bench
 ```
 
