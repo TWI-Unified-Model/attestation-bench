@@ -107,7 +107,15 @@ func (s *server) retrieve(req *RetrieveRequest) (*bundle.Bundle, []string, error
 		Metadata: map[string]any{"secret_version": strconv.Itoa(version), "validity_seconds": validity}}
 	aad := bundle.AAD{GroupID: gid, Target: req.Target, Handle: req.Handle, CredentialHint: req.CredentialHint}
 	var b *bundle.Bundle
-	if bundle.IsSignedCEK(req.CEKPub) {
+	if bundle.IsSignedCEKP256(req.CEKPub) && slices.Contains(t.Acceptable, bundle.AcceptableSignedP256) {
+		// the signed container under DHKEM(P-256, HKDF-SHA256), where the Target accepts that suite (issue #15 of the EST
+		// draft, 28 October 2026); a P-256 CEK at a Target that accepts only hpke-auth suites takes the branch below
+		if s.signer == nil {
+			return nil, nil, &gateway.Error{Status: http.StatusInternalServerError, Code: "internal",
+				Err: errors.New("no signature key for the hpke-base-signed container")}
+		}
+		b, err = bundle.SealSigned(s.signer, req.CEKPub, aad, content)
+	} else if bundle.IsSignedCEK(req.CEKPub) {
 		if !slices.Contains(t.Acceptable, bundle.AcceptableSigned) {
 			return nil, nil, &gateway.Error{Status: http.StatusBadRequest, Code: "cek",
 				Err: errors.New("the Target does not accept the hpke-base-signed container")}

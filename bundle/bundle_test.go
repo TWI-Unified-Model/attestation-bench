@@ -41,7 +41,7 @@ func TestCanonicalMatchesReference(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `{"a":[1,true,null],"b":"\u03a9` + "\u007f" + `\u2713\ud83d\ude00<&>"}`
+	want := "{\"a\":[1,true,null],\"b\":\"Ω\u007f✓\U0001F600<&>\"}" // RFC 8785: nothing above U+001F is escaped
 	if string(got) != want {
 		t.Fatalf("got %s, want %s", got, want)
 	}

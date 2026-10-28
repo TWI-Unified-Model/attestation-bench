@@ -110,7 +110,7 @@ func TestSignedContainerSignatureCoversTheTarget(t *testing.T) {
 		t.Fatal(err)
 	}
 	verifies := func(target string) bool {
-		d := sha256.Sum256(ToBeSigned(cekPub, InfoSigned(target, keptEpoch), aadBytes, a.Enc, a.Ciphertext))
+		d := sha256.Sum256(ToBeSigned(SuiteSigned, cekPub, InfoSigned(target, keptEpoch), aadBytes, a.Enc, a.Ciphertext))
 		return ecdsa.VerifyASN1(&signer.PublicKey, d[:], a.Signature)
 	}
 	if !verifies(keptLedger) {
@@ -124,7 +124,7 @@ func TestSignedContainerSignatureCoversTheTarget(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d := sha256.Sum256(ToBeSigned(otherPub, InfoSigned(keptLedger, keptEpoch), aadBytes, a.Enc, a.Ciphertext))
+	d := sha256.Sum256(ToBeSigned(SuiteSigned, otherPub, InfoSigned(keptLedger, keptEpoch), aadBytes, a.Enc, a.Ciphertext))
 	if ecdsa.VerifyASN1(&signer.PublicKey, d[:], a.Signature) {
 		t.Fatal("the Vault's signature verifies for another CEK")
 	}

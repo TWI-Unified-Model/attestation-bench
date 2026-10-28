@@ -4,8 +4,8 @@
 A wire log is the EST server's (est-server.json, wire_log; a run keeps its part in bench-logs/est-wire.log): one JSON
 object per exchange on an attest-* resource, the request and the response as they crossed the wire. The CDDL is the
 one of the wire format proposed for draft-novak-lamps-tacra-est in October 2026 (e2e/est-attest.cddl). Each message it
-defines is checked against its rule: the attest-initiate response, the attest-enroll and attest-retrieve requests. The
-attest-retrieve response, the Secret Vault's container, is not in it (the container is TACRA's). Of every message the
+defines is checked against its rule: the attest-initiate response, the attest-enroll and attest-retrieve requests, and
+the attest-retrieve response, the Secret Vault's container (since 28 October 2026, issue #15 of the draft). Of every message the
 media type is checked: its own (one for each message type: application/est-attest-initiate+json, -enroll+json,
 -retrieve+json and -bundle+json), application/pkcs7-mime for the enrollment's certificate, text/plain for a refusal.
 
@@ -42,7 +42,9 @@ RULES = {
     ("GET", "attest-initiate", "response"): "attestation-initiation-response",
     ("POST", "attest-enroll", "request"): "attested-enrollment-request",
     ("POST", "attest-retrieve", "request"): "attested-retrieval-request",
+    ("POST", "attest-retrieve", "response"): "encrypted-credential-bundle",
 }
+BUNDLE = "encrypted-credential-bundle"
 # (method, resource, which body) -> the media type of the request, or of the response when its status is 200; any
 # other response is a refusal, in text/plain
 TYPES = {
@@ -99,6 +101,18 @@ def messages(log):
 
 def altered(rule, message):
     """The message, altered in each way the CDDL must refuse for its rule, kind and mode: (what was done, message)."""
+    if rule == BUNDLE:
+        m = dict(message)
+        del m["signature"]
+        yield "without a signature", m
+        yield "container relabelled", dict(message, container="hpke-auth")
+        yield "suite relabelled", dict(message, suite=dict(message["suite"], kem="DHKEM(X25519, HKDF-SHA256)"))
+        aad = dict(message["aad"])
+        del aad["target"]
+        yield "aad without target", dict(message, aad=aad)
+        yield "with server_id, which the CDDL does not define", dict(message, server_id="est.tacra.example")
+        yield "with enc in standard base64", dict(message, enc=message["enc"][:-2] + "+/")
+        return
     kind = message.get("freshness_kind")
     m = dict(message)
     del m["freshness_kind"]
@@ -163,11 +177,7 @@ def main(argv=None):
             valid += bool(rule) and ok
             typed += type_ok
             bad += not (ok and type_ok)
-            note = (
-                f" as {rule}"
-                if rule
-                else (" (the Vault's container, not in this CDDL)" if want.endswith("+json") else "")
-            )
+            note = f" as {rule}" if rule else ""
             print(f"{'ok ' if ok and type_ok else 'BAD'} {where} {what}{note}, {media_type(ctype) or 'no media type'}"
                   + ("" if ok else f": {why}") + ("" if type_ok else f", not {want}"))  # fmt: skip
         for (rule, kind, mode), (what, message) in firsts.items():

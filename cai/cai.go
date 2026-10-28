@@ -316,7 +316,7 @@ func (c *Client) retrieve(ctx context.Context, req AcquisitionRequest) (*Credent
 	var doc []byte
 	switch containerOf(resp.GetWrappedCredential()) {
 	case bundle.ContainerSigned:
-		doc, err = c.openSigned(resp.GetWrappedCredential(), cek.Private, req, element)
+		doc, err = c.openSigned(resp.GetWrappedCredential(), cek.Private, cekPub, req, element)
 	case bundle.Container:
 		doc, err = c.openHPKEAuth(resp.GetWrappedCredential(), cek.Private, req, element)
 	default:

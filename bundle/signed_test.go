@@ -170,7 +170,7 @@ func TestOpenVector(t *testing.T) {
 	if string(aad) != v.AAD {
 		t.Fatalf("associated data differs:\n%s\n%s", aad, v.AAD)
 	}
-	if hex.EncodeToString(ToBeSigned(unhex(t, v.CEKPub), info, aad, b.Enc, b.Ciphertext)) != v.ToBeSigned {
+	if hex.EncodeToString(ToBeSigned(v.Suite, unhex(t, v.CEKPub), info, aad, b.Enc, b.Ciphertext)) != v.ToBeSigned {
 		t.Fatal("to-be-signed octets differ")
 	}
 	c, err := OpenSigned(&b, ExpectSigned{Target: v.Target, Handle: fresh, CredentialHint: v.CredentialHint,
@@ -217,7 +217,7 @@ func TestWriteVector(t *testing.T) {
 		Suite: SuiteSigned, CEKSeed: hex.EncodeToString(seed), CEKPub: hex.EncodeToString(cekPub), VaultSPKI: hex.EncodeToString(spki),
 		VaultPKCS8: hex.EncodeToString(pkcs8), Target: aad.Target, Freshness: hex.EncodeToString(fresh),
 		CredentialHint: aad.CredentialHint, Info: hex.EncodeToString(info), AAD: string(aadBytes),
-		ToBeSigned: hex.EncodeToString(ToBeSigned(cekPub, info, aadBytes, b.Enc, b.Ciphertext)), Bundle: braw,
+		ToBeSigned: hex.EncodeToString(ToBeSigned(SuiteSigned, cekPub, info, aadBytes, b.Enc, b.Ciphertext)), Bundle: braw,
 		Plaintext: string(pt)}, "", " ")
 	if err := os.WriteFile(path, append(out, '\n'), 0o644); err != nil {
 		t.Fatal(err)

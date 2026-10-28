@@ -104,10 +104,12 @@ per platform ("submodule": `SEVSNP` or `TDX`), the trustworthiness claims behind
 
 ## The signed container
 
-A released secret travels to the workload sealed to its CEK and signed by the Vault: HPKE in base mode with an
-ML-KEM-768 + P-256 hybrid key encapsulation (`MLKEM768-P256+HKDF-SHA256+AES-256-GCM`) and an ECDSA P-256 signature over
-it, which the workload checks against the Vault's key it holds for that RRP identifier (`bundle/`). Only the TEE that
-generated the CEK can open it, and only the Vault could have made it.
+A released secret travels to the workload sealed to its CEK and signed by the Vault: HPKE in base mode and an ECDSA
+P-256 signature over the sealed container, which the workload checks against the Vault's key it holds for the Target
+(`bundle/`). Two suites: the ML-KEM-768 + P-256 hybrid key encapsulation (`MLKEM768-P256+HKDF-SHA256+AES-256-GCM`), the
+bank profile's and the one of every run before 28 October 2026, and DHKEM(P-256, HKDF-SHA256) with the same KDF and
+AEAD, which a Target names when it takes it. Only the TEE that generated the CEK can open the container, and only the
+Vault could have made it.
 
 ## Only real hardware
 

@@ -42,6 +42,11 @@ KINDS = ("present-nonce", "present-epoch", "absent-epoch", "absent-timestamp", "
 FRESHNESS_PARAMS = ("expires_in", "max_age", "clock_skew")
 INFRA = ("est-server", "ca-gateway", "vault-gateway", "operator")  # the components with a client certificate
 SERVICE = {"credential-authority": "ca-gateway", "secret-vault": "vault-gateway"}  # an RRP kind's program
+# the suites of the signed container as attest-initiate names them (bundle/signed.go): the pack's Targets name the
+# hybrid; --cek-suite p256 makes them name the DHKEM(P-256) suite instead, for the runs that compare the two
+SIGNED_MLKEM = "MLKEM768-P256+HKDF-SHA256+AES-256-GCM"
+SIGNED_P256 = "DHKEM(P-256, HKDF-SHA256)+HKDF-SHA256+AES-256-GCM"
+CEK_SUITE = "mlkem768-p256"
 
 
 class PackError(Exception):
@@ -223,7 +228,17 @@ def parse_args():
         action="store_true",
         help="a redirection variant: each copy of an RRP (same_as) keeps an epoch marker of its own",
     )
-    return p.parse_args()
+    p.add_argument(
+        "--cek-suite",
+        choices=("mlkem768-p256", "p256"),
+        default="mlkem768-p256",
+        help="the suite of the signed container the Secret Vault's Targets accept: the ML-KEM-768 and P-256 hybrid "
+        "(default), or DHKEM(P-256, HKDF-SHA256) (p256), for the runs that compare the two (EST draft issue #15)",
+    )
+    a = p.parse_args()
+    global CEK_SUITE
+    CEK_SUITE = a.cek_suite
+    return a
 
 
 def load_platform(path):
@@ -392,7 +407,10 @@ def target_config(t, workload, measurements, everyone):
     c = {"credential_types": t["credential_types"], "freshness_kind": t["freshness_kind"]}
     c.update({k: t[k] for k in FRESHNESS_PARAMS if k in t})
     c["verifiers"] = everyone if t["verifiers"] == "all" else t["verifiers"]
-    c["acceptable"] = t["acceptable"]
+    acceptable = list(t["acceptable"])
+    if CEK_SUITE == "p256":
+        acceptable = [SIGNED_P256 if a == SIGNED_MLKEM else a for a in acceptable]
+    c["acceptable"] = acceptable
     if "secret" in t:
         # the workload's group, and the Target's other groups: the same launches, under other Credential Hints
         c["groups"] = {

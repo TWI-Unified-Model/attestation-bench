@@ -5,9 +5,8 @@
 // and only if the associated data names what its Evidence bound. No identifier of the Vault is in it since 11 October
 // 2026 (rats-tacra#20): the Vault's key, which the Attester holds, is its identity.
 //
-// The encoding: info = len32(handle) || handle; the associated data and the plaintext are deterministic JSON (sorted
-// keys, no spaces); byte strings in JSON
-// are unpadded base64url. The DHKEM follows the key type of CEKpub: X25519 (mandatory to implement) or P-256.
+// The encoding: info = len32(handle) || handle; the associated data and the plaintext are the JSON Canonicalization
+// Scheme (RFC 8785) of their objects; byte strings in JSON are unpadded base64url. The DHKEM follows the key type of CEKpub: X25519 (mandatory to implement) or P-256.
 package bundle
 
 import (
@@ -113,7 +112,8 @@ func Info(handle []byte) []byte {
 	return append(b, handle...)
 }
 
-// Canonical returns deterministic JSON: object keys sorted, no insignificant space, no HTML escaping.
+// Canonical returns the JSON Canonicalization Scheme serialization (RFC 8785) of v, for the values a bundle carries:
+// object keys sorted, no insignificant space, strings escaped as Section 3.2.2.2 says, integers as they are.
 func Canonical(v any) ([]byte, error) {
 	raw, err := json.Marshal(v)
 	if err != nil {
@@ -183,8 +183,9 @@ func writeCanonical(buf *bytes.Buffer, v any) error {
 	return nil
 }
 
-// writeString writes s as a JSON string escaped as Python's json.dumps does by default (ensure_ascii): control
-// characters and everything above U+007F escaped, U+007F itself left as it is.
+// writeString writes s as the JSON Canonicalization Scheme does (RFC 8785, Section 3.2.2.2): only the quotation mark,
+// the reverse solidus and the control characters are escaped, the latter as \b \t \n \f \r or \u00xx in lowercase
+// hex, and everything else, U+007F and the characters above it included, is written as it is.
 func writeString(buf *bytes.Buffer, s string) error {
 	buf.WriteByte('"')
 	for _, r := range s {
@@ -203,11 +204,8 @@ func writeString(buf *bytes.Buffer, s string) error {
 			buf.WriteString(`\b`)
 		case r == '\f':
 			buf.WriteString(`\f`)
-		case r < 0x20 || (r > 0x7f && r < 0x10000):
+		case r < 0x20:
 			fmt.Fprintf(buf, `\u%04x`, r)
-		case r >= 0x10000:
-			r -= 0x10000
-			fmt.Fprintf(buf, `\u%04x\u%04x`, 0xd800+(r>>10), 0xdc00+(r&0x3ff))
 		default:
 			buf.WriteRune(r)
 		}

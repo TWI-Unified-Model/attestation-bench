@@ -33,6 +33,17 @@ What changed, newest first. Dates are UTC.
 
 ### Changed
 
+- **The signed container's second suite, for the draft's issue #15 (28 October 2026).** `bundle/signed.go` seals and signs
+  under DHKEM(P-256, HKDF-SHA256) as well as under MLKEM768-P256, each with HKDF-SHA256 and AES-256-GCM: the suite follows
+  the encoding of CEKpub (a P-256 SubjectPublicKeyInfo or the 1249-octet encapsulation key), the HPKE suite_id of the suite
+  in use is among the signed octets, and CEKpub is signed as the request carried it. The Vault gateway seals the P-256
+  suite where a Target names it (`DHKEM(P-256, HKDF-SHA256)+HKDF-SHA256+AES-256-GCM`), `trustzone.py --cek-suite p256`
+  (`CEK_SUITE=p256 e2e/scripts/bench.sh config`) makes the pack's Vault Targets name it, and the CAI opens either suite.
+  `bundle.Canonical` is now the JSON Canonicalization Scheme of RFC 8785 for every value a bundle carries: characters above
+  U+007F are written as they are, where they were escaped before. No committed run carried such a character, so no run's
+  octets change. `e2e/scripts/est-wire-cddl.py` now checks the attest-retrieve response against the draft's CDDL of the
+  container too, and refuses six alterations of it. A second vector, `bundle/testdata/go-hpke-base-signed-p256.json`.
+
 - **The guest takes the bench's ssh key in its own metadata**, with OS Login off and project-wide keys blocked. A service
   account, as on a cloud VM that runs the bench, cannot import its key into OS Login (the API answers INVALID_ARGUMENT), and
   a user account needs no OS Login role. The key is `~/.ssh/google_compute_engine`, made if missing. Found by the

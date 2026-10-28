@@ -97,8 +97,9 @@ var SignedItemPolicy = struct {
 
 // openSigned checks and opens an hpke-base-signed container: it must be signed by the key the CAI holds for the RRP
 // its Evidence bound, name that RRP, the Target, the freshness element and the hint, be sealed to this request's
-// MLKEM768-P256 CEK, and carry only items SignedItemPolicy takes. The document returned is the first item's value.
-func (c *Client) openSigned(raw []byte, cekPriv crypto.PrivateKey, req AcquisitionRequest, element []byte) ([]byte, error) {
+// CEK (MLKEM768-P256 or P-256, cekPub being CEKpub as the request carried it), and carry only items SignedItemPolicy
+// takes. The document returned is the first item's value.
+func (c *Client) openSigned(raw []byte, cekPriv crypto.PrivateKey, cekPub []byte, req AcquisitionRequest, element []byte) ([]byte, error) {
 	var b bundle.Bundle
 	if err := json.Unmarshal(raw, &b); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrUnwrap, err)
@@ -114,10 +115,12 @@ func (c *Client) openSigned(raw []byte, cekPriv crypto.PrivateKey, req Acquisiti
 	}
 	cek, ok := cekPriv.(hpke.PrivateKey)
 	if !ok {
-		return nil, fmt.Errorf("%w: a signed container needs an MLKEM768-P256 CEK, not %T", ErrUnwrap, cekPriv)
+		if cek, err = bundle.DHKEMPrivateKey(cekPriv); err != nil {
+			return nil, fmt.Errorf("%w: a signed container needs an MLKEM768-P256 or a P-256 CEK: %v", ErrUnwrap, err)
+		}
 	}
 	content, err := bundle.OpenSigned(&b, bundle.ExpectSigned{Target: req.Target, Handle: element,
-		CredentialHint: req.Hint, CEK: cek, VaultKey: vaultKey})
+		CredentialHint: req.Hint, CEK: cek, CEKPub: cekPub, VaultKey: vaultKey})
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrUnwrap, err)
 	}

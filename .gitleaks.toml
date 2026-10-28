@@ -12,11 +12,11 @@ regexes = ['''"secret_sha256": "[0-9a-f]{64}"''']
 paths = ['''(^|/)e2e/evidence/[^/]+/results\.json$''']
 
 [[allowlists]]
-description = "the signing key of the signed container's test vectors: made for the vectors, it signs nothing else"
+description = "the signing key and the P-256 CEK of the signed container's test vectors: made for the vectors, they sign and open nothing else"
 condition = "AND"
 regexTarget = "line"
-regexes = ['''"vault_signing_key_pkcs8"''']
-paths = ['''(^|/)bundle/testdata/(ref|go)-hpke-base-signed\.json$''']
+regexes = ['''"(vault_signing_key_pkcs8|cek_pkcs8)"''']
+paths = ['''(^|/)bundle/testdata/(ref|go)-hpke-base-signed(-p256)?\.json$''']
 
 [[allowlists]]
 description = "test fixtures: attestation results (EARs) from GCP and AWS SEV-SNP runs, signed tokens, not credentials"
