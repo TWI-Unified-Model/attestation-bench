@@ -332,6 +332,29 @@ gets each from a local port nothing listens on.
 
 `make cloud-check` found both clouds empty at the end of each batch.
 
+## The signed container under DHKEM(P-256, HKDF-SHA256) as well (28 October 2026)
+
+For issue #15 of the EST draft, which asks for the container of attest-retrieve to be written down, the signed container
+gained a second suite: HPKE in base mode under DHKEM(P-256, HKDF-SHA256) instead of the ML-KEM-768 and P-256 hybrid, the
+same HKDF-SHA256 and AES-256-GCM, the same signature by the Secret Vault. The suite follows the encoding of CEKpub, a P-256
+SubjectPublicKeyInfo (91 octets) or the 1249-octet encapsulation key, and the HPKE suite_id of the suite in use is among the
+signed octets. `CEK_SUITE=p256 e2e/scripts/bench.sh config` makes the pack's Vault Targets name the P-256 suite in
+`acceptable_cek`. The runs below are the P-256 suite on the same events as the hybrid's: the bank profile stays hybrid-only.
+
+| Check | Commit | Result |
+|---|---|---|
+| `make demo` on the three platforms, Passport, P-256 suite | this commit | 3 PASS, 10 of 10 Targets each: [Google Cloud SEV-SNP](../e2e/evidence/20261028T225401Z-gcp-sev-snp-e2e-passport), [AWS SEV-SNP](../e2e/evidence/20261028T230612Z-aws-sev-snp-e2e-passport), [Google Cloud TDX](../e2e/evidence/20261028T230818Z-gcp-tdx-e2e-passport); every attest-retrieve carried a 91-octet CEKpub and returned `hpke-base-signed` with `DHKEM(P-256, HKDF-SHA256)` and a 65-octet `enc` |
+| `make demo` on Google Cloud SEV-SNP, Background Check, P-256 suite | this commit | PASS, 10 of 10 Targets ([run](../e2e/evidence/20261028T231134Z-gcp-sev-snp-e2e-background-check)) |
+| `CONDUIT_ATTACK=seal make demo` on Google Cloud SEV-SNP, P-256 suite | this commit | PASS: the 5 Retrievals given the conduit's own container, sealed to the Attester's CEKpub under the conduit's keys, each refused by the CAI for its origin ([run](../e2e/evidence/20261028T225840Z-gcp-sev-snp-e2e-passport-conduit-seal)) |
+| `CONDUIT_ATTACK=swap make demo` on Google Cloud SEV-SNP, P-256 suite | this commit | PASS: the first Retrieval admitted, the 4 given the container of the one before each refused for its associated data ([run](../e2e/evidence/20261028T230300Z-gcp-sev-snp-e2e-passport-conduit-swap)) |
+| `make check-mtls` after the reconfiguration | this commit | 40 of 40 |
+| `make lint`, `make test` | this commit | every linter clean; every Go module, the EST patches' tests and the 79 Python tests pass |
+| `e2e/scripts/est-wire-cddl.py` with the draft's CDDL of the container, variant A (one suite, MLKEM768-P256), on the 94 wire logs committed before these runs | this commit | the 37 logs since 11 October 14:31Z: 892 messages valid, 1094 of 1094 with their place's media type, 3260 altered messages refused, the 160 containers among them valid against the new rule; the 45 logs before that carry the RRP identifier in the container's associated data, the layout the group removed on 11 October (rats-tacra#20), and their 255 containers are refused for it; the 12 logs of the night of 8 October predate the wire format |
+| the same, variant B (DHKEM(P-256) mandatory, MLKEM768-P256 recommended), on the six P-256 runs above and three hybrid runs | this commit | 9 logs, 9 valid in full: 225 messages, 45 containers (30 under DHKEM(P-256), 15 under MLKEM768-P256), 810 altered messages refused; under variant A's rule the 30 P-256 containers are refused, as that variant intends |
+| the two implementations on each other's output (bench/xcheck-container-2026-10-28 of the project folder, not in this repository) | this commit, globalsign-est branch mock-signed-container | the bench seals and the group's mock opens, and the reverse, under both suites; the two committed vectors open in the mock |
+
+`make cloud-check` found both clouds empty after the six runs.
+
 ## No RRP identifier, the default (11 October 2026)
 
 The group decided on 6 October to leave the RRP identifier out of the binding until the threat model is agreed

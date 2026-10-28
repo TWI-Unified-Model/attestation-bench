@@ -1,0 +1,10 @@
+2026/10/28 23:00:23 https://db-nonce.tacra.example           x509    acquired in   573.5 ms (1 attempt(s)); relying party answered 200
+2026/10/28 23:00:24 https://db-epoch.tacra.example           x509    acquired in   572.7 ms (1 attempt(s)); relying party answered 200
+2026/10/28 23:00:24 https://db-lepoch.tacra.example          x509    acquired in   558.6 ms (1 attempt(s)); relying party answered 200
+2026/10/28 23:00:25 https://db-time.tacra.example            x509    acquired in   559.2 ms (1 attempt(s)); relying party answered 200
+2026/10/28 23:00:26 https://db-none.tacra.example            x509    acquired in   542.5 ms (1 attempt(s)); relying party answered 200
+2026/10/28 23:00:26 https://ledger-nonce.tacra.example       acquire failed: cai: failed to unwrap retrieved credential: bundle: not signed by the trusted Vault key over this request's bundle
+2026/10/28 23:00:27 https://ledger-epoch.tacra.example       acquire failed: cai: failed to unwrap retrieved credential: bundle: not signed by the trusted Vault key over this request's bundle
+2026/10/28 23:00:28 https://ledger-lepoch.tacra.example      acquire failed: cai: failed to unwrap retrieved credential: bundle: not signed by the trusted Vault key over this request's bundle
+2026/10/28 23:00:28 https://ledger-time.tacra.example        acquire failed: cai: failed to unwrap retrieved credential: bundle: not signed by the trusted Vault key over this request's bundle
+2026/10/28 23:00:29 https://ledger-none.tacra.example        acquire failed: cai: failed to unwrap retrieved credential: bundle: not signed by the trusted Vault key over this request's bundle
