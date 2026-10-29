@@ -47,6 +47,7 @@ SERVICE = {"credential-authority": "ca-gateway", "secret-vault": "vault-gateway"
 SIGNED_MLKEM = "MLKEM768-P256+HKDF-SHA256+AES-256-GCM"
 SIGNED_P256 = "DHKEM(P-256, HKDF-SHA256)+HKDF-SHA256+AES-256-GCM"
 CEK_SUITE = "mlkem768-p256"
+ORIGIN_AUTH = "on"  # --origin-auth off: the Vault's Targets release containers without their signature
 
 
 class PackError(Exception):
@@ -235,9 +236,17 @@ def parse_args():
         help="the suite of the signed container the Secret Vault's Targets accept: the ML-KEM-768 and P-256 hybrid "
         "(default), or DHKEM(P-256, HKDF-SHA256) (p256), for the runs that compare the two (EST draft issue #15)",
     )
+    p.add_argument(
+        "--origin-auth",
+        choices=("on", "off"),
+        default="on",
+        help="whether the Secret Vault's Targets sign the containers they release (on, the default) or release them "
+        "without origin authentication (off): the EST draft's accepted risk, for the runs that measure it (issue #15)",
+    )
     a = p.parse_args()
-    global CEK_SUITE
+    global CEK_SUITE, ORIGIN_AUTH
     CEK_SUITE = a.cek_suite
+    ORIGIN_AUTH = a.origin_auth
     return a
 
 
@@ -411,6 +420,8 @@ def target_config(t, workload, measurements, everyone):
     if CEK_SUITE == "p256":
         acceptable = [SIGNED_P256 if a == SIGNED_MLKEM else a for a in acceptable]
     c["acceptable"] = acceptable
+    if "secret" in t and ORIGIN_AUTH == "off":
+        c["sign"] = False  # the Vault releases this Target's containers without its origin authentication
     if "secret" in t:
         # the workload's group, and the Target's other groups: the same launches, under other Credential Hints
         c["groups"] = {

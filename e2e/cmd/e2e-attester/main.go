@@ -44,7 +44,7 @@ type config struct {
 	Targets        []target                     `json:"targets"`
 	RelyingParties map[string]map[string]string `json:"relying_parties"` // Target -> mode -> RRP identifier held
 	VaultOrigins   map[string]map[string]string `json:"vault_origins"`   // RRP id -> DHKEM -> SPKI (base64url)
-	VaultSigners   map[string]string            `json:"vault_signers"`   // RRP id -> signature key SPKI (base64url), hpke-base-signed
+	VaultSigners   map[string]string            `json:"vault_signers"`   // RRP id -> signature key SPKI (base64url): the hpke-base container's origin member is required and verified under it
 	CAAnchors      map[string]string            `json:"ca_anchors"`      // RRP id -> the Credential Authority's certificates (PEM): tacra-est N15
 	LocalEpochHex  string                       `json:"local_epoch_hex"`
 	RUP            struct {

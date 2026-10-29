@@ -332,6 +332,39 @@ gets each from a local port nothing listens on.
 
 `make cloud-check` found both clouds empty at the end of each batch.
 
+## The container's origin authentication by the Target's policy (29 October 2026)
+
+Issue #15 of the EST draft ended with the group's decision of 28 October (TheBankster/lamps-tacra-est#15, 23:44Z and
+23:46Z, 00:45Z): the attest-retrieve container is HPKE in base mode under DHKEM(P-256, HKDF-SHA256), mandatory, or
+MLKEM768-P256, recommended; the substitution of the container by the conduit is an accepted risk, and the Secret Vault's
+signature is a configuration a deployment turns on. The bench follows: the container is `hpke-base`, its `origin` member
+(`alg`, `signature`) is present where the Target requires it (`"sign": false` on a Vault Target releases without it), the
+CAI's policy is the Vault key it holds for the RRP (with it the member is required and verified, without it the container
+opens as it is), and the name of the signature algorithm among the signed octets is the one the member carries,
+`ECDSA-P256-SHA256`. `ORIGIN_AUTH=off make config && make start` configures the accepted risk, and the seal drill measures
+it (`caapi-est -no-origin`, `verdict.py conduit --origin-auth off`). The two logs of the AWS and TDX runs below overlap:
+the runs were concurrent, and each run's wire log is the EST server's log over the run's window.
+
+| Check | Commit | Result |
+|---|---|---|
+| `make demo` with origin authentication, DHKEM(P-256), Passport, three platforms | this commit | 3 PASS, 10 of 10 Targets each, every container with its origin member: [Google Cloud SEV-SNP](../e2e/evidence/20261029T003635Z-gcp-sev-snp-e2e-passport), [AWS SEV-SNP](../e2e/evidence/20261029T004510Z-aws-sev-snp-e2e-passport), [Google Cloud TDX](../e2e/evidence/20261029T004511Z-gcp-tdx-e2e-passport) |
+| `make demo`, Background Check, Google Cloud SEV-SNP, DHKEM(P-256), origin authentication | this commit | PASS, 10 of 10 ([run](../e2e/evidence/20261029T004744Z-gcp-sev-snp-e2e-background-check)) |
+| `CONDUIT_ATTACK=seal`, origin authentication, DHKEM(P-256) | this commit | PASS: the 5 Retrievals given the conduit's container, signed with the conduit's own key, each refused by the CAI for its origin ([run](../e2e/evidence/20261029T003931Z-gcp-sev-snp-e2e-passport-conduit-seal)) |
+| `CONDUIT_ATTACK=swap`, origin authentication, DHKEM(P-256) | this commit | PASS: the first Retrieval admitted, the 4 given the container of the one before each refused for its associated data ([run](../e2e/evidence/20261029T004221Z-gcp-sev-snp-e2e-passport-conduit-swap)) |
+| `ORIGIN_AUTH=off make demo`, Google Cloud SEV-SNP, DHKEM(P-256), Passport: the accepted risk's configuration | this commit | PASS, 10 of 10, the 5 containers without an origin member ([run](../e2e/evidence/20261029T005046Z-gcp-sev-snp-e2e-passport-no-origin-auth)) |
+| `ORIGIN_AUTH=off CONDUIT_ATTACK=seal make demo`: the accepted risk, measured | this commit | PASS: the 5 Retrievals given the conduit's container without origin authentication; the CAI, holding no Vault key for the Target, opened each and took the key the conduit chose (`secret_sha256` = SHA-256 of "a key the conduit chose"), presented it, and the relying party refused it, 403 ([run](../e2e/evidence/20261029T010900Z-gcp-sev-snp-e2e-passport-conduit-seal-no-origin-auth)). The first run of this drill ([run](../e2e/evidence/20261029T005337Z-gcp-sev-snp-e2e-passport-conduit-seal-no-origin-auth)) did the same, and its verdict says FAIL: `verdict.py` then expected the relying party to admit the conduit's key; the expectation was corrected to what the drill shows, and the drill run again |
+| `ORIGIN_AUTH=off CONDUIT_ATTACK=swap make demo` | this commit | PASS: the first Retrieval admitted, the 4 given the container of the one before each refused for its associated data, with no origin authentication: the CEK and the associated data refuse it on their own ([run](../e2e/evidence/20261029T005627Z-gcp-sev-snp-e2e-passport-conduit-swap-no-origin-auth)) |
+| `make demo` and `CONDUIT_ATTACK=seal make demo`, the default again: MLKEM768-P256, origin authentication | this commit | PASS 10 of 10 ([run](../e2e/evidence/20261029T005931Z-gcp-sev-snp-e2e-passport)); PASS, the 5 conduit containers refused for their origin ([run](../e2e/evidence/20261029T010232Z-gcp-sev-snp-e2e-passport-conduit-seal)) |
+| `make check-mtls` after the reconfigurations | this commit | 40 of 40 ([run](../e2e/evidence/20261029T010523Z-bench-mtls-passport)) |
+| `make cloud-check` after the runs | this commit | both clouds empty |
+| `e2e/scripts/est-wire-cddl.py` with the draft's CDDL of 29 October (`e2e/est-attest.cddl`: the `origin` member optional, the response Handle 8 to 64 octets) on the 12 wire logs of these runs | this commit | every log valid in full: 25 messages each (50 in the two overlapping logs), every message with its place's media type, 96 alterations of each log refused, among them a container whose origin lacks its signature, one of another algorithm, the old `hpke-base-signed` label, a `suite.sig` member, and a 4-octet Handle |
+| `make lint`, `make test` | this commit | every linter clean; every Go module, the EST patches' tests and the 79 Python tests pass |
+| the two implementations on each other's output (bench/xcheck-container-2026-10-28 of the project folder) | this commit, globalsign-est branch mock-bundle-origin | the bench seals and the group's mock opens, and the reverse, under both suites, with the origin member and without it; the two committed vectors open in the mock; each refuses the unsigned container where a Vault key is held |
+
+The earlier variant, the signature required (`hpke-base-signed`, 28 October and before), stays measured in the section
+below and in `e2e/evidence/20261028T*`; its 190 containers do not validate against the CDDL of 29 October, by design: the
+label and the layout changed with the decision.
+
 ## The signed container under DHKEM(P-256, HKDF-SHA256) as well (28 October 2026)
 
 For issue #15 of the EST draft, which asks for the container of attest-retrieve to be written down, the signed container

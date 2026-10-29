@@ -53,17 +53,18 @@ type bridge struct {
 type attack struct {
 	name string
 
-	signKey *ecdsa.PrivateKey  // seal: its own signature key, for an hpke-base-signed container
-	sender  *bundle.SenderKeys // seal: its own static KEM keys, for an hpke-auth container
-	mu      sync.Mutex
-	prev    []byte // swap: the Vault's container of the Retrieval before this one
+	signKey  *ecdsa.PrivateKey  // seal: its own signature key, for an hpke-base container with origin authentication
+	noOrigin bool               // seal: its container carries no origin authentication (the EST draft's accepted risk)
+	sender   *bundle.SenderKeys // seal: its own static KEM keys, for an hpke-auth container
+	mu       sync.Mutex
+	prev     []byte // swap: the Vault's container of the Retrieval before this one
 }
 
 // The Credential Hints the conduit of the hint drills sends in place of the Attester's: one the Target serves no group
 // to, and one it serves another group to (packs/tacra-bench, other_groups).
 var otherHints = map[string]string{"hint": "reports.workload.tacra.example", "hint-group": "audit.workload.tacra.example"}
 
-func newAttack(name string) (*attack, error) {
+func newAttack(name string, noOrigin bool) (*attack, error) {
 	switch name {
 	case "":
 		return nil, nil
@@ -71,7 +72,7 @@ func newAttack(name string) (*attack, error) {
 	default:
 		return nil, fmt.Errorf("-attack %q: seal, swap, hint or hint-group", name)
 	}
-	a := &attack{name: name}
+	a := &attack{name: name, noOrigin: noOrigin}
 	var err error
 	if a.signKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader); err != nil {
 		return nil, err
@@ -108,9 +109,14 @@ func (a *attack) container(target string, cekPub, raw []byte) ([]byte, error) {
 			Metadata: map[string]any{"validity_seconds": 3600}}
 		var own *bundle.Bundle
 		var err error
+		how := "signed with the conduit's own key"
 		switch v.Container {
-		case bundle.ContainerSigned:
-			own, err = bundle.SealSigned(a.signKey, cekPub, v.AAD, content)
+		case bundle.ContainerBase:
+			key := a.signKey
+			if a.noOrigin {
+				key, how = nil, "without origin authentication"
+			}
+			own, err = bundle.SealBase(key, cekPub, v.AAD, content)
 		case bundle.Container:
 			own, err = bundle.Seal(a.sender, cekPub, v.AAD, content)
 		default:
@@ -119,8 +125,8 @@ func (a *attack) container(target string, cekPub, raw []byte) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		a.logf(target, "returned its own %s container, sealed to the Attester's CEKpub with the conduit's keys, the "+
-			"Vault's associated data kept", v.Container)
+		a.logf(target, "returned its own %s container, sealed to the Attester's CEKpub with the conduit's keys, %s, the "+
+			"Vault's associated data kept", v.Container, how)
 		return json.Marshal(own)
 	case "swap":
 		a.mu.Lock()
@@ -205,8 +211,8 @@ func (b *bridge) InitiateRemoteAttestation(ctx context.Context, in *caapiv1.Init
 				out.EncryptionAlgorithm = caapiv1.EncryptionAlgorithm_ENCRYPTION_ALGORITHM_ECDH_P256.Enum()
 			}
 		}
-		// the hpke-base-signed container (tacra-est decision 4), when the RRP accepts it: preferred
-		if slices.Contains(r.AcceptableCEK, bundle.AcceptableSigned) {
+		// the hpke-base container under MLKEM768-P256 (tacra-est decision 4), when the RRP accepts it: preferred
+		if slices.Contains(r.AcceptableCEK, bundle.AcceptableMLKEM768P256) {
 			out.EncryptionAlgorithm = caapiv1.EncryptionAlgorithm_ENCRYPTION_ALGORITHM_MLKEM768_P256.Enum()
 		}
 	}
@@ -268,8 +274,9 @@ func main() {
 	host := flag.String("est", "localhost:18443", "EST server host:port")
 	anchor := flag.String("anchor", "", "PEM file with the EST server's TLS trust anchor")
 	attackName := flag.String("attack", "", "a drill of docs/attacks.md, section 6: seal, swap, hint or hint-group (none: honest)")
+	noOrigin := flag.Bool("no-origin", false, "seal: the conduit's container carries no origin authentication, as the Vault's does not for a Target with \"sign\": false")
 	flag.Parse()
-	drill, err := newAttack(*attackName)
+	drill, err := newAttack(*attackName, *noOrigin)
 	if err != nil {
 		log.Fatal(err)
 	}

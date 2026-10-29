@@ -20,7 +20,7 @@
 #                 marker (absent-epoch)
 #     vault       the default run on the Secret Vaults: Retrieval Evidence for a ledger Target of vault1, offered to
 #                 vault1 and to vault2, its copy (packs/tacra-bench); each asked for the
-#                 workload's group's key, in the hpke-base-signed container to an MLKEM768-P256 CEK
+#                 workload's group's key, in the hpke-base container, signed, to an MLKEM768-P256 CEK
 #     replay      the same request twice at ca1: what a conduit that holds a request gets by offering
 #                 it again. The RRP keeps no record of a CSR it served, so only the freshness element can refuse the
 #                 second offer: a present-nonce Handle serves once; an epoch marker serves while it is current, a
@@ -64,7 +64,7 @@ if [ "$VARIANT" != default ]; then OUT="$OUT-$VARIANT"; fi
 BIN="$(mktemp -d)"
 CA1=https://127.0.0.1:9101; CA2=https://127.0.0.1:9103
 # The RRP pair the conduit plays: the Credential Authorities (Enrollment), or, in the vault variant, the Secret Vaults
-# (Retrieval of the workload's group's key, sealed in the hpke-base-signed container to an MLKEM768-P256 CEK, the only
+# (Retrieval of the workload's group's key, sealed in the signed hpke-base container to an MLKEM768-P256 CEK, the only
 # one the ledger Targets take)
 if [ "$VARIANT" = vault ] || [ "$VARIANT" = replay-vault ]; then
   MODE=retrieve; RRP1=vault1; RRP2=vault2; URL1=https://127.0.0.1:9102; URL2=https://127.0.0.1:9104

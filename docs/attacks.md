@@ -90,7 +90,7 @@ Attester, and who chooses it. `ca1`, the control, issues where the freshness is 
 
 `vault` runs the default experiment on the Secret Vaults, which it leaves out: Retrieval Evidence for a ledger Target
 of `vault1`, offered to `vault1` and to `vault2`, its copy with another RRP identifier (the bench's pack), each asked
-for the workload's group's key in the hpke-base-signed container. As on the Credential Authorities, with the RRP
+for the workload's group's key in the hpke-base container, signed by the Vault. As on the Credential Authorities, with the RRP
 identifier `vault2` refuses every kind, and without it releases the key for every kind but present-nonce, the two
 Vaults sharing one epoch marker. Each container it releases is sealed to the Attester's CEKpub, and its associated data
 names `vault2`.
@@ -199,17 +199,22 @@ Evidence refused at `db-tdx-only` in Passport, genuine TDX Evidence at `db-snp-o
 ## 6. The conduit and the Retrieval container
 
 In Retrieval the Vault seals the secret to the CEKpub the workload's Evidence binds, and the conduit carries the
-container back. CEKpub is public, so anyone who saw it can seal a container to it; the CAI opens only a container the
-Vault sealed for this request. The conduit of these drills is the workload's own CAS Client (`caapi-est -attack`):
+container back. CEKpub is public, so anyone who saw it can seal a container to it. Whether the CAI can tell is the
+Target's policy, since 29 October 2026 (issue #15 of the EST draft, the group's decision of 28 October): where the CAI
+holds the Vault's signature key for the Target, the container must carry the Vault's origin authentication, its `origin`
+member, and the CAI opens only what the Vault signed for this request; where it holds none, the container opens as it
+is, which the draft accepts as a risk and the `ORIGIN_AUTH=off` runs below measure. The conduit of these drills is the
+workload's own CAS Client (`caapi-est -attack`):
 
 ```bash
 CONDUIT_ATTACK=seal make demo PLATFORM=gcp-snp   # also swap, hint, hint-group; also aws-snp, gcp-tdx
+ORIGIN_AUTH=off CONDUIT_ATTACK=seal make demo PLATFORM=gcp-snp   # after ORIGIN_AUTH=off make config && make start: the accepted risk
 ```
 
 | Drill | What the conduit does to each Retrieval | What stops it | Expected result |
 |---|---|---|---|
-| `seal` | returns a container it sealed itself to the workload's CEKpub, with its own keys: the Vault's container type and associated data, another secret. TACRA leaves the CAS Server the option of encrypting to CEKpub itself; this is that container | the container's origin: the CAI opens only what the Vault key it holds for the RRP sealed or signed | each Retrieval refused, `bundle: not signed by the trusted Vault key over this request's bundle` |
-| `swap` | returns to each Retrieval after the first the Vault's container of the Retrieval before it | the container is the Vault's, but for another request: its associated data names another Target and freshness element, and its signature covers another CEKpub | the first admitted; each later one refused, `bundle: associated data does not name what the Evidence bound` |
+| `seal` | returns a container it sealed itself to the workload's CEKpub, with its own keys: the Vault's container type and associated data, another secret. TACRA leaves the CAS Server the option of encrypting to CEKpub itself; this is that container | the container's origin, where the Target requires it: the CAI opens only what the Vault key it holds for the RRP signed. Where the Target does not require it (`ORIGIN_AUTH=off`), nothing: the EST draft's accepted risk | each Retrieval refused, `bundle: not signed by the trusted Vault key over this request's bundle`; with `ORIGIN_AUTH=off`, each admitted, the measurement of the accepted risk |
+| `swap` | returns to each Retrieval after the first the Vault's container of the Retrieval before it | the container is the Vault's, but for another request: its associated data names another Target and freshness element, it was sealed to another CEK, and its signature, where there is one, covers another CEKpub | the first admitted; each later one refused, `bundle: associated data does not name what the Evidence bound`, with or without origin authentication |
 | `hint` | asks the Vault with the Credential Hint of a workload the Target serves no group to | the Vault's policy: no credential group for that hint at the Target | each Retrieval refused by the Vault, `credential-hint` |
 | `hint-group` | asks the Vault with the Credential Hint of another group the Target serves to the same launches (`audit.workload.tacra.example`, the bench pack's `other_groups`) | the Vault releases that group's secret, sealed to the workload's CEKpub with that hint in its associated data; nothing in the binding covers the hint, so only the CAI's check of the hint it asked for refuses it | each Retrieval refused by the CAI, `bundle: associated data does not name what the Evidence bound` |
 
@@ -234,7 +239,7 @@ What the drills leave to the unit tests of the container (`bundle/keptcek_test.g
 check refuses a container meant for another request. With a new CEK for each Retrieval, as the CAI makes, it does
 not open whatever its associated data says. With one CEK kept across Retrievals, the hpke-auth container's HPKE info
 carries the RRP identifier and the freshness element but not the Target, so only the associated data's Target check
-refuses another Target's container under a freshness element the Targets share; the hpke-base-signed container's
+refuses another Target's container under a freshness element the Targets share; the hpke-base container's
 signature covers the Target and CEKpub, and refuses it without that check.
 
 ### The conduit's own Verifier (`verifier`)

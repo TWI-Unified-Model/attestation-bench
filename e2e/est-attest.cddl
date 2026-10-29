@@ -11,7 +11,7 @@ attestation-initiation-response = {
 
 initiation-freshness = (
   freshness_kind: "present-nonce" / "present-epoch",
-  handle: text .b64u bytes,
+  handle: text .b64u (bytes .size (8..64)),
   ? expires_in: uint,
 //
   freshness_kind: "absent-timestamp",
@@ -58,6 +58,43 @@ request-freshness = (
 )
 
 binding = {
-  method: text,
-  ? hash: text,
+  method: "binding-input",
+  hash: "sha512",
+}
+
+encrypted-credential-bundle = {
+  container: "hpke-base",
+  suite: {
+    kem: "DHKEM(P-256, HKDF-SHA256)" / "MLKEM768-P256",
+    kdf: "HKDF-SHA256",
+    aead: "AES-256-GCM",
+  },
+  enc: text .b64u bytes,
+  ciphertext: text .b64u bytes,
+  aad: {
+    group_id: text,
+    target: text,
+    ? handle: text .b64u bytes,
+    ? credential_hint: text,
+  },
+  ? origin: {
+    alg: "ECDSA-P256-SHA256",
+    signature: text .b64u bytes,
+  },
+}
+
+credential-bundle = {
+  credential_items: [+ credential-item],
+  ? metadata: { * text => any },
+}
+
+credential-item = {
+  type: text,
+  value: text,
+  ? format: text,
+  ? kid: text,
+  ? purpose: [+ text],
+  ? algorithm: text,
+  ? exportable: bool,
+  ? shared: bool,
 }

@@ -192,7 +192,10 @@ data names another Target and freshness element. With a new CEK for each Retriev
 Retrieval's container does not open at all; with one CEK kept across Retrievals, what refuses it is the Target in the
 associated data or in the signature. Repeated without the RRP identifier in the binding (12 runs, 8 October), the
 drills end the same way. This belongs with the container's definition in TACRA (the thread of 8 October on
-pull request #1), not with the two halves above.
+pull request #1), not with the two halves above. Since 29 October the origin authentication is the Target's policy
+(EST draft issue #15, the group's decision of 28 October): a Target whose Attesters hold no Vault key accepts a container
+anyone sealed to CEKpub, the draft's accepted risk, which the `ORIGIN_AUTH=off` runs of 29 October measure: the
+conduit's container, admitted ([docs/attacks.md](attacks.md), section 6).
 
 ## 7. Assumptions and what this model does not cover
 

@@ -1,0 +1,17 @@
+the conduit's drill: swap; it acted on 5 requests, for 5 Targets
+ok  https://db-nonce.tacra.example         x509
+ok  https://db-epoch.tacra.example         x509
+ok  https://db-lepoch.tacra.example        x509
+ok  https://db-time.tacra.example          x509
+ok  https://db-none.tacra.example          x509
+ok  https://ledger-nonce.tacra.example     api-key
+    the conduit: the first Retrieval: returned the Vault's own container, kept for the next
+no  https://ledger-epoch.tacra.example     api-key  cai: failed to unwrap retrieved credential: bundle: associated data does not name what the Evidence bound
+    the conduit: returned the Vault's container of the Retrieval before, for https://ledger-nonce.tacra.example
+no  https://ledger-lepoch.tacra.example    api-key  cai: failed to unwrap retrieved credential: bundle: associated data does not name what the Evidence bound
+    the conduit: returned the Vault's container of the Retrieval before, for https://ledger-epoch.tacra.example
+no  https://ledger-time.tacra.example      api-key  cai: failed to unwrap retrieved credential: bundle: associated data does not name what the Evidence bound
+    the conduit: returned the Vault's container of the Retrieval before, for https://ledger-lepoch.tacra.example
+no  https://ledger-none.tacra.example      api-key  cai: failed to unwrap retrieved credential: bundle: associated data does not name what the Evidence bound
+    the conduit: returned the Vault's container of the Retrieval before, for https://ledger-time.tacra.example
+VERDICT PASS: the first Retrieval admitted with its own container; 4 given the container of the one before, each refused by the CAI for its associated data; the 5 other Targets admitted

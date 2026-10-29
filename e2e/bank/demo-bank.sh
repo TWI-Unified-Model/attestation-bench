@@ -204,7 +204,7 @@ print(json.dumps({"tee": os.environ["TEE"], "caapi": "127.0.0.1:50061", "hint": 
   "fraud": {"target": fraud["target"], "url": "https://core.demobank.internal:8444", "server_ca_pem": core_root},
   "relying_parties": {ledger["target"]: {"enroll": ca}, fraud["target"]: {"retrieve": vault}},
   "vault_origins": {vault: {k: v for k, v in keys.items() if k.startswith("DHKEM")}},
-  # the hpke-base-signed container's trust anchor: the Vault's signature key, held for its RRP identifier
+  # the container's trust anchor: the Vault's signature key, held for its RRP identifier, and with it the requirement of its origin member
   "vault_signers": {vault: keys["ECDSA-P256-SHA256"]},
   # tacra-est N15: the CA the CAI holds for Enrollment, the bank's step-ca intermediate (public)
   "ca_anchors": {ca: open(f"{P}/workload-ca-intermediate.crt").read()},

@@ -1,0 +1,17 @@
+the conduit's drill: seal; it acted on 5 requests, for 5 Targets
+ok  https://db-nonce.tacra.example         x509
+ok  https://db-epoch.tacra.example         x509
+ok  https://db-lepoch.tacra.example        x509
+ok  https://db-time.tacra.example          x509
+ok  https://db-none.tacra.example          x509
+no  https://ledger-nonce.tacra.example     api-key  cai: failed to unwrap retrieved credential: bundle: not signed by the trusted Vault key over this request's bu
+    the conduit: returned its own hpke-base container, sealed to the Attester's CEKpub with the conduit's keys, signed with the conduit's own key, the Vault's associat
+no  https://ledger-epoch.tacra.example     api-key  cai: failed to unwrap retrieved credential: bundle: not signed by the trusted Vault key over this request's bu
+    the conduit: returned its own hpke-base container, sealed to the Attester's CEKpub with the conduit's keys, signed with the conduit's own key, the Vault's associat
+no  https://ledger-lepoch.tacra.example    api-key  cai: failed to unwrap retrieved credential: bundle: not signed by the trusted Vault key over this request's bu
+    the conduit: returned its own hpke-base container, sealed to the Attester's CEKpub with the conduit's keys, signed with the conduit's own key, the Vault's associat
+no  https://ledger-time.tacra.example      api-key  cai: failed to unwrap retrieved credential: bundle: not signed by the trusted Vault key over this request's bu
+    the conduit: returned its own hpke-base container, sealed to the Attester's CEKpub with the conduit's keys, signed with the conduit's own key, the Vault's associat
+no  https://ledger-none.tacra.example      api-key  cai: failed to unwrap retrieved credential: bundle: not signed by the trusted Vault key over this request's bu
+    the conduit: returned its own hpke-base container, sealed to the Attester's CEKpub with the conduit's keys, signed with the conduit's own key, the Vault's associat
+VERDICT PASS: 5 Retrievals given the conduit's own container, each refused by the CAI for its origin; the 5 other Targets admitted

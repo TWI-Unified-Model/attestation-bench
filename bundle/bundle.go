@@ -69,21 +69,27 @@ type AAD struct {
 
 // Bundle is the EncryptedCredentialBundle.
 type Bundle struct {
-	Container  string `json:"container"`
-	Suite      Suite  `json:"suite"`
-	Enc        B64    `json:"enc"`
-	Ciphertext B64    `json:"ciphertext"`
-	AAD        AAD    `json:"aad"`
-	SenderPub  B64    `json:"sender_pub,omitempty"` // hpke-auth: SubjectPublicKeyInfo of the Vault's KEM key
-	Signature  B64    `json:"signature,omitempty"`  // hpke-base-signed: the Vault's signature (signed.go)
+	Container  string  `json:"container"`
+	Suite      Suite   `json:"suite"`
+	Enc        B64     `json:"enc"`
+	Ciphertext B64     `json:"ciphertext"`
+	AAD        AAD     `json:"aad"`
+	SenderPub  B64     `json:"sender_pub,omitempty"` // hpke-auth: SubjectPublicKeyInfo of the Vault's KEM key
+	Origin     *Origin `json:"origin,omitempty"`     // hpke-base: the Vault's origin authentication (signed.go)
 }
 
-// Suite names the HPKE algorithms, and for hpke-base-signed the signature algorithm.
+// Suite names the HPKE algorithms.
 type Suite struct {
 	KEM  string `json:"kem"`
 	KDF  string `json:"kdf"`
 	AEAD string `json:"aead"`
-	Sig  string `json:"sig,omitempty"`
+}
+
+// Origin is the Secret Vault's authentication of itself as the origin of an hpke-base container: the name of the
+// signature algorithm (OriginAlg) and the signature (signed.go).
+type Origin struct {
+	Alg       string `json:"alg"`
+	Signature B64    `json:"signature"`
 }
 
 // Item is one credential inside the bundle, with its key-block attributes: what it may be used for, with which

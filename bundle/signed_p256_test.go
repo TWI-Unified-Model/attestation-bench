@@ -2,7 +2,6 @@ package bundle
 
 import (
 	"crypto/ecdsa"
-	"crypto/hpke"
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
@@ -11,9 +10,9 @@ import (
 	"testing"
 )
 
-// The DHKEM(P-256, HKDF-SHA256) suite of the signed container: CEKpub is a SubjectPublicKeyInfo, and the signature
-// covers those octets and the suite's own suite_id.
-func TestSignedP256RoundTripAndRefusals(t *testing.T) {
+// The DHKEM(P-256, HKDF-SHA256) suite of the hpke-base container, the profile's mandatory one: CEKpub is a
+// SubjectPublicKeyInfo, and the origin member's signature covers those octets and the suite's own suite_id.
+func TestBaseP256RoundTripAndRefusals(t *testing.T) {
 	vault := testVault(t)
 	k, cekPub, err := GenerateCEKP256()
 	if err != nil {
@@ -24,8 +23,11 @@ func TestSignedP256RoundTripAndRefusals(t *testing.T) {
 	} else if _, ok := pub.(*ecdsa.PublicKey); !ok {
 		t.Fatalf("CEKpub parses as %T, want an EC key", pub)
 	}
-	if !IsSignedCEKP256(cekPub) || IsSignedCEK(cekPub) {
-		t.Fatal("CEKpub is not read as the P-256 CEK of the signed container")
+	if len(cekPub) != 91 {
+		t.Fatalf("CEKpub is %d octets, want the 91 of a P-256 SubjectPublicKeyInfo", len(cekPub))
+	}
+	if !IsP256CEK(cekPub) || IsMLKEM768P256CEK(cekPub) {
+		t.Fatal("CEKpub is not read as the P-256 CEK of the container")
 	}
 	cek, err := DHKEMPrivateKey(k)
 	if err != nil {
@@ -33,19 +35,19 @@ func TestSignedP256RoundTripAndRefusals(t *testing.T) {
 	}
 	aad := AAD{GroupID: "g1", Target: "https://ledger.tacra.example",
 		Handle: []byte("0123456789abcdef0123456789abcdef"), CredentialHint: "workload.tacra.example"}
-	b, err := SealSigned(vault, cekPub, aad, testContent())
+	b, err := SealBase(vault, cekPub, aad, testContent())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if b.Suite != SuiteSignedP256 {
-		t.Fatalf("suite %+v, want %+v", b.Suite, SuiteSignedP256)
+	if b.Suite != SuiteDHKEMP256 {
+		t.Fatalf("suite %+v, want %+v", b.Suite, SuiteDHKEMP256)
 	}
 	if len(b.Enc) != 65 {
 		t.Fatalf("enc is %d octets, want the 65 of an uncompressed P-256 point", len(b.Enc))
 	}
-	exp := ExpectSigned{Target: aad.Target, Handle: aad.Handle, CredentialHint: aad.CredentialHint,
-		CEK: cek, CEKPub: cekPub, VaultKey: &vault.PublicKey}
-	c, err := OpenSigned(b, exp)
+	exp := ExpectBase{Target: aad.Target, Handle: aad.Handle, CredentialHint: aad.CredentialHint,
+		CEK: cek, CEKPub: cekPub, VaultKey: &vault.PublicKey, RequireOrigin: true}
+	c, err := OpenBase(b, exp)
 	if err != nil {
 		t.Fatalf("honest bundle: %v", err)
 	}
@@ -54,41 +56,48 @@ func TestSignedP256RoundTripAndRefusals(t *testing.T) {
 	}
 	other := testVault(t)
 	_, cekPub2, _ := GenerateCEKP256()
-	b2, _ := SealSigned(vault, cekPub2, aad, testContent())
-	forged, _ := SealSigned(other, cekPub, aad, testContent())
+	b2, _ := SealBase(vault, cekPub2, aad, testContent())
+	forged, _ := SealBase(other, cekPub, aad, testContent())
+	unsigned, _ := SealBase(nil, cekPub, aad, testContent())
 	hybrid, hybridPub, _ := GenerateCEK()
-	hb, _ := SealSigned(vault, hybridPub, aad, testContent())
+	hb, _ := SealBase(vault, hybridPub, aad, testContent())
 	for _, c := range []struct {
 		name string
 		b    Bundle
-		exp  ExpectSigned
+		exp  ExpectBase
 		want error
 	}{
 		{"signed by another key", *forged, exp, ErrSignature},
-		{"unsigned", func() Bundle { x := *b; x.Signature = nil; return x }(), exp, ErrSignature},
-		{"suite relabelled as the hybrid", func() Bundle { x := *b; x.Suite = SuiteSigned; return x }(), exp, ErrSignature},
+		{"origin stripped", func() Bundle { x := *b; x.Origin = nil; return x }(), exp, ErrOriginRequired},
+		{"unsigned by the Vault, origin required", *unsigned, exp, ErrOriginRequired},
+		{"suite relabelled as the hybrid", func() Bundle { x := *b; x.Suite = SuiteMLKEM768P256; return x }(), exp, ErrSignature},
 		{"suite relabelled as hpke-auth's", func() Bundle { x := *b; x.Suite.KEM = "DHKEM(X25519, HKDF-SHA256)"; return x }(), exp, ErrContainer},
-		{"another request's enc, ciphertext and signature", func() Bundle {
+		{"another request's enc, ciphertext and origin", func() Bundle {
 			x := *b
-			x.Enc, x.Ciphertext, x.Signature = b2.Enc, b2.Ciphertext, b2.Signature
+			x.Enc, x.Ciphertext, x.Origin = b2.Enc, b2.Ciphertext, b2.Origin
 			return x
 		}(), exp, ErrSignature},
-		{"CEKpub as the raw point, not as carried", *b, func() ExpectSigned { e := exp; e.CEKPub = cek.PublicKey().Bytes(); return e }(), ErrSignature},
-		{"another handle", *b, func() ExpectSigned { e := exp; e.Handle = []byte("other"); return e }(), ErrAAD},
+		{"CEKpub as the raw point, not as carried", *b, func() ExpectBase { e := exp; e.CEKPub = cek.PublicKey().Bytes(); return e }(), ErrSignature},
+		{"another handle", *b, func() ExpectBase { e := exp; e.Handle = []byte("other"); return e }(), ErrAAD},
 		{"the hybrid's bundle under the P-256 CEK", *hb, exp, ErrSignature},
 	} {
-		if _, err := OpenSigned(&c.b, c.exp); !errors.Is(err, c.want) {
+		if _, err := OpenBase(&c.b, c.exp); !errors.Is(err, c.want) {
 			t.Errorf("%s: got %v, want %v", c.name, err, c.want)
 		}
 	}
+	// without a Vault key held, the unsigned container opens: the accepted risk
+	if _, err := OpenBase(unsigned, ExpectBase{Target: aad.Target, Handle: aad.Handle, CredentialHint: aad.CredentialHint,
+		CEK: cek, CEKPub: cekPub}); err != nil {
+		t.Fatalf("no key held, unsigned container: %v", err)
+	}
 	// the hybrid still works beside it
-	if _, err := OpenSigned(hb, ExpectSigned{Target: aad.Target, Handle: aad.Handle, CredentialHint: aad.CredentialHint,
-		CEK: hybrid, VaultKey: &vault.PublicKey}); err != nil {
+	if _, err := OpenBase(hb, ExpectBase{Target: aad.Target, Handle: aad.Handle, CredentialHint: aad.CredentialHint,
+		CEK: hybrid, VaultKey: &vault.PublicKey, RequireOrigin: true}); err != nil {
 		t.Fatalf("hybrid bundle: %v", err)
 	}
 }
 
-// vectorP256 is the test vector of the P-256 suite (testdata/go-hpke-base-signed-p256.json, TestWriteVectorP256).
+// vectorP256 is the test vector of the P-256 suite (testdata/go-hpke-base-p256.json, TestWriteVectorP256).
 type vectorP256 struct {
 	CEKPKCS8       string          `json:"cek_pkcs8"`
 	CEKPub         string          `json:"cek_pub"`
@@ -106,12 +115,12 @@ type vectorP256 struct {
 	Description    string          `json:"description"`
 }
 
-const vectorP256Path = "testdata/go-hpke-base-signed-p256.json"
+const vectorP256Path = "testdata/go-hpke-base-p256.json"
 
 func TestOpenVectorP256(t *testing.T) {
 	raw, err := os.ReadFile(vectorP256Path)
 	if err != nil {
-		t.Skipf("no vector yet: %v", err)
+		t.Fatal(err)
 	}
 	var v vectorP256
 	if err := json.Unmarshal(raw, &v); err != nil {
@@ -135,7 +144,7 @@ func TestOpenVectorP256(t *testing.T) {
 		t.Fatal(err)
 	}
 	fresh := unhex(t, v.Freshness)
-	info := InfoSigned(v.Target, fresh)
+	info := InfoBase(v.Target, fresh)
 	if hex.EncodeToString(info) != v.Info {
 		t.Fatal("info differs")
 	}
@@ -146,8 +155,8 @@ func TestOpenVectorP256(t *testing.T) {
 	if hex.EncodeToString(ToBeSigned(v.Suite, cekPub, info, aad, b.Enc, b.Ciphertext)) != v.ToBeSigned {
 		t.Fatal("to-be-signed octets differ")
 	}
-	c, err := OpenSigned(&b, ExpectSigned{Target: v.Target, Handle: fresh, CredentialHint: v.CredentialHint,
-		CEK: cek, CEKPub: cekPub, VaultKey: pub.(*ecdsa.PublicKey)})
+	c, err := OpenBase(&b, ExpectBase{Target: v.Target, Handle: fresh, CredentialHint: v.CredentialHint,
+		CEK: cek, CEKPub: cekPub, VaultKey: pub.(*ecdsa.PublicKey), RequireOrigin: true})
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
@@ -173,18 +182,18 @@ func TestWriteVectorP256(t *testing.T) {
 	}
 	aad := AAD{GroupID: "a0f1c2d3e4f50617a0f1c2d3e4f50617a0f1c2d3e4f50617", Target: "https://ledger.tacra.example",
 		Handle: []byte("0123456789abcdef0123456789abcdef"), CredentialHint: "workload.tacra.example"}
-	b, err := SealSigned(vault, cekPub, aad, testContent())
+	b, err := SealBase(vault, cekPub, aad, testContent())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := OpenSigned(b, ExpectSigned{Target: aad.Target, Handle: aad.Handle, CredentialHint: aad.CredentialHint,
-		CEK: cek, CEKPub: cekPub, VaultKey: &vault.PublicKey}); err != nil {
+	if _, err := OpenBase(b, ExpectBase{Target: aad.Target, Handle: aad.Handle, CredentialHint: aad.CredentialHint,
+		CEK: cek, CEKPub: cekPub, VaultKey: &vault.PublicKey, RequireOrigin: true}); err != nil {
 		t.Fatal(err)
 	}
 	pkcs8, _ := x509.MarshalPKCS8PrivateKey(k)
 	spki, _ := x509.MarshalPKIXPublicKey(&vault.PublicKey)
 	vpkcs8, _ := x509.MarshalPKCS8PrivateKey(vault)
-	info := InfoSigned(aad.Target, aad.Handle)
+	info := InfoBase(aad.Target, aad.Handle)
 	aadBytes, _ := Canonical(aad)
 	pt, _ := Canonical(testContent())
 	braw, _ := json.Marshal(b)
@@ -193,10 +202,9 @@ func TestWriteVectorP256(t *testing.T) {
 		CredentialHint: aad.CredentialHint, Info: hex.EncodeToString(info), AAD: string(aadBytes),
 		ToBeSigned: hex.EncodeToString(ToBeSigned(b.Suite, cekPub, info, aadBytes, b.Enc, b.Ciphertext)), Bundle: braw,
 		Plaintext: string(pt), Suite: b.Suite,
-		Description: "hpke-base-signed with DHKEM(P-256, HKDF-SHA256), HKDF-SHA256 and AES-256-GCM: sealed and signed by this package on 28 October 2026"}
+		Description: "hpke-base container with DHKEM(P-256, HKDF-SHA256), HKDF-SHA256 and AES-256-GCM, its origin member signed by the test Vault key: sealed by this package on 29 October 2026; test keys"}
 	out, _ := json.MarshalIndent(v, "", "  ")
 	if err := os.WriteFile(vectorP256Path, append(out, '\n'), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	_ = hpke.AES256GCM
 }

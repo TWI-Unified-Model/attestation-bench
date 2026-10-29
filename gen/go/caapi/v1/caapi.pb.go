@@ -198,7 +198,7 @@ const (
 	EncryptionAlgorithm_ENCRYPTION_ALGORITHM_UNSPECIFIED EncryptionAlgorithm = 0
 	EncryptionAlgorithm_ENCRYPTION_ALGORITHM_ECDH_P256   EncryptionAlgorithm = 1
 	EncryptionAlgorithm_ENCRYPTION_ALGORITHM_RSA_2048    EncryptionAlgorithm = 2
-	// The hpke-base-signed container (the Secret Vault seals to it in HPKE base mode with
+	// The hpke-base container (the Secret Vault seals to it in HPKE base mode with
 	// MLKEM768-P256, HKDF-SHA256 and AES-256-GCM, and signs the result): CEKpub is the 1249-octet
 	// MLKEM768-P256 encapsulation key itself, not a SubjectPublicKeyInfo.
 	EncryptionAlgorithm_ENCRYPTION_ALGORITHM_MLKEM768_P256 EncryptionAlgorithm = 3

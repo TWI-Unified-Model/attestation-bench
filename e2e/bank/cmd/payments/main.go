@@ -56,7 +56,7 @@ type config struct {
 	} `json:"fraud"`
 	RelyingParties map[string]map[string]string `json:"relying_parties"` // Target -> mode -> RRP identifier held
 	VaultOrigins   map[string]map[string]string `json:"vault_origins"`
-	VaultSigners   map[string]string            `json:"vault_signers"` // RRP id -> signature key SPKI (base64url), hpke-base-signed
+	VaultSigners   map[string]string            `json:"vault_signers"` // RRP id -> signature key SPKI (base64url): the container's origin member required and verified under it
 	CAAnchors      map[string]string            `json:"ca_anchors"`    // RRP id -> the Credential Authority's certificates (PEM): tacra-est N15
 	LocalEpochHex  string                       `json:"local_epoch_hex"`
 }

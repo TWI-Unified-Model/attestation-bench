@@ -73,7 +73,7 @@ func main() {
 	// Target, while the guest's clock runs ahead (hwcheck/scripts/preplay.sh)
 	onlyKinds := flag.String("kinds", "", "comma-separated Freshness Kinds to make Evidence for (default: all five)")
 	onlyModes := flag.String("modes", "", "comma-separated modes, enroll and retrieve (default: both)")
-	// cekAlg is the CEK's algorithm for Retrieval: a Target that takes the hpke-base-signed container alone (the
+	// cekAlg is the CEK's algorithm for Retrieval: a Target that takes the hpke-base container alone (the
 	// bench's ledger-time) needs an MLKEM768-P256 CEK
 	cekAlg := flag.String("cek", "ecdh-p256", "the CEK for Retrieval: ecdh-p256 or mlkem768-p256")
 	tee := flag.String("tee", "sev-snp", "sev-snp or tdx")

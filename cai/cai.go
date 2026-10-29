@@ -98,8 +98,9 @@ type Client struct {
 	// be sealed with.
 	vaultOrigins map[string]map[string][]byte
 	// vaultSigners holds, per RRP identifier, the Secret Vault's ECDSA P-256 signature key (SubjectPublicKeyInfo
-	// DER) the hpke-base-signed container must be signed with: the trust anchor the CAI holds for the Target and
-	// Retrieval (draft-novak-lamps-tacra-est, Processing the Bundle, item 1).
+	// DER) the hpke-base container's origin member must be signed with: the trust anchor the CAI holds for the
+	// Target and Retrieval, and with it the Target's policy that the origin be authenticated
+	// (draft-novak-lamps-tacra-est, Response: EncryptedCredentialBundle).
 	vaultSigners map[string][]byte
 	// csrNamesHint makes the CSR name the Credential Hint instead of the
 	// Target, leaving the certificate's names to the CA's policy.
@@ -167,7 +168,7 @@ func WithVaultOrigin(rrpID, kem string, spki []byte) Option {
 }
 
 // WithVaultSigner provisions the Secret Vault's signature key for rrpID, as DER SubjectPublicKeyInfo: the key the
-// hpke-base-signed container must be signed with.
+// hpke-base container's origin member must be signed with, and, by holding it, the requirement that it be there.
 func WithVaultSigner(rrpID string, spki []byte) Option {
 	return func(c *Client) { c.vaultSigners[rrpID] = append([]byte(nil), spki...) }
 }
@@ -315,8 +316,8 @@ func (c *Client) retrieve(ctx context.Context, req AcquisitionRequest) (*Credent
 	}
 	var doc []byte
 	switch containerOf(resp.GetWrappedCredential()) {
-	case bundle.ContainerSigned:
-		doc, err = c.openSigned(resp.GetWrappedCredential(), cek.Private, cekPub, req, element)
+	case bundle.ContainerBase:
+		doc, err = c.openBase(resp.GetWrappedCredential(), cek.Private, cekPub, req, element)
 	case bundle.Container:
 		doc, err = c.openHPKEAuth(resp.GetWrappedCredential(), cek.Private, req, element)
 	default:

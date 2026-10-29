@@ -30,7 +30,7 @@ func freshnessElement(ev *platform.Evidence, handle []byte) []byte {
 	return handle
 }
 
-// containerOf names the container of a wrapped credential: bundle.ContainerSigned (hpke-base-signed),
+// containerOf names the container of a wrapped credential: bundle.ContainerBase (hpke-base),
 // bundle.Container (hpke-auth), or "" for the earlier wrapping that is not a JSON container.
 func containerOf(b []byte) string {
 	b = bytes.TrimSpace(b)
@@ -84,47 +84,50 @@ func (c *Client) openHPKEAuth(raw []byte, cekPriv crypto.PrivateKey, req Acquisi
 	return []byte(content.CredentialItems[0].Value), nil
 }
 
-// ErrNoVaultSigner is returned when the CAI holds no signature key for the Secret Vault that sealed a signed container.
+// ErrNoVaultSigner is returned when the key the CAI holds for the Secret Vault's signatures is not an ECDSA key.
 var ErrNoVaultSigner = errors.New("cai: no trust anchor for the Secret Vault's signature key")
 
-// SignedItemPolicy is what the CAI takes from a signed container (the bank profile; tacra-est decisions 5 and 6):
+// ItemPolicy is what the CAI takes from an hpke-base container (the bank profile; tacra-est decisions 5 and 6):
 // every item with its key-block attributes and not exportable, no private key shared among instances, and a
 // validity of at most 3600 s.
-var SignedItemPolicy = struct {
+var ItemPolicy = struct {
 	AcceptShared       bool
 	MaxValiditySeconds int
 }{false, 3600}
 
-// openSigned checks and opens an hpke-base-signed container: it must be signed by the key the CAI holds for the RRP
-// its Evidence bound, name that RRP, the Target, the freshness element and the hint, be sealed to this request's
-// CEK (MLKEM768-P256 or P-256, cekPub being CEKpub as the request carried it), and carry only items SignedItemPolicy
-// takes. The document returned is the first item's value.
-func (c *Client) openSigned(raw []byte, cekPriv crypto.PrivateKey, cekPub []byte, req AcquisitionRequest, element []byte) ([]byte, error) {
+// openBase checks and opens an hpke-base container: it must name the Target, the freshness element and the hint the
+// Evidence bound, be sealed to this request's CEK (MLKEM768-P256 or P-256, cekPub being CEKpub as the request carried
+// it), and carry only items ItemPolicy takes. The Target's policy on origin authentication is the key the CAI holds
+// for the RRP its Evidence bound: with a key, the container must carry the Secret Vault's signature under it; without
+// one, the container opens as it is, which is the EST draft's accepted risk (docs/attacks.md, section 6). The document
+// returned is the first item's value.
+func (c *Client) openBase(raw []byte, cekPriv crypto.PrivateKey, cekPub []byte, req AcquisitionRequest, element []byte) ([]byte, error) {
 	var b bundle.Bundle
 	if err := json.Unmarshal(raw, &b); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrUnwrap, err)
 	}
-	spki := c.vaultSigners[req.RelyingParty]
-	if spki == nil {
-		return nil, ErrNoVaultSigner
-	}
-	pub, err := x509.ParsePKIXPublicKey(spki)
-	vaultKey, ok := pub.(*ecdsa.PublicKey)
-	if err != nil || !ok {
-		return nil, fmt.Errorf("%w: the key held for %s is not an ECDSA public key", ErrNoVaultSigner, req.RelyingParty)
+	var vaultKey *ecdsa.PublicKey
+	if spki := c.vaultSigners[req.RelyingParty]; spki != nil {
+		pub, err := x509.ParsePKIXPublicKey(spki)
+		k, ok := pub.(*ecdsa.PublicKey)
+		if err != nil || !ok {
+			return nil, fmt.Errorf("%w: the key held for %s is not an ECDSA public key", ErrNoVaultSigner, req.RelyingParty)
+		}
+		vaultKey = k
 	}
 	cek, ok := cekPriv.(hpke.PrivateKey)
 	if !ok {
+		var err error
 		if cek, err = bundle.DHKEMPrivateKey(cekPriv); err != nil {
-			return nil, fmt.Errorf("%w: a signed container needs an MLKEM768-P256 or a P-256 CEK: %v", ErrUnwrap, err)
+			return nil, fmt.Errorf("%w: an hpke-base container needs an MLKEM768-P256 or a P-256 CEK: %v", ErrUnwrap, err)
 		}
 	}
-	content, err := bundle.OpenSigned(&b, bundle.ExpectSigned{Target: req.Target, Handle: element,
-		CredentialHint: req.Hint, CEK: cek, CEKPub: cekPub, VaultKey: vaultKey})
+	content, err := bundle.OpenBase(&b, bundle.ExpectBase{Target: req.Target, Handle: element,
+		CredentialHint: req.Hint, CEK: cek, CEKPub: cekPub, VaultKey: vaultKey, RequireOrigin: vaultKey != nil})
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrUnwrap, err)
 	}
-	if err := bundle.CheckItems(content, SignedItemPolicy.AcceptShared, SignedItemPolicy.MaxValiditySeconds); err != nil {
+	if err := bundle.CheckItems(content, ItemPolicy.AcceptShared, ItemPolicy.MaxValiditySeconds); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrUnwrap, err)
 	}
 	if len(content.CredentialItems) == 0 {

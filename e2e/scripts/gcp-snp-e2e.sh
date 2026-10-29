@@ -45,8 +45,18 @@ UNAPPROVED="${UNAPPROVED:-}"
 CONDUIT_ATTACK="${CONDUIT_ATTACK:-}"
 case "$CONDUIT_ATTACK" in "" | seal | swap | hint | hint-group | verifier | redirect) ;; *) bench_die "CONDUIT_ATTACK=$CONDUIT_ATTACK: seal, swap, hint, hint-group, verifier or redirect" ;; esac
 [ -z "$CONDUIT_ATTACK" ] || [ -z "$OTHER_PLATFORM$UNAPPROVED" ] || bench_die "CONDUIT_ATTACK runs on its own, without OTHER_PLATFORM or UNAPPROVED"
+ORIGIN_AUTH="${ORIGIN_AUTH:-on}" # off: the Vault's Targets release containers without origin authentication, and the
+case "$ORIGIN_AUTH" in on | off) ;; *) bench_die "ORIGIN_AUTH=$ORIGIN_AUTH: on or off" ;; esac # workload holds no Vault key
+if [ "$ORIGIN_AUTH" = off ]; then
+  python3 - "$B/config/vault-gateway.json" <<'PY' || bench_die "ORIGIN_AUTH=off: the trust zone's Secret Vault still signs: ORIGIN_AUTH=off make config && make start (and make config && make start to restore it)"
+import json, sys
+targets = json.load(open(sys.argv[1]))["targets"].values()
+sys.exit(0 if targets and all(t.get("sign") is False for t in targets) else 1)
+PY
+fi
 GUEST_ATTACK="" # the CAS Client is the attacker of the container drills; of verifier, the EST server is (bench.sh config)
 case "$CONDUIT_ATTACK" in seal | swap | hint | hint-group) GUEST_ATTACK=" -attack $CONDUIT_ATTACK" ;; esac
+[ "$ORIGIN_AUTH" = on ] || [ "$CONDUIT_ATTACK" != seal ] || GUEST_ATTACK="$GUEST_ATTACK -no-origin" # its container as the Vault's: unsigned
 if [ "$CONDUIT_ATTACK" = verifier ]; then
   # the EST server is the attacker of this drill: the trust zone has to be configured with it
   python3 - "$B/config/est-server.json" <<'PY' || bench_die "CONDUIT_ATTACK=verifier: the EST server is not configured as the attacking conduit: CONDUIT_ATTACK=verifier make config && make start (and make config && make start to put it back)"
@@ -61,7 +71,7 @@ EXPECT=(--expect admitted) # what the run must show (scripts/verdict.py)
 [ -z "$OTHER_PLATFORM" ] || EXPECT=(--expect refused --reason "none of the verifiers this RRP takes for the Target")
 [ -z "$UNAPPROVED" ] || EXPECT=(--expect refused --reason "ear: not affirming: SEVSNP is")
 RUNS_DIR="${RUNS_DIR:-$B/runs}"
-OUT="$RUNS_DIR/${STAMP}-gcp-${TEE}-e2e-${MODEL}${CAS_OUTSIDE:+-cas-outside}${OTHER_PLATFORM:+-other-platform}${UNAPPROVED:+-unapproved}${CONDUIT_ATTACK:+-conduit-$CONDUIT_ATTACK}${COPIES_OWN_KEYS:+-own-keys}"
+OUT="$RUNS_DIR/${STAMP}-gcp-${TEE}-e2e-${MODEL}${CAS_OUTSIDE:+-cas-outside}${OTHER_PLATFORM:+-other-platform}${UNAPPROVED:+-unapproved}${CONDUIT_ATTACK:+-conduit-$CONDUIT_ATTACK}${COPIES_OWN_KEYS:+-own-keys}$([ "$ORIGIN_AUTH" = on ] || echo -no-origin-auth)"
 BIN="$(mktemp -d)"
 mkdir -p "$OUT/bench-logs"
 if [ "$CONDUIT_ATTACK" = redirect ]; then
@@ -113,7 +123,7 @@ echo "== guest configuration (public material only)"
 # the Vault gateway takes callers with a certificate of the bench (mutual TLS): the operator's
 curl -sf --cacert "$B/tls/root.crt" --cert "$B/tls/clients/operator.crt" --key "$B/tls/clients/operator.key" https://127.0.0.1:9102/tacra/v1/origin-keys > "$BIN/origin-keys.json"
 cp "$B/tls/root.crt" "$BIN/bench-tls-root.crt"
-TEE="$TEE" B="$B" BIN="$BIN" TARGETS="${OTHER_PLATFORM:+other-platform}" python3 "$HERE/e2e/scripts/guest_config.py"
+TEE="$TEE" B="$B" BIN="$BIN" TARGETS="${OTHER_PLATFORM:+other-platform}" ORIGIN_AUTH="$ORIGIN_AUTH" python3 "$HERE/e2e/scripts/guest_config.py"
 cp "$BIN/e2e-attester.json" "$OUT/e2e-attester.json"
 
 if [ "$TEE" = tdx ]; then
@@ -221,7 +231,7 @@ tail -n +"$(( $(cat "$OUT/bench-logs/.verification.start") + 1 ))" "$VERAISON_DE
 rm -f "$OUT"/bench-logs/.*.start
 rc=0
 if [ -n "$CONDUIT_ATTACK" ]; then
-  python3 "$HERE/scripts/verdict.py" conduit "$OUT" --attack "$CONDUIT_ATTACK" --out "$OUT/verdict.txt" || rc=$?
+  python3 "$HERE/scripts/verdict.py" conduit "$OUT" --attack "$CONDUIT_ATTACK" --origin-auth "$ORIGIN_AUTH" --out "$OUT/verdict.txt" || rc=$?
 else
   python3 "$HERE/scripts/verdict.py" demo "$OUT" "${EXPECT[@]}" --out "$OUT/verdict.txt" || rc=$?
 fi

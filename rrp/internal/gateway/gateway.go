@@ -111,11 +111,19 @@ type Target struct {
 	MaxAgeS    int      `json:"max_age,omitempty"`    // absent-timestamp
 	SkewS      int      `json:"clock_skew,omitempty"` // absent-timestamp, future tolerance
 	Acceptable []string `json:"acceptable"`           // acceptable_csk (CA) or acceptable_cek (Vault)
+	// Sign (Secret Vault): whether the hpke-base container released for this Target carries the Vault's origin
+	// authentication, its signature (bundle.SealBase). Absent, it does. "sign": false is the EST draft's accepted
+	// risk: a container anyone who saw CEKpub could have sealed, for Attesters that hold no key for this Vault.
+	Sign *bool `json:"sign,omitempty"`
 	// Identities (Credential Authority), keyed by the identity's name, which the bound CSR's common name or the
 	// Credential Hint gives (ca-gateway assignIdentity); Groups (Secret Vault), keyed by Credential Hint.
 	Identities map[string]*Identity `json:"identities,omitempty"`
 	Groups     map[string]*Group    `json:"groups,omitempty"`
 }
+
+// Signs reports whether the Secret Vault signs the containers it releases for the Target: it does unless the Target
+// says "sign": false.
+func (t *Target) Signs() bool { return t.Sign == nil || *t.Sign }
 
 // Identity is what the Credential Authority may certify under one name, and for which launch measurements.
 type Identity struct {

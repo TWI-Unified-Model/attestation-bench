@@ -4,7 +4,7 @@
 hpke-base-signed container's trust anchor, from 01.10 on, so Retrieval on AWS failed (evidence
 20261006T160234Z-aws-sev-snp-e2e). Public material only: trust anchors, the Vault's public keys, the epoch marker.
 
-    TEE=sev-snp|tdx B=$BENCH_HOME BIN=<dir holding origin-keys.json> [TARGETS=all|other-platform] \
+    TEE=sev-snp|tdx B=$BENCH_HOME BIN=<dir holding origin-keys.json> [TARGETS=all|other-platform] [ORIGIN_AUTH=on|off] \
         python3 e2e/scripts/guest_config.py
 
 The Targets, the RRP identifiers and the workload's name come from the bench's pack (packs/tacra-bench/pack.json).
@@ -42,11 +42,14 @@ cfg = {
     "targets": targets,
     "relying_parties": rp,
     "vault_origins": {vault: {k: v for k, v in keys.items() if k.startswith("DHKEM")}},
-    # the hpke-base-signed container's trust anchor: the Vault's signature key, held for its RRP identifier
+    # the hpke-base container's trust anchor: the Vault's signature key, held for its RRP identifier, and with it the
+    # requirement that the container's origin member be there (ORIGIN_AUTH=off: neither, the EST draft's accepted risk)
     "vault_signers": {vault: keys["ECDSA-P256-SHA256"]},
     # tacra-est N15: the CA the CAI holds for Enrollment, the bench's step-ca intermediate (public)
     "ca_anchors": {ca: (B / "step" / "certs" / "intermediate_ca.crt").read_text()},
     "local_epoch_hex": (B / "epoch.hex").read_text().strip(),
     "rup": {"url": "https://localhost:19443", "anchor_pem": (B / "tls" / "root.crt").read_text()},
 }
+if os.environ.get("ORIGIN_AUTH", "on") == "off":
+    del cfg["vault_signers"]
 (BIN / "e2e-attester.json").write_text(json.dumps(cfg, indent=1))

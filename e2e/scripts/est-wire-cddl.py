@@ -5,14 +5,16 @@ A wire log is the EST server's (est-server.json, wire_log; a run keeps its part 
 object per exchange on an attest-* resource, the request and the response as they crossed the wire. The CDDL is the
 one of the wire format proposed for draft-novak-lamps-tacra-est in October 2026 (e2e/est-attest.cddl). Each message it
 defines is checked against its rule: the attest-initiate response, the attest-enroll and attest-retrieve requests, and
-the attest-retrieve response, the Secret Vault's container (since 28 October 2026, issue #15 of the draft). Of every message the
+the attest-retrieve response, the Secret Vault's container (since 28 October 2026, issue #15 of the draft; its origin
+member optional since 29 October, by the Target's policy). Of every message the
 media type is checked: its own (one for each message type: application/est-attest-initiate+json, -enroll+json,
 -retrieve+json and -bundle+json), application/pkcs7-mime for the enrollment's certificate, text/plain for a refusal.
 
 Before that, for the first message of each kind (each rule, Freshness Kind and mode), the check shows that the tool
 refuses what the CDDL must: the message without freshness_kind; with a member the CDDL does not define (rrp_id in a
 response, endorsements in a request); with a byte string in standard base64; with a handle where its kind takes none,
-or without one where it takes one; a response of one mode with the other mode's algorithms.
+or without one where it takes one; a response of one mode with the other mode's algorithms; a container whose origin
+member lacks its signature or names another algorithm, relabelled, or with a suite member the CDDL does not define.
 
     e2e/scripts/est-wire-cddl.py [--cddl CDDL] WIRE_LOG...
 
@@ -102,11 +104,18 @@ def messages(log):
 def altered(rule, message):
     """The message, altered in each way the CDDL must refuse for its rule, kind and mode: (what was done, message)."""
     if rule == BUNDLE:
-        m = dict(message)
-        del m["signature"]
-        yield "without a signature", m
-        yield "container relabelled", dict(message, container="hpke-auth")
+        origin = message.get("origin") or {
+            "alg": "ECDSA-P256-SHA256",
+            "signature": "AAAA",
+        }  # one of the container's own, or made up
+        yield "origin without its signature", dict(message, origin={"alg": origin["alg"]})
+        yield "origin of another algorithm", dict(message, origin=dict(origin, alg="ECDSA-P384-SHA384"))
+        yield "container relabelled", dict(message, container="hpke-base-signed")
         yield "suite relabelled", dict(message, suite=dict(message["suite"], kem="DHKEM(X25519, HKDF-SHA256)"))
+        yield (
+            "suite with sig, which the CDDL does not define",
+            dict(message, suite=dict(message["suite"], sig="ECDSA-P256-SHA256")),
+        )
         aad = dict(message["aad"])
         del aad["target"]
         yield "aad without target", dict(message, aad=aad)
@@ -130,6 +139,8 @@ def altered(rule, message):
         m = dict(message)
         m.pop("handle", None)
         yield "without a handle", m
+        if rule.startswith("attestation-"):
+            yield "with a 4-octet handle, under the 8 the profile sets", dict(message, handle="AAAAAA")
     else:
         yield "with a handle", dict(message, handle="AAAAAAAAAAA")
     if rule.startswith("attestation-"):

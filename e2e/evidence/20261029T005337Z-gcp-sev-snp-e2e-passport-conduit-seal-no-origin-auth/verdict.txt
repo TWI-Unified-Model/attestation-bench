@@ -1,0 +1,17 @@
+the conduit's drill: seal; it acted on 5 requests, for 5 Targets
+ok  https://db-nonce.tacra.example         x509
+ok  https://db-epoch.tacra.example         x509
+ok  https://db-lepoch.tacra.example        x509
+ok  https://db-time.tacra.example          x509
+ok  https://db-none.tacra.example          x509
+no  https://ledger-nonce.tacra.example     api-key
+    the conduit: returned its own hpke-base container, sealed to the Attester's CEKpub with the conduit's keys, without origin authentication, the Vault's associated d
+no  https://ledger-epoch.tacra.example     api-key
+    the conduit: returned its own hpke-base container, sealed to the Attester's CEKpub with the conduit's keys, without origin authentication, the Vault's associated d
+no  https://ledger-lepoch.tacra.example    api-key
+    the conduit: returned its own hpke-base container, sealed to the Attester's CEKpub with the conduit's keys, without origin authentication, the Vault's associated d
+no  https://ledger-time.tacra.example      api-key
+    the conduit: returned its own hpke-base container, sealed to the Attester's CEKpub with the conduit's keys, without origin authentication, the Vault's associated d
+no  https://ledger-none.tacra.example      api-key
+    the conduit: returned its own hpke-base container, sealed to the Attester's CEKpub with the conduit's keys, without origin authentication, the Vault's associated d
+VERDICT FAIL: https://ledger-nonce.tacra.example: the conduit's unsigned container, with no origin authentication required, not admitted: ; https://ledger-epoch.tacra.example: the conduit's unsigned container, with no origin authentication required, not admitted: ; https://ledger-lepoch.tacra.example: the conduit's unsigned container, with no origin authentication required, not admitted: ; https://ledger-time.tacra.example: the conduit's unsigned container, with no origin authentication required, not admitted: ; https://ledger-none.tacra.example: the conduit's unsigned container, with no origin authentication required, not admitted: 

@@ -33,6 +33,21 @@ What changed, newest first. Dates are UTC.
 
 ### Changed
 
+- **The container's origin authentication is the Target's policy (29 October 2026).** Issue #15 of the EST draft settled
+  the attest-retrieve container as HPKE in base mode under DHKEM(P-256, HKDF-SHA256), mandatory, or MLKEM768-P256,
+  recommended, and the group accepted the substitution of the container by the conduit as a risk, with the Secret
+  Vault's signature where a deployment wants it. The container is `hpke-base`; the Vault's ECDSA P-256 signature moved
+  from `suite.sig` and `signature` into an optional `origin` member (`alg`, `signature`), present where the Target
+  requires it, and absent for a Vault Target with `"sign": false`. The name of the algorithm among the signed octets is
+  the one the member carries, `ECDSA-P256-SHA256` (it was `ecdsa-p256-sha256`, which the text never said). The CAI's
+  policy is the key it holds: with the Vault's key for the RRP it requires and verifies the member, without one it opens
+  the container as it is. `ORIGIN_AUTH=off make config` configures the accepted risk and
+  `ORIGIN_AUTH=off CONDUIT_ATTACK=seal make demo` measures it (`caapi-est -no-origin`, `verdict.py conduit
+  --origin-auth off`). `e2e/est-attest.cddl` is the draft's, the checker expects the `origin` member and refuses the old
+  layout and a response Handle under 8 octets (the draft's issue #21: a `present-nonce` Handle is 8 to 64 octets, at least
+  64 bits of entropy, issued once), and `bundle/testdata/go-hpke-base{,-p256}.json` replace the `-signed` vectors. The
+  runs: [docs/verification.md](docs/verification.md).
+
 - **The signed container's second suite, for the draft's issue #15 (28 October 2026).** `bundle/signed.go` seals and signs
   under DHKEM(P-256, HKDF-SHA256) as well as under MLKEM768-P256, each with HKDF-SHA256 and AES-256-GCM: the suite follows
   the encoding of CEKpub (a P-256 SubjectPublicKeyInfo or the 1249-octet encapsulation key), the HPKE suite_id of the suite

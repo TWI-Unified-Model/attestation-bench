@@ -49,6 +49,7 @@ hwcheck/evidence included.
 """
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -520,6 +521,9 @@ def mtls(run):
 
 # the conduit's drills on the Retrieval container (caapi-est -attack) and the error each Retrieval it acted on must
 # end in: from the CAI's container checks (bundle), or the Vault's refusal (rrp/cmd/vault-gateway)
+# the key the seal drill's conduit puts in its own container (e2e/cmd/caapi-est), as the workload records a secret
+CONDUIT_KEY_SHA256 = hashlib.sha256(b"a key the conduit chose").hexdigest()
+
 CONDUIT = {
     "seal": ("not signed by the trusted Vault key", "not sealed by the trusted Vault key"),
     "swap": ("associated data does not name what the Evidence bound",),
@@ -587,7 +591,10 @@ def conduit_redirect(run):
     return lines, True, say
 
 
-def conduit(run, attack):
+def conduit(run, attack, origin_auth="on"):
+    """origin_auth off (ORIGIN_AUTH=off): the Vault released its containers without origin authentication and the workload
+    holds no Vault key, the EST draft's accepted risk; the seal drill's container is then admitted, which is the
+    measurement."""
     if attack == "redirect":
         return conduit_redirect(run)
     results = json.loads((run / "results.json").read_text())
@@ -620,6 +627,15 @@ def conduit(run, attack):
             if not r["ok"]:
                 bad.append(f"{r['target']}: the first Retrieval, given its own container, not admitted")
             continue
+        if attack == "seal" and origin_auth == "off":
+            # the accepted risk, measured: the CAI opens the conduit's container and holds the key the conduit chose
+            # (caapi-est, "a key the conduit chose"), presents it, and the honest relying party refuses it
+            if r.get("secret_sha256") != CONDUIT_KEY_SHA256 or r.get("rup_status") != 403 or r["ok"]:
+                bad.append(
+                    f"{r['target']}: expected the conduit's key taken and refused by the relying party, got "
+                    f"secret {str(r.get('secret_sha256'))[:12]}, rup {r.get('rup_status')}, {r.get('error', '')[:60]}"
+                )
+            continue
         if r["ok"] or r.get("secret_sha256"):
             bad.append(f"{r['target']}: a secret taken from what the conduit returned")
         elif not any(reason in r.get("error", "") for reason in CONDUIT[attack]):
@@ -633,7 +649,11 @@ def conduit(run, attack):
     others = len(results) - len(acts)
     refused = len(acts) - (attack == "swap")
     say = {
-        "seal": f"{refused} Retrievals given the conduit's own container, each refused by the CAI for its origin",
+        "seal": f"{refused} Retrievals given the conduit's own container, each refused by the CAI for its origin"
+        if origin_auth == "on"
+        else f"{refused} Retrievals given the conduit's own container, without origin authentication: the CAI, holding "
+        "no Vault key for the Target, opened each and took the key the conduit chose, and the relying party refused "
+        "that key, 403: the EST draft's accepted risk, measured",
         "swap": f"the first Retrieval admitted with its own container; {refused} given the container of the one "
         "before, each refused by the CAI for its associated data",
         "hint": f"{refused} Retrievals asked with the Credential Hint of a workload the Target serves no group to, "
@@ -652,7 +672,7 @@ JUDGES = {
     "redirect": lambda a: redirect(a.run),
     "bank-pay": lambda a: bank_pay(a.run, a.expect),
     "mtls": lambda a: mtls(a.run),
-    "conduit": lambda a: conduit(a.run, a.attack),
+    "conduit": lambda a: conduit(a.run, a.attack, a.origin_auth),
 }
 
 
@@ -670,6 +690,12 @@ def main(argv=None):
             p.add_argument("--expect", choices=("pay", "ordinary", "unapproved", "platform"), required=True)
         if kind == "conduit":
             p.add_argument("--attack", choices=tuple(CONDUIT), required=True)
+            p.add_argument(
+                "--origin-auth",
+                choices=("on", "off"),
+                default="on",
+                help="off: the run's Vault signed nothing and the workload held no Vault key (ORIGIN_AUTH=off)",
+            )
     args = parser.parse_args(argv)
     try:
         lines, ok, summary = JUDGES[args.kind](args)

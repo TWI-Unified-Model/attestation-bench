@@ -37,6 +37,7 @@ config() {
   case "${CONDUIT_ATTACK:-}" in verifier | redirect) flags+=(--conduit-attack "$CONDUIT_ATTACK") ;; esac
   if [ "${COPIES_OWN_KEYS:-}" = 1 ]; then flags+=(--copies-own-keys); fi
   if [ -n "${CEK_SUITE:-}" ]; then flags+=(--cek-suite "$CEK_SUITE"); fi
+  if [ -n "${ORIGIN_AUTH:-}" ]; then flags+=(--origin-auth "$ORIGIN_AUTH"); fi
   python3 "$HERE/scripts/trustzone.py" --home "$B" --veraison "$VERAISON_DEPLOYMENT" --pack "$PACK" "${flags[@]}"
   (cd "$HERE/rrp" && GOWORK=off go build -o "$BIN/ca-gateway" ./cmd/ca-gateway && GOWORK=off go build -o "$BIN/vault-gateway" ./cmd/vault-gateway \
     && GOWORK=off go build -o "$BIN/tdx-verifier" ./cmd/tdx-verifier)

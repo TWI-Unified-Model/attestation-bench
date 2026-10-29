@@ -102,14 +102,17 @@ with one setting: `RATS_MODEL=passport` or `background-check` ([getting-started.
 The verifier's signed result is an **EAR** (EAT Attestation Result): a JWT signed with ES256 that names the verdict
 per platform ("submodule": `SEVSNP` or `TDX`), the trustworthiness claims behind it, and the nonce. The RRP's checks are in `rrp/internal/ear`.
 
-## The signed container
+## The container and its origin member
 
-A released secret travels to the workload sealed to its CEK and signed by the Vault: HPKE in base mode and an ECDSA
-P-256 signature over the sealed container, which the workload checks against the Vault's key it holds for the Target
-(`bundle/`). Two suites: the ML-KEM-768 + P-256 hybrid key encapsulation (`MLKEM768-P256+HKDF-SHA256+AES-256-GCM`), the
-bank profile's and the one of every run before 28 October 2026, and DHKEM(P-256, HKDF-SHA256) with the same KDF and
-AEAD, which a Target names when it takes it. Only the TEE that generated the CEK can open the container, and only the
-Vault could have made it.
+A released secret travels to the workload sealed to its CEK: HPKE in base mode, the `hpke-base` container of the EST
+draft (`bundle/`). Two suites: DHKEM(P-256, HKDF-SHA256) with HKDF-SHA256 and AES-256-GCM
+(`DHKEM(P-256, HKDF-SHA256)+HKDF-SHA256+AES-256-GCM`), the draft's mandatory one, and the ML-KEM-768 + P-256 hybrid key
+encapsulation (`MLKEM768-P256+HKDF-SHA256+AES-256-GCM`), the draft's recommended one, the bank profile's and the one of
+every run before 28 October 2026. A Target names in `acceptable_cek` the suites it takes. Only the TEE that generated the
+CEK can open the container. Who sealed it is the Target's policy: where the workload holds the Vault's signature key for
+the Target, the container carries the Vault's ECDSA P-256 signature over the sealed container in its `origin` member and
+the workload opens nothing else; where it holds none, the container opens whoever sealed it, which the EST draft accepts
+as a risk (issue #15) and [docs/attacks.md](attacks.md), section 6, measures.
 
 ## Only real hardware
 
