@@ -36,7 +36,7 @@ func (k Kind) Valid() bool {
 	return false
 }
 
-// Refusals. Stale is answered 409 (the Attester retries attest-initiate); Malformed is answered 400.
+// Refusals. Both are answered 400 (the draft, Error Handling); on Stale the Attester retries attest-initiate.
 var (
 	ErrStale     = errors.New("fresh: freshness element is not valid now")
 	ErrMalformed = errors.New("fresh: freshness element does not fit the Freshness Kind")

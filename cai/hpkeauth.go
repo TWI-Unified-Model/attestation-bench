@@ -7,6 +7,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/hpke"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -81,7 +82,7 @@ func (c *Client) openHPKEAuth(raw []byte, cekPriv crypto.PrivateKey, req Acquisi
 	if len(content.CredentialItems) == 0 {
 		return nil, ErrEmptyCredential
 	}
-	return []byte(content.CredentialItems[0].Value), nil
+	return itemOctets(content.CredentialItems[0])
 }
 
 // ErrNoVaultSigner is returned when the key the CAI holds for the Secret Vault's signatures is not an ECDSA key.
@@ -133,5 +134,16 @@ func (c *Client) openBase(raw []byte, cekPriv crypto.PrivateKey, cekPub []byte, 
 	if len(content.CredentialItems) == 0 {
 		return nil, ErrEmptyCredential
 	}
-	return []byte(content.CredentialItems[0].Value), nil
+	return itemOctets(content.CredentialItems[0])
+}
+
+// itemOctets is the credential an item carries: its value is the unpadded base64url of the credential's octets, a DER
+// certificate, a DER PrivateKeyInfo, the key octets or the UTF-8 of a token (the EST draft, Response:
+// EncryptedCredentialBundle, 30 October 2026).
+func itemOctets(it bundle.Item) ([]byte, error) {
+	octets, err := base64.RawURLEncoding.DecodeString(it.Value)
+	if err != nil {
+		return nil, fmt.Errorf("%w: the item's value is not unpadded base64url: %v", ErrUnwrap, err)
+	}
+	return octets, nil
 }

@@ -23,6 +23,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -104,7 +105,8 @@ func (a *attack) container(target string, cekPub, raw []byte) ([]byte, error) {
 			return nil, err
 		}
 		no := false
-		content := bundle.Content{CredentialItems: []bundle.Item{{Type: "api-key", Value: "a key the conduit chose",
+		content := bundle.Content{CredentialItems: []bundle.Item{{Type: "api-key",
+			Value:   base64.RawURLEncoding.EncodeToString([]byte("a key the conduit chose")),
 			Purpose: []string{"authenticate"}, Algorithm: "opaque-bearer", Exportable: &no}},
 			Metadata: map[string]any{"validity_seconds": 3600}}
 		var own *bundle.Bundle

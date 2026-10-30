@@ -347,7 +347,10 @@ func (g *Gateway) target(name, credentialType string) (*Target, error) {
 		return nil, refuse(http.StatusForbidden, "unsupported-target", ErrPolicy)
 	}
 	if !slices.Contains(t.CredentialTypes, credentialType) {
-		return nil, refuse(http.StatusForbidden, "unsupported-credential-type", ErrPolicy)
+		// not an authorization matter: 406, the body naming the Credential Types served for the Target (the draft,
+		// Error Handling)
+		return nil, refuse(http.StatusNotAcceptable, "unsupported-credential-type",
+			fmt.Errorf("%w: served: %s", ErrPolicy, strings.Join(t.CredentialTypes, ", ")))
 	}
 	return t, nil
 }
@@ -389,9 +392,8 @@ func (g *Gateway) Check(req *SecondLeg, subject []byte) (*ear.Result, *Target, e
 	}
 	maxAge, skew := time.Duration(t.MaxAgeS)*time.Second, time.Duration(t.SkewS)*time.Second
 	if err := g.Fresh.Accept(req.FreshnessKind, req.Handle, req.Target, req.CredentialType, maxAge, skew); err != nil {
-		if errors.Is(err, fresh.ErrStale) {
-			return nil, nil, refuse(http.StatusConflict, "freshness", err)
-		}
+		// a Handle not issued, expired or used before, an epoch marker that moved, a stale timestamp: 400, as the draft
+		// says since 30 October 2026 (no 409)
 		return nil, nil, refuse(http.StatusBadRequest, "freshness", err)
 	}
 	bv := platform.BindingValue(req.Handle, req.Target, subject) // no identifier of any party (rats-tacra#20, 11 October 2026)
