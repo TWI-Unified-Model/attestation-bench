@@ -14,7 +14,9 @@ Before that, for the first message of each kind (each rule, Freshness Kind and m
 refuses what the CDDL must: the message without freshness_kind; with a member the CDDL does not define (rrp_id in a
 response, endorsements in a request); with a byte string in standard base64; with a handle where its kind takes none,
 or without one where it takes one; a response of one mode with the other mode's algorithms; a container whose origin
-member lacks its signature or names another algorithm, relabelled, or with a suite member the CDDL does not define.
+member lacks its signature or names another algorithm, relabelled, without its KEM, or with a suite member the CDDL does
+not define. The suite's names are open text since 31 October 2026 (TACRA names the mandatory suite and allows others), so a
+relabelled suite is the Attester's refusal, not the grammar's.
 
     e2e/scripts/est-wire-cddl.py [--cddl CDDL] WIRE_LOG...
 
@@ -111,7 +113,7 @@ def altered(rule, message):
         yield "origin without its signature", dict(message, origin={"alg": origin["alg"]})
         yield "origin of another algorithm", dict(message, origin=dict(origin, alg="ECDSA-P384-SHA384"))
         yield "container relabelled", dict(message, container="hpke-base-signed")
-        yield "suite relabelled", dict(message, suite=dict(message["suite"], kem="DHKEM(X25519, HKDF-SHA256)"))
+        yield "suite without its kem", dict(message, suite={k: v for k, v in message["suite"].items() if k != "kem"})
         yield (
             "suite with sig, which the CDDL does not define",
             dict(message, suite=dict(message["suite"], sig="ECDSA-P256-SHA256")),
