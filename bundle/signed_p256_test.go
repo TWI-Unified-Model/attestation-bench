@@ -33,7 +33,7 @@ func TestBaseP256RoundTripAndRefusals(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	aad := AAD{GroupID: "g1", Target: "https://ledger.tacra.example",
+	aad := AAD{GroupID: "g1", Target: B64("https://ledger.tacra.example"),
 		Handle: []byte("0123456789abcdef0123456789abcdef"), CredentialHint: "workload.tacra.example"}
 	b, err := SealBase(vault, cekPub, aad, testContent())
 	if err != nil {
@@ -45,7 +45,7 @@ func TestBaseP256RoundTripAndRefusals(t *testing.T) {
 	if len(b.Enc) != 65 {
 		t.Fatalf("enc is %d octets, want the 65 of an uncompressed P-256 point", len(b.Enc))
 	}
-	exp := ExpectBase{Target: aad.Target, Handle: aad.Handle, CredentialHint: aad.CredentialHint,
+	exp := ExpectBase{Target: string(aad.Target), Handle: aad.Handle, CredentialHint: aad.CredentialHint,
 		CEK: cek, CEKPub: cekPub, VaultKey: &vault.PublicKey, RequireOrigin: true}
 	c, err := OpenBase(b, exp)
 	if err != nil {
@@ -86,12 +86,12 @@ func TestBaseP256RoundTripAndRefusals(t *testing.T) {
 		}
 	}
 	// without a Vault key held, the unsigned container opens: the accepted risk
-	if _, err := OpenBase(unsigned, ExpectBase{Target: aad.Target, Handle: aad.Handle, CredentialHint: aad.CredentialHint,
+	if _, err := OpenBase(unsigned, ExpectBase{Target: string(aad.Target), Handle: aad.Handle, CredentialHint: aad.CredentialHint,
 		CEK: cek, CEKPub: cekPub}); err != nil {
 		t.Fatalf("no key held, unsigned container: %v", err)
 	}
 	// the hybrid still works beside it
-	if _, err := OpenBase(hb, ExpectBase{Target: aad.Target, Handle: aad.Handle, CredentialHint: aad.CredentialHint,
+	if _, err := OpenBase(hb, ExpectBase{Target: string(aad.Target), Handle: aad.Handle, CredentialHint: aad.CredentialHint,
 		CEK: hybrid, VaultKey: &vault.PublicKey, RequireOrigin: true}); err != nil {
 		t.Fatalf("hybrid bundle: %v", err)
 	}
@@ -180,25 +180,25 @@ func TestWriteVectorP256(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	aad := AAD{GroupID: "a0f1c2d3e4f50617a0f1c2d3e4f50617a0f1c2d3e4f50617", Target: "https://ledger.tacra.example",
+	aad := AAD{GroupID: "a0f1c2d3e4f50617a0f1c2d3e4f50617a0f1c2d3e4f50617", Target: B64("https://ledger.tacra.example"),
 		Handle: []byte("0123456789abcdef0123456789abcdef"), CredentialHint: "workload.tacra.example"}
 	b, err := SealBase(vault, cekPub, aad, testContent())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := OpenBase(b, ExpectBase{Target: aad.Target, Handle: aad.Handle, CredentialHint: aad.CredentialHint,
+	if _, err := OpenBase(b, ExpectBase{Target: string(aad.Target), Handle: aad.Handle, CredentialHint: aad.CredentialHint,
 		CEK: cek, CEKPub: cekPub, VaultKey: &vault.PublicKey, RequireOrigin: true}); err != nil {
 		t.Fatal(err)
 	}
 	pkcs8, _ := x509.MarshalPKCS8PrivateKey(k)
 	spki, _ := x509.MarshalPKIXPublicKey(&vault.PublicKey)
 	vpkcs8, _ := x509.MarshalPKCS8PrivateKey(vault)
-	info := InfoBase(aad.Target, aad.Handle)
+	info := InfoBase(string(aad.Target), aad.Handle)
 	aadBytes, _ := Canonical(aad)
 	pt, _ := Canonical(testContent())
 	braw, _ := json.Marshal(b)
 	v := vectorP256{CEKPKCS8: hex.EncodeToString(pkcs8), CEKPub: hex.EncodeToString(cekPub), VaultSPKI: hex.EncodeToString(spki),
-		VaultPKCS8: hex.EncodeToString(vpkcs8), Target: aad.Target, Freshness: hex.EncodeToString(aad.Handle),
+		VaultPKCS8: hex.EncodeToString(vpkcs8), Target: string(aad.Target), Freshness: hex.EncodeToString(aad.Handle),
 		CredentialHint: aad.CredentialHint, Info: hex.EncodeToString(info), AAD: string(aadBytes),
 		ToBeSigned: hex.EncodeToString(ToBeSigned(b.Suite, cekPub, info, aadBytes, b.Enc, b.Ciphertext)), Bundle: braw,
 		Plaintext: string(pt), Suite: b.Suite,

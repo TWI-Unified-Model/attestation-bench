@@ -209,7 +209,7 @@ func SealBase(signKey *ecdsa.PrivateKey, cekPub []byte, aad AAD, content Content
 		return nil, err
 	}
 	kdf, aead := kdfAEAD()
-	info := InfoBase(aad.Target, aad.Handle)
+	info := InfoBase(string(aad.Target), aad.Handle)
 	enc, snd, err := hpke.NewSender(pk, kdf, aead, info)
 	if err != nil {
 		return nil, err
@@ -272,7 +272,7 @@ func OpenBase(b *Bundle, exp ExpectBase) (*Content, error) {
 	if _, ok := SuiteID(b.Suite); !ok {
 		return nil, ErrContainer
 	}
-	if b.AAD.Target != exp.Target || !bytes.Equal(b.AAD.Handle, exp.Handle) || b.AAD.CredentialHint != exp.CredentialHint {
+	if !bytes.Equal(b.AAD.Target, []byte(exp.Target)) || !bytes.Equal(b.AAD.Handle, exp.Handle) || b.AAD.CredentialHint != exp.CredentialHint {
 		return nil, ErrAAD
 	}
 	info := InfoBase(exp.Target, exp.Handle)

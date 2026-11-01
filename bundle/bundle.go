@@ -62,7 +62,7 @@ func (b *B64) UnmarshalJSON(d []byte) error {
 // AAD is the associated data of the bundle.
 type AAD struct {
 	GroupID        string `json:"group_id"`
-	Target         string `json:"target"`
+	Target         B64    `json:"target"` // the Target octets, base64url on the wire (TACRA-02)
 	Handle         B64    `json:"handle,omitempty"`
 	CredentialHint string `json:"credential_hint,omitempty"`
 }
@@ -370,7 +370,7 @@ func Open(b *Bundle, cek *ecdh.PrivateKey, exp Expect) (*Content, error) {
 	if b.Container != Container || b.Suite.KDF != KDF || b.Suite.AEAD != AEAD {
 		return nil, ErrContainer
 	}
-	if b.AAD.Target != exp.Target || !bytes.Equal(b.AAD.Handle, exp.Handle) || b.AAD.CredentialHint != exp.CredentialHint {
+	if !bytes.Equal(b.AAD.Target, []byte(exp.Target)) || !bytes.Equal(b.AAD.Handle, exp.Handle) || b.AAD.CredentialHint != exp.CredentialHint {
 		return nil, ErrAAD
 	}
 	var kemID hpke.KEM

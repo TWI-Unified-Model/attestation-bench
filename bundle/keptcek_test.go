@@ -33,7 +33,7 @@ func keptContent(secret string) Content {
 }
 
 func keptAAD(target string) AAD {
-	return AAD{GroupID: "g", Target: target, Handle: keptEpoch}
+	return AAD{GroupID: "g", Target: B64(target), Handle: keptEpoch}
 }
 
 func TestAuthContainerNewCEKForEachRetrieval(t *testing.T) {
@@ -53,7 +53,7 @@ func TestAuthContainerNewCEKForEachRetrieval(t *testing.T) {
 		t.Fatal(err)
 	}
 	// B's CAI, comparing nothing: it takes the RRP identifier, Target and Handle the container itself names
-	_, err = Open(a, cekB, Expect{Target: a.AAD.Target, Handle: a.AAD.Handle, VaultSPKI: anchor})
+	_, err = Open(a, cekB, Expect{Target: string(a.AAD.Target), Handle: a.AAD.Handle, VaultSPKI: anchor})
 	if !errors.Is(err, ErrOrigin) {
 		t.Fatalf("A's container opened with B's CEK: %v, want %v", err, ErrOrigin)
 	}
@@ -80,7 +80,7 @@ func TestAuthContainerKeptCEKOnlyTheTargetCheck(t *testing.T) {
 	}
 	// without the Target check, the HPKE info (RRP identifier and Handle, the same for both) lets it open
 	noTarget := expectDB
-	noTarget.Target = a.AAD.Target
+	noTarget.Target = string(a.AAD.Target)
 	c, err := Open(a, cek, noTarget)
 	if err != nil || c.CredentialItems[0].Value != "the ledger's key" {
 		t.Fatalf("without the Target check: %v; this test shows that the Target check is the one that refuses", err)

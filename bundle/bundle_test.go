@@ -15,7 +15,7 @@ func TestP256RoundTrip(t *testing.T) {
 	cekSPKI, _ := x509.MarshalPKIXPublicKey(&k.PublicKey)
 	cek, _ := k.ECDH()
 	vaultSPKI, _ := sender.PublicSPKI(KEMP256)
-	aad := AAD{GroupID: "g", Target: "https://ledger.tacra.example"}
+	aad := AAD{GroupID: "g", Target: B64("https://ledger.tacra.example")}
 	b, err := Seal(sender, cekSPKI, aad, Content{CredentialItems: []Item{{Type: "psk", Value: "s"}}})
 	if err != nil {
 		t.Fatal(err)
@@ -23,14 +23,14 @@ func TestP256RoundTrip(t *testing.T) {
 	if b.Suite.KEM != KEMP256 {
 		t.Fatalf("suite %s", b.Suite.KEM)
 	}
-	c, err := Open(b, cek, Expect{Target: aad.Target, VaultSPKI: vaultSPKI})
+	c, err := Open(b, cek, Expect{Target: string(aad.Target), VaultSPKI: vaultSPKI})
 	if err != nil || c.CredentialItems[0].Value != "s" {
 		t.Fatalf("%v %+v", err, c)
 	}
 	// a container sealed by someone else who saw CEKpub is refused
 	intruder, _ := GenerateSenderKeys()
 	forged, _ := Seal(intruder, cekSPKI, aad, Content{CredentialItems: []Item{{Type: "psk", Value: "x"}}})
-	if _, err := Open(forged, cek, Expect{Target: aad.Target, VaultSPKI: vaultSPKI}); !errors.Is(err, ErrOrigin) {
+	if _, err := Open(forged, cek, Expect{Target: string(aad.Target), VaultSPKI: vaultSPKI}); !errors.Is(err, ErrOrigin) {
 		t.Fatalf("container from another sender: %v", err)
 	}
 }

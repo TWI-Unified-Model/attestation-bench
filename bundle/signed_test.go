@@ -40,7 +40,7 @@ func TestBaseRoundTripAndRefusals(t *testing.T) {
 	if len(cekPub) != 1249 {
 		t.Fatalf("CEKpub is %d octets, want 1249", len(cekPub))
 	}
-	aad := AAD{GroupID: "g1", Target: "https://ledger.tacra.example",
+	aad := AAD{GroupID: "g1", Target: B64("https://ledger.tacra.example"),
 		Handle: []byte("0123456789abcdef0123456789abcdef"), CredentialHint: "workload.tacra.example"}
 	b, err := SealBase(vault, cekPub, aad, testContent())
 	if err != nil {
@@ -49,7 +49,7 @@ func TestBaseRoundTripAndRefusals(t *testing.T) {
 	if b.Container != ContainerBase || b.Origin == nil || b.Origin.Alg != OriginAlg {
 		t.Fatalf("the Vault's container: %s, origin %+v", b.Container, b.Origin)
 	}
-	exp := ExpectBase{Target: aad.Target, Handle: aad.Handle, CredentialHint: aad.CredentialHint,
+	exp := ExpectBase{Target: string(aad.Target), Handle: aad.Handle, CredentialHint: aad.CredentialHint,
 		CEK: cek, VaultKey: &vault.PublicKey, RequireOrigin: true}
 	c, err := OpenBase(b, exp)
 	if err != nil {
@@ -97,7 +97,7 @@ func TestBaseRoundTripAndRefusals(t *testing.T) {
 	}
 	// the accepted risk: an Attester that holds no Vault key for the Target, and so requires no origin, opens a
 	// container as it is, whoever sealed it
-	relaxed := ExpectBase{Target: aad.Target, Handle: aad.Handle, CredentialHint: aad.CredentialHint, CEK: cek}
+	relaxed := ExpectBase{Target: string(aad.Target), Handle: aad.Handle, CredentialHint: aad.CredentialHint, CEK: cek}
 	for name, x := range map[string]*Bundle{"the Vault's unsigned container": unsigned, "the Vault's signed container": b,
 		"a container signed by another key": forged} {
 		if _, err := OpenBase(x, relaxed); err != nil {
@@ -105,7 +105,7 @@ func TestBaseRoundTripAndRefusals(t *testing.T) {
 		}
 	}
 	// a key held is used on every origin member, whether or not one is required
-	held := ExpectBase{Target: aad.Target, Handle: aad.Handle, CredentialHint: aad.CredentialHint, CEK: cek, VaultKey: &vault.PublicKey}
+	held := ExpectBase{Target: string(aad.Target), Handle: aad.Handle, CredentialHint: aad.CredentialHint, CEK: cek, VaultKey: &vault.PublicKey}
 	if _, err := OpenBase(forged, held); !errors.Is(err, ErrSignature) {
 		t.Errorf("key held, not required, signed by another key: %v, want %v", err, ErrSignature)
 	}
@@ -234,7 +234,7 @@ func TestWriteVector(t *testing.T) {
 	}
 	fresh := make([]byte, 32)
 	rand.Read(fresh)
-	aad := AAD{GroupID: "1111111111111111111111111111111111111111111111111111111111111111", Target: "https://ledger.tacra.example", Handle: fresh, CredentialHint: "workload.tacra.example"}
+	aad := AAD{GroupID: "1111111111111111111111111111111111111111111111111111111111111111", Target: B64("https://ledger.tacra.example"), Handle: fresh, CredentialHint: "workload.tacra.example"}
 	content := testContent()
 	b, err := SealBase(vault, cekPub, aad, content)
 	if err != nil {
@@ -243,13 +243,13 @@ func TestWriteVector(t *testing.T) {
 	seed, _ := cek.Bytes()
 	spki, _ := x509.MarshalPKIXPublicKey(&vault.PublicKey)
 	pkcs8, _ := x509.MarshalPKCS8PrivateKey(vault)
-	info := InfoBase(aad.Target, fresh)
+	info := InfoBase(string(aad.Target), fresh)
 	aadBytes, _ := Canonical(aad)
 	pt, _ := Canonical(content)
 	braw, _ := json.Marshal(b)
 	out, _ := json.MarshalIndent(vector{Description: "hpke-base container with MLKEM768-P256, HKDF-SHA256 and AES-256-GCM, its origin member signed by the test Vault key: sealed by TWI bundle.SealBase (Go crypto/hpke) on 29 October 2026; test keys",
 		Suite: SuiteMLKEM768P256, CEKSeed: hex.EncodeToString(seed), CEKPub: hex.EncodeToString(cekPub), VaultSPKI: hex.EncodeToString(spki),
-		VaultPKCS8: hex.EncodeToString(pkcs8), Target: aad.Target, Freshness: hex.EncodeToString(fresh),
+		VaultPKCS8: hex.EncodeToString(pkcs8), Target: string(aad.Target), Freshness: hex.EncodeToString(fresh),
 		CredentialHint: aad.CredentialHint, Info: hex.EncodeToString(info), AAD: string(aadBytes),
 		ToBeSigned: hex.EncodeToString(ToBeSigned(SuiteMLKEM768P256, cekPub, info, aadBytes, b.Enc, b.Ciphertext)), Bundle: braw,
 		Plaintext: string(pt)}, "", " ")
