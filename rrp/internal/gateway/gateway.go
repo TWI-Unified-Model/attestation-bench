@@ -315,6 +315,7 @@ var (
 type InitiateRequest struct {
 	Target         string `json:"target"`
 	CredentialType string `json:"credential_type"`
+	CredentialHint string `json:"credential_hint,omitempty"` // the Credential Hint named at attest-initiate, forwarded by the EST Server; not correlated here
 }
 
 // InitiateResponse carries the fields of the AttestationInitiationResponse this RRP originates.

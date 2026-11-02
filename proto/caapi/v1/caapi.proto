@@ -74,6 +74,10 @@ message InitiateCredentialAcquistionRequest {
 
     // Which credential type does the workload with to use?
     CredentialType credential_type = 2;
+
+    // The Credential Hint of Initiate-Credential-Acquisition (TACRA 5.1), optional: a
+    // present-nonce second leg must repeat a hint named here (the EST profile, 2 November 2026).
+    string credential_hint = 3;
 }
 
 message InitiateCredentialAcquisitionResponse {

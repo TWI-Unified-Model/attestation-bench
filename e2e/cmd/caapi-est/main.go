@@ -192,7 +192,7 @@ func (b *bridge) InitiateRemoteAttestation(ctx context.Context, in *caapiv1.Init
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "unsupported Credential Type")
 	}
-	r, err := b.est.InitiateRemoteAttestation(ctx, in.GetTarget(), ct)
+	r, err := b.est.InitiateRemoteAttestation(ctx, in.GetTarget(), ct, in.GetCredentialHint())
 	if err != nil {
 		return nil, grpcError(err)
 	}

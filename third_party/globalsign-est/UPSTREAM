@@ -9,9 +9,14 @@
 # `make check` that no program the bench builds links a mock (the EST tree: 2 programs, none does).
 # The tests of cmd/estserver, internal/refvectors and internal/tacra are ours, merged with the pull requests: scripts/test.sh
 # runs them (TESTS_OURS_IN_UPSTREAM), with the test files patch 0001 adds, and no other test of the tree.
+# Moved on 2 November 2026 to the fork's branch mock-bundle-origin at e489716 (pull request #8, open): the container as
+# TACRA-02 specifies it (label tacra hpke-base v1, aad target base64url of the Target octets), a Credential Type the
+# Relying Party does not serve refused with 403 and a token the profile does not define with 400, the Handle correlation
+# of the EST profile after 2 November (a Credential Type or Hint attest-initiate named must come back on the present-nonce
+# second leg, one it omitted may be named), and credential_hint on attest-initiate. Patch 0001 applies unchanged.
 NAME=globalsign-est
 REPO=https://github.com/TWI-Unified-Model/globalsign-est.git
-BASE=623c19764b16fa697523a6d116b4b9bc65b24e82   # master: Merge pull request #6 from TWI-Unified-Model/x509-retrieval, 2026-10-13
+BASE=e4897163a55d80e9d01cbb8d4b2d9271d1f6bcdd   # mock-bundle-origin (pull request #8): attest-initiate takes credential_hint, 2026-11-02
 LICENSE=MIT
-VARIANTS="src:1:86de667a4abf7c7ecba3946ebf819d973da05b18"
+VARIANTS="src:1:4ef464f810d9a84daf1bdc181446fb85c23a3f17"
 TESTS_OURS_IN_UPSTREAM="cmd/estserver internal/refvectors internal/tacra"

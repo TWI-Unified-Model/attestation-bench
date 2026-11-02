@@ -221,6 +221,7 @@ func (c *Client) AcquireCredential(ctx context.Context, target string, credType 
 	initResp, err := c.caapi.InitiateRemoteAttestation(ctx, &caapiv1.InitiateCredentialAcquistionRequest{
 		Target:         target,
 		CredentialType: credType,
+		CredentialHint: credHint,
 	})
 	if err != nil {
 		return nil, rpcError("InitiateRemoteAttestation", err)
