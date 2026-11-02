@@ -347,9 +347,10 @@ func (g *Gateway) target(name, credentialType string) (*Target, error) {
 		return nil, refuse(http.StatusForbidden, "unsupported-target", ErrPolicy)
 	}
 	if !slices.Contains(t.CredentialTypes, credentialType) {
-		// not an authorization matter: 406, the body naming the Credential Types served for the Target (the draft,
-		// Error Handling)
-		return nil, refuse(http.StatusNotAcceptable, "unsupported-credential-type",
+		// a Credential Type this Relying Party does not serve for the Target: 403, the body naming the ones it serves
+		// (the EST profile after 2 November, Error Handling); a token the profile does not define never reaches the RRP,
+		// the EST Server refuses it with 400
+		return nil, refuse(http.StatusForbidden, "unsupported-credential-type",
 			fmt.Errorf("%w: served: %s", ErrPolicy, strings.Join(t.CredentialTypes, ", ")))
 	}
 	return t, nil
