@@ -1,0 +1,17 @@
+the conduit's drill: seal; it acted on 5 requests, for 5 Targets
+ok  https://db-nonce.tacra.example         x509
+ok  https://db-epoch.tacra.example         x509
+ok  https://db-lepoch.tacra.example        x509
+ok  https://db-time.tacra.example          x509
+ok  https://db-none.tacra.example          x509
+no  https://ledger-nonce.tacra.example     api-key
+    the conduit: returned its own hpke-base container, sealed to the Attester's CEKpub with the conduit's keys, without origin authentication, the Vault's associated d
+no  https://ledger-epoch.tacra.example     api-key
+    the conduit: returned its own hpke-base container, sealed to the Attester's CEKpub with the conduit's keys, without origin authentication, the Vault's associated d
+no  https://ledger-lepoch.tacra.example    api-key
+    the conduit: returned its own hpke-base container, sealed to the Attester's CEKpub with the conduit's keys, without origin authentication, the Vault's associated d
+no  https://ledger-time.tacra.example      api-key
+    the conduit: returned its own hpke-base container, sealed to the Attester's CEKpub with the conduit's keys, without origin authentication, the Vault's associated d
+no  https://ledger-none.tacra.example      api-key
+    the conduit: returned its own hpke-base container, sealed to the Attester's CEKpub with the conduit's keys, without origin authentication, the Vault's associated d
+VERDICT PASS: 5 Retrievals given the conduit's own container, without origin authentication: the CAI, holding no Vault key for the Target, opened each and took the key the conduit chose, and the relying party refused that key, 403: the EST draft's accepted risk, measured; the 5 other Targets admitted
