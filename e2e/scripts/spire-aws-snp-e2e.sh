@@ -133,6 +133,18 @@ plugins {{
 PY
 cp "$S/server.conf" "$OUT/config/server.conf"
 cp "$S/platform-rule.json" "$OUT/config/platform-rule.json"
+# the vault's origin authentication: when its Targets sign their containers, the guest holds the vault's signature
+# key (public, from the vault's origin-keys resource) and requires the signature; the record keeps which
+ORIGIN_AUTH="$(python3 -c "import json,sys; v=json.load(open(sys.argv[1])); print('off' if v['targets']['https://ledger-nonce.tacra.example'].get('sign') is False else 'on')" "$B/config/vault-gateway.json")"
+VAULT_MODEL="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('rats_model') or 'passport')" "$B/config/vault-gateway.json")"
+echo "vault rats_model=$VAULT_MODEL origin_auth=$ORIGIN_AUTH" | tee "$OUT/config/vault-mode.txt"
+if [ "$ORIGIN_AUTH" = on ]; then
+  curl -sf --cacert "$B/tls/root.crt" --cert "$B/tls/clients/operator.crt" --key "$B/tls/clients/operator.key" https://127.0.0.1:9102/tacra/v1/origin-keys \
+    | python3 -c "import json,sys,base64; k=json.load(sys.stdin)['ECDSA-P256-SHA256']; der=base64.urlsafe_b64decode(k+'='*(-len(k)%4)); b=base64.b64encode(der).decode(); print('-----BEGIN PUBLIC KEY-----'); print('\\n'.join(b[i:i+64] for i in range(0,len(b),64))); print('-----END PUBLIC KEY-----')" > "$BIN/vault-origin.pem"
+  cp "$BIN/vault-origin.pem" "$OUT/config/vault-origin.pem"
+else
+  : > "$BIN/vault-origin.pem"
+fi
 wc -l < "$B/vault-gateway.log" > "$OUT/bench-logs/.vault-gateway.start"
 python3 -c "import json,sys; ca=json.load(open(sys.argv[1])); print(json.dumps(sorted({m for t in ca['targets'].values() for i in t.get('identities',{}).values() for m in i.get('measurements',[])}), indent=1))" "$B/config/ca-gateway.json" > "$OUT/approved-measurements.json"
 
@@ -233,7 +245,7 @@ mountpoint -q /sys/kernel/config || sudo mount -t configfs none /sys/kernel/conf
 ls -ld /sys/kernel/config/tsm/report; uname -r' 2>>"$OUT/ssh.stderr" | tee "$OUT/provision.txt"
 
 echo "== copy the agent, the workload and the public configuration"
-bench_retry "$OUT/ssh.stderr" scp "${SSHO[@]}" "$BIN/spire-agent" "$BIN/attested-workload" "$BIN/agent.conf" "$BIN/bundle.pem" \
+bench_retry "$OUT/ssh.stderr" scp "${SSHO[@]}" "$BIN/spire-agent" "$BIN/attested-workload" "$BIN/agent.conf" "$BIN/bundle.pem" "$BIN/vault-origin.pem" \
   "$HERE/hwcheck/scripts/guest-clock.sh" "ubuntu@$IP:~/" >/dev/null
 
 echo "== reverse tunnel to the server (8081)"
@@ -271,7 +283,8 @@ mkdir -p "$H/out" "$H/out-retrieve"
 if [ "$rc" = 0 ]; then
   sleep 3
   sudo "$H/attested-workload" -target '"$TARGET"' -tee '"$TEE"' -hint internal -out "$H/out" 2>&1 | tee "$H/out/stdout.txt" || rc=$?
-  sudo "$H/attested-workload" -target https://ledger-nonce.tacra.example -credentialType api-key -tee '"$TEE"' -hint payments.workload.tacra.example -out "$H/out-retrieve" 2>&1 | tee "$H/out-retrieve/stdout.txt" || rc=$?
+  ORIGIN=""; [ -s "$H/vault-origin.pem" ] && ORIGIN="-vaultOriginKey $H/vault-origin.pem"
+  sudo "$H/attested-workload" -target https://ledger-nonce.tacra.example -credentialType api-key -tee '"$TEE"' -hint payments.workload.tacra.example $ORIGIN -out "$H/out-retrieve" 2>&1 | tee "$H/out-retrieve/stdout.txt" || rc=$?
 fi
 sudo chown -R "$(id -u):$(id -g)" "$H/out" "$H/out-retrieve"
 sudo rm -f "$H/out/svid.key" "$H/out-retrieve/credential.secret"
@@ -334,6 +347,9 @@ checks = {
     "retrieve: server audited the retrieval": any("status=success" in l for l in audit_r),
     "retrieve: the Secret Vault released for the Target": "released: target=https://ledger-nonce.tacra.example" in vault,
 }
+mode = open(f"{out}/config/vault-mode.txt").read().strip() if os.path.exists(f"{out}/config/vault-mode.txt") else ""
+if "origin_auth=on" in mode:
+    checks["retrieve: the container's origin signature verified under the vault's key"] = rr.get("origin_verified") is True
 for k, v in checks.items():
     print(("ADMITTED  " if v else "REFUSED   ") + k)
 print()
@@ -341,7 +357,7 @@ print(f"enroll: spiffe_id={r.get('spiffe_id')} serial={r.get('cert_serial')} not
 print(f"enroll: measurement={m} report_version={r.get('report_version')} signer={r.get('report_signer')} waived={r.get('waived','')}")
 print(f"enroll: initiate_ms={r.get('initiate_ms')} enroll_ms={r.get('enroll_ms')} evidence_bytes={r.get('evidence_bytes')}")
 print(f"retrieve: item={rr.get('item_type')}/{rr.get('item_kid')} suite={rr.get('suite')} secret_bytes={rr.get('secret_bytes')} secret_sha256={rr.get('secret_sha256')} group={str(rr.get('group_id'))[:16]}…")
-print(f"retrieve: initiate_ms={rr.get('initiate_ms')} retrieve_ms={rr.get('retrieve_ms')} cek_pub_bytes={rr.get('cek_pub_bytes')} origin_verified={rr.get('origin_verified')}")
+print(f"retrieve: initiate_ms={rr.get('initiate_ms')} retrieve_ms={rr.get('retrieve_ms')} cek_pub_bytes={rr.get('cek_pub_bytes')} origin_verified={rr.get('origin_verified')} vault: {mode}")
 for name, x in (("enroll", r), ("retrieve", rr)):
     if x.get("error"): print(f"{name} error:", x["error"])
 sys.exit(0 if all(checks.values()) else 1)
