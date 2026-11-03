@@ -36,3 +36,17 @@ condition = "AND"
 regexTarget = "match"
 regexes = ['''^[A-Za-z0-9._~/-]+ v[0-9A-Za-z.+-]+(/go\.mod)? h1:[A-Za-z0-9+/]{43}=$''']
 paths = ['''(^|/)third_party/[^/]+/patches/[^/]+\.patch$''']
+
+[[allowlists]]
+description = "the SPIRE runs' record of the forks' commits: the 40-hex commit hash of spire-api-sdk after the module's name, which carries the word api; a commit, not a key"
+condition = "AND"
+regexTarget = "line"
+regexes = ['''spire-api-sdk: [0-9a-f]{40} ''']
+paths = ['''(^|/)e2e/evidence/[^/]+-spire-[^/]+/spire-source\.txt$''']
+
+[[allowlists]]
+description = "SPIRE Server's log lines: request_id is the UUID the server gives each RPC, beside method names and node attestor types that name tokens and credentials; an identifier, not a credential"
+condition = "AND"
+regexTarget = "line"
+regexes = ['''request_id=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}''']
+paths = ['''(^|/)e2e/evidence/[^/]+-spire-[^/]+/server\.log$''']
