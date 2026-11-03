@@ -61,7 +61,10 @@ verifiers = {v["name"]: v for v in ca["verifiers"]}
 name = "veraison" if tee == "sev-snp" else "tdx"
 v = verifiers[name]
 measurements = sorted({m for t in ca["targets"].values() for i in t.get("identities", {}).values() for m in i.get("measurements", [])})
+est = json.load(open(f"{B}/config/est-server.json"))["tacra"]   # the conduit's client certificate: the Vault takes it
+vault = json.load(open(f"{B}/config/vault-gateway.json"))          # its RATS model: who asks the verifier for a Retrieval
 q = lambda s: json.dumps(s)
+json.dump(ca["platform"], open(f"{S}/platform-rule.json", "w"), indent=1)
 print(f'''server {{
     bind_address = "127.0.0.1"
     bind_port = "8081"
@@ -95,6 +98,19 @@ print(f'''server {{
                 acceptable_csk = ["ecdsa-p256-sha256"]
                 measurements = {json.dumps(measurements)}
             }}
+            target "https://ledger-nonce.tacra.example" {{
+                mode = "retrieve"
+                credential_types = ["api-key", "x509"]
+                rats_model = {q(vault.get("rats_model") or "passport")}
+                verifiers = [{q(name)}]
+            }}
+            secret_vault {{
+                url = "https://127.0.0.1:9102"
+                ca_path = {q(B + "/tls/root.crt")}
+                client_cert_path = {q(est["client_cert"])}
+                client_key_path = {q(est["client_key"])}
+            }}
+            platform_rule_path = {q(S + "/platform-rule.json")}
         }}
     }}
 }}
@@ -115,6 +131,8 @@ plugins {{
 ''')
 PY
 cp "$S/server.conf" "$OUT/config/server.conf"
+cp "$S/platform-rule.json" "$OUT/config/platform-rule.json"
+wc -l < "$B/vault-gateway.log" > "$OUT/bench-logs/.vault-gateway.start"
 python3 -c "import json,sys; ca=json.load(open(sys.argv[1])); print(json.dumps(sorted({m for t in ca['targets'].values() for i in t.get('identities',{}).values() for m in i.get('measurements',[])}), indent=1))" "$B/config/ca-gateway.json" > "$OUT/approved-measurements.json"
 
 wc -l < "$VERAISON_DEPLOYMENT/logs/vts.log" > "$OUT/bench-logs/.vts.start"
@@ -228,32 +246,34 @@ sudo bash -c "nohup $H/spire-agent run -config /root/spire-agent/agent.conf -joi
 for _ in $(seq 1 60); do sudo test -S /tmp/spire-agent/public/api.sock && break; sleep 1; done
 rc=0
 sudo "$H/spire-agent" healthcheck -socketPath /tmp/spire-agent/public/api.sock || rc=$?
-mkdir -p "$H/out"
+mkdir -p "$H/out" "$H/out-retrieve"
 if [ "$rc" = 0 ]; then
   sleep 3
   sudo "$H/attested-workload" -target '"$TARGET"' -tee '"$TEE"' -hint internal -out "$H/out" 2>&1 | tee "$H/out/stdout.txt" || rc=$?
+  sudo "$H/attested-workload" -target https://ledger-nonce.tacra.example -credentialType api-key -tee '"$TEE"' -hint payments.workload.tacra.example -out "$H/out-retrieve" 2>&1 | tee "$H/out-retrieve/stdout.txt" || rc=$?
 fi
-sudo chown -R "$(id -u):$(id -g)" "$H/out"
-sudo rm -f "$H/out/svid.key"
+sudo chown -R "$(id -u):$(id -g)" "$H/out" "$H/out-retrieve"
+sudo rm -f "$H/out/svid.key" "$H/out-retrieve/credential.secret"
 uname -a > "$H/kernel.txt"
 sudo bash "$H/guest-clock.sh" "$H" && sudo chown "$(id -u):$(id -g)" "$H/clock.txt"
 (curl -s -H Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/machine-type > "$H/machine-type.txt" || true)
 sudo pkill -f "spire-agent run" || true
 sleep 1
 for f in agent.log agent.stdout; do sudo cp "/root/spire-agent/$f" "$H/$f" 2>/dev/null && sudo chown "$(id -u):$(id -g)" "$H/$f" || : > "$H/$f"; done
-tar czf "$H/out.tgz" -C "$H" out agent.log agent.stdout kernel.txt machine-type.txt clock.txt
+tar czf "$H/out.tgz" -C "$H" out out-retrieve agent.log agent.stdout kernel.txt machine-type.txt clock.txt
 exit "$rc"' "${SSH[@]}" --command | tee "$OUT/guest-stdout.txt" || GUEST_RC=$?
 NA="$(date -u +%s)"
 echo "$NB $NA" > "$OUT/run-window.txt"
 echo "guest script exit status: $GUEST_RC" | tee "$OUT/guest-rc.txt"
 bench_clock_offset "$OUT/clock-offset.txt" "${SSH[@]}" --command || true
 bench_retry "$OUT/ssh.stderr" gcloud compute scp "$NAME:~/out.tgz" "$OUT/" --project="$PROJECT" --zone="$ZONE" >/dev/null || true
-if [ -f "$OUT/out.tgz" ]; then tar xzf "$OUT/out.tgz" -C "$OUT" && rm -f "$OUT/out.tgz" && mv "$OUT/out" "$OUT/workload"; fi
+if [ -f "$OUT/out.tgz" ]; then tar xzf "$OUT/out.tgz" -C "$OUT" && rm -f "$OUT/out.tgz" && mv "$OUT/out" "$OUT/workload" && mv "$OUT/out-retrieve" "$OUT/workload-retrieve"; fi
 cleanup
 trap 'rm -rf "$BIN"' EXIT
 
 echo "== the server's and Veraison's logs of the run"
 cp "$S/server.log" "$OUT/server.log"
+tail -n +"$(( $(cat "$OUT/bench-logs/.vault-gateway.start") + 1 ))" "$B/vault-gateway.log" | grep -v "TLS handshake error" > "$OUT/bench-logs/vault-gateway.log" || true
 tail -n +"$(( $(cat "$OUT/bench-logs/.vts.start") + 1 ))" "$VERAISON_DEPLOYMENT/logs/vts.log" | grep -v DEBUG > "$OUT/bench-logs/veraison-vts.log" || true
 tail -n +"$(( $(cat "$OUT/bench-logs/.verification.start") + 1 ))" "$VERAISON_DEPLOYMENT/logs/verification.log" | grep -v DEBUG > "$OUT/bench-logs/veraison-verification.log" || true
 rm -f "$OUT"/bench-logs/.*.start
@@ -261,7 +281,7 @@ rm -f "$OUT"/bench-logs/.*.start
 echo "== verdict"
 rc=0
 python3 - "$OUT" "$TRUST_DOMAIN" > "$OUT/verdict.txt" <<'PY' || rc=$?
-import json, re, sys
+import json, os, re, sys
 out, td = sys.argv[1:3]
 try:
     r = json.load(open(f"{out}/workload/result.json"))
@@ -270,24 +290,39 @@ except FileNotFoundError:
     sys.exit(1)
 approved = set(json.load(open(f"{out}/approved-measurements.json")))
 server = open(f"{out}/server.log", errors="replace").read()
+try:
+    rr = json.load(open(f"{out}/workload-retrieve/result.json"))
+except FileNotFoundError:
+    rr = {}
+vault = open(f"{out}/bench-logs/vault-gateway.log", errors="replace").read() if os.path.exists(f"{out}/bench-logs/vault-gateway.log") else ""
 audit = [l for l in server.splitlines() if "API accessed" in l and "method=EnrollCredential" in l]
+audit_r = [l for l in server.splitlines() if "API accessed" in l and "method=RetrieveCredential" in l]
 enrolled = [l for l in server.splitlines() if "Enrolled an attested X509-SVID" in l]
+m = r.get("report_measurement_hex")
 checks = {
-    "workload ok": r.get("ok") is True,
-    "chain verified against the bundle": r.get("chain_verified") is True,
-    "the SVID carries the workload's key": r.get("key_matches") is True,
-    "SPIFFE ID of the entry": r.get("spiffe_id") == f"spiffe://{td}/workload",
-    "launch measurement approved": r.get("report_measurement_hex") in approved,
-    "server enrolled with the report's measurement": any(f"measurement={r.get('report_measurement_hex')}" in l and "verifier=veraison" in l for l in enrolled),
-    "server audited the enrollment": any("status=success" in l and f"measurement={r.get('report_measurement_hex')}" in l for l in audit),
+    "enroll: workload ok": r.get("ok") is True,
+    "enroll: chain verified against the bundle": r.get("chain_verified") is True,
+    "enroll: the SVID carries the workload's key": r.get("key_matches") is True,
+    "enroll: SPIFFE ID of the entry": r.get("spiffe_id") == f"spiffe://{td}/workload",
+    "enroll: launch measurement approved": m in approved,
+    "enroll: server enrolled with the report's measurement": any(f"measurement={m}" in l for l in enrolled),
+    "enroll: server audited the enrollment": any("status=success" in l and f"measurement={m}" in l for l in audit),
+    "retrieve: workload ok": rr.get("ok") is True,
+    "retrieve: a credential came back, opened by the workload's CEK": bool(rr.get("secret_sha256")) and rr.get("secret_bytes", 0) > 0,
+    "retrieve: the same launch measurement": rr.get("report_measurement_hex") == m,
+    "retrieve: server audited the retrieval": any("status=success" in l for l in audit_r),
+    "retrieve: the Secret Vault released for the Target": "released: target=https://ledger-nonce.tacra.example" in vault,
 }
 for k, v in checks.items():
     print(("ADMITTED  " if v else "REFUSED   ") + k)
 print()
-print(f"spiffe_id={r.get('spiffe_id')} serial={r.get('cert_serial')} not_after={r.get('not_after')}")
-print(f"measurement={r.get('report_measurement_hex')} report_version={r.get('report_version')} signer={r.get('report_signer')}")
-print(f"initiate_ms={r.get('initiate_ms')} enroll_ms={r.get('enroll_ms')} evidence_bytes={r.get('evidence_bytes')}")
-if r.get("error"): print("error:", r["error"])
+print(f"enroll: spiffe_id={r.get('spiffe_id')} serial={r.get('cert_serial')} not_after={r.get('not_after')}")
+print(f"enroll: measurement={m} report_version={r.get('report_version')} signer={r.get('report_signer')} waived={r.get('waived','')}")
+print(f"enroll: initiate_ms={r.get('initiate_ms')} enroll_ms={r.get('enroll_ms')} evidence_bytes={r.get('evidence_bytes')}")
+print(f"retrieve: item={rr.get('item_type')}/{rr.get('item_kid')} suite={rr.get('suite')} secret_bytes={rr.get('secret_bytes')} secret_sha256={rr.get('secret_sha256')} group={str(rr.get('group_id'))[:16]}…")
+print(f"retrieve: initiate_ms={rr.get('initiate_ms')} retrieve_ms={rr.get('retrieve_ms')} cek_pub_bytes={rr.get('cek_pub_bytes')} origin_verified={rr.get('origin_verified')}")
+for name, x in (("enroll", r), ("retrieve", rr)):
+    if x.get("error"): print(f"{name} error:", x["error"])
 sys.exit(0 if all(checks.values()) else 1)
 PY
 cat "$OUT/verdict.txt"

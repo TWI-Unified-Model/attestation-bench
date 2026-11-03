@@ -1,0 +1,18 @@
+ADMITTED  enroll: workload ok
+ADMITTED  enroll: chain verified against the bundle
+ADMITTED  enroll: the SVID carries the workload's key
+ADMITTED  enroll: SPIFFE ID of the entry
+ADMITTED  enroll: launch measurement approved
+ADMITTED  enroll: server enrolled with the report's measurement
+ADMITTED  enroll: server audited the enrollment
+ADMITTED  retrieve: workload ok
+ADMITTED  retrieve: a credential came back, opened by the workload's CEK
+ADMITTED  retrieve: the same launch measurement
+ADMITTED  retrieve: server audited the retrieval
+ADMITTED  retrieve: the Secret Vault released for the Target
+
+enroll: spiffe_id=spiffe://example.org/workload serial=126688751847547397623266004186194968491 not_after=2026-11-03T22:46:58Z
+enroll: measurement=e79ebb5b789ddb6b7a9897f663a655a65c69445aa482c4e1a5ff9fdeb4af1a2c8d5d30fcad5f4f0e04f1a13885eb984d report_version=5 signer=VCEK waived=
+enroll: initiate_ms=46.024 enroll_ms=249.988 evidence_bytes=5989
+retrieve: item=api-key/0156b1ec5fc72a6c suite=MLKEM768-P256+HKDF-SHA256+AES-256-GCM secret_bytes=64 secret_sha256=332e6832d1a35ebe5a1e3361d2306469c966868bffeb6dc25ed4a2cc7892ee10 group=0156b1ec5fc72a6c…
+retrieve: initiate_ms=139.973 retrieve_ms=165.368 cek_pub_bytes=1249 origin_verified=None
