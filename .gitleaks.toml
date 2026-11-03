@@ -50,3 +50,10 @@ condition = "AND"
 regexTarget = "line"
 regexes = ['''request_id=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}''']
 paths = ['''(^|/)e2e/evidence/[^/]+-spire-[^/]+/server\.log$''']
+
+[[allowlists]]
+description = "the SHA-256 of the demo API key the SPIRE runs' workload retrieved, which its record and the verdict keep instead of the key"
+condition = "AND"
+regexTarget = "line"
+regexes = ['''secret_sha256["=: ]+"?[0-9a-f]{64}''']
+paths = ['''(^|/)e2e/evidence/[^/]+-spire-[^/]+/(workload-retrieve/result\.json|verdict\.txt)$''']
