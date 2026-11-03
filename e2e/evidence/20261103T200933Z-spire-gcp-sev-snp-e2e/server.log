@@ -1,0 +1,69 @@
+time="2026-11-03T14:10:14-06:00" level=debug msg="No TLS config configured"
+time="2026-11-03T14:10:14-06:00" level=warning msg="Experimental features have been enabled. Please see doc/upgrading.md for upgrade and compatibility considerations for experimental features."
+time="2026-11-03T14:10:14-06:00" level=info msg="Attested credential acquisition (TACRA) enabled"
+time="2026-11-03T14:10:14-06:00" level=warning msg="Current umask 0022 is too permissive; setting umask 0027"
+time="2026-11-03T14:10:14-06:00" level=info msg=Configured admin_ids="[]" data_dir=/Users/serhiinikolaichuk/.attestation-bench/spire/data launch_log_level=debug version=1.16.0-dev-unk
+time="2026-11-03T14:10:14-06:00" level=info msg="Opening SQL database" db_type=sqlite3 subsystem_name=sql
+time="2026-11-03T14:10:14-06:00" level=info msg="Initializing new database" subsystem_name=sql
+time="2026-11-03T14:10:14-06:00" level=info msg="Connected to SQL database" read_only=false subsystem_name=sql type=sqlite3 version=3.53.4
+time="2026-11-03T14:10:14-06:00" level=info msg="Configured DataStore" reconfigurable=false subsystem_name=catalog
+time="2026-11-03T14:10:14-06:00" level=info msg="Configured plugin" external=false plugin_name=join_token plugin_type=NodeAttestor reconfigurable=false subsystem_name=catalog
+time="2026-11-03T14:10:14-06:00" level=info msg="Plugin loaded" external=false plugin_name=join_token plugin_type=NodeAttestor subsystem_name=catalog
+time="2026-11-03T14:10:14-06:00" level=info msg="Plugin loaded" external=false plugin_name=memory plugin_type=KeyManager subsystem_name=catalog
+time="2026-11-03T14:10:14-06:00" level=debug msg="Loading journal from datastore" subsystem_name=ca_manager
+time="2026-11-03T14:10:14-06:00" level=info msg="There is not a CA journal record that matches any of the local X509 authority IDs" subsystem_name=ca_manager
+time="2026-11-03T14:10:14-06:00" level=info msg="Journal loaded" jwt_keys=0 subsystem_name=ca_manager wit_keys=0 x509_cas=0
+time="2026-11-03T14:10:14-06:00" level=debug msg="Preparing X509 CA" slot=A subsystem_name=ca_manager
+time="2026-11-03T14:10:14-06:00" level=debug msg="There is no active X.509 authority yet. Can't save CA journal in the datastore" subsystem_name=ca_manager
+time="2026-11-03T14:10:14-06:00" level=info msg="X509 CA prepared" expiration="2026-11-04 14:10:14 -0600 CST" issued_at="2026-11-03 14:10:14.270602 -0600 CST" local_authority_id=1ef2fe93cb23895b9265edda1afb7626a64353e2 self_signed=true slot=A subsystem_name=ca_manager upstream_authority_id=
+time="2026-11-03T14:10:14-06:00" level=info msg="X509 CA activated" expiration="2026-11-04 14:10:14 -0600 CST" issued_at="2026-11-03 14:10:14.270602 -0600 CST" local_authority_id=1ef2fe93cb23895b9265edda1afb7626a64353e2 slot=A subsystem_name=ca_manager upstream_authority_id=
+time="2026-11-03T14:10:14-06:00" level=info msg="Creating a new CA journal entry" subsystem_name=ca_manager
+time="2026-11-03T14:10:14-06:00" level=debug msg="Successfully stored CA journal entry in datastore" ca_journal_id=1 local_authority_id=1ef2fe93cb23895b9265edda1afb7626a64353e2 subsystem_name=ca_manager
+time="2026-11-03T14:10:14-06:00" level=debug msg="Successfully rotated X.509 CA" subsystem_name=ca_manager trust_domain_id="spiffe://example.org" ttl=86399.728159
+time="2026-11-03T14:10:14-06:00" level=debug msg="Preparing JWT key" slot=A subsystem_name=ca_manager
+time="2026-11-03T14:10:14-06:00" level=debug msg="Successfully stored CA journal entry in datastore" ca_journal_id=1 local_authority_id=1ef2fe93cb23895b9265edda1afb7626a64353e2 subsystem_name=ca_manager
+time="2026-11-03T14:10:14-06:00" level=info msg="JWT key prepared" expiration="2026-11-04 14:10:14.271876 -0600 CST" issued_at="2026-11-03 14:10:14.271876 -0600 CST" local_authority_id=urXn3xHrBF4UpGfYVxhPZBeOl3zdomdH slot=A subsystem_name=ca_manager
+time="2026-11-03T14:10:14-06:00" level=info msg="JWT key activated" expiration="2026-11-04 14:10:14.271876 -0600 CST" issued_at="2026-11-03 14:10:14.271876 -0600 CST" local_authority_id=urXn3xHrBF4UpGfYVxhPZBeOl3zdomdH slot=A subsystem_name=ca_manager
+time="2026-11-03T14:10:14-06:00" level=debug msg="Successfully stored CA journal entry in datastore" ca_journal_id=1 local_authority_id=1ef2fe93cb23895b9265edda1afb7626a64353e2 subsystem_name=ca_manager
+time="2026-11-03T14:10:14-06:00" level=debug msg="Rotating server SVID" subsystem_name=svid_rotator
+time="2026-11-03T14:10:14-06:00" level=debug msg="Signed X509 SVID" expiration="2026-11-03T21:10:14Z" spiffe_id="spiffe://example.org/spire/server" subsystem_name=svid_rotator
+time="2026-11-03T14:10:14-06:00" level=info msg="Attested credential acquisition configured for Target" mode=enroll subsystem_name=credential_acquisition target="spiffe://example.org" verifiers=veraison
+time="2026-11-03T14:10:14-06:00" level=info msg="Building in-memory entry cache" subsystem_name=endpoints
+time="2026-11-03T14:10:14-06:00" level=info msg="Completed building in-memory entry cache" subsystem_name=endpoints
+time="2026-11-03T14:10:14-06:00" level=info msg="Logger service configured" launch_log_level=debug
+time="2026-11-03T14:10:14-06:00" level=debug msg="Initializing API endpoints" subsystem_name=endpoints
+time="2026-11-03T14:10:14-06:00" level=info msg="Starting Server APIs" address="127.0.0.1:8081" network=tcp subsystem_name=endpoints
+time="2026-11-03T14:10:14-06:00" level=info msg="Starting Server APIs" address=/Users/serhiinikolaichuk/.attestation-bench/spire/server.sock network=unix subsystem_name=endpoints
+time="2026-11-03T14:10:14-06:00" level=debug msg="Initializing health checkers" subsystem_name=health
+time="2026-11-03T14:11:53-06:00" level=info msg="Agent attestation request completed" address="127.0.0.1:58056" agent_id="spiffe://example.org/spire/agent/join_token/70720704-9768-4133-b69f-1bc6ecd46aff" authorized_as=nobody authorized_via= caller_addr="127.0.0.1:58056" method=AttestAgent node_attestor_type=join_token request_id=8e75ef23-a616-4034-9f10-a3d39ee8f95f service=agent.v1.Agent subsystem_name=api
+time="2026-11-03T14:11:53-06:00" level=debug msg="Agent status updated" agent_version=1.16.0-dev-unk authorized_as=agent authorized_via=datastore caller_addr="127.0.0.1:58057" caller_id="spiffe://example.org/spire/agent/join_token/70720704-9768-4133-b69f-1bc6ecd46aff" method=PostStatus request_id=68b9cdf9-d718-4d4b-8e2d-6d50846887dc service=agent.v1.Agent spiffe_id="spiffe://example.org/spire/agent/join_token/70720704-9768-4133-b69f-1bc6ecd46aff" subsystem_name=api
+time="2026-11-03T14:11:53-06:00" level=debug msg="Signed X509 SVID" authorized_as=agent authorized_via=datastore caller_addr="127.0.0.1:58057" caller_id="spiffe://example.org/spire/agent/join_token/70720704-9768-4133-b69f-1bc6ecd46aff" entry_id=d84f6bcc-af1a-4045-9e0c-b879d29d3c0c expiration="2026-11-03T21:11:53Z" method=BatchNewX509SVID request_id=5e598f6d-72ba-4ca4-922b-8d6342b97d09 revision_number=0 serial_num=294297440055688738956607300698271107090 service=svid.v1.SVID spiffe_id="spiffe://example.org/workload" subsystem_name=api
+time="2026-11-03T14:11:53-06:00" level=debug msg="Signed X509 SVID" authorized_as=agent authorized_via=datastore caller_addr="127.0.0.1:58057" caller_id="spiffe://example.org/spire/agent/join_token/70720704-9768-4133-b69f-1bc6ecd46aff" entry_id=e58cf6da-e2d6-4915-8291-fa917b8c203a expiration="2026-11-03T21:11:53Z" method=BatchNewX509SVID request_id=5e598f6d-72ba-4ca4-922b-8d6342b97d09 revision_number=0 serial_num=312158125860566990477126224790885801207 service=svid.v1.SVID spiffe_id="spiffe://example.org/agent/gcp-sev-snp" subsystem_name=api
+time="2026-11-03T14:11:58-06:00" level=info msg="Enrolled an attested X509-SVID" authorized_as=agent authorized_via=datastore caller_addr="127.0.0.1:58057" caller_id="spiffe://example.org/spire/agent/join_token/70720704-9768-4133-b69f-1bc6ecd46aff" expiration="2026-11-03T21:11:58Z" measurement=e79ebb5b789ddb6b7a9897f663a655a65c69445aa482c4e1a5ff9fdeb4af1a2c8d5d30fcad5f4f0e04f1a13885eb984d method=EnrollCredential request_id=5895639c-2356-4c19-8ae5-8267d54a475c serial_num=70760660782331005580900230762975217301 service=credentialacquisition.v1.CredentialAcquisition spiffe_id="spiffe://example.org/workload" subsystem_name=api verifier=veraison
+time="2026-11-03T14:13:05-06:00" level=debug msg="Stopping event pruner" subsystem_name=endpoints
+time="2026-11-03T14:13:05-06:00" level=info msg="Shutting down" subsystem_name=bundle_client
+time="2026-11-03T14:13:05-06:00" level=debug msg="Stopping SVID rotator" subsystem_name=svid_rotator
+time="2026-11-03T14:13:05-06:00" level=debug msg="Finishing health checker" check=server subsystem_name=health
+time="2026-11-03T14:13:05-06:00" level=debug msg="Finishing health checker" check=server.ca subsystem_name=health
+time="2026-11-03T14:13:05-06:00" level=debug msg="Finishing health checker" check=catalog.datastore subsystem_name=health
+time="2026-11-03T14:13:05-06:00" level=debug msg="Finishing health checker" check=server.ca.rotator subsystem_name=health
+time="2026-11-03T14:13:05-06:00" level=debug msg="Stopping in-memory entry cache hydrator" subsystem_name=endpoints
+time="2026-11-03T14:13:05-06:00" level=info msg="Stopping Server APIs" address=/Users/serhiinikolaichuk/.attestation-bench/spire/server.sock network=unix subsystem_name=endpoints
+time="2026-11-03T14:13:05-06:00" level=info msg="Stopping Server APIs" address="127.0.0.1:8081" network=tcp subsystem_name=endpoints
+time="2026-11-03T14:13:05-06:00" level=info msg="Attempting graceful stop" address=/Users/serhiinikolaichuk/.attestation-bench/spire/server.sock network=unix subsystem_name=endpoints
+time="2026-11-03T14:13:05-06:00" level=info msg="Attempting graceful stop" address="127.0.0.1:8081" network=tcp subsystem_name=endpoints
+time="2026-11-03T14:13:05-06:00" level=info msg="Graceful stop successful" address="127.0.0.1:8081" network=tcp subsystem_name=endpoints
+time="2026-11-03T14:13:05-06:00" level=info msg="Server APIs have stopped" address="127.0.0.1:8081" network=tcp subsystem_name=endpoints
+time="2026-11-03T14:13:05-06:00" level=info msg="Graceful stop successful" address=/Users/serhiinikolaichuk/.attestation-bench/spire/server.sock network=unix subsystem_name=endpoints
+time="2026-11-03T14:13:05-06:00" level=info msg="Server APIs have stopped" address=/Users/serhiinikolaichuk/.attestation-bench/spire/server.sock network=unix subsystem_name=endpoints
+time="2026-11-03T14:13:05-06:00" level=debug msg="Closing catalog" subsystem_name=catalog
+time="2026-11-03T14:13:05-06:00" level=debug msg="Unloading plugin" external=false plugin_name=memory plugin_type=KeyManager subsystem_name=catalog
+time="2026-11-03T14:13:05-06:00" level=debug msg="Plugin deinitialized" external=false plugin_name=memory plugin_type=KeyManager subsystem_name=catalog
+time="2026-11-03T14:13:05-06:00" level=info msg="Plugin unloaded" external=false plugin_name=memory plugin_type=KeyManager subsystem_name=catalog
+time="2026-11-03T14:13:05-06:00" level=debug msg="Unloading plugin" external=false plugin_name=join_token plugin_type=NodeAttestor subsystem_name=catalog
+time="2026-11-03T14:13:05-06:00" level=debug msg="Plugin deinitialized" external=false plugin_name=join_token plugin_type=NodeAttestor subsystem_name=catalog
+time="2026-11-03T14:13:05-06:00" level=info msg="Plugin unloaded" external=false plugin_name=join_token plugin_type=NodeAttestor subsystem_name=catalog
+time="2026-11-03T14:13:05-06:00" level=info msg="Catalog closed" subsystem_name=catalog
+time="2026-11-03T14:13:05-06:00" level=debug msg="Closing DataStore" subsystem_name=catalog
+time="2026-11-03T14:13:05-06:00" level=info msg="DataStore closed" subsystem_name=catalog
+time="2026-11-03T14:13:05-06:00" level=info msg="Server stopped gracefully"

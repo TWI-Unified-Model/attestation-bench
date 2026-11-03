@@ -1,0 +1,6 @@
+spire built from /Users/serhiinikolaichuk/dev/spire
+  commit 445ab3636c4ebaafbca6caab51c6c4bda7324ab7 Add the attested workload of the TACRA proof of concept
+  replace github.com/spiffe/go-spiffe/v2 => ../go-spiffe
+  replace github.com/spiffe/spire-api-sdk => ../spire-api-sdk
+go-spiffe: 290df1d6b65514f3dcd7e884e773595b0bacb853 Workload API: attested credential acquisition
+spire-api-sdk: 6628d059ce2c85d843f23baa42fca91c1d54d82c Add the CredentialAcquisition server API
