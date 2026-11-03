@@ -42,18 +42,44 @@ description = "the SPIRE runs' record of the forks' commits: the 40-hex commit h
 condition = "AND"
 regexTarget = "line"
 regexes = ['''spire-api-sdk: [0-9a-f]{40} ''']
-paths = ['''(^|/)e2e/evidence/[^/]+-spire-[^/]+/spire-source\.txt$''']
+paths = [
+  '''(^|/)e2e/evidence/[^/]+-spire-[^/]+/spire-source\.txt$''',
+  # the run prints the same line, and the demo's log and recording keep the run's output
+  '''(^|/)e2e/evidence/[^/]+-spire-demo-[^/]+/(run\.log|demo\.txt|demo\.typescript)$''',
+]
 
 [[allowlists]]
 description = "SPIRE Server's log lines: request_id is the UUID the server gives each RPC, beside method names and node attestor types that name tokens and credentials; an identifier, not a credential"
 condition = "AND"
 regexTarget = "line"
-regexes = ['''request_id=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}''']
-paths = ['''(^|/)e2e/evidence/[^/]+-spire-[^/]+/server\.log$''']
+regexes = [
+  '''request_id=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}''',
+  # the recording folds the audit lines at 160 columns: the registration entry's UUID, beside the credential type
+  # api-key, can land on a line of its own; an identifier, not a credential
+  '''credential_type=api-key entry_id=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}''',
+]
+paths = [
+  '''(^|/)e2e/evidence/[^/]+-spire-[^/]+/server\.log$''',
+  # the demo's recording and walkthrough quote those same audit lines
+  '''(^|/)e2e/evidence/[^/]+-spire-demo-[^/]+/(demo\.txt|demo\.typescript|walkthrough\.md|run\.log)$''',
+]
 
 [[allowlists]]
 description = "the SHA-256 of the demo API key the SPIRE runs' workload retrieved, which its record and the verdict keep instead of the key"
 condition = "AND"
 regexTarget = "line"
-regexes = ['''secret_sha256["=: ]+"?[0-9a-f]{64}''']
-paths = ['''(^|/)e2e/evidence/[^/]+-spire-[^/]+/(workload-retrieve/result\.json|verdict\.txt)$''']
+regexes = [
+  '''secret_sha256["=: ]+"?[0-9a-f]{64}''',
+  # the walkthrough's wording of the same digest
+  '''keeps only its SHA-256, `[0-9a-f]{64}`''',
+]
+paths = [
+  '''(^|/)e2e/evidence/[^/]+-spire-[^/]+/(workload-retrieve/result\.json|verdict\.txt)$''',
+  '''(^|/)e2e/evidence/[^/]+-spire-demo-[^/]+/(demo\.txt|demo\.typescript|walkthrough\.md|run\.log)$''',
+]
+
+[[allowlists]]
+description = "the Secret Vault's credential-group identifier (32 octets, hex) the demo's walkthrough names beside the word credential: an identifier of the group, not a secret"
+regexTarget = "line"
+regexes = ['''credential group: `[0-9a-f]{64}`''']
+paths = ['''(^|/)e2e/evidence/[^/]+-spire-demo-[^/]+/walkthrough\.md$''']

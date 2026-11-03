@@ -1,0 +1,248 @@
+
+== The SPIRE proof of concept of TACRA: an attested workload on sev-snp
+In the words of the draft: the workload is the Attester, with the Credential Acquisition Interface built in.
+SPIRE Agent is the CAS Client and SPIRE Server the CAS Server: conduits, holding no RATS role and no credential.
+SPIRE Server's CA is the Credential Authority, the Relying Party for enrollment: it recomputes the binding value
+and appraises the Attestation Results by its own policy; the conduit only forwards Evidence to the Verifier.
+The bench's Secret Vault is the Relying Party for retrieval; the bench's Veraison is the Verifier.
+
+== The bench on this machine
+$ /Users/serhiinikolaichuk/dev/attestation-bench/e2e/scripts/bench.sh status
+vts running (46303)
+provisioning running (46333)
+verification running (46335)
+management running (46337)
+step-ca running (46339)
+vault running (46340)
+tdx-verifier running (46368)
+ca-gateway running (46373)
+ca-gateway-2 running (46374)
+vault-gateway running (46375)
+vault-gateway-2 running (46388)
+est-server running (46394)
+rup running (46395)
+vault: rats_model=passport
+
+== The code under demonstration
+$ git -C /Users/serhiinikolaichuk/dev/spire --no-pager log --oneline -3
+2d99af4a1 (HEAD -> tacra-credential-acquisition) Extend the EC256 test key pool for the credential acquisition tests
+feea2374e Log the entry's SPIFFE ID as a URI in Initiate and Retrieve
+ab0575f2f (org/tacra-credential-acquisition) Add the attested workload of the TACRA proof of concept
+$ grep -E ^replace /Users/serhiinikolaichuk/dev/spire/go.mod
+replace github.com/spiffe/go-spiffe/v2 => github.com/TWI-Unified-Model/spiffe-go-spiffe/v2 v2.9.1-0.20261103185101-290df1d6b655
+replace github.com/spiffe/spire-api-sdk => github.com/TWI-Unified-Model/spiffe-spire-api-sdk v1.2.5-0.20261103185608-6628d059ce2c
+
+== The run: a fresh confidential guest, SPIRE Agent, the attested workload
+== Google Cloud: project rats-probe, zone us-central1-c
+Connection to 127.0.0.1 port 8443 [tcp/pcsync-https] succeeded!
+== the fork's state
+spire built from /Users/serhiinikolaichuk/dev/spire
+  commit 2d99af4a16aada4519b12b47a02b901131af8cf6 Extend the EC256 test key pool for the credential acquisition tests
+  replace github.com/spiffe/go-spiffe/v2 => github.com/TWI-Unified-Model/spiffe-go-spiffe/v2 v2.9.1-0.20261103185101-290df1d6b655
+  replace github.com/spiffe/spire-api-sdk => github.com/TWI-Unified-Model/spiffe-spire-api-sdk v1.2.5-0.20261103185608-6628d059ce2c
+go-spiffe: 290df1d6b65514f3dcd7e884e773595b0bacb853 Workload API: attested credential acquisition
+spire-api-sdk: 6628d059ce2c85d843f23baa42fca91c1d54d82c Add the CredentialAcquisition server API
+== build: spire-server (this machine), spire-agent and attested-workload (linux/amd64)
+== the server's configuration: the bench's verifier and approved launches
+vault rats_model=passport origin_auth=on
+== start the server
+Entry ID                : 7bc28e3b-2659-49f5-b969-c078f9e3bae5
+SPIFFE ID               : spiffe://example.org/workload
+Parent ID               : spiffe://example.org/agent/gcp-sev-snp
+Revision                : 0
+X509-SVID TTL           : 3600
+JWT-SVID TTL            : default
+Selector                : unix:uid:0
+Hint                    : internal
+
+== the agent's configuration (the join token goes with the command line, not into the record)
+== create tacra-spire-2611032252 (us-central1-c, sev-snp)
+WARNING: You have selected a disk size of under [200GB]. This may result in poor I/O performance. For more information, see: https://developers.google.com/compute/docs/disks#performance.
+Created [https://www.googleapis.com/compute/v1/projects/rats-probe/zones/us-central1-c/instances/tacra-spire-2611032252].
+WARNING: Some requests generated warnings:
+ - Disk size: '20 GB' is larger than image size: '10 GB'. You might need to resize the root repartition manually if the operating system does not support automatic resizing. See https://cloud.google.com/compute/docs/disks/add-persistent-disk#resize_pd for details.
+
+== wait for ssh
+drwxr-xr-x 2 root root 0 Nov  3 22:53 /sys/kernel/config/tsm/report
+7.0.0-1014-gcp
+== copy the agent, the workload and the public configuration
+== reverse tunnel to the server (8081)
+== run in the guest: the agent attests the node, the workload enrolls
+Agent is healthy.
+enrolled spiffe://example.org/workload, serial 325445020513225148324440535568258352067, not after 2026-11-03T23:55:03Z, launch measurement e79ebb5b789ddb6b7a9897f663a655a65c69445aa482c4e1a5ff9fdeb4af1a2c8d5d30fcad5f4f0e04f1a13885eb984d
+retrieved api-key (0156b1ec5fc72a6c, 64 octets, sha256 332e6832d1a35ebe5a1e3361d2306469c966868bffeb6dc25ed4a2cc7892ee10) under MLKEM768-P256+HKDF-SHA256+AES-256-GCM, launch measurement e79ebb5b789ddb6b7a9897f663a655a65c69445aa482c4e1a5ff9fdeb4af1a2c8d5d30fcad5f4f0e04f1a13885eb984d
+guest script exit status: 0
+== delete tacra-spire-2611032252
+== tacra-spire-2611032252 is gone at 2026-11-03T22:56:11Z
+== the server's and Veraison's logs of the run
+== verdict
+ADMITTED  enroll: workload ok
+ADMITTED  enroll: chain verified against the bundle
+ADMITTED  enroll: the SVID carries the workload's key
+ADMITTED  enroll: SPIFFE ID of the entry
+ADMITTED  enroll: launch measurement approved
+ADMITTED  enroll: server enrolled with the report's measurement
+ADMITTED  enroll: server audited the enrollment
+ADMITTED  retrieve: workload ok
+ADMITTED  retrieve: a credential came back, opened by the workload's CEK
+ADMITTED  retrieve: the same launch measurement
+ADMITTED  retrieve: server audited the retrieval
+ADMITTED  retrieve: the Secret Vault released for the Target
+ADMITTED  retrieve: the container's origin signature verified under the vault's key
+
+enroll: spiffe_id=spiffe://example.org/workload serial=325445020513225148324440535568258352067 not_after=2026-11-03T23:55:03Z
+enroll: measurement=e79ebb5b789ddb6b7a9897f663a655a65c69445aa482c4e1a5ff9fdeb4af1a2c8d5d30fcad5f4f0e04f1a13885eb984d report_version=5 signer=VCEK waived=
+enroll: initiate_ms=41.782 enroll_ms=515.099 evidence_bytes=5989
+retrieve: item=api-key/0156b1ec5fc72a6c suite=MLKEM768-P256+HKDF-SHA256+AES-256-GCM secret_bytes=64 secret_sha256=332e6832d1a35ebe5a1e3361d2306469c966868bffeb6dc25ed4a2cc7892ee10 group=0156b1ec5fc72a6c…
+retrieve: initiate_ms=112.573 retrieve_ms=150.596 cek_pub_bytes=1249 origin_verified=True vault: vault rats_model=passport origin_auth=on
+== run directory: /Users/serhiinikolaichuk/.attestation-bench/runs/20261103T225224Z-spire-gcp-sev-snp-e2e
+
+== The server's configuration for the Targets (paths and policy; no secrets)
+$ sed -n /credential_acquisition {/,/^        }$/p /Users/serhiinikolaichuk/.attestation-bench/runs/20261103T225224Z-spire-gcp-sev-snp-e2e/config/server.conf
+        credential_acquisition {
+            acceptable_evidence = ["application/vnd.veraison.tsm-report+cbor"]
+            ear_max_age = "120s"
+            ear_skew = "5s"
+            client_cert_path = "/Users/serhiinikolaichuk/.attestation-bench/tls/clients/ca-gateway.crt"
+            client_key_path = "/Users/serhiinikolaichuk/.attestation-bench/tls/clients/ca-gateway.key"
+            verifier "veraison" {
+                url = "https://localhost:8443"
+                ca_path = "/Users/serhiinikolaichuk/.attestation-bench/veraison/certs/rootCA.crt"
+                ear_key_path = "/Users/serhiinikolaichuk/.attestation-bench/gateways/veraison.ear.jwk"
+                provider = "sev_guest"
+                submods = ["SEVSNP"]
+            }
+            target "spiffe://example.org" {
+                mode = "enroll"
+                credential_types = ["x509"]
+                freshness_kind = "present-nonce"
+                expires_in = "5m"
+                verifiers = ["veraison"]
+                acceptable_csk = ["ecdsa-p256-sha256"]
+                measurements = ["7a89cceaaba0bbdddc4f775acca3ef15d1f9bf8abccdc6115cfad7fb8eae113df3ee0bb50efa34db9c53ae065b1dc766", "c1ee9c16e3afc506cfe042c5b846a368528f3b37618eafb27469bc114cf914e9222c91618470e7f2b28ac360968270a5", "ccdc5cf01ba25526bd65503d95931b787b4385a3277cfe4448addf9c3e894948ae8cf7b099620e3e22717de2fb5d26fa", "e79ebb5b789ddb6b7a9897f663a655a65c69445aa482c4e1a5ff9fdeb4af1a2c8d5d30fcad5f4f0e04f1a13885eb984d", "f21e6b48743fe14c2d090078ca1197f09ae4c99438677f2c79901ef80e2aeefe2f9a7eb6e3eb3b5047c4f1511731e5d3"]
+            }
+            target "https://ledger-nonce.tacra.example" {
+                mode = "retrieve"
+                credential_types = ["api-key", "x509"]
+                rats_model = "passport"
+                verifiers = ["veraison"]
+            }
+            secret_vault {
+                url = "https://127.0.0.1:9102"
+                ca_path = "/Users/serhiinikolaichuk/.attestation-bench/tls/root.crt"
+                client_cert_path = "/Users/serhiinikolaichuk/.attestation-bench/tls/clients/est-server.crt"
+                client_key_path = "/Users/serhiinikolaichuk/.attestation-bench/tls/clients/est-server.key"
+            }
+            platform_rule_path = "/Users/serhiinikolaichuk/.attestation-bench/spire/platform-rule.json"
+        }
+
+== The X509-SVID the workload enrolled: its own key, the entry's SPIFFE ID, the trust domain's CA
+$ openssl x509 -in /Users/serhiinikolaichuk/.attestation-bench/runs/20261103T225224Z-spire-gcp-sev-snp-e2e/workload/svid.pem -noout -subject -issuer -dates -ext subjectAltName
+subject=C=US, O=SPIRE
+issuer=C=US, O=SPIFFE, serialNumber=116671042965471882263584653723515374078
+notBefore=Nov  3 22:54:53 2026 GMT
+notAfter=Nov  3 23:55:03 2026 GMT
+X509v3 Subject Alternative Name: 
+    URI:spiffe://example.org/workload
+the workload's record of the enrollment:
+  target: spiffe://example.org
+  credential_type: x509
+  mode: CREDENTIAL_ACQUISITION_MODE_ENROLL
+  freshness_kind: FRESHNESS_KIND_PRESENT_NONCE
+  handle_hex: 3ae3994bf866200f4ef0d5bd3344333db1a7f1285806cb4a413abe526a73905d
+  binding_value_hex: b4c2f3a1c4d370f23f1ef7dbfea5ff7534a69208f5305620b38c2483b54cad8133caf36da520a519f6959c96d0d25e7c927c640d6d2f5616dd8612fcbca2dfc2
+  evidence_media_type: application/vnd.veraison.tsm-report+cbor
+  evidence_bytes: 5989
+  report_provider: sev_guest
+  report_version: 5
+  report_signer: VCEK
+  report_measurement_hex: e79ebb5b789ddb6b7a9897f663a655a65c69445aa482c4e1a5ff9fdeb4af1a2c8d5d30fcad5f4f0e04f1a13885eb984d
+  spiffe_id: spiffe://example.org/workload
+  chain_verified: True
+  key_matches: True
+  initiate_ms: 41.782
+  enroll_ms: 515.099
+
+== What the Credential Authority recorded (SPIRE Server's audit log): the Verifier, the measurement, a waiver if any
+time="2026-11-03T16:55:03-06:00" level=warning msg="Attestation Results admitted under a waiver of the platform rule" subsystem_name=credential_acquisition veri
+fier=veraison waiver="admitted without bit 4, AMD-SB-3034: Milan mitigation bit 4 (AMD-SB-3034 (CVE-2025-54510)) is not set (LAUNCH_MIT_VECTOR 0xfeb, CURRENT_MI
+T_VECTOR 0xfeb)"
+time="2026-11-03T16:55:03-06:00" level=info msg="API accessed" authorized_as=agent authorized_via=datastore caller_id="spiffe://example.org/spire/agent/join_tok
+en/fc136746-6ce3-424b-8f03-7147ab3f289f" credential_type=x509 csr=fce0555e54c07ed0798f157c7921fb4aecd14183f3eebbf04b8b8cc36e78ea59 entry_id=7bc28e3b-2659-49f5-b
+969-c078f9e3bae5 expires_at=1793750103 freshness_kind=present-nonce measurement=e79ebb5b789ddb6b7a9897f663a655a65c69445aa482c4e1a5ff9fdeb4af1a2c8d5d30fcad5f4f0e
+04f1a13885eb984d method=EnrollCredential request_id=633f86d5-efab-474b-8cc0-a69bb0c3e09f service=credentialacquisition.v1.CredentialAcquisition spiffe_id="spiff
+e://example.org/workload" status=success submod=SEVSNP subsystem_name=api target="spiffe://example.org" type=audit verifier=veraison waived="admitted without bi
+t 4, AMD-SB-3034: Milan mitigation bit 4 (AMD-SB-3034 (CVE-2025-54510)) is not set (LAUNCH_MIT_VECTOR 0xfeb, CURRENT_MIT_VECTOR 0xfeb)"
+time="2026-11-03T16:55:03-06:00" level=info msg="Enrolled an attested X509-SVID" authorized_as=agent authorized_via=datastore caller_id="spiffe://example.org/sp
+ire/agent/join_token/fc136746-6ce3-424b-8f03-7147ab3f289f" expiration="2026-11-03T23:55:03Z" measurement=e79ebb5b789ddb6b7a9897f663a655a65c69445aa482c4e1a5ff9fd
+eb4af1a2c8d5d30fcad5f4f0e04f1a13885eb984d method=EnrollCredential request_id=633f86d5-efab-474b-8cc0-a69bb0c3e09f serial_num=32544502051322514832444053556825835
+2067 service=credentialacquisition.v1.CredentialAcquisition spiffe_id="spiffe://example.org/workload" subsystem_name=api verifier=veraison
+
+== The Verifier's sessions, both opened by the CAS Server: in the Passport model it forwards the Attestation Results to the Secret Vault
+INFO	session requested	{"caller": ["ca-gateway.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/11/03 - 16:55:03 | 201 |   99.347875ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=tMLzocTTcPI_Hvfb_qX_dTSmkgj1MFYgs4wkg7VMrYEzyvNtpSClGfaVnJbQ0l58knxkDW0
+INFO	gin	[GIN] 2026/11/03 - 16:55:03 | 200 |  254.588417ms |       127.0.0.1 | POST     "/challenge-response/v1/session/9b103962-d7d9-11f1-bfb3-313543423532"
+INFO	gin	[GIN] 2026/11/03 - 16:55:03 | 204 |       2.708µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/9b103962-d7d9-11f1-bfb3-313543423532"
+INFO	session requested	{"caller": ["ca-gateway.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/11/03 - 16:55:03 | 201 |      24.994ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=yGs8WwVdYDf0_ycrKKm5uqYBXmZmufZYiiaXgFG93U9em95Eta_ToxtyMpCtrFiBeHoSzKO
+
+== What the CAS Server recorded for the retrieval (SPIRE Server's audit log)
+time="2026-11-03T16:55:04-06:00" level=info msg="API accessed" authorized_as=agent authorized_via=datastore caller_id="spiffe://example.org/spire/agent/join_tok
+en/fc136746-6ce3-424b-8f03-7147ab3f289f" credential_type=api-key entry_id=7bc28e3b-2659-49f5-b969-c078f9e3bae5 freshness_kind=present-nonce method=RetrieveCrede
+ntial request_id=7cc60e4a-6c06-4e29-b460-114265b1d6a8 service=credentialacquisition.v1.CredentialAcquisition status=success subsystem_name=api target="https://l
+edger-nonce.tacra.example" type=audit
+time="2026-11-03T16:55:04-06:00" level=info msg="Retrieved an attested credential bundle" authorized_as=agent authorized_via=datastore caller_id="spiffe://examp
+le.org/spire/agent/join_token/fc136746-6ce3-424b-8f03-7147ab3f289f" method=RetrieveCredential request_id=7cc60e4a-6c06-4e29-b460-114265b1d6a8 service=credential
+acquisition.v1.CredentialAcquisition spiffe_id="spiffe://example.org/workload" subsystem_name=api
+
+== The credential the workload retrieved from the Secret Vault, sealed to its CEK
+  target: https://ledger-nonce.tacra.example
+  credential_type: api-key
+  credential_hint: payments.workload.tacra.example
+  mode: CREDENTIAL_ACQUISITION_MODE_RETRIEVE
+  freshness_kind: FRESHNESS_KIND_PRESENT_NONCE
+  suite: MLKEM768-P256+HKDF-SHA256+AES-256-GCM
+  cek_pub_bytes: 1249
+  report_measurement_hex: e79ebb5b789ddb6b7a9897f663a655a65c69445aa482c4e1a5ff9fdeb4af1a2c8d5d30fcad5f4f0e04f1a13885eb984d
+  group_id: 0156b1ec5fc72a6ccc6c04b33e23cb114c9e19979cd3fe68bdd7e9495544a46c
+  item_type: api-key
+  item_kid: 0156b1ec5fc72a6c
+  item_purpose: ['authenticate']
+  item_algorithm: opaque-bearer
+  secret_bytes: 64
+  secret_sha256: 332e6832d1a35ebe5a1e3361d2306469c966868bffeb6dc25ed4a2cc7892ee10
+  origin_verified: True
+  initiate_ms: 112.573
+  retrieve_ms: 150.596
+the container as released (its associated data names the Target, the Handle and the Credential Hint):
+  container: hpke-base suite: {'kem': 'MLKEM768-P256', 'kdf': 'HKDF-SHA256', 'aead': 'AES-256-GCM'}
+  aad: {'group_id': '0156b1ec5fc72a6ccc6c04b33e23cb114c9e19979cd3fe68bdd7e9495544a46c', 'target': 'aHR0cHM6Ly9sZWRnZXItbm9uY2UudGFjcmEuZXhhbXBsZQ', 'handle': 'wNTpGMO7W-fPrngja2XJZ32y1SKcqvR9mbj5xUFVVeM', 'credential_hint': 'payments.workload.tacra.example'}
+  origin signature: ECDSA-P256-SHA256
+the Secret Vault's release:
+2026/11/03 16:55:04 released: target=https://ledger-nonce.tacra.example kind=present-nonce group=0156b1ec5fc72a6c container=hpke-base kem=MLKEM768-P256 origin=true caller=[est-server.bench.tacra.example]; under the platf
+
+== The verdict
+ADMITTED  enroll: workload ok
+ADMITTED  enroll: chain verified against the bundle
+ADMITTED  enroll: the SVID carries the workload's key
+ADMITTED  enroll: SPIFFE ID of the entry
+ADMITTED  enroll: launch measurement approved
+ADMITTED  enroll: server enrolled with the report's measurement
+ADMITTED  enroll: server audited the enrollment
+ADMITTED  retrieve: workload ok
+ADMITTED  retrieve: a credential came back, opened by the workload's CEK
+ADMITTED  retrieve: the same launch measurement
+ADMITTED  retrieve: server audited the retrieval
+ADMITTED  retrieve: the Secret Vault released for the Target
+ADMITTED  retrieve: the container's origin signature verified under the vault's key
+
+enroll: spiffe_id=spiffe://example.org/workload serial=325445020513225148324440535568258352067 not_after=2026-11-03T23:55:03Z
+enroll: measurement=e79ebb5b789ddb6b7a9897f663a655a65c69445aa482c4e1a5ff9fdeb4af1a2c8d5d30fcad5f4f0e04f1a13885eb984d report_version=5 signer=VCEK waived=
+enroll: initiate_ms=41.782 enroll_ms=515.099 evidence_bytes=5989
+retrieve: item=api-key/0156b1ec5fc72a6c suite=MLKEM768-P256+HKDF-SHA256+AES-256-GCM secret_bytes=64 secret_sha256=332e6832d1a35ebe5a1e3361d2306469c966868bffeb6dc25ed4a2cc7892ee10 group=0156b1ec5fc72a6c…
+retrieve: initiate_ms=112.573 retrieve_ms=150.596 cek_pub_bytes=1249 origin_verified=True vault: vault rats_model=passport origin_auth=on
+
+== Writing the walkthrough
+/Users/serhiinikolaichuk/.attestation-bench/demo/20261103T225222Z-spire-sev-snp/walkthrough.md
+
+== Done: /Users/serhiinikolaichuk/.attestation-bench/demo/20261103T225222Z-spire-sev-snp
