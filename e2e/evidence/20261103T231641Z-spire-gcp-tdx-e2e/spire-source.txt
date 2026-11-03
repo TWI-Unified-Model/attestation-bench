@@ -1,0 +1,6 @@
+spire built from /Users/serhiinikolaichuk/dev/spire
+  commit 2d99af4a16aada4519b12b47a02b901131af8cf6 Extend the EC256 test key pool for the credential acquisition tests
+  replace github.com/spiffe/go-spiffe/v2 => github.com/TWI-Unified-Model/spiffe-go-spiffe/v2 v2.9.1-0.20261103185101-290df1d6b655
+  replace github.com/spiffe/spire-api-sdk => github.com/TWI-Unified-Model/spiffe-spire-api-sdk v1.2.5-0.20261103185608-6628d059ce2c
+go-spiffe: 290df1d6b65514f3dcd7e884e773595b0bacb853 Workload API: attested credential acquisition
+spire-api-sdk: 6628d059ce2c85d843f23baa42fca91c1d54d82c Add the CredentialAcquisition server API
