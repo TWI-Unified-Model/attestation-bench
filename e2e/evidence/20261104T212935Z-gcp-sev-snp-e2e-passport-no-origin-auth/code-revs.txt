@@ -1,0 +1,10 @@
+attestation-bench 1f2318ba71da
+globalsign-est/src upstream e4897163a55d + 1 patch(es), tree 4ef464f810d9: tested tree
+veraison-services/src upstream f997c5275c30 + 8 patch(es), tree e7a04b43faf9: tested tree
+go-gen-ref/src upstream aa3740de6b00 + 3 patch(es), tree 5f74ee0c1309: tested tree
+veraison verification-service rev f997c5275c30 modified true go-sev-guest - sha256 0d3261bd7441465c
+veraison vts-service rev f997c5275c30 modified true go-sev-guest v0.15.0 sha256 d86a422b6422719d
+veraison scheme-sevsnp.plugin rev f997c5275c30 modified true go-sev-guest v0.15.0 sha256 cb465d29f64bc6e2
+estserver built from /Users/serhiinikolaichuk/dev/globalsign-est
+  commit 90efd7466ef718b7e7f1577c65f59bc762789106 review of 4 November: credential types, supported, requested, additionalPathSegment, RelyingParty; no dates or draft references in code
+  worktree clean
