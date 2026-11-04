@@ -175,8 +175,8 @@ func grpcError(err error) error {
 		return status.Error(codes.Unavailable, err.Error())
 	}
 	switch e.StatusCode() {
-	case http.StatusBadRequest, http.StatusRequestEntityTooLarge, http.StatusUnsupportedMediaType:
-		return status.Error(codes.InvalidArgument, e.Error())
+	case http.StatusBadRequest, http.StatusRequestEntityTooLarge, http.StatusUnsupportedMediaType, http.StatusUnprocessableEntity:
+		return status.Error(codes.InvalidArgument, e.Error()) // 422: a Credential Type the RATS Relying Party does not serve for the Target
 	case http.StatusForbidden, http.StatusUnauthorized:
 		return status.Error(codes.PermissionDenied, e.Error())
 	case http.StatusConflict:
