@@ -146,7 +146,7 @@ through whom):
 |---|---|---|
 | a made-up Handle (present-nonce) | the RRP knows the Handles it minted | refused, `freshness` |
 | the Freshness Kind `absent-none`, for a Target of another kind | the kind is the Target's, by the RRP's policy | refused, `freshness-kind-mismatch` |
-| a credential type the Target does not offer | the Target's credential types | refused, `unsupported-credential-type` |
+| a credential type the Target does not offer | the Target's credential types, checked after the Attestation Results (422) | refused, `unsupported-credential-type`; not sent under present-nonce, where the Handle binding refuses first and spends the Handle (last row) |
 | another workload's Credential Hint | the Credential Authority names the attested workload itself | refused, `credential-hint` |
 | the other credential type the Target offers | the present-nonce Handle, which the RRP minted for one Target and credential type; nothing else | present-nonce: refused, `freshness`; every other kind: issued, the CA's X.509, as without the rewrite |
 

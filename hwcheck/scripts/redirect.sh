@@ -272,7 +272,10 @@ rewrite() {
 
 # offer_rewrites PASS: the #19 rewrites on Evidence made for ca1. In "rewrites" those a gateway refuses before it
 # spends the freshness element come first, the Credential Hint last; "type-offered" sends the other credential type
-# the Target offers.
+# the Target offers. A present-nonce Handle is minted for one Target and credential type and serves once, whatever
+# the outcome: a credential type the Target does not offer is refused there by the Handle binding, which spends the
+# Handle, so "rewrites" does not send it under present-nonce (the "type-offered" pass measures that binding), and the
+# Credential Hint rewrite finds the Handle unspent.
 offer_rewrites() {
   local PASS="$1" d="$OUT/$1" k fresh
   : > "$d/results.jsonl"
@@ -283,7 +286,7 @@ offer_rewrites() {
         rewrite "$d" "$fresh" "made-up Handle" -handle "$(python3 -c 'import base64,secrets;print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode().rstrip("="))')"
       fi
       [ "$fresh" = absent-none ] || rewrite "$d" "$fresh" "Freshness Kind absent-none" -kind absent-none -handle ""
-      rewrite "$d" "$fresh" "credential type not offered" -ctype wit
+      [ "$fresh" = present-nonce ] || rewrite "$d" "$fresh" "credential type not offered" -ctype wit
       rewrite "$d" "$fresh" "Credential Hint of another workload" -hint other.workload.tacra.example
     else
       rewrite "$d" "$fresh" "the other credential type offered" -ctype api-key

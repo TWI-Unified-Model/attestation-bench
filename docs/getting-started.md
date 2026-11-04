@@ -250,7 +250,6 @@ no-rrp-id    absent-none        ISSUED   ISSUED
 rewrite at ca1                         kind               outcome
 made-up Handle                         present-nonce      refused freshness fresh: freshness element is not valid now: unknown or alread
 Freshness Kind absent-none             present-nonce      refused freshness-kind-mismatch not allowed by this RRP's policy for the Targe
-credential type not offered            present-nonce      refused unsupported-credential-type not allowed by this RRP's policy for the T
 Credential Hint of another workload    present-nonce      refused credential-hint the Credential Hint is not the identity the CA assigns
 ...
 the other credential type offered      present-nonce      refused freshness fresh: freshness element is not valid now: Handle was issued
