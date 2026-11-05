@@ -1,0 +1,37 @@
+{
+  "ok": true,
+  "target": "spiffe://example.org",
+  "credential_type": "x509",
+  "credential_hint": "internal",
+  "tee": "tdx",
+  "mode": "CREDENTIAL_ACQUISITION_MODE_ENROLL",
+  "freshness_kind": "FRESHNESS_KIND_PRESENT_NONCE",
+  "handle_hex": "c2857dac5b6d20cdf2c7cb8e754e99fb170518996e73fe2b19a4c19813215828",
+  "expires_in": 300,
+  "acceptable_csk": [
+    "ecdsa-p256-sha256"
+  ],
+  "acceptable_evidence": [
+    "application/vnd.veraison.tsm-report+cbor"
+  ],
+  "binding_value_hex": "f55828c5051a1a7d69f70565c217f032282751f73a288e66154d23651f8cd43e9c6f9fa7f86a68cbf4ea2a1ebe1e451876be3dee9d7037e5cafb02ade609ab99",
+  "csr_sha256": "2990f0d2dcc5873cd0e539934b085f8d6493bc05180434c8634a1b1c47d4347a",
+  "evidence_bytes": 4966,
+  "evidence_media_type": "application/vnd.veraison.tsm-report+cbor",
+  "report_provider": "tdx_guest",
+  "report_version": 4,
+  "report_measurement_hex": "f21e6b48743fe14c2d090078ca1197f09ae4c99438677f2c79901ef80e2aeefe2f9a7eb6e3eb3b5047c4f1511731e5d3",
+  "report_td_attributes_hex": "0000001000000000",
+  "spiffe_id": "spiffe://example.org/workload",
+  "hint": "internal",
+  "cert_serial": "328211139616363613381214993933124552354",
+  "cert_issuer": "SERIALNUMBER=281910181360918876294978599998142594760,O=SPIFFE,C=US",
+  "not_before": "2026-11-05T02:20:03Z",
+  "not_after": "2026-11-05T03:20:13Z",
+  "chain_verified": true,
+  "key_matches": true,
+  "initiate_ms": 40.362,
+  "enroll_ms": 780.557,
+  "started_at": "2026-11-05T02:20:12.652565647Z",
+  "finished_at": "2026-11-05T02:20:13.516155343Z"
+}
