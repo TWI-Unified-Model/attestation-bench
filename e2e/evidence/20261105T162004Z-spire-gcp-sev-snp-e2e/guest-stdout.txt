@@ -1,0 +1,3 @@
+Agent is healthy.
+attested-workload: enroll: rpc error: code = PermissionDenied desc = failed to enroll credential: remote attestation failed: the Attestation Results are not affirming: SEVSNP is "contraindicated"
+attested-workload: retrieve: rpc error: code = PermissionDenied desc = failed to retrieve credential: Secret Vault: attestation: ear: not affirming: SEVSNP is "contraindicated"
