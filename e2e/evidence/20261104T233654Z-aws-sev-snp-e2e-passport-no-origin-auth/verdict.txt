@@ -1,0 +1,14 @@
+10 of 10 Targets: credential acquired and admitted by the relying party
+ok  https://db-nonce.tacra.example         x509        731.6 ms 200
+ok  https://db-epoch.tacra.example         x509        638.4 ms 200
+ok  https://db-lepoch.tacra.example        x509        535.6 ms 200
+ok  https://db-time.tacra.example          x509        555.7 ms 200
+ok  https://db-none.tacra.example          x509        581.8 ms 200
+ok  https://ledger-nonce.tacra.example     api-key     531.5 ms 200
+ok  https://ledger-epoch.tacra.example     api-key     678.0 ms 200
+ok  https://ledger-lepoch.tacra.example    api-key     551.4 ms 200
+ok  https://ledger-time.tacra.example      api-key     525.2 ms 200
+ok  https://ledger-none.tacra.example      api-key     578.3 ms 200
+the platform rule's waiver: Milan bit 4: admitted without bit 4, AMD-SB-3034
+guest minus RRP: +0.395 s, within 0.401 s
+VERDICT PASS: all 10 Targets: credential acquired and admitted by the relying party; admitted under the bench's waiver: Milan bit 4: admitted without bit 4, AMD-SB-3034

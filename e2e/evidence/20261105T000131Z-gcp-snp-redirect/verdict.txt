@@ -1,0 +1,28 @@
+pass         kind               ca1      ca2
+no-rrp-id    present-nonce      ISSUED   refused
+no-rrp-id    present-epoch      ISSUED   ISSUED
+no-rrp-id    absent-epoch       ISSUED   ISSUED
+no-rrp-id    absent-timestamp   ISSUED   ISSUED
+no-rrp-id    absent-none        ISSUED   ISSUED
+rewrite at ca1                         kind               outcome
+made-up Handle                         present-nonce      refused freshness fresh: freshness element is not valid now: unknown or alread
+Freshness Kind absent-none             present-nonce      refused freshness-kind-mismatch not allowed by this RRP's policy for the Targe
+Credential Hint of another workload    present-nonce      refused credential-hint the Credential Hint is not the identity the CA assigns
+Freshness Kind absent-none             present-epoch      refused freshness-kind-mismatch not allowed by this RRP's policy for the Targe
+credential type not offered            present-epoch      refused unsupported-credential-type not allowed by this RRP's policy for the T
+Credential Hint of another workload    present-epoch      refused credential-hint the Credential Hint is not the identity the CA assigns
+Freshness Kind absent-none             absent-epoch       refused freshness-kind-mismatch not allowed by this RRP's policy for the Targe
+credential type not offered            absent-epoch       refused unsupported-credential-type not allowed by this RRP's policy for the T
+Credential Hint of another workload    absent-epoch       refused credential-hint the Credential Hint is not the identity the CA assigns
+Freshness Kind absent-none             absent-timestamp   refused freshness-kind-mismatch not allowed by this RRP's policy for the Targe
+credential type not offered            absent-timestamp   refused unsupported-credential-type not allowed by this RRP's policy for the T
+Credential Hint of another workload    absent-timestamp   refused credential-hint the Credential Hint is not the identity the CA assigns
+credential type not offered            absent-none        refused unsupported-credential-type not allowed by this RRP's policy for the T
+Credential Hint of another workload    absent-none        refused credential-hint the Credential Hint is not the identity the CA assigns
+the other credential type offered      present-nonce      refused freshness fresh: freshness element is not valid now: Handle was issued
+the other credential type offered      present-epoch      ISSUED CN=payments.workload.tacra.example
+the other credential type offered      absent-epoch       ISSUED CN=payments.workload.tacra.example
+the other credential type offered      absent-timestamp   ISSUED CN=payments.workload.tacra.example
+the other credential type offered      absent-none        ISSUED CN=payments.workload.tacra.example
+guest minus RRP: +0.913 s, within 1.023 s
+VERDICT PASS: without the RRP identifier, ca2 issued for every Freshness Kind but present-nonce; of the conduit's 19 rewrites at ca1, the other credential type the Target offers was issued for every kind but present-nonce, and every other was refused for its own reason
