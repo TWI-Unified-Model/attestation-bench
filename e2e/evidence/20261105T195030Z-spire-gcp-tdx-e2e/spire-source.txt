@@ -1,0 +1,6 @@
+spire built from /Users/serhiinikolaichuk/dev/spire
+  commit 3cf25b335f0a8568e217ae3136b381518b4d0134 Appraiser, binding and CoMID comments: the client certificate explained, the tests named for what they check, the TACRA Binding, the CoMID from the report
+  replace github.com/spiffe/go-spiffe/v2 => github.com/TWI-Unified-Model/spiffe-go-spiffe/v2 v2.9.1-0.20261103185101-290df1d6b655
+  replace github.com/spiffe/spire-api-sdk => github.com/TWI-Unified-Model/spiffe-spire-api-sdk v1.2.5-0.20261103185608-6628d059ce2c
+go-spiffe: f6d4f2861ec1b3282adcf051ef15c903cfa2d656 Workload API comment: the policy for the Target decides; stubs regenerated
+spire-api-sdk: 76a162a3c91c1af220798acd36743e0af7da7b90 Server API comments: roles capitalized, no possessive apostrophes, the CSK algorithms by name
