@@ -1,0 +1,19 @@
+ADMITTED  enroll: workload ok
+ADMITTED  enroll: chain verified against the bundle
+ADMITTED  enroll: the SVID carries the workload's key
+ADMITTED  enroll: SPIFFE ID of the entry
+ADMITTED  enroll: launch measurement approved
+ADMITTED  enroll: server enrolled with the report's measurement
+ADMITTED  enroll: server audited the enrollment
+ADMITTED  retrieve: workload ok
+ADMITTED  retrieve: a credential came back, opened by the workload's CEK
+ADMITTED  retrieve: the same launch measurement
+ADMITTED  retrieve: server audited the retrieval
+ADMITTED  retrieve: the Secret Vault released for the Target
+ADMITTED  retrieve: the container's origin signature verified under the vault's key
+
+enroll: spiffe_id=spiffe://example.org/workload serial=311072987510992759734588027387693833584 not_after=2026-11-06T16:47:59Z
+enroll: measurement=f21e6b48743fe14c2d090078ca1197f09ae4c99438677f2c79901ef80e2aeefe2f9a7eb6e3eb3b5047c4f1511731e5d3 report_version=4 signer=None waived=
+enroll: initiate_ms=39.306 enroll_ms=2020.068 evidence_bytes=4966
+retrieve: item=api-key/53c3043b1d35b933 suite=MLKEM768-P256+HKDF-SHA256+AES-256-GCM secret_bytes=64 secret_sha256=332e6832d1a35ebe5a1e3361d2306469c966868bffeb6dc25ed4a2cc7892ee10 group=53c3043b1d35b933…
+retrieve: initiate_ms=63.443 retrieve_ms=150.613 cek_pub_bytes=1249 origin_verified=True vault: vault rats_model=passport origin_auth=on

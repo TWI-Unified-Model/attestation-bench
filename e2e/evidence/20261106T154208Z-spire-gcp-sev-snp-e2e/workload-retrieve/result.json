@@ -1,0 +1,42 @@
+{
+  "ok": true,
+  "target": "https://ledger-nonce.tacra.example",
+  "credential_type": "api-key",
+  "credential_hint": "payments.workload.tacra.example",
+  "tee": "sev-snp",
+  "mode": "CREDENTIAL_ACQUISITION_MODE_RETRIEVE",
+  "freshness_kind": "FRESHNESS_KIND_PRESENT_NONCE",
+  "handle_hex": "e49295f183fb583f8610ce7d5e584b27ba8432a3a4092781e255e8882c60d52f",
+  "expires_in": 300,
+  "acceptable_evidence": [
+    "application/vnd.veraison.tsm-report+cbor"
+  ],
+  "binding_value_hex": "55c1ae3f51c81355ad06156f96bbd60922eba728cf618b8c62898aa0a264c27c59e8d76d2ddd10b3d4a411bd689fd7239960ac52c139a6ec755d507a45e62cce",
+  "evidence_bytes": 5989,
+  "evidence_media_type": "application/vnd.veraison.tsm-report+cbor",
+  "report_provider": "sev_guest",
+  "report_version": 5,
+  "report_measurement_hex": "f67900851e25a378f04b4d4b5f1ea4410c11deb74e97ddcc7e3363a33f6e1dbb7880d304005387bc98e9cbdceec4ea28",
+  "report_signer": "VCEK",
+  "chain_verified": false,
+  "key_matches": false,
+  "acceptable_cek": [
+    "MLKEM768-P256+HKDF-SHA256+AES-256-GCM"
+  ],
+  "suite": "MLKEM768-P256+HKDF-SHA256+AES-256-GCM",
+  "cek_pub_bytes": 1249,
+  "group_id": "1336d3d6778845717c4d59ed185c0605997728dd2b1c0d3d4b878a456f48a7a5",
+  "origin_verified": true,
+  "item_type": "api-key",
+  "item_kid": "1336d3d677884571",
+  "item_purpose": [
+    "authenticate"
+  ],
+  "item_algorithm": "opaque-bearer",
+  "secret_sha256": "332e6832d1a35ebe5a1e3361d2306469c966868bffeb6dc25ed4a2cc7892ee10",
+  "secret_bytes": 64,
+  "initiate_ms": 99.095,
+  "retrieve_ms": 124.715,
+  "started_at": "2026-11-06T15:44:36.206501499Z",
+  "finished_at": "2026-11-06T15:44:36.443611191Z"
+}
