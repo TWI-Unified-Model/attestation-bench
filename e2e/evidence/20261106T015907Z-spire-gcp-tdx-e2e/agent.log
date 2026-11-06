@@ -1,0 +1,50 @@
+time="2026-11-06T02:00:58Z" level=debug msg="No TLS config configured"
+time="2026-11-06T02:00:58Z" level=warning msg="Current umask 0022 is too permissive; setting umask 0027"
+time="2026-11-06T02:00:58Z" level=info msg="Starting agent" data_dir=/root/spire-agent/data version=1.16.0-dev-unk
+time="2026-11-06T02:00:58Z" level=info msg="Plugin loaded" external=false plugin_name=join_token plugin_type=NodeAttestor subsystem_name=catalog
+time="2026-11-06T02:00:58Z" level=info msg="Configured plugin" external=false plugin_name=disk plugin_type=KeyManager reconfigurable=false subsystem_name=catalog
+time="2026-11-06T02:00:58Z" level=info msg="Plugin loaded" external=false plugin_name=disk plugin_type=KeyManager subsystem_name=catalog
+time="2026-11-06T02:00:58Z" level=info msg="Configured plugin" external=false plugin_name=unix plugin_type=WorkloadAttestor reconfigurable=false subsystem_name=catalog
+time="2026-11-06T02:00:58Z" level=info msg="Plugin loaded" external=false plugin_name=unix plugin_type=WorkloadAttestor subsystem_name=catalog
+time="2026-11-06T02:00:58Z" level=info msg="Bundle loaded" subsystem_name=attestor trust_domain_id="spiffe://example.org"
+time="2026-11-06T02:00:58Z" level=debug msg="No pre-existing agent SVID found. Will perform node attestation" subsystem_name=attestor
+time="2026-11-06T02:00:58Z" level=info msg="SVID is not found. Starting node attestation" subsystem_name=attestor trust_domain_id="spiffe://example.org"
+time="2026-11-06T02:00:58Z" level=info msg="Node attestation was successful" reattestable=false spiffe_id="spiffe://example.org/spire/agent/join_token/9efe7385-bd75-4ec8-80bc-c1ddcca6103e" subsystem_name=attestor trust_domain_id="spiffe://example.org"
+time="2026-11-06T02:00:58Z" level=info msg="Success after 382.97068ms attempts=1" Logger=TrustBundleSources
+time="2026-11-06T02:00:58Z" level=info msg="Setting use." Logger=TrustBundleSources
+time="2026-11-06T02:00:59Z" level=debug msg="Entry created" entry=772970d8-fe29-41a9-9455-77df01754153 selectors_added=1 spiffe_id="spiffe://example.org/agent/gcp-tdx" subsystem_name=cache_manager
+time="2026-11-06T02:00:59Z" level=debug msg="Entry created" entry=2d681d55-0365-4621-b037-ad3dc788c46b selectors_added=1 spiffe_id="spiffe://example.org/workload" subsystem_name=cache_manager
+time="2026-11-06T02:00:59Z" level=debug msg="Renewing stale entries" cache_type=workload count=2 limit=500 subsystem_name=manager
+time="2026-11-06T02:00:59Z" level=info msg="Creating X509-SVID" entry_id=772970d8-fe29-41a9-9455-77df01754153 spiffe_id="spiffe://example.org/agent/gcp-tdx" subsystem_name=manager
+time="2026-11-06T02:00:59Z" level=info msg="Creating X509-SVID" entry_id=2d681d55-0365-4621-b037-ad3dc788c46b spiffe_id="spiffe://example.org/workload" subsystem_name=manager
+time="2026-11-06T02:00:59Z" level=debug msg="SVID updated" entry=2d681d55-0365-4621-b037-ad3dc788c46b spiffe_id="spiffe://example.org/workload" subsystem_name=cache_manager
+time="2026-11-06T02:00:59Z" level=debug msg="SVID updated" entry=772970d8-fe29-41a9-9455-77df01754153 spiffe_id="spiffe://example.org/agent/gcp-tdx" subsystem_name=cache_manager
+time="2026-11-06T02:00:59Z" level=debug msg="Bundle added" subsystem_name=svid_store_cache trust_domain_id=example.org
+time="2026-11-06T02:00:59Z" level=info msg="Starting agent APIs" address=/tmp/spire-agent/public/api.sock apis="Workload and SDS APIs" network=unix subsystem_name=endpoints
+time="2026-11-06T02:00:59Z" level=debug msg="Initializing health checkers" subsystem_name=health
+time="2026-11-06T02:01:02Z" level=debug msg="PID attested to have selectors" pid=1837 selectors="[type:\"unix\" value:\"uid:0\" type:\"unix\" value:\"user:root\" type:\"unix\" value:\"gid:0\" type:\"unix\" value:\"group:root\" type:\"unix\" value:\"supplementary_gid:0\" type:\"unix\" value:\"supplementary_group:root\"]" subsystem_name=workload_attestor
+time="2026-11-06T02:01:02Z" level=debug msg="PID attested to have selectors" pid=1837 selectors="[type:\"unix\" value:\"uid:0\" type:\"unix\" value:\"user:root\" type:\"unix\" value:\"gid:0\" type:\"unix\" value:\"group:root\" type:\"unix\" value:\"supplementary_gid:0\" type:\"unix\" value:\"supplementary_group:root\"]" subsystem_name=workload_attestor
+time="2026-11-06T02:01:03Z" level=debug msg="Enrolled X509-SVID" entry_id=2d681d55-0365-4621-b037-ad3dc788c46b expiration="2026-11-06T03:01:03Z" method=EnrollCredential pid=1837 service=WorkloadAPI spiffe_id="spiffe://example.org/workload" subsystem_name=endpoints
+time="2026-11-06T02:01:03Z" level=debug msg="PID attested to have selectors" pid=1896 selectors="[type:\"unix\" value:\"uid:0\" type:\"unix\" value:\"user:root\" type:\"unix\" value:\"gid:0\" type:\"unix\" value:\"group:root\" type:\"unix\" value:\"supplementary_gid:0\" type:\"unix\" value:\"supplementary_group:root\"]" subsystem_name=workload_attestor
+time="2026-11-06T02:01:03Z" level=debug msg="No entry carries the credential hint; it goes to the Server with the default identity" hint=payments.workload.tacra.example method=InitiateCredentialAcquisition pid=1896 service=WorkloadAPI subsystem_name=endpoints
+time="2026-11-06T02:01:03Z" level=debug msg="PID attested to have selectors" pid=1896 selectors="[type:\"unix\" value:\"uid:0\" type:\"unix\" value:\"user:root\" type:\"unix\" value:\"gid:0\" type:\"unix\" value:\"group:root\" type:\"unix\" value:\"supplementary_gid:0\" type:\"unix\" value:\"supplementary_group:root\"]" subsystem_name=workload_attestor
+time="2026-11-06T02:01:03Z" level=debug msg="No entry carries the credential hint; it goes to the Server with the default identity" hint=payments.workload.tacra.example method=RetrieveCredential pid=1896 service=WorkloadAPI subsystem_name=endpoints
+time="2026-11-06T02:01:03Z" level=debug msg="Retrieved credential bundle" entry_id=2d681d55-0365-4621-b037-ad3dc788c46b method=RetrieveCredential pid=1896 service=WorkloadAPI spiffe_id="spiffe://example.org/workload" subsystem_name=endpoints
+time="2026-11-06T02:01:04Z" level=debug msg="Finishing health checker" check=agent subsystem_name=health
+time="2026-11-06T02:01:04Z" level=info msg="Stopping agent APIs" apis="Workload and SDS APIs" subsystem_name=endpoints
+time="2026-11-06T02:01:04Z" level=error msg="Failed to fetch bundle" error="rpc error: code = Canceled desc = context canceled" status_code=Canceled status_message="context canceled" subsystem_name=manager
+time="2026-11-06T02:01:04Z" level=debug msg="Stopping SVID rotator" subsystem_name=manager
+time="2026-11-06T02:01:04Z" level=error msg="Synchronize failed" error="failed to fetch bundle: rpc error: code = Canceled desc = context canceled" subsystem_name=manager
+time="2026-11-06T02:01:04Z" level=info msg="Cache manager stopped" subsystem_name=manager
+time="2026-11-06T02:01:04Z" level=debug msg="Closing catalog" subsystem_name=catalog
+time="2026-11-06T02:01:04Z" level=debug msg="Unloading plugin" external=false plugin_name=unix plugin_type=WorkloadAttestor subsystem_name=catalog
+time="2026-11-06T02:01:04Z" level=debug msg="Plugin deinitialized" external=false plugin_name=unix plugin_type=WorkloadAttestor subsystem_name=catalog
+time="2026-11-06T02:01:04Z" level=info msg="Plugin unloaded" external=false plugin_name=unix plugin_type=WorkloadAttestor subsystem_name=catalog
+time="2026-11-06T02:01:04Z" level=debug msg="Unloading plugin" external=false plugin_name=disk plugin_type=KeyManager subsystem_name=catalog
+time="2026-11-06T02:01:04Z" level=debug msg="Plugin deinitialized" external=false plugin_name=disk plugin_type=KeyManager subsystem_name=catalog
+time="2026-11-06T02:01:04Z" level=info msg="Plugin unloaded" external=false plugin_name=disk plugin_type=KeyManager subsystem_name=catalog
+time="2026-11-06T02:01:04Z" level=debug msg="Unloading plugin" external=false plugin_name=join_token plugin_type=NodeAttestor subsystem_name=catalog
+time="2026-11-06T02:01:04Z" level=debug msg="Plugin deinitialized" external=false plugin_name=join_token plugin_type=NodeAttestor subsystem_name=catalog
+time="2026-11-06T02:01:04Z" level=info msg="Plugin unloaded" external=false plugin_name=join_token plugin_type=NodeAttestor subsystem_name=catalog
+time="2026-11-06T02:01:04Z" level=info msg="Catalog closed" subsystem_name=catalog
+time="2026-11-06T02:01:04Z" level=info msg="Agent stopped gracefully"
