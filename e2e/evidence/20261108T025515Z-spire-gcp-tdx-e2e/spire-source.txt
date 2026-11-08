@@ -1,0 +1,6 @@
+spire built from /Users/serhiinikolaichuk/dev/spire
+  commit 40ee0c3e553b26128ddd26133ec95ab71436c2b9 A duration without its unit is refused when the configuration is read: the test for ear_max_age, ear_skew and expires_in
+  replace github.com/spiffe/go-spiffe/v2 => github.com/TWI-Unified-Model/spiffe-go-spiffe/v2 v2.9.1-0.20261103185101-290df1d6b655
+  replace github.com/spiffe/spire-api-sdk => github.com/TWI-Unified-Model/spiffe-spire-api-sdk v1.2.5-0.20261103185608-6628d059ce2c
+go-spiffe: 37e447ff0215b67e046e7338b00402ab4ef63749 Workload API comment: the Attester-held key is bound to the Evidence; stubs regenerated
+spire-api-sdk: 7fdf940af4855bd3bbe65fcc5e75bc534f131688 Server API comments: the Attester-held key is bound to the Evidence; stubs regenerated
