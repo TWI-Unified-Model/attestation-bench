@@ -8,8 +8,10 @@
 # fork: the Attester with the SEV-SNP or TDX plug-in), which enrolls an X509-SVID for a key of its own through the
 # attested credential acquisition calls of the Workload API.
 #
-#   e2e/scripts/spire-gcp-snp-e2e.sh            SPIRE_REPO=~/dev/spire (the fork's checkout, built from its HEAD)
-#   TEE=tdx e2e/scripts/spire-gcp-snp-e2e.sh
+#   SPIRE_REPO=<checkout of the fork> e2e/scripts/spire-gcp-snp-e2e.sh            built from HEAD of the checkout
+#   SPIRE_REPO=<checkout of the fork> TEE=tdx e2e/scripts/spire-gcp-snp-e2e.sh
+#
+# SPIRE_REPO has no default (scripts/lib.sh, bench_spire_repo); docs/spire.md says what to clone and what a run keeps.
 #
 # The run directory (RUNS_DIR, default BENCH_HOME/runs) keeps the workload's record (result.json, the SVID and the
 # bundle, the Evidence), the server's and the agent's logs, Veraison's logs of the run, the configurations without
@@ -19,10 +21,10 @@ set -euo pipefail
 # shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"
 [ $# -eq 0 ] || bench_die "no arguments: the project and zone come from GCP_PROJECT and GCP_ZONE (scripts/lib.sh)"
+bench_spire_repo
 bench_gcp
 PROJECT="$GCP_PROJECT" ZONE="$GCP_ZONE"
 TEE="${TEE:-sev-snp}"
-SPIRE_REPO="${SPIRE_REPO:-$HOME/dev/spire}"
 TRUST_DOMAIN="${TRUST_DOMAIN:-example.org}"
 TARGET="spiffe://$TRUST_DOMAIN"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
@@ -34,15 +36,13 @@ OUT="$RUNS_DIR/${STAMP}-spire-gcp-${TEE}-e2e"
 BIN="$(mktemp -d)"
 S="$B/spire"   # the server's directory for this run: configuration, data, socket, log (outside git)
 mkdir -p "$OUT/bench-logs" "$OUT/config"
-[ -d "$SPIRE_REPO/.git" ] || bench_die "SPIRE_REPO=$SPIRE_REPO is not a checkout"
 case "$TEE" in sev-snp | tdx) ;; *) bench_die "TEE=$TEE: sev-snp or tdx" ;; esac
 make -s status >/dev/null 2>&1 || true
 nc -z 127.0.0.1 8443 || bench_die "Veraison is not up on 127.0.0.1:8443 (make start)"
 ! nc -z 127.0.0.1 8081 2>/dev/null || bench_die "port 8081 is taken on this machine"
 
 echo "== the fork's state"
-{ echo "spire built from $SPIRE_REPO"; git -C "$SPIRE_REPO" log -1 --format="  commit %H %s"; git -C "$SPIRE_REPO" status --porcelain | sed 's/^/  modified: /';
-  grep -E '^replace' "$SPIRE_REPO/go.mod" | sed 's/^/  /'; for r in go-spiffe spire-api-sdk; do git -C "$HOME/dev/$r" log -1 --format="$r: %H %s"; done; } > "$OUT/spire-source.txt"
+bench_spire_source > "$OUT/spire-source.txt"
 cat "$OUT/spire-source.txt"
 
 echo "== build: spire-server (this machine), spire-agent and attested-workload (linux/amd64)"

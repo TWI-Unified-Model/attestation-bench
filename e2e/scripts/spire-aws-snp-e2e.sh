@@ -8,8 +8,10 @@
 # fork: the Attester with the SEV-SNP or TDX plug-in), which enrolls an X509-SVID for a key of its own through the
 # attested credential acquisition calls of the Workload API.
 #
-#   e2e/scripts/spire-aws-snp-e2e.sh            SPIRE_REPO=~/dev/spire (the fork's checkout, built from its HEAD)
+#   SPIRE_REPO=<checkout of the fork> e2e/scripts/spire-aws-snp-e2e.sh            built from HEAD of the checkout
 #   AWS_REGION, AWS_AZ: where the instance goes (scripts/lib.sh); TYPE: the instance type (default c6a.large)
+#
+# SPIRE_REPO has no default (scripts/lib.sh, bench_spire_repo); docs/spire.md says what to clone and what a run keeps.
 #
 # The run directory (RUNS_DIR, default BENCH_HOME/runs) keeps the workload's record (result.json, the SVID and the
 # bundle, the Evidence), the server's and the agent's logs, Veraison's logs of the run, the configurations without
@@ -19,12 +21,12 @@ set -euo pipefail
 # shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"
 [ $# -eq 0 ] || bench_die "no arguments: the region and zone come from AWS_REGION and AWS_AZ (scripts/lib.sh)"
+bench_spire_repo
 bench_aws
 REGION="$AWS_REGION" AZ="$AWS_AZ"
 TYPE="${TYPE:-c6a.large}"
 AMI_PARAM="${AMI_PARAM:-/aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id}"
 TEE="sev-snp"
-SPIRE_REPO="${SPIRE_REPO:-$HOME/dev/spire}"
 TRUST_DOMAIN="${TRUST_DOMAIN:-example.org}"
 TARGET="spiffe://$TRUST_DOMAIN"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
@@ -36,14 +38,12 @@ OUT="$RUNS_DIR/${STAMP}-spire-aws-${TEE}-e2e"
 BIN="$(mktemp -d)"
 S="$B/spire"   # the server's directory for this run: configuration, data, socket, log (outside git)
 mkdir -p "$OUT/bench-logs" "$OUT/config"
-[ -d "$SPIRE_REPO/.git" ] || bench_die "SPIRE_REPO=$SPIRE_REPO is not a checkout"
 make -s status >/dev/null 2>&1 || true
 nc -z 127.0.0.1 8443 || bench_die "Veraison is not up on 127.0.0.1:8443 (make start)"
 ! nc -z 127.0.0.1 8081 2>/dev/null || bench_die "port 8081 is taken on this machine"
 
 echo "== the fork's state"
-{ echo "spire built from $SPIRE_REPO"; git -C "$SPIRE_REPO" log -1 --format="  commit %H %s"; git -C "$SPIRE_REPO" status --porcelain | sed 's/^/  modified: /';
-  grep -E '^replace' "$SPIRE_REPO/go.mod" | sed 's/^/  /'; for r in go-spiffe spire-api-sdk; do git -C "$HOME/dev/$r" log -1 --format="$r: %H %s"; done; } > "$OUT/spire-source.txt"
+bench_spire_source > "$OUT/spire-source.txt"
 cat "$OUT/spire-source.txt"
 
 echo "== build: spire-server (this machine), spire-agent and attested-workload (linux/amd64)"
@@ -178,7 +178,7 @@ trap cleanup EXIT
 SERVER_PID=$!
 for _ in $(seq 1 30); do "$BIN/spire-server" healthcheck -socketPath "$S/server.sock" >/dev/null 2>&1 && break; sleep 1; done
 "$BIN/spire-server" healthcheck -socketPath "$S/server.sock" >/dev/null || { cat "$S/server.stdout"; bench_die "the server did not come up"; }
-AGENT_ID="spiffe://$TRUST_DOMAIN/agent/gcp-$TEE"   # the join token names the agent; /spire/agent/ is the reserved namespace
+AGENT_ID="spiffe://$TRUST_DOMAIN/agent/aws-$TEE"   # the join token names the agent; /spire/agent/ is the reserved namespace
 TOKEN="$("$BIN/spire-server" token generate -socketPath "$S/server.sock" -spiffeID "$AGENT_ID" -ttl 1800 | awk '/Token:/{print $2}')"
 [ -n "$TOKEN" ] || bench_die "no join token"
 "$BIN/spire-server" bundle show -socketPath "$S/server.sock" -format pem > "$BIN/bundle.pem"

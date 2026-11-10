@@ -2,7 +2,8 @@
 # The demo of the SPIRE proof of concept of TACRA, for the TAC: one end-to-end run on a confidential guest, narrated,
 # recorded as a typescript, and written up from the run's record as a walkthrough the audience can read.
 #
-#   e2e/scripts/spire-demo.sh [sev-snp|tdx|aws]      (default sev-snp: a Google Cloud SEV-SNP guest)
+#   SPIRE_REPO=<checkout of the fork> e2e/scripts/spire-demo.sh [sev-snp|tdx|aws]   (default sev-snp: a Google
+#                                                        Cloud SEV-SNP guest; SPIRE_REPO as the run scripts take it)
 #   DEMO_RUN=<run directory> e2e/scripts/spire-demo.sh   narrates an existing record instead of running (for checking)
 #
 # Roles, in the words of draft-novak-rats-tacra-03: the attested workload is the Attester, with the Credential
@@ -22,14 +23,22 @@ PLATFORM="${1:-sev-snp}"
 HERE="$(cd "$(dirname "$0")/../.." && pwd)"
 B="$BENCH_HOME"
 
+if [ -n "${DEMO_RUN:-}" ]; then
+  [ -d "$DEMO_RUN" ] || bench_die "no such run directory: $DEMO_RUN"
+else
+  bench_spire_repo
+fi
+
 if [ "${DEMO_RECORDED:-}" != 1 ]; then
   STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
   DEMO_DIR="${DEMO_DIR:-$B/demo/${STAMP}-spire-${PLATFORM}}"
+  export DEMO_DIR
   mkdir -p "$DEMO_DIR"
   # record this script's own session as a typescript: the narration runs under a pseudo-terminal whose output is
-  # copied to the file byte for byte (script(1) needs a terminal on its stdin; this works from any shell)
+  # copied to the file byte for byte (script(1) needs a terminal on its stdin; this works from any shell). The
+  # recorder is the here-document: python3 reads it from its standard input.
   set +e
-  DEMO_RECORDED=1 DEMO_DIR="$DEMO_DIR" python3 - "$DEMO_DIR/demo.typescript" "$0" "$PLATFORM" </dev/null <<'PYREC'
+  DEMO_RECORDED=1 python3 - "$DEMO_DIR/demo.typescript" "$0" "$PLATFORM" <<'PYREC'
 import os, pty, sys
 out = open(sys.argv[1], "wb")
 def read(fd):
@@ -65,8 +74,12 @@ show "$HERE/e2e/scripts/bench.sh" status
 echo "vault: $(python3 -c "import json,sys; v=json.load(open(sys.argv[1])); print('rats_model=' + str(v.get('rats_model') or 'passport'))" "$B/config/vault-gateway.json")"
 
 say "The code under demonstration"
-show git -C "$HOME/dev/spire" --no-pager log --oneline -3
-show grep -E '^replace' "$HOME/dev/spire/go.mod"
+if [ -n "${DEMO_RUN:-}" ]; then
+  show cat "$DEMO_RUN/spire-source.txt"
+else
+  show git -C "$SPIRE_REPO" --no-pager log --oneline -3
+  show grep -E '^replace' "$SPIRE_REPO/go.mod"
+fi
 
 if [ -n "${DEMO_RUN:-}" ]; then
   say "Narrated from an existing record, no new run: $DEMO_RUN"
@@ -76,8 +89,8 @@ else
   RUN_LOG="$DEMO_DIR/run.log"
   set +e
   case "$PLATFORM" in
-    sev-snp | tdx) TEE="$PLATFORM" SPIRE_REPO="$HOME/dev/spire" "$HERE/e2e/scripts/spire-gcp-snp-e2e.sh" 2>&1 | tee "$RUN_LOG"; rc=${PIPESTATUS[0]} ;;
-    aws) SPIRE_REPO="$HOME/dev/spire" "$HERE/e2e/scripts/spire-aws-snp-e2e.sh" 2>&1 | tee "$RUN_LOG"; rc=${PIPESTATUS[0]} ;;
+    sev-snp | tdx) TEE="$PLATFORM" "$HERE/e2e/scripts/spire-gcp-snp-e2e.sh" 2>&1 | tee "$RUN_LOG"; rc=${PIPESTATUS[0]} ;;
+    aws) "$HERE/e2e/scripts/spire-aws-snp-e2e.sh" 2>&1 | tee "$RUN_LOG"; rc=${PIPESTATUS[0]} ;;
     *) bench_die "platform: sev-snp, tdx or aws" ;;
   esac
   set -e
@@ -164,6 +177,8 @@ retrieval_model = (
     "policy.")
 conf = subprocess.run(["sed", "-n", "/credential_acquisition {/,/^        }$/p", f"{run}/config/server.conf"], capture_output=True, text=True).stdout
 cert = subprocess.run(["openssl", "x509", "-in", f"{run}/workload/svid.pem", "-noout", "-subject", "-issuer", "-dates", "-ext", "subjectAltName"], capture_output=True, text=True).stdout
+built_from = re.search(r"commit ([0-9a-f]{40})", read(f"{run}/spire-source.txt"))
+built_from = f", built from commit `{built_from.group(1)[:12]}` (`spire-source.txt`)" if built_from else ""
 kernel = read(f"{run}/kernel.txt").split()
 kernel = kernel[2] if len(kernel) > 2 else " ".join(kernel)
 machine = read(f"{run}/machine-type.txt").strip().split("/")[-1]
@@ -187,8 +202,7 @@ A walkthrough of one run of the SPIRE proof of concept of draft-novak-rats-tacra
 
 ## What runs where
 
-- On the bench machine: SPIRE Server (this organization's fork, branch tacra-credential-acquisition), Veraison, the
-  Secret Vault.
+- On the bench machine: SPIRE Server (the TWI-Unified-Model fork of SPIRE{built_from}), Veraison, the Secret Vault.
 - In a fresh confidential guest ({machine or platform}, kernel {kernel}): SPIRE Agent and the attested workload, which
   generates its keys and obtains its Evidence through the Linux configfs-tsm interface.
 - The guest reaches the server through an SSH reverse tunnel; the server reaches Veraison and the vault on the bench

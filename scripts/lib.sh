@@ -190,6 +190,54 @@ bench_seal() {
   fi
 }
 
+# The SPIRE runs (e2e/scripts/spire-*.sh, docs/spire.md) build SPIRE Server, SPIRE Agent and the attested Workload
+# from a checkout of the fork of SPIRE with the TACRA work. SPIRE_REPO names that checkout. It has no default: a run
+# builds only from a directory the user named.
+#
+# bench_spire_repo: stops with what to do when SPIRE_REPO is not set or does not name such a checkout.
+bench_spire_repo() {
+  [ -n "${SPIRE_REPO:-}" ] ||
+    bench_die "set SPIRE_REPO to a checkout of the fork of SPIRE with the TACRA work: git clone https://github.com/TWI-Unified-Model/spiffe-spire (docs/spire.md)"
+  git -C "$SPIRE_REPO" rev-parse --git-dir >/dev/null 2>&1 || bench_die "SPIRE_REPO=$SPIRE_REPO is not a git checkout"
+  [ -d "$SPIRE_REPO/support/attested-workload" ] ||
+    bench_die "SPIRE_REPO=$SPIRE_REPO has no support/attested-workload: not the fork with the TACRA work (docs/spire.md)"
+}
+
+# bench_spire_source: prints what the programs of a SPIRE run are built from, for the record of the run
+# (spire-source.txt): the commit of the checkout and its uncommitted changes, the Go version, the replace directives
+# of go.mod and, for a module replaced by a directory, the commit of that directory, because the build uses the module
+# from there.
+bench_spire_source() {
+  local line dir top
+  echo "spire built from $SPIRE_REPO"
+  git -C "$SPIRE_REPO" log -1 --format='  commit %H %s'
+  git -C "$SPIRE_REPO" status --porcelain | sed 's/^/  modified: /'
+  echo "  $(cd "$SPIRE_REPO" && go version)"
+  (cd "$SPIRE_REPO" && go mod edit -json) | python3 -c '
+import json, sys
+
+replaced = json.load(sys.stdin).get("Replace") or []
+for r in replaced:
+    print("  replace", r["Old"]["Path"], "=>", " ".join(x for x in (r["New"]["Path"], r["New"].get("Version")) if x))
+for r in replaced:
+    if not r["New"].get("Version"):
+        print("directory", r["New"]["Path"])
+' | while IFS= read -r line; do
+    case "$line" in
+      "directory "*)
+        dir="${line#directory }"
+        case "$dir" in /*) ;; *) dir="$SPIRE_REPO/$dir" ;; esac
+        if top="$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null)"; then
+          echo "${top##*/}: $(git -C "$dir" log -1 --format='%H %s')$([ -z "$(git -C "$dir" status --porcelain)" ] || echo ', with uncommitted changes')"
+        else
+          echo "$dir: not a git checkout"
+        fi
+        ;;
+      *) echo "$line" ;;
+    esac
+  done
+}
+
 # bench_go_tool NAME MODULE@VERSION DIR: installs that version of a Go program into DIR with go install, unless it is
 # there already; says which
 bench_go_tool() {
