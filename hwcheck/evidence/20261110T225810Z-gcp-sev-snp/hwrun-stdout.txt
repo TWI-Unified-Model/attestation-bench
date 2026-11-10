@@ -1,0 +1,12 @@
+enroll-present-nonce            9.6 ms    5989 B  VCEK 
+retrieve-present-nonce          9.3 ms    5989 B  VCEK 
+enroll-present-epoch            9.1 ms    5989 B  VCEK 
+retrieve-present-epoch          7.8 ms    5989 B  VCEK 
+enroll-absent-epoch             8.2 ms    5989 B  VCEK 
+retrieve-absent-epoch           8.4 ms    5989 B  VCEK 
+enroll-absent-timestamp         8.3 ms    5989 B  VCEK 
+retrieve-absent-timestamp       8.6 ms    5989 B  VCEK 
+enroll-absent-none             10.1 ms    5989 B  VCEK 
+retrieve-absent-none            8.1 ms    5989 B  VCEK 
+burst of 100: min 7.7 ms, median 8.2 ms, p95 10226.9 ms, max 10229.9 ms
+attestation key (from the host certificate table): SHA-256(SPKI) 07a94d18e3119c3a598ff3503bb0e3a0a57be54844336b60f79658662e52932b

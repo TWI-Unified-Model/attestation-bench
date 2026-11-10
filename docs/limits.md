@@ -75,7 +75,7 @@ Read this page before you cite a result.
   `…214424Z-gcp-tdx`, `preplay.json`):
   - present-nonce, present-epoch, absent-epoch and absent-none Evidence made with the clock ahead was taken at once,
     in both modes: those kinds do not rest on the guest's clock (absent-none rests on nothing);
-  - absent-timestamp Evidence made with it ahead was refused at once (409: the timestamp outside the window of
+  - absent-timestamp Evidence made with it ahead was refused at once (the timestamp outside the window of
     `max_age` 120 s and `clock_skew` 5 s), taken two seconds after the RRPs' clock reached the timestamp less
     `clock_skew` and again two seconds before it reached the timestamp plus `max_age`, the same Evidence each time, and
     refused two seconds after that: by the RRPs' clock, from 295 s to 420 s after the guest's clock was moved and the
