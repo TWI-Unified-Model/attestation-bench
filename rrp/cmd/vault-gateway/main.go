@@ -103,8 +103,8 @@ func (s *server) retrieve(req *RetrieveRequest) (*bundle.Bundle, []string, error
 	if validity == 0 {
 		validity = int(gateway.BankMaxValidity / time.Second)
 	}
-	// value is the unpadded base64url of the credential octets, as every byte string of the profile is carried; format
-	// names another encoding of those octets when the secret's policy sets one
+	// value is the unpadded base64url of the credential octets, as the profile encodes every byte string; format names
+	// another encoding of those octets when the policy for the secret sets one
 	content := bundle.Content{CredentialItems: []bundle.Item{{Type: secret["type"], Format: secret["format"],
 		Value: base64.RawURLEncoding.EncodeToString([]byte(secret["value"])), Kid: gid[:16], Purpose: grp.Purpose, Algorithm: grp.Algorithm, Exportable: &no, Shared: shared}},
 		Metadata: map[string]any{"secret_version": strconv.Itoa(version), "validity_seconds": validity}}

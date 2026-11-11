@@ -350,10 +350,10 @@ func (g *Gateway) target(name string) (*Target, error) {
 	return t, nil
 }
 
-// supports refuses a Credential Type this Relying Party does not serve for the Target: 422, the body naming the ones
-// it supports. At attest-initiate it is checked at once; on the second leg only after the Attestation Results were
-// taken, so that a failed attestation is refused with 403 whatever the Credential Type. A credential type the profile
-// does not define never reaches the RRP: the EST Server refuses it with 400.
+// supports refuses a Credential Type that this Relying Party does not support for the Target: 422, with the supported
+// ones in the body. At attest-initiate the check comes at once. At the second call it comes after the Attestation
+// Results are verified, so that a failed attestation is refused with 403 whatever the Credential Type. A Credential
+// Type that the profile does not define does not reach the RRP: the EST server refuses it with 400.
 func (t *Target) supports(credentialType string) error {
 	if slices.Contains(t.CredentialTypes, credentialType) {
 		return nil
@@ -402,8 +402,7 @@ func (g *Gateway) Check(req *SecondLeg, subject []byte) (*ear.Result, *Target, e
 	}
 	maxAge, skew := time.Duration(t.MaxAgeS)*time.Second, time.Duration(t.SkewS)*time.Second
 	if err := g.Fresh.Accept(req.FreshnessKind, req.Handle, req.Target, req.CredentialType, maxAge, skew); err != nil {
-		// a Handle not issued, expired or used before, an epoch marker that moved, a stale timestamp: 400, as the draft
-		// says since 30 October 2026 (no 409)
+		// a Handle not issued, expired or used before, an epoch marker that moved, a stale timestamp: 400
 		return nil, nil, refuse(http.StatusBadRequest, "freshness", err)
 	}
 	bv := platform.BindingValue(req.Handle, req.Target, subject) // no identifier of any party (rats-tacra#20, 11 October 2026)

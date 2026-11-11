@@ -178,8 +178,8 @@ func grpcError(err error) error {
 	case http.StatusBadRequest, http.StatusRequestEntityTooLarge, http.StatusUnsupportedMediaType:
 		return status.Error(codes.InvalidArgument, e.Error())
 	case http.StatusUnprocessableEntity:
-		// a Credential Type the RATS Relying Party does not serve for the Target: not supported in this service, as
-		// gRPC defines Unimplemented, and not retried
+		// a Credential Type that the RATS Relying Party does not support for the Target: gRPC defines Unimplemented
+		// as not supported in this service, and a client does not retry the call
 		return status.Error(codes.Unimplemented, e.Error())
 	case http.StatusForbidden, http.StatusUnauthorized:
 		return status.Error(codes.PermissionDenied, e.Error())

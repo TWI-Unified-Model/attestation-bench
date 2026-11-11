@@ -318,8 +318,8 @@ type InitiateCredentialAcquistionRequest struct {
 	Target string `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
 	// Which credential type does the workload with to use?
 	CredentialType CredentialType `protobuf:"varint,2,opt,name=credential_type,json=credentialType,proto3,enum=caapi.v1.CredentialType" json:"credential_type,omitempty"`
-	// The Credential Hint of Initiate-Credential-Acquisition (TACRA 5.1), optional: a
-	// present-nonce second leg must repeat a hint named here (the EST profile, 2 November 2026).
+	// The Credential Hint of Initiate-Credential-Acquisition, optional. Under
+	// present-nonce the second call must repeat a hint named here.
 	CredentialHint string `protobuf:"bytes,3,opt,name=credential_hint,json=credentialHint,proto3" json:"credential_hint,omitempty"`
 }
 

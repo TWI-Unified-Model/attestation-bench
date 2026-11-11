@@ -62,7 +62,7 @@ func (b *B64) UnmarshalJSON(d []byte) error {
 // AAD is the associated data of the bundle.
 type AAD struct {
 	GroupID        string `json:"group_id"`
-	Target         B64    `json:"target"` // the Target octets, base64url on the wire (TACRA-02)
+	Target         B64    `json:"target"` // the Target octets, base64url on the wire
 	Handle         B64    `json:"handle,omitempty"`
 	CredentialHint string `json:"credential_hint,omitempty"`
 }

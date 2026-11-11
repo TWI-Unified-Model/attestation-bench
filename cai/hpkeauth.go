@@ -137,13 +137,12 @@ func (c *Client) openBase(raw []byte, cekPriv crypto.PrivateKey, cekPub []byte, 
 	return itemOctets(content.CredentialItems[0])
 }
 
-// itemOctets is the credential an item carries: its value is the unpadded base64url of the credential's octets, a DER
-// certificate, a DER PrivateKeyInfo, the key octets or the UTF-8 of a token (the EST draft, Response:
-// EncryptedCredentialBundle, 30 October 2026).
+// itemOctets returns the credential of an item. The value of an item is the unpadded base64url of the octets of the
+// credential: a DER certificate, a DER PrivateKeyInfo, key octets, or the UTF-8 text of an API key.
 func itemOctets(it bundle.Item) ([]byte, error) {
 	octets, err := base64.RawURLEncoding.DecodeString(it.Value)
 	if err != nil {
-		return nil, fmt.Errorf("%w: the item's value is not unpadded base64url: %v", ErrUnwrap, err)
+		return nil, fmt.Errorf("%w: the value of the item is not unpadded base64url: %v", ErrUnwrap, err)
 	}
 	return octets, nil
 }

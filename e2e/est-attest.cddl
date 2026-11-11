@@ -71,7 +71,7 @@ binding = {
   hash: "sha512",
 }
 
-; --- the container of TACRA-02, Sealing the Released Credential ---
+; --- the container of TACRA, Sealing the Released Credential ---
 encrypted-credential-bundle = {
   container: "hpke-base",
   suite: {
