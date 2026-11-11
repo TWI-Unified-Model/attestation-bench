@@ -93,7 +93,7 @@ The run directory is `~/.attestation-bench/runs/<time>-spire-<cloud>-<tee>-e2e`;
 | `server.log`, `agent.log`, `agent.stdout` | the log of SPIRE Server with the audit records, the log of SPIRE Agent |
 | `bench-logs/` | the logs of the Verifier and of the Secret Vault during the run |
 | `approved-measurements.json`, `entry.txt` | the launch measurements that the bench approves, the registration entry |
-| `provision.txt`, `kernel.txt`, `machine-type.txt`, `clock.txt`, `clock-offset.txt`, `run-window.txt` | the VM: the TSM interface, the kernel, the machine type, the clock |
+| `provision.txt`, `kernel.txt`, `machine-type.txt`, `clock.txt`, `clock-offset.txt`, `run-window.txt` | the VM: the TSM interface, the kernel, the type of the VM, the clock |
 | `guest-stdout.txt`, `guest-rc.txt`, `ssh.stderr` | the output of the script in the VM, its exit status, the messages of SSH |
 | `vm-deleted.txt` | the time at which the VM was gone |
 | `sha256sums.txt` | the seal: `shasum -a 256 -c sha256sums.txt` in the run directory shows that no file changed ([results.md](results.md)) |
@@ -103,7 +103,7 @@ stay in the VM.
 
 ## Passport and Background Check
 
-A run reads the RATS model of the Secret Vault from the configuration of the bench. Section 11 of
+A run reads the RATS model of the Secret Vault from the configuration of the bench. Step 11 of
 [getting-started.md](getting-started.md) switches the model:
 
 ```bash
@@ -145,6 +145,6 @@ One run on each platform, made with the commands above:
   the Server are in memory, and the `credential_acquisition` block is under `experimental`. This arrangement is for
   testing, not for deployment.
 - On Google Cloud and AWS SEV-SNP the Server admits the host under the waiver of the bench for the mitigation bit that
-  AMD-SB-3034 names ([limits.md](limits.md)). `server.log` records the waiver; `verdict.txt` does not.
+  AMD-SB-3034 names ([limits.md](limits.md)). `server.log` records the waiver; `verdict.txt` does not record it.
 - The run script judges the run. `scripts/verdict.py` does not know this kind of run: `make report` lists it as "not a
   run of the make commands", and `make test-live` does not appraise its Evidence again.

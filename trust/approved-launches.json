@@ -8,7 +8,7 @@
     },
     {
       "measurement": "e79ebb5b789ddb6b7a9897f663a655a65c69445aa482c4e1a5ff9fdeb4af1a2c8d5d30fcad5f4f0e04f1a13885eb984d",
-      "launch": "Google Cloud n2d-standard-2 (AMD Milan, 2 vCPUs), confidential VM with SEV-SNP: the UEFI build of Google met from 25 October 2026",
+      "launch": "Google Cloud n2d-standard-2 (AMD Milan, 2 vCPUs), confidential VM with SEV-SNP: Google's UEFI build met from 25 October 2026",
       "endorsement": "launch endorsement signed by Google (GCE-uefi-signer), SVN 2, 2026-08-28T12:54:59Z",
       "checked": "hwcheck/evidence/20261025T224459Z-gcp-sev-snp/refvals/snp-e79ebb5b789ddb6b7a9897f663a655a65c69445aa482c4e1a5ff9fdeb4af1a2c8d5d30fcad5f4f0e04f1a13885eb984d.json"
     },
@@ -26,7 +26,7 @@
     },
     {
       "measurement": "f67900851e25a378f04b4d4b5f1ea4410c11deb74e97ddcc7e3363a33f6e1dbb7880d304005387bc98e9cbdceec4ea28",
-      "launch": "Google Cloud n2d-standard-2 (AMD Milan, 2 vCPUs), confidential VM with SEV-SNP: the UEFI build of Google met from 5 November 2026",
+      "launch": "Google Cloud n2d-standard-2 (AMD Milan, 2 vCPUs), confidential VM with SEV-SNP: Google's UEFI build met from 5 November 2026",
       "endorsement": "launch endorsement signed by Google (GCE-uefi-signer), SVN 2, 2026-10-16T22:14:59Z",
       "checked": "hwcheck/evidence/20261105T163101Z-gcp-sev-snp/refvals/snp-f67900851e25a378f04b4d4b5f1ea4410c11deb74e97ddcc7e3363a33f6e1dbb7880d304005387bc98e9cbdceec4ea28.json"
     }
@@ -34,13 +34,13 @@
   "tdx": [
     {
       "mrtd": "c1ee9c16e3afc506cfe042c5b846a368528f3b37618eafb27469bc114cf914e9222c91618470e7f2b28ac360968270a5",
-      "launch": "Google Cloud c3-standard-4, confidential VM with Intel TDX: the TDX firmware build of Google",
+      "launch": "Google Cloud c3-standard-4, confidential VM with Intel TDX: Google's TDX firmware build",
       "endorsement": "launch endorsement signed by Google (GCE-uefi-signer), SVN 2, 2026-05-21T23:52:45Z",
       "checked": "e2e/evidence/20261006T183422Z-gce-tdx-endorsements/tdx-c1ee9c16e3afc506.txt"
     },
     {
       "mrtd": "f21e6b48743fe14c2d090078ca1197f09ae4c99438677f2c79901ef80e2aeefe2f9a7eb6e3eb3b5047c4f1511731e5d3",
-      "launch": "Google Cloud c3-standard-4, confidential VM with Intel TDX: the TDX firmware build of Google",
+      "launch": "Google Cloud c3-standard-4, confidential VM with Intel TDX: Google's TDX firmware build",
       "endorsement": "launch endorsement signed by Google (GCE-uefi-signer), SVN 2, 2026-07-31T09:52:02Z",
       "checked": "e2e/evidence/20261006T183422Z-gce-tdx-endorsements/tdx-f21e6b48743fe14c.txt"
     }

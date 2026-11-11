@@ -89,12 +89,13 @@ if [ -n "${DEMO_RUN:-}" ]; then
   show cat "$DEMO_RUN/spire-source.txt"
 else
   show git -C "$SPIRE_REPO" --no-pager log --oneline -3
-  show grep -E '^replace' "$SPIRE_REPO/go.mod"
+  # grep ends with status 1 when go.mod has no replace directive
+  show grep -E '^replace' "$SPIRE_REPO/go.mod" || echo "go.mod has no replace directive"
 fi
 
 if [ -n "${DEMO_RUN:-}" ]; then
   say "Narrated from the record of a run already made: $DEMO_RUN"
-  RUN="$DEMO_RUN"; [ -d "$RUN" ] || bench_die "no such run directory: $RUN"
+  RUN="$DEMO_RUN"
 else
   say "The run: a new confidential VM, SPIRE Agent, the attested Workload"
   RUN_LOG="$DEMO_DIR/run.log"

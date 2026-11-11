@@ -7,7 +7,7 @@
 # the bench for TDX) and the Secret Vault. The run writes the configuration of the Server from the configuration of the
 # bench: the Verifier and the key that signs its Attestation Results, the approved launch measurements, the platform
 # rule. The Server calls the Verifier with the client certificate of the Credential Authority gateway of the bench, and
-# the Secret Vault with the client certificate of the EST server of the bench.
+# the Secret Vault with the client certificate of the EST Server of the bench.
 # In the VM: SPIRE Agent, which joins with a join token and reaches the Server through an SSH reverse tunnel on
 # 127.0.0.1:8081, and the attested Workload (support/attested-workload of the fork), the Attester. The Workload enrolls
 # an X509-SVID for a key that it generates, and retrieves a credential from the Secret Vault, through the attested
@@ -41,7 +41,6 @@ BIN="$(mktemp -d)"
 S="$B/spire"   # the directory of the Server for this run: configuration, data, socket, log (outside git)
 mkdir -p "$OUT/bench-logs" "$OUT/config"
 case "$TEE" in sev-snp | tdx) ;; *) bench_die "TEE=$TEE: sev-snp or tdx" ;; esac
-make -s status >/dev/null 2>&1 || true
 nc -z 127.0.0.1 8443 || bench_die "Veraison is not up on 127.0.0.1:8443 (make start)"
 ! nc -z 127.0.0.1 8081 2>/dev/null || bench_die "port 8081 is in use on this computer"
 
@@ -137,8 +136,8 @@ PY
 cp "$S/server.conf" "$OUT/config/server.conf"
 cp "$S/platform-rule.json" "$OUT/config/platform-rule.json"
 # Origin authentication: when the Secret Vault signs the containers that it releases for the Target, the Workload
-# gets the public signature key of the Secret Vault, from its origin-keys resource, and requires the signature. The
-# record keeps which.
+# gets the public signature key of the Secret Vault, from its origin-keys resource, and requires the signature.
+# config/vault-mode.txt of the run records whether the Secret Vault signs.
 ORIGIN_AUTH="$(python3 -c "import json,sys; v=json.load(open(sys.argv[1])); print('off' if v['targets']['https://ledger-nonce.tacra.example'].get('sign') is False else 'on')" "$B/config/vault-gateway.json")"
 VAULT_MODEL="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('rats_model') or 'passport')" "$B/config/vault-gateway.json")"
 echo "vault rats_model=$VAULT_MODEL origin_auth=$ORIGIN_AUTH" | tee "$OUT/config/vault-mode.txt"
@@ -299,7 +298,7 @@ rm -f "$OUT"/bench-logs/.*.start
 echo "== verdict"
 rc=0
 python3 - "$OUT" "$TRUST_DOMAIN" > "$OUT/verdict.txt" <<'PY' || rc=$?
-import json, os, re, sys
+import json, os, sys
 out, td = sys.argv[1:3]
 try:
     r = json.load(open(f"{out}/workload/result.json"))

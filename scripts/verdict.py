@@ -108,10 +108,9 @@ def redirect_variant_expected(variant):
 REWRITES = {
     "made-up Handle": ("refused", "freshness"),  # present-nonce only: the RRP knows its Handles
     "Freshness Kind absent-none": ("refused", "freshness-kind-mismatch"),  # the kind is the Target's, by policy
-    "credential type not offered": (
-        "refused",
-        "unsupported-credential-type",
-    ),  # 422, after the appraisal; not sent under present-nonce: the Handle binding refuses first and spends the Handle
+    # The gateway refuses with 422, after the appraisal. Under present-nonce the experiment does not send this rewrite:
+    # the binding of the Handle refuses first and consumes the Handle.
+    "credential type not offered": ("refused", "unsupported-credential-type"),
     "Credential Hint of another workload": ("refused", "credential-hint"),  # the CA names the attested workload
     "the other credential type offered": ("issued", None),  # nothing binds it, but a present-nonce Handle: below
 }
@@ -289,10 +288,10 @@ def sent_rewrites(rows):
     return {(r["rewrite"], r["kind"]) for r in rows}
 
 
-def rewrites_wanted(sent=frozenset()):
-    """The rewrites the experiment makes: (name, kind), in the order it makes them. Under present-nonce the credential
-    type the Target does not offer is sent only by the runs made while the gateways checked the Credential Type before
-    the Handle; sent says what the run made, and those runs keep that row."""
+def experiment_rewrites(sent=frozenset()):
+    """The rewrites the experiment makes: (name, kind), in the order it makes them. Under present-nonce the experiment
+    does not send the Credential Type that the Target does not offer. A kept run whose gateways checked the Credential
+    Type before the Handle did send it: sent says what the run made, and such a run keeps that row."""
     out = []
     for k in FRESHNESS_KINDS:
         if k == "present-nonce":
@@ -309,7 +308,7 @@ def rewrite_lines(rows):
     """The conduit's rewrites (runs from 7 October 2026 on): a table, and each one not as expected."""
     got = {(r["rewrite"], r["kind"]): r["result"] for r in rows}
     lines, wrong = [f"{'rewrite at ca1':38} {'kind':18} outcome"], []
-    for name, kind in rewrites_wanted(sent_rewrites(rows)):
+    for name, kind in experiment_rewrites(sent_rewrites(rows)):
         res, (want, code) = got.get((name, kind)), rewrite_expected(name, kind)
         if res is None:
             lines.append(f"{name:38} {kind:18} missing")
@@ -349,11 +348,13 @@ def redirect(run):
                     wrong.append(f"{p} {k} {rrp}: {cells[-1]}, expected {'ISSUED' if want[rrp] else 'refused'}")
             lines.append(f"{p:12} {k:18} {cells[0]:8} {cells[1]}")
     outcomes = len(passes) * len(FRESHNESS_KINDS) * 2
+    rewrite_count = 0
     if rewrites:
         more, bad = rewrite_lines(rewrites)
         lines += more
         wrong += bad
-        outcomes += len(rewrites_wanted(sent_rewrites(rewrites)))
+        rewrite_count = len(experiment_rewrites(sent_rewrites(rewrites)))
+        outcomes += rewrite_count
     lines += clock_lines(run)
     if wrong:
         return lines + wrong, False, f"{len(wrong)} of {outcomes} outcomes not as expected"
@@ -362,7 +363,7 @@ def redirect(run):
         summary = "with the RRP identifier, ca2 refused all 5 Freshness Kinds; " + summary
     if rewrites:
         summary += (
-            f"; of the conduit's {len(rewrites_wanted(sent_rewrites(rewrites)))} rewrites at ca1, the other credential type the Target "
+            f"; of the conduit's {rewrite_count} rewrites at ca1, the other credential type the Target "
             "offers was issued for every kind but present-nonce, and every other was refused for its own reason"
         )
     return lines, True, summary

@@ -233,7 +233,7 @@ make redirect PLATFORM=gcp-snp
 
 The workload produces Evidence for a Target of one Credential Authority, `ca1`. A hostile intermediary then offers
 the same Evidence to a second one, `ca2`. Then the intermediary rewrites, one at a time, what it relays to `ca1`: a
-made-up Handle, the Freshness Kind, the Credential Type, the Credential Hint of another Workload. It ends with:
+made-up Handle, the Freshness Kind, the Credential Type, the Credential Hint of another workload. It ends with:
 
 ```
 pass         kind               ca1      ca2
