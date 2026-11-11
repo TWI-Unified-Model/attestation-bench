@@ -1,33 +1,34 @@
 #!/usr/bin/env python3
 """Checks the messages of EST wire logs against the CDDL of the attest-* wire, with the cddl tool, and their media types.
 
-A wire log is the EST server's (est-server.json, wire_log; a run keeps its part in bench-logs/est-wire.log): one JSON
-object per exchange on an attest-* resource, the request and the response as they crossed the wire. The CDDL is the
-one of the wire format proposed for draft-novak-lamps-tacra-est in October 2026 (e2e/est-attest.cddl). Each message it
-defines is checked against its rule: the attest-initiate response, the attest-enroll and attest-retrieve requests, and
-the attest-retrieve response, the Secret Vault's container (since 28 October 2026, issue #15 of the draft; its origin
-member optional since 29 October, by the Target's policy). Of every message the
-media type is checked: its own (one for each message type: application/est-attest-initiate+json, -enroll+json,
--retrieve+json and -bundle+json), application/pkcs7-mime for the enrollment's certificate, text/plain for a refusal.
+A wire log is the log of the EST Server (est-server.json, wire_log; a run keeps its part in bench-logs/est-wire.log):
+one JSON object for each exchange on an attest-* resource, the request and the response as they crossed the wire. The
+CDDL is e2e/est-attest.cddl: the CDDL of the EST profile, then the container of TACRA, then the container with the
+origin member that the Secret Vault of the bench adds when it signs. Each message is checked against its rule: the
+attest-initiate response, the attest-enroll and attest-retrieve requests, and the attest-retrieve response. Of every
+message the media type is checked: its own (one for each message type: application/est-attest-initiate+json,
+-enroll+json, -retrieve+json and -bundle+json), application/pkcs7-mime for the certificate of an Enrollment, and
+text/plain for a refusal.
 
 Before that, for the first message of each kind (each rule, Freshness Kind and mode), the check shows that the tool
-refuses what the CDDL must: the message without freshness_kind; with a member the CDDL does not define (rrp_id in a
-response, endorsements in a request); with a byte string in standard base64; with a handle where its kind takes none,
-or without one where it takes one; a response of one mode with the other mode's algorithms; a container whose origin
-member lacks its signature or names another algorithm, a container with another label, without its KEM, or with a suite
-member the CDDL does not define. The names of the suite are open text, because TACRA names the mandatory suite and
-allows others: the Attester, not the grammar, refuses a suite with another name.
+refuses what the CDDL must refuse: the message without freshness_kind; with a member the CDDL does not define; with a
+byte string in standard base64; with a Handle under a Freshness Kind that has none, or without one under a kind that
+has one; a response of one mode with the algorithms of the other mode; a container whose origin member lacks its
+signature or names another algorithm, a container with another label, without its KEM, or with a suite member the
+CDDL does not define. The names of the suite are open text, because TACRA names the mandatory suite and allows
+others: the Attester, not the grammar, refuses a suite with another name.
 
     e2e/scripts/est-wire-cddl.py [--cddl CDDL] WIRE_LOG...
 
-The wire log of a run whose requests are all as the workload sent them: make test-live's deliberate refusals are not.
-The cddl tool is Carsten Bormann's (the Ruby gem `cddl`), found as $CDDL_TOOL or in BENCH_HOME/gems; Ruby 4 no longer
-bundles two libraries it needs, so they come with it:
+Use the wire log of a run whose requests are all as the Workload sent them: the refusals that make test-live provokes
+are not.
+The cddl tool is the Ruby gem `cddl` of Carsten Bormann, found as $CDDL_TOOL or in BENCH_HOME/gems. Ruby 4 does not
+bundle two libraries that the gem needs, so they are installed with it:
 
     GEM_HOME="$BENCH_HOME/gems" gem install --no-document cddl:0.12.14 pstore:0.2.1 base64:0.3.0
 
-Prints one line per message and exits 1 unless every message is valid with its media type and every altered message
-refused.
+Prints one line for each message and exits 1 unless every message is valid with its media type and every altered
+message is refused.
 """
 
 import argparse
@@ -46,9 +47,9 @@ RULES = {
     ("GET", "attest-initiate", "response"): "attestation-initiation-response",
     ("POST", "attest-enroll", "request"): "attested-enrollment-request",
     ("POST", "attest-retrieve", "request"): "attested-retrieval-request",
-    ("POST", "attest-retrieve", "response"): "encrypted-credential-bundle",
+    ("POST", "attest-retrieve", "response"): "attest-retrieve-response",
 }
-BUNDLE = "encrypted-credential-bundle"
+BUNDLE = "attest-retrieve-response"
 # (method, resource, which body) -> the media type of the request, or of the response when its status is 200; any
 # other response is a refusal, in text/plain
 TYPES = {
@@ -134,10 +135,11 @@ def altered(rule, message):
     yield f"with {name}, which the CDDL does not define", dict(message, **{name: value})
     for k in ("evidence", "handle"):
         if isinstance(message.get(k), str) and len(message[k]) >= 4:
-            yield f"with {k} in standard base64", dict(message, **{k: message[k][:-2] + "+/"})  # not base64url's
+            # the characters + and / are not in the alphabet of base64url
+            yield f"with {k} in standard base64", dict(message, **{k: message[k][:-2] + "+/"})
             break
-    takes_handle = kind in PRESENT if rule.startswith("attestation-") else kind != "absent-none"
-    if takes_handle:
+    has_handle = kind in PRESENT if rule.startswith("attestation-") else kind != "absent-none"
+    if has_handle:
         m = dict(message)
         m.pop("handle", None)
         yield "without a handle", m

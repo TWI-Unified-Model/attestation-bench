@@ -73,6 +73,10 @@ binding = {
 
 ; --- the container of TACRA, Sealing the Released Credential ---
 encrypted-credential-bundle = {
+  container-members,
+}
+
+container-members = (
   container: "hpke-base",
   suite: {
     kem: text,
@@ -86,6 +90,21 @@ encrypted-credential-bundle = {
     target: text .b64u bytes,
     ? handle: text .b64u bytes,
     ? credential_hint: text,
+  },
+)
+
+; --- the response of attest-retrieve on the bench ---
+; The Secret Vault of the bench signs the container when its policy for
+; the Target says so, and then adds the origin member. TACRA does not
+; define that member.
+attest-retrieve-response = encrypted-credential-bundle
+                         / signed-credential-bundle
+
+signed-credential-bundle = {
+  container-members,
+  origin: {
+    alg: "ECDSA-P256-SHA256",
+    signature: text .b64u bytes,
   },
 }
 
