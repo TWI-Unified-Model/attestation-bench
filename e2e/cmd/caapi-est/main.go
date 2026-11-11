@@ -183,8 +183,6 @@ func grpcError(err error) error {
 		return status.Error(codes.Unimplemented, e.Error())
 	case http.StatusForbidden, http.StatusUnauthorized:
 		return status.Error(codes.PermissionDenied, e.Error())
-	case http.StatusConflict:
-		return status.Error(codes.Aborted, e.Error()) // freshness no longer valid: retry from Initiate
 	case http.StatusTooManyRequests:
 		return status.Error(codes.ResourceExhausted, e.Error())
 	}
