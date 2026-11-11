@@ -1,0 +1,9 @@
+Entry ID                : fca15706-954f-4477-90bb-1bf2f760cb0f
+SPIFFE ID               : spiffe://example.org/workload
+Parent ID               : spiffe://example.org/agent/aws-sev-snp
+Revision                : 0
+X509-SVID TTL           : 3600
+JWT-SVID TTL            : default
+Selector                : unix:uid:0
+Hint                    : internal
+

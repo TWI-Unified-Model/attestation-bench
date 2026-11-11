@@ -134,9 +134,9 @@ The demo writes `demo.typescript`, `demo.txt`, `run.log`, `run-directory.txt` an
 
 One run on each platform, made with the commands above:
 
-- [Google Cloud SEV-SNP](../e2e/evidence/20261110T230848Z-spire-gcp-sev-snp-e2e)
-- [Google Cloud TDX](../e2e/evidence/20261110T231239Z-spire-gcp-tdx-e2e)
-- [AWS SEV-SNP](../e2e/evidence/20261110T231604Z-spire-aws-sev-snp-e2e)
+- [Google Cloud SEV-SNP](../e2e/evidence/20261111T145013Z-spire-gcp-sev-snp-e2e)
+- [Google Cloud TDX](../e2e/evidence/20261111T145412Z-spire-gcp-tdx-e2e)
+- [AWS SEV-SNP](../e2e/evidence/20261111T145723Z-spire-aws-sev-snp-e2e)
 
 ## Limits
 
