@@ -272,10 +272,10 @@ rewrite() {
 
 # offer_rewrites PASS: the #19 rewrites on Evidence made for ca1. In "rewrites" those a gateway refuses before it
 # spends the freshness element come first, the Credential Hint last; "type-offered" sends the other credential type
-# the Target offers. A present-nonce Handle is minted for one Target and credential type and serves once, whatever
-# the outcome: a credential type the Target does not offer is refused there by the Handle binding, which spends the
-# Handle, so "rewrites" does not send it under present-nonce (the "type-offered" pass measures that binding), and the
-# Credential Hint rewrite finds the Handle unspent.
+# the Target offers. A present-nonce Handle is minted for one Target and one Credential Type and is consumed once,
+# whatever the outcome. The binding of the Handle refuses a Credential Type that the Target does not offer and consumes
+# the Handle, so "rewrites" does not send that rewrite under present-nonce (the "type-offered" pass measures the
+# binding), and the Credential Hint rewrite finds the Handle not yet consumed.
 offer_rewrites() {
   local PASS="$1" d="$OUT/$1" k fresh
   : > "$d/results.jsonl"
