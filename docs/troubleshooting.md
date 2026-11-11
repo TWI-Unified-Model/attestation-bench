@@ -7,8 +7,9 @@ Each entry: what you see, why, what to do. Most of them were met while the bench
 **`make: command not found`.** make is not installed: `sudo apt-get install -y make` on Debian or Ubuntu,
 `xcode-select --install` on macOS. Then `make doctor`.
 
-**`make doctor` lists `MISSING …`.** A tool is missing or too old; the line ends with the command that installs it
-(Homebrew on macOS, apt on Linux). Install it and run `make doctor` again.
+**`make doctor` lists `MISSING …`.** A tool is missing or too old. The line names its package, and the last line of the
+output is the one command that installs every missing package (Homebrew on macOS, apt on Linux). Run that command, then
+`make doctor` again.
 
 **`make doctor` says a port is in use.** Another program listens on one of the trust zone's ports. If it is an earlier
 bench, stop it (`make stop`, or that bench's own stop command); otherwise stop the program, or run the bench on a

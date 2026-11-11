@@ -26,12 +26,22 @@ version_ge() {
   return 0
 }
 
-hint() { # brew-package apt-package
-  if [ "$BENCH_OS" = darwin ]; then echo "brew install $1"; else echo "sudo apt-get install -y $2"; fi
+pkg_name() { # brew-package apt-package: the package on this system
+  if [ "$BENCH_OS" = darwin ]; then echo "$1"; else echo "$2"; fi
+}
+
+# need_pkg tool brew-package apt-package [what is wrong]: a missing tool that a package holds. The line names the
+# package, and the package joins the one command that doctor prints at the end.
+pkgs=""
+need_pkg() {
+  local p
+  p="$(pkg_name "$2" "$3")"
+  need "$1" "${4:+$4: }package $p"
+  pkgs="$pkgs $p"
 }
 
 tool() { # command brew-package apt-package [what for]
-  if command -v "$1" >/dev/null 2>&1; then ok "$1" "${4:-}"; else need "$1" "$(hint "$2" "$3")"; fi
+  if command -v "$1" >/dev/null 2>&1; then ok "$1" "${4:-}"; else need_pkg "$1" "$2" "$3"; fi
 }
 
 echo "attestation-bench doctor: $BENCH_OS/$BENCH_ARCH, BENCH_HOME=$BENCH_HOME"
@@ -46,14 +56,14 @@ fi
 if command -v python3 >/dev/null 2>&1; then
   pv="$(python3 -c 'import sys; print("%d.%d.%d" % sys.version_info[:3])')"
   if ! version_ge "$pv" 3.10; then
-    need python3 "$pv is older than 3.10: $(hint python@3.12 python3)"
+    need_pkg python3 python@3.12 python3 "$pv is older than 3.10"
   elif ! python3 -c 'import venv, ensurepip' >/dev/null 2>&1; then
-    need python3 "$pv has no venv/ensurepip: $(hint python@3.12 python3-venv)"
+    need_pkg python3 python@3.12 python3-venv "$pv has no venv/ensurepip"
   else
     ok python3 "$pv"
   fi
 else
-  need python3 "$(hint python@3.12 'python3 python3-venv')"
+  need_pkg python3 python@3.12 'python3 python3-venv'
 fi
 if [ "$BENCH_OS" = darwin ] && ! xcode-select -p >/dev/null 2>&1; then
   need xcode-clt "xcode-select --install (git, make, the C compiler Veraison's SQLite stores need)"
@@ -76,7 +86,7 @@ if [ "$BENCH_OS" = darwin ]; then
 elif ! printf '1\n' | sort -V >/dev/null 2>&1; then
   # a run of sort -V, not a read of its help: grep -q leaves the help's second 4 KB chunk unread, and under
   # pipefail the SIGPIPE that gives sort makes the check fail now and then (CI, 27 October 2026)
-  need sort "$(hint coreutils coreutils) (GNU sort)"
+  need_pkg sort coreutils coreutils "no GNU sort"
 else
   ok sort "GNU sort"
 fi
@@ -88,7 +98,7 @@ for c in gcloud aws ssh; do
     case "$c" in
       gcloud) note gcloud "https://cloud.google.com/sdk/docs/install (GCP SEV-SNP and TDX)" ;;
       aws) note aws "https://aws.amazon.com/cli/ (AWS SEV-SNP)" ;;
-      ssh) note ssh "$(hint openssh openssh-client)" ;;
+      ssh) note ssh "package $(pkg_name openssh openssh-client)" ;;
     esac
   fi
 done
@@ -112,6 +122,12 @@ if [ "${avail_kb:-0}" -lt 8000000 ]; then note disk "$((avail_kb / 1024)) MB fre
 echo
 if [ "$missing" -gt 0 ]; then
   echo "$missing required tool(s) missing: install them, then run make doctor again."
+  if [ -n "$pkgs" ] && [ "$BENCH_OS" = darwin ]; then
+    echo "The packages, in one command: brew install$pkgs"
+  elif [ -n "$pkgs" ]; then
+    # apt-get update first: on a fresh Ubuntu 24.04 apt-get install does not find protobuf-compiler without it
+    echo "The packages, in one command: sudo apt-get update && sudo apt-get install -y$pkgs"
+  fi
   exit 1
 fi
 if [ "$warn" -gt 0 ]; then echo "Ready for make setup ($warn warning(s) above)."; else echo "Ready for make setup."; fi

@@ -37,7 +37,7 @@ Every command below runs from this directory.
 make doctor
 ```
 
-It lists each tool the bench needs with `ok`, or with `MISSING` and the command to install it, then the cloud tools
+It lists each tool the bench needs with `ok`, or with `MISSING` and the package that holds it, then the cloud tools
 the hardware runs use (from step 7), the ports and the disk. When everything is there it ends with:
 
 ```
@@ -46,7 +46,9 @@ the hardware runs use (from step 7), the ports and the disk. When everything is 
 Ready for make setup.
 ```
 
-Install what it asks for and run it again until it says `Ready for make setup.`
+When tools are missing, the last line is the one command that installs their packages. Run that command, then
+`make doctor` again, until it says `Ready for make setup.` A `warning` names a cloud CLI that only the hardware runs of
+that cloud use (from step 7); `make setup` does not need it.
 
 ## 4. Set the trust zone up
 
