@@ -1,0 +1,6 @@
+spire built from /Users/serhiinikolaichuk/dev/spire
+  commit 437a528791ce85551ed28cd92f52bd9aa1ccdc5c After the second pass: CredentialType and CredentialAcquisitionMode as named types with typed constants, VerifierKind and SecretVaultKind as the names of the kinds, the seconds of the API in the names of the fields that carry them, the Secret Vault guard first in Retrieve, CSR, Binding and CEKpub capitalized in the messages, the Server named the same way in every message, the logging of the Agent handler described and made one, and the wording of the comments
+  replace github.com/spiffe/go-spiffe/v2 => github.com/TWI-Unified-Model/spiffe-go-spiffe/v2 v2.9.1-0.20261103185101-290df1d6b655
+  replace github.com/spiffe/spire-api-sdk => github.com/TWI-Unified-Model/spiffe-spire-api-sdk v1.2.5-0.20261103185608-6628d059ce2c
+go-spiffe: 37e447ff0215b67e046e7338b00402ab4ef63749 Workload API comment: the Attester-held key is bound to the Evidence; stubs regenerated
+spire-api-sdk: 7fdf940af4855bd3bbe65fcc5e75bc534f131688 Server API comments: the Attester-held key is bound to the Evidence; stubs regenerated

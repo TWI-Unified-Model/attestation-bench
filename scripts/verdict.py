@@ -21,8 +21,9 @@ hwcheck/evidence included.
             reason. The builds of Veraison the bench compares with (rrpverify-veraison-fork and -fixed) are reported,
             not judged: what they get wrong is the reason the bench runs its own build. And, in a run that made it,
             the pre-play check (preplay.json, hwcheck/scripts/preplay.py): absent-timestamp Evidence made with the
-            guest's clock ahead, refused by each RRP at once (409, freshness) and accepted later, older than the
-            Target's max_age. That is reported as an exposure, not as a pass; any other outcome fails the run. The
+            clock of the guest ahead, refused by each RRP at once for freshness (FRESHNESS_REFUSALS) and accepted
+            later, older than the max_age of the Target. That is reported as an exposure, not as a pass; any other
+            outcome fails the run. The
             RRPs' platform rule on the honest Attestation Results is one of the files (rrpverify-platform.json); a
             SEV-SNP run that keeps the rule (platform-rule.json) names its waivers in the verdict, as a demo does.
   redirect  results.jsonl. ca1 issues for every Freshness Kind in both passes. With the RRP identifier in the binding,
@@ -107,7 +108,10 @@ def redirect_variant_expected(variant):
 REWRITES = {
     "made-up Handle": ("refused", "freshness"),  # present-nonce only: the RRP knows its Handles
     "Freshness Kind absent-none": ("refused", "freshness-kind-mismatch"),  # the kind is the Target's, by policy
-    "credential type not offered": ("refused", "unsupported-credential-type"),
+    "credential type not offered": (
+        "refused",
+        "unsupported-credential-type",
+    ),  # 422, after the appraisal; not sent under present-nonce: the Handle binding refuses first and spends the Handle
     "Credential Hint of another workload": ("refused", "credential-hint"),  # the CA names the attested workload
     "the other credential type offered": ("issued", None),  # nothing binds it, but a present-nonce Handle: below
 }
@@ -183,15 +187,21 @@ def preplay(run):
             f"pre-play {r['target']}: at once {once['answer'][:110]}; {age:.0f} s or more after the Evidence was made: "
             f"{later['status']}"
         )
-        if once["status"] == 409 and "freshness" in once["answer"] and later["status"] == 200 and age > r["max_age_s"]:
+        if refused_for_freshness(once) and later["status"] == 200 and age > r["max_age_s"]:
             exposures.append(f"{r['target']} accepted Evidence {age:.0f} s old or more (max_age {r['max_age_s']} s)")
         else:
             bad.append(r["target"])
     return lines, bad, exposures
 
 
+# An RRP refuses a freshness element that is not valid now with 400 Bad Request: a timestamp outside the window, a
+# Handle not issued, expired or used before, an epoch marker that moved. Runs kept in this repository that answered
+# 409 Conflict are judged as well.
+FRESHNESS_REFUSALS = (400, 409)
+
+
 def refused_for_freshness(answer):
-    return answer.get("status") == 409 and "freshness" in answer.get("answer", "")
+    return answer.get("status") in FRESHNESS_REFUSALS and "freshness" in answer.get("answer", "")
 
 
 def preplay_moved(d):
@@ -274,15 +284,24 @@ def rewrite_expected(name, kind):
     return REWRITES[name]
 
 
-def rewrites_wanted():
-    """The rewrites the experiment makes: (name, kind), in the order it makes them."""
+def sent_rewrites(rows):
+    """The (rewrite, kind) pairs a run made."""
+    return {(r["rewrite"], r["kind"]) for r in rows}
+
+
+def rewrites_wanted(sent=frozenset()):
+    """The rewrites the experiment makes: (name, kind), in the order it makes them. Under present-nonce the credential
+    type the Target does not offer is sent only by the runs made while the gateways checked the Credential Type before
+    the Handle; sent says what the run made, and those runs keep that row."""
     out = []
     for k in FRESHNESS_KINDS:
         if k == "present-nonce":
             out.append(("made-up Handle", k))
         if k != "absent-none":
             out.append(("Freshness Kind absent-none", k))
-        out += [("credential type not offered", k), ("Credential Hint of another workload", k)]
+        if k != "present-nonce" or ("credential type not offered", k) in sent:
+            out.append(("credential type not offered", k))
+        out.append(("Credential Hint of another workload", k))
     return out + [("the other credential type offered", k) for k in FRESHNESS_KINDS]
 
 
@@ -290,7 +309,7 @@ def rewrite_lines(rows):
     """The conduit's rewrites (runs from 7 October 2026 on): a table, and each one not as expected."""
     got = {(r["rewrite"], r["kind"]): r["result"] for r in rows}
     lines, wrong = [f"{'rewrite at ca1':38} {'kind':18} outcome"], []
-    for name, kind in rewrites_wanted():
+    for name, kind in rewrites_wanted(sent_rewrites(rows)):
         res, (want, code) = got.get((name, kind)), rewrite_expected(name, kind)
         if res is None:
             lines.append(f"{name:38} {kind:18} missing")
@@ -334,7 +353,7 @@ def redirect(run):
         more, bad = rewrite_lines(rewrites)
         lines += more
         wrong += bad
-        outcomes += len(rewrites_wanted())
+        outcomes += len(rewrites_wanted(sent_rewrites(rewrites)))
     lines += clock_lines(run)
     if wrong:
         return lines + wrong, False, f"{len(wrong)} of {outcomes} outcomes not as expected"
@@ -343,7 +362,7 @@ def redirect(run):
         summary = "with the RRP identifier, ca2 refused all 5 Freshness Kinds; " + summary
     if rewrites:
         summary += (
-            f"; of the conduit's {len(rewrites_wanted())} rewrites at ca1, the other credential type the Target "
+            f"; of the conduit's {len(rewrites_wanted(sent_rewrites(rewrites)))} rewrites at ca1, the other credential type the Target "
             "offers was issued for every kind but present-nonce, and every other was refused for its own reason"
         )
     return lines, True, summary

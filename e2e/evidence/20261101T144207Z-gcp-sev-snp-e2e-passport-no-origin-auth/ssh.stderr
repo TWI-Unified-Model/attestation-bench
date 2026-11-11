@@ -1,0 +1,14 @@
+kex_exchange_identification: read: Operation timed out
+banner exchange: Connection to 34.170.18.48 port 22: Operation timed out
+
+Recommendation: To check for possible causes of SSH connectivity issues and get
+recommendations, rerun the ssh command with the --troubleshoot option.
+
+gcloud compute ssh tacra-e2e-2611011442 --project=rats-probe --zone=us-central1-c --troubleshoot
+
+Or, to investigate an IAP tunneling issue:
+
+gcloud compute ssh tacra-e2e-2611011442 --project=rats-probe --zone=us-central1-c --troubleshoot --tunnel-through-iap
+
+ERROR: (gcloud.compute.ssh) [/usr/bin/ssh] exited with return code [255].
+2026-11-01T14:45:57Z a call to the VM failed; asking again

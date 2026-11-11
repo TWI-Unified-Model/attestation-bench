@@ -1,0 +1,6 @@
+spire built from /Users/serhiinikolaichuk/dev/spire
+  commit 3904626f202817fe3474cbcfc62d421dcb35e0b5 Tests of the Server: expectations that read as error descriptions, the nonce and the trust tier explained
+  replace github.com/spiffe/go-spiffe/v2 => github.com/TWI-Unified-Model/spiffe-go-spiffe/v2 v2.9.1-0.20261103185101-290df1d6b655
+  replace github.com/spiffe/spire-api-sdk => github.com/TWI-Unified-Model/spiffe-spire-api-sdk v1.2.5-0.20261103185608-6628d059ce2c
+go-spiffe: 45e68078867608bb84c52254613aeda5b17491d0 Workload API comments: roles capitalized, no possessive apostrophes, the CSK algorithms by name
+spire-api-sdk: 76a162a3c91c1af220798acd36743e0af7da7b90 Server API comments: roles capitalized, no possessive apostrophes, the CSK algorithms by name

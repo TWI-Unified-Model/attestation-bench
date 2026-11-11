@@ -1,0 +1,7 @@
+INFO	session requested	{"caller": ["ca-gateway.bench.tacra.example"]}
+INFO	gin	[GIN] 2026/11/03 - 14:16:22 | 201 |     41.4275ms |       127.0.0.1 | POST     "/challenge-response/v1/newSession?nonce=nFMfjKVxeumM0oqK6J5eXVX5519og-Cfbxdh0VMn9TENh9TEkbdbyPjjz32RM7pdVYZ5JRef4X2bK2G4KfeMuw%3D%3D"
+INFO	gin	
+INFO	gin	[GIN] 2026/11/03 - 14:16:22 | 200 |   14.934583ms |       127.0.0.1 | POST     "/challenge-response/v1/session/7034b706-d7c3-11f1-baa4-313543423532"
+INFO	gin	
+INFO	gin	[GIN] 2026/11/03 - 14:16:22 | 204 |       8.834µs |       127.0.0.1 | DELETE   "/challenge-response/v1/session/7034b706-d7c3-11f1-baa4-313543423532"
+INFO	gin	

@@ -23,6 +23,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -104,7 +105,8 @@ func (a *attack) container(target string, cekPub, raw []byte) ([]byte, error) {
 			return nil, err
 		}
 		no := false
-		content := bundle.Content{CredentialItems: []bundle.Item{{Type: "api-key", Value: "a key the conduit chose",
+		content := bundle.Content{CredentialItems: []bundle.Item{{Type: "api-key",
+			Value:   base64.RawURLEncoding.EncodeToString([]byte("a key the conduit chose")),
 			Purpose: []string{"authenticate"}, Algorithm: "opaque-bearer", Exportable: &no}},
 			Metadata: map[string]any{"validity_seconds": 3600}}
 		var own *bundle.Bundle
@@ -175,6 +177,10 @@ func grpcError(err error) error {
 	switch e.StatusCode() {
 	case http.StatusBadRequest, http.StatusRequestEntityTooLarge, http.StatusUnsupportedMediaType:
 		return status.Error(codes.InvalidArgument, e.Error())
+	case http.StatusUnprocessableEntity:
+		// a Credential Type that the RATS Relying Party does not support for the Target: gRPC defines Unimplemented
+		// as not supported in this service, and a client does not retry the call
+		return status.Error(codes.Unimplemented, e.Error())
 	case http.StatusForbidden, http.StatusUnauthorized:
 		return status.Error(codes.PermissionDenied, e.Error())
 	case http.StatusConflict:
@@ -190,7 +196,7 @@ func (b *bridge) InitiateRemoteAttestation(ctx context.Context, in *caapiv1.Init
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "unsupported Credential Type")
 	}
-	r, err := b.est.InitiateRemoteAttestation(ctx, in.GetTarget(), ct)
+	r, err := b.est.InitiateRemoteAttestation(ctx, in.GetTarget(), ct, in.GetCredentialHint())
 	if err != nil {
 		return nil, grpcError(err)
 	}

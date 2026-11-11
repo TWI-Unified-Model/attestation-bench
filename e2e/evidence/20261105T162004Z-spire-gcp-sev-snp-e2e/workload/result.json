@@ -1,0 +1,31 @@
+{
+  "ok": false,
+  "error": "enroll: rpc error: code = PermissionDenied desc = failed to enroll credential: remote attestation failed: the Attestation Results are not affirming: SEVSNP is \"contraindicated\"",
+  "target": "spiffe://example.org",
+  "credential_type": "x509",
+  "credential_hint": "internal",
+  "tee": "sev-snp",
+  "mode": "CREDENTIAL_ACQUISITION_MODE_ENROLL",
+  "freshness_kind": "FRESHNESS_KIND_PRESENT_NONCE",
+  "handle_hex": "920225da459a741af19372272425b5b94615922322b78190e19ce13d291febf7",
+  "expires_in": 300,
+  "acceptable_csk": [
+    "ecdsa-p256-sha256"
+  ],
+  "acceptable_evidence": [
+    "application/vnd.veraison.tsm-report+cbor"
+  ],
+  "binding_value_hex": "07e02842cd97a7c1325e036bcd6eeddc762374483e28b6d58d5013dd76e4eaaadb50c34a745ed2caf31257e5b804d867d3d8f5e98fc48e12b278c4d8ca7e8746",
+  "csr_sha256": "d68d87ba0299c1d45ea4390192b9df56a056daa7cfd0b544166b6d1f07bb2474",
+  "evidence_bytes": 5989,
+  "evidence_media_type": "application/vnd.veraison.tsm-report+cbor",
+  "report_provider": "sev_guest",
+  "report_version": 5,
+  "report_measurement_hex": "f67900851e25a378f04b4d4b5f1ea4410c11deb74e97ddcc7e3363a33f6e1dbb7880d304005387bc98e9cbdceec4ea28",
+  "report_signer": "VCEK",
+  "chain_verified": false,
+  "key_matches": false,
+  "initiate_ms": 80.198,
+  "started_at": "2026-11-05T16:22:35.039487257Z",
+  "finished_at": "2026-11-05T16:22:35.572526012Z"
+}

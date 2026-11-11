@@ -1,0 +1,9 @@
+Entry ID                : c75db7ac-09f6-4090-977f-39a393bb065a
+SPIFFE ID               : spiffe://example.org/workload
+Parent ID               : spiffe://example.org/agent/gcp-tdx
+Revision                : 0
+X509-SVID TTL           : 3600
+JWT-SVID TTL            : default
+Selector                : unix:uid:0
+Hint                    : internal
+

@@ -1,0 +1,6 @@
+spire built from /Users/serhiinikolaichuk/dev/spire
+  commit 3e128a630c02609e7b8a3e89dc4363429ee9e9e1 The attested Workload: the AMD product chains, the ASK or ASVK and ARK of each product line, are PEM files under version control in platform/amdchains, indexed by the issuer of the VCEK or VLEK, with -amdChains naming a directory in their place
+  replace github.com/spiffe/go-spiffe/v2 => github.com/TWI-Unified-Model/spiffe-go-spiffe/v2 v2.9.1-0.20261103185101-290df1d6b655
+  replace github.com/spiffe/spire-api-sdk => github.com/TWI-Unified-Model/spiffe-spire-api-sdk v1.2.5-0.20261103185608-6628d059ce2c
+go-spiffe: 37e447ff0215b67e046e7338b00402ab4ef63749 Workload API comment: the Attester-held key is bound to the Evidence; stubs regenerated
+spire-api-sdk: 7fdf940af4855bd3bbe65fcc5e75bc534f131688 Server API comments: the Attester-held key is bound to the Evidence; stubs regenerated

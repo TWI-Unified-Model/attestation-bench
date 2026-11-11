@@ -1,0 +1,23 @@
+ahead  enroll-absent-epoch        at_once      200    28 s after it was made
+ahead  enroll-absent-none         at_once      200    29 s after it was made
+ahead  enroll-absent-timestamp    at_once      400    29 s after it was made
+ahead  enroll-present-epoch       at_once      200    29 s after it was made
+ahead  enroll-present-nonce       at_once      200    29 s after it was made
+ahead  retrieve-absent-epoch      at_once      200    29 s after it was made
+ahead  retrieve-absent-none       at_once      200    29 s after it was made
+ahead  retrieve-absent-timestamp  at_once      400    29 s after it was made
+ahead  retrieve-present-epoch     at_once      200    29 s after it was made
+ahead  retrieve-present-nonce     at_once      200    29 s after it was made
+behind enroll-absent-timestamp    at_once      400    29 s after it was made
+behind retrieve-absent-timestamp  at_once      400    29 s after it was made
+waiting 254 s
+ahead  enroll-absent-timestamp    opened       200   283 s after it was made
+ahead  retrieve-absent-timestamp  opened       200   283 s after it was made
+waiting 121 s
+ahead  enroll-absent-timestamp    before_close 200   404 s after it was made
+ahead  retrieve-absent-timestamp  before_close 200   404 s after it was made
+waiting 4 s
+ahead  enroll-absent-timestamp    after_close  400   408 s after it was made
+ahead  retrieve-absent-timestamp  after_close  400   408 s after it was made
+behind enroll-absent-timestamp    again        400   408 s after it was made
+behind retrieve-absent-timestamp  again        400   408 s after it was made

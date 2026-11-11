@@ -1,0 +1,42 @@
+{
+  "ok": true,
+  "target": "https://ledger-nonce.tacra.example",
+  "credential_type": "api-key",
+  "credential_hint": "payments.workload.tacra.example",
+  "tee": "tdx",
+  "mode": "CREDENTIAL_ACQUISITION_MODE_RETRIEVE",
+  "freshness_kind": "FRESHNESS_KIND_PRESENT_NONCE",
+  "handle_hex": "dfe1af4088cbe3798e83995242aab109c088efb7854729d0ce85fa09765d3576",
+  "expires_in": 300,
+  "acceptable_evidence": [
+    "application/vnd.veraison.tsm-report+cbor"
+  ],
+  "binding_value_hex": "2d0365e949357ff4ec35b86dd3a40c175715724a97bc7a6b0163f557756df10c1c958f939907b644c8ce1c872bbadee8389f02afae84ec05488a0a835bf76771",
+  "evidence_bytes": 4966,
+  "evidence_media_type": "application/vnd.veraison.tsm-report+cbor",
+  "report_provider": "tdx_guest",
+  "report_version": 4,
+  "report_measurement_hex": "f21e6b48743fe14c2d090078ca1197f09ae4c99438677f2c79901ef80e2aeefe2f9a7eb6e3eb3b5047c4f1511731e5d3",
+  "report_td_attributes_hex": "0000001000000000",
+  "chain_verified": false,
+  "key_matches": false,
+  "acceptable_cek": [
+    "MLKEM768-P256+HKDF-SHA256+AES-256-GCM"
+  ],
+  "suite": "MLKEM768-P256+HKDF-SHA256+AES-256-GCM",
+  "cek_pub_bytes": 1249,
+  "group_id": "53c3043b1d35b9337c4aab9702252dec38a881a2f8a66d018c0aa051720b0222",
+  "origin_verified": true,
+  "item_type": "api-key",
+  "item_kid": "53c3043b1d35b933",
+  "item_purpose": [
+    "authenticate"
+  ],
+  "item_algorithm": "opaque-bearer",
+  "secret_sha256": "332e6832d1a35ebe5a1e3361d2306469c966868bffeb6dc25ed4a2cc7892ee10",
+  "secret_bytes": 64,
+  "initiate_ms": 125.863,
+  "retrieve_ms": 66.326,
+  "started_at": "2026-11-06T13:01:28.115900253Z",
+  "finished_at": "2026-11-06T13:01:28.351090576Z"
+}

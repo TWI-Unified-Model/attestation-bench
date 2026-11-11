@@ -11,7 +11,7 @@ For each of attest-enroll and attest-retrieve, as the wire format proposed for d
 - a request that is not of the CDDL's syntax is refused with 400, saying why: with a member the CDDL does not define
   (endorsements), sent twice in one body, with a member twice, with a byte string in standard base64;
 - none of these refusals uses up the Handle: the request as sent, under the resource's type and a CA label, reaches the
-  RRP, and the same Handle again is refused with 409;
+  RRP, and the same Handle again is refused with 400;
 - Evidence of a format the server does not accept is refused with 415 before the Handle is correlated: a new Handle
   then still serves the request.
 
@@ -172,7 +172,8 @@ def main(argv=None):
         check(f"{LABEL}{resource} as {own}, the Handle the refusals left unused",
               st == 403 and body.startswith(f"403 {rrp}: attestation:"), answer(st, body))  # fmt: skip
         st, _, _, body = est.call("POST", resource, sent, own)
-        check(f"{resource}, the same Handle again", st == 409, answer(st, body))
+        check(f"{resource}, the same Handle again",
+              st == 400 and body == "400 no attest-initiate returned this Handle, or it expired", answer(st, body))  # fmt: skip
 
         # an Evidence format the server does not accept: 415, before the Handle is correlated, so a new Handle stays
         # usable for the request that follows

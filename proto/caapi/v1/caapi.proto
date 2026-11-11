@@ -74,6 +74,10 @@ message InitiateCredentialAcquistionRequest {
 
     // Which credential type does the workload with to use?
     CredentialType credential_type = 2;
+
+    // The Credential Hint of Initiate-Credential-Acquisition, optional. Under
+    // present-nonce the second call must repeat a hint named here.
+    string credential_hint = 3;
 }
 
 message InitiateCredentialAcquisitionResponse {

@@ -39,7 +39,7 @@ make setup                      # builds and starts the trust zone in ~/.attesta
 make check-mtls                 # VERDICT PASS: 40 of 40 checks as expected: only the allowed components, over TLS 1.3
 make test-live                  # the EST wire format, and the committed runs appraised again by the live verifiers
 make demo     PLATFORM=gcp-snp  # VERDICT PASS: all 10 Targets: …; admitted under the bench's waiver: Milan bit 4: …
-make attacks  PLATFORM=gcp-snp  # VERDICT PASS: 262 checks: …; … the bench's waiver …; exposure, the guest's clock: …
+make attacks  PLATFORM=gcp-snp  # VERDICT PASS: 232 checks: …; … the bench's waiver …; exposure, the guest's clock: …
 make redirect PLATFORM=gcp-snp  # the #20 table, then the conduit's #19 rewrites (PASSPORT=1: in Passport)
 ```
 
@@ -127,6 +127,7 @@ What a run does **not** prove: [docs/limits.md](docs/limits.md).
 | [Concepts](docs/concepts.md) | understand TACRA's terms: Target, RRP, Evidence, binding, Freshness Kinds, Passport, Background Check |
 | [Architecture](docs/architecture.md) | see every component, port and trust boundary |
 | [Hardware](docs/hardware/README.md) | run on GCP SEV-SNP, GCP TDX and AWS SEV-SNP |
+| [TACRA through SPIRE](docs/spire.md) | run the SPIRE proof of concept end to end on the same hardware: an attested Workload enrolls an X509-SVID and retrieves a credential through SPIRE Agent and SPIRE Server |
 | [Demo Bank](docs/demo-bank.md) | run the fictional bank in the cloud, or make your own |
 | [Attacks](docs/attacks.md) | see each attack the bench tries, what stops it and what result to expect |
 | [Results](docs/results.md) | read a run directory |

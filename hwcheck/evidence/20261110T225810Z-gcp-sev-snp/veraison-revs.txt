@@ -1,0 +1,10 @@
+veraison-services/src-fork upstream f997c5275c30 + 0 patch(es), tree f21adc8e89a7: tested tree
+veraison-services/src-der upstream f997c5275c30 + 2 patch(es), tree c39b22dccb06: tested tree
+veraison-services/src upstream f997c5275c30 + 8 patch(es), tree e7a04b43faf9: tested tree
+go-gen-ref/src upstream aa3740de6b00 + 3 patch(es), tree 5f74ee0c1309: tested tree
+estserver built from /Users/serhiinikolaichuk/dev/attestation-bench/third_party/globalsign-est/src
+  commit e4897163a55d80e9d01cbb8d4b2d9271d1f6bcdd attest-initiate takes credential_hint: the Credential Hint of Initiate-Credential-Acquisition, forwarded to the RRP and kept with a present-nonce Handle; a hint attest-initiate named must come back on the second leg and one it omitted may be named, present-epoch and absent-* are not correlated, as the EST profile says after 2 November
+  worktree modified
+veraison verification-service rev f997c5275c30 modified true go-sev-guest - sha256 0d3261bd7441465c
+veraison vts-service rev f997c5275c30 modified true go-sev-guest v0.15.0 sha256 d86a422b6422719d
+veraison scheme-sevsnp.plugin rev f997c5275c30 modified true go-sev-guest v0.15.0 sha256 cb465d29f64bc6e2

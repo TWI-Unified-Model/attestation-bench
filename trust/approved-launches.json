@@ -1,42 +1,48 @@
 {
- "sev-snp": [
-  {
-   "measurement": "ccdc5cf01ba25526bd65503d95931b787b4385a3277cfe4448addf9c3e894948ae8cf7b099620e3e22717de2fb5d26fa",
-   "launch": "Google Cloud n2d-standard-2 (AMD Milan, 2 vCPUs), confidential VM with SEV-SNP",
-   "endorsement": "Google's signed launch endorsement (GCE-uefi-signer), SVN 2, 2026-07-24T08:29:40Z",
-   "checked": "e2e/evidence/20260928T212732Z-demo-bank/refvals/initial-snp-ccdc5cf01ba25526bd65503d95931b787b4385a3277cfe4448addf9c3e894948ae8cf7b099620e3e22717de2fb5d26fa.json"
-  },
-  {
-   "measurement": "e79ebb5b789ddb6b7a9897f663a655a65c69445aa482c4e1a5ff9fdeb4af1a2c8d5d30fcad5f4f0e04f1a13885eb984d",
-   "launch": "Google Cloud n2d-standard-2 (AMD Milan, 2 vCPUs), confidential VM with SEV-SNP: Google's UEFI build met from 25 October 2026",
-   "endorsement": "Google's signed launch endorsement (GCE-uefi-signer), SVN 2, 2026-08-28T12:54:59Z",
-   "checked": "hwcheck/evidence/20261025T224459Z-gcp-sev-snp/refvals/snp-e79ebb5b789ddb6b7a9897f663a655a65c69445aa482c4e1a5ff9fdeb4af1a2c8d5d30fcad5f4f0e04f1a13885eb984d.json"
-  },
-  {
-   "measurement": "7a89cceaaba0bbdddc4f775acca3ef15d1f9bf8abccdc6115cfad7fb8eae113df3ee0bb50efa34db9c53ae065b1dc766",
-   "launch": "AWS EC2 c6a.large (AMD Milan, 2 vCPUs), AmdSevSnp enabled",
-   "endorsement": "none from AWS, which signs no launch endorsement; the measurement of AWS's published EC2 SEV-SNP UEFI, release 20260814, computed again from the binary (firmware): trust/check.sh repeats it",
-   "checked": "e2e/evidence/20260928T212732Z-demo-bank/refvals/initial-snp-7a89cceaaba0bbdddc4f775acca3ef15d1f9bf8abccdc6115cfad7fb8eae113df3ee0bb50efa34db9c53ae065b1dc766.json",
-   "firmware": {
-    "release": "https://github.com/aws/uefi/releases/tag/20260814",
-    "binary": "https://github.com/aws/uefi/releases/download/20260814/ovmf_img.fd",
-    "sha256": "67aaae01a6f4245cc071e008859b00ea2b5c05824362c41d165c3b4751372bc9",
-    "measure": "sev-snp-measure 0.0.13 --mode snp --vcpus 2 --vmm-type ec2"
-   }
-  }
- ],
- "tdx": [
-  {
-   "mrtd": "c1ee9c16e3afc506cfe042c5b846a368528f3b37618eafb27469bc114cf914e9222c91618470e7f2b28ac360968270a5",
-   "launch": "Google Cloud c3-standard-4, confidential VM with Intel TDX: Google's TDX firmware build",
-   "endorsement": "Google's signed launch endorsement (GCE-uefi-signer), SVN 2, 2026-05-21T23:52:45Z",
-   "checked": "e2e/evidence/20261006T183422Z-gce-tdx-endorsements/tdx-c1ee9c16e3afc506.txt"
-  },
-  {
-   "mrtd": "f21e6b48743fe14c2d090078ca1197f09ae4c99438677f2c79901ef80e2aeefe2f9a7eb6e3eb3b5047c4f1511731e5d3",
-   "launch": "Google Cloud c3-standard-4, confidential VM with Intel TDX: Google's TDX firmware build",
-   "endorsement": "Google's signed launch endorsement (GCE-uefi-signer), SVN 2, 2026-07-31T09:52:02Z",
-   "checked": "e2e/evidence/20261006T183422Z-gce-tdx-endorsements/tdx-f21e6b48743fe14c.txt"
-  }
- ]
+  "sev-snp": [
+    {
+      "measurement": "ccdc5cf01ba25526bd65503d95931b787b4385a3277cfe4448addf9c3e894948ae8cf7b099620e3e22717de2fb5d26fa",
+      "launch": "Google Cloud n2d-standard-2 (AMD Milan, 2 vCPUs), confidential VM with SEV-SNP",
+      "endorsement": "launch endorsement signed by Google (GCE-uefi-signer), SVN 2, 2026-07-24T08:29:40Z",
+      "checked": "e2e/evidence/20260928T212732Z-demo-bank/refvals/initial-snp-ccdc5cf01ba25526bd65503d95931b787b4385a3277cfe4448addf9c3e894948ae8cf7b099620e3e22717de2fb5d26fa.json"
+    },
+    {
+      "measurement": "e79ebb5b789ddb6b7a9897f663a655a65c69445aa482c4e1a5ff9fdeb4af1a2c8d5d30fcad5f4f0e04f1a13885eb984d",
+      "launch": "Google Cloud n2d-standard-2 (AMD Milan, 2 vCPUs), confidential VM with SEV-SNP: the UEFI build of Google met from 25 October 2026",
+      "endorsement": "launch endorsement signed by Google (GCE-uefi-signer), SVN 2, 2026-08-28T12:54:59Z",
+      "checked": "hwcheck/evidence/20261025T224459Z-gcp-sev-snp/refvals/snp-e79ebb5b789ddb6b7a9897f663a655a65c69445aa482c4e1a5ff9fdeb4af1a2c8d5d30fcad5f4f0e04f1a13885eb984d.json"
+    },
+    {
+      "measurement": "7a89cceaaba0bbdddc4f775acca3ef15d1f9bf8abccdc6115cfad7fb8eae113df3ee0bb50efa34db9c53ae065b1dc766",
+      "launch": "AWS EC2 c6a.large (AMD Milan, 2 vCPUs), AmdSevSnp enabled",
+      "endorsement": "none from AWS, which signs no launch endorsement; the measurement of the EC2 SEV-SNP UEFI that AWS publishes, release 20260814, computed again from the binary (firmware): trust/check.sh repeats it",
+      "checked": "e2e/evidence/20260928T212732Z-demo-bank/refvals/initial-snp-7a89cceaaba0bbdddc4f775acca3ef15d1f9bf8abccdc6115cfad7fb8eae113df3ee0bb50efa34db9c53ae065b1dc766.json",
+      "firmware": {
+        "release": "https://github.com/aws/uefi/releases/tag/20260814",
+        "binary": "https://github.com/aws/uefi/releases/download/20260814/ovmf_img.fd",
+        "sha256": "67aaae01a6f4245cc071e008859b00ea2b5c05824362c41d165c3b4751372bc9",
+        "measure": "sev-snp-measure 0.0.13 --mode snp --vcpus 2 --vmm-type ec2"
+      }
+    },
+    {
+      "measurement": "f67900851e25a378f04b4d4b5f1ea4410c11deb74e97ddcc7e3363a33f6e1dbb7880d304005387bc98e9cbdceec4ea28",
+      "launch": "Google Cloud n2d-standard-2 (AMD Milan, 2 vCPUs), confidential VM with SEV-SNP: the UEFI build of Google met from 5 November 2026",
+      "endorsement": "launch endorsement signed by Google (GCE-uefi-signer), SVN 2, 2026-10-16T22:14:59Z",
+      "checked": "hwcheck/evidence/20261105T163101Z-gcp-sev-snp/refvals/snp-f67900851e25a378f04b4d4b5f1ea4410c11deb74e97ddcc7e3363a33f6e1dbb7880d304005387bc98e9cbdceec4ea28.json"
+    }
+  ],
+  "tdx": [
+    {
+      "mrtd": "c1ee9c16e3afc506cfe042c5b846a368528f3b37618eafb27469bc114cf914e9222c91618470e7f2b28ac360968270a5",
+      "launch": "Google Cloud c3-standard-4, confidential VM with Intel TDX: the TDX firmware build of Google",
+      "endorsement": "launch endorsement signed by Google (GCE-uefi-signer), SVN 2, 2026-05-21T23:52:45Z",
+      "checked": "e2e/evidence/20261006T183422Z-gce-tdx-endorsements/tdx-c1ee9c16e3afc506.txt"
+    },
+    {
+      "mrtd": "f21e6b48743fe14c2d090078ca1197f09ae4c99438677f2c79901ef80e2aeefe2f9a7eb6e3eb3b5047c4f1511731e5d3",
+      "launch": "Google Cloud c3-standard-4, confidential VM with Intel TDX: the TDX firmware build of Google",
+      "endorsement": "launch endorsement signed by Google (GCE-uefi-signer), SVN 2, 2026-07-31T09:52:02Z",
+      "checked": "e2e/evidence/20261006T183422Z-gce-tdx-endorsements/tdx-f21e6b48743fe14c.txt"
+    }
+  ]
 }

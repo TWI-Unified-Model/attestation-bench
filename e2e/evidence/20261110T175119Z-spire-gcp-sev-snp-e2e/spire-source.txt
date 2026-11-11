@@ -1,0 +1,8 @@
+spire built from /Users/serhiinikolaichuk/dev/spire-main-local-tacra
+  commit a672825a70651829f3436a0eb62221c53545a9c3 The SDKs of the TACRA work at the branches they were merged into
+  modified:  M go.mod
+  replace github.com/spiffe/go-spiffe/v2 => github.com/TWI-Unified-Model/spiffe-go-spiffe/v2 v2.9.1-0.20261108150357-afc10e7a7e9f
+  replace github.com/spiffe/spire-api-sdk => github.com/TWI-Unified-Model/spiffe-spire-api-sdk v1.2.5-0.20261108150641-5e09952350d9
+  replace github.com/TWI-Unified-Model/tacra/platform => /Users/serhiinikolaichuk/dev/tacra/platform
+go-spiffe: be24f4efb3d3d154bf01958c181c111928c492e6 Workload API: a blank line before the banner of the attested credential acquisition calls
+spire-api-sdk: 7fdf940af4855bd3bbe65fcc5e75bc534f131688 Server API comments: the Attester-held key is bound to the Evidence; stubs regenerated

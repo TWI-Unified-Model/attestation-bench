@@ -315,6 +315,7 @@ var (
 type InitiateRequest struct {
 	Target         string `json:"target"`
 	CredentialType string `json:"credential_type"`
+	CredentialHint string `json:"credential_hint,omitempty"` // the Credential Hint named at attest-initiate, forwarded by the EST Server; not correlated here
 }
 
 // InitiateResponse carries the fields of the AttestationInitiationResponse this RRP originates.
@@ -341,21 +342,33 @@ type SecondLeg struct {
 	Profile        string     `json:"profile,omitempty"`  // Background Check: the Evidence's media type
 }
 
-func (g *Gateway) target(name, credentialType string) (*Target, error) {
+func (g *Gateway) target(name string) (*Target, error) {
 	t, ok := g.Config.Targets[name]
 	if !ok {
 		return nil, refuse(http.StatusForbidden, "unsupported-target", ErrPolicy)
 	}
-	if !slices.Contains(t.CredentialTypes, credentialType) {
-		return nil, refuse(http.StatusForbidden, "unsupported-credential-type", ErrPolicy)
-	}
 	return t, nil
+}
+
+// supports refuses a Credential Type that this Relying Party does not support for the Target: 422, with the supported
+// ones in the body. At attest-initiate the check comes at once. At the second call it comes after the Attestation
+// Results are verified, so that a failed attestation is refused with 403 whatever the Credential Type. A Credential
+// Type that the profile does not define does not reach the RRP: the EST server refuses it with 400.
+func (t *Target) supports(credentialType string) error {
+	if slices.Contains(t.CredentialTypes, credentialType) {
+		return nil
+	}
+	return refuse(http.StatusUnprocessableEntity, "unsupported-credential-type",
+		fmt.Errorf("%w: supported: %s", ErrPolicy, strings.Join(t.CredentialTypes, ", ")))
 }
 
 // Initiate answers attest-initiate for a Target: this RRP originates the Handle, never the conduit.
 func (g *Gateway) Initiate(req InitiateRequest) (*InitiateResponse, error) {
-	t, err := g.target(req.Target, req.CredentialType)
+	t, err := g.target(req.Target)
 	if err != nil {
+		return nil, err
+	}
+	if err := t.supports(req.CredentialType); err != nil {
 		return nil, err
 	}
 	resp := &InitiateResponse{FreshnessKind: t.FreshnessKind, Mode: g.Mode}
@@ -380,7 +393,7 @@ func (g *Gateway) Initiate(req InitiateRequest) (*InitiateResponse, error) {
 // Check runs the checks common to both modes for a second leg whose binding subject is subject (the CSR DER, or
 // CEKpub's SubjectPublicKeyInfo DER), and returns the verified Attestation Results and the Target's policy.
 func (g *Gateway) Check(req *SecondLeg, subject []byte) (*ear.Result, *Target, error) {
-	t, err := g.target(req.Target, req.CredentialType)
+	t, err := g.target(req.Target)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -389,9 +402,7 @@ func (g *Gateway) Check(req *SecondLeg, subject []byte) (*ear.Result, *Target, e
 	}
 	maxAge, skew := time.Duration(t.MaxAgeS)*time.Second, time.Duration(t.SkewS)*time.Second
 	if err := g.Fresh.Accept(req.FreshnessKind, req.Handle, req.Target, req.CredentialType, maxAge, skew); err != nil {
-		if errors.Is(err, fresh.ErrStale) {
-			return nil, nil, refuse(http.StatusConflict, "freshness", err)
-		}
+		// a Handle not issued, expired or used before, an epoch marker that moved, a stale timestamp: 400
 		return nil, nil, refuse(http.StatusBadRequest, "freshness", err)
 	}
 	bv := platform.BindingValue(req.Handle, req.Target, subject) // no identifier of any party (rats-tacra#20, 11 October 2026)
@@ -428,6 +439,10 @@ func (g *Gateway) Check(req *SecondLeg, subject []byte) (*ear.Result, *Target, e
 			return nil, nil, refuse(http.StatusForbidden, "platform-policy", err)
 		}
 		res.Waived = waived
+	}
+	// the Credential Type after the attestation: 403 above comes first, 422 here
+	if err := t.supports(req.CredentialType); err != nil {
+		return nil, nil, err
 	}
 	return res, t, nil
 }

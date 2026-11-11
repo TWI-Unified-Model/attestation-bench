@@ -1,0 +1,10 @@
+attestation-bench d559605a2f7a
+globalsign-est/src upstream 623c19764b16 + 1 patch(es), tree 86de667a4abf: tested tree
+veraison-services/src upstream f997c5275c30 + 8 patch(es), tree e7a04b43faf9: tested tree
+go-gen-ref/src upstream aa3740de6b00 + 3 patch(es), tree 5f74ee0c1309: tested tree
+veraison verification-service rev f997c5275c30 modified true go-sev-guest - sha256 0d3261bd7441465c
+veraison vts-service rev f997c5275c30 modified true go-sev-guest v0.15.0 sha256 d86a422b6422719d
+veraison scheme-sevsnp.plugin rev f997c5275c30 modified true go-sev-guest v0.15.0 sha256 cb465d29f64bc6e2
+estserver built from /Users/serhiinikolaichuk/dev/globalsign-est
+  commit 11e0e65c83832fb6ed4f2b14cf3dc3d43e9b7e31 The container's aad carries the Target octets base64url, as TACRA-02 specifies, and the Attester compares the decoded octets
+  worktree clean

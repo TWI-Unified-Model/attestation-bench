@@ -1,0 +1,6 @@
+spire built from /Users/serhiinikolaichuk/dev/spire
+  commit b4fe125c2d23e6299f0add5e6a1cc075bfa22357 After the audit of the second pass: every call of the Server API logs a success at debug with the fields of the result and the rule is written down, the Agent names the cases in which the Workload sees Unavailable, the Binding is capitalized in a test name, and a stray line leaves a test
+  replace github.com/spiffe/go-spiffe/v2 => github.com/TWI-Unified-Model/spiffe-go-spiffe/v2 v2.9.1-0.20261103185101-290df1d6b655
+  replace github.com/spiffe/spire-api-sdk => github.com/TWI-Unified-Model/spiffe-spire-api-sdk v1.2.5-0.20261103185608-6628d059ce2c
+go-spiffe: 37e447ff0215b67e046e7338b00402ab4ef63749 Workload API comment: the Attester-held key is bound to the Evidence; stubs regenerated
+spire-api-sdk: 7fdf940af4855bd3bbe65fcc5e75bc534f131688 Server API comments: the Attester-held key is bound to the Evidence; stubs regenerated

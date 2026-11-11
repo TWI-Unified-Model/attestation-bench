@@ -1,0 +1,37 @@
+{
+  "ok": true,
+  "target": "spiffe://example.org",
+  "credential_type": "x509",
+  "credential_hint": "internal",
+  "tee": "sev-snp",
+  "mode": "CREDENTIAL_ACQUISITION_MODE_ENROLL",
+  "freshness_kind": "FRESHNESS_KIND_PRESENT_NONCE",
+  "handle_hex": "a21a9645350af17bcb6fb34796d8eaaefa695d05d2d373c7e8d3ddc2abc62a8f",
+  "expires_in": 300,
+  "acceptable_csk": [
+    "ecdsa-p256-sha256"
+  ],
+  "acceptable_evidence": [
+    "application/vnd.veraison.tsm-report+cbor"
+  ],
+  "binding_value_hex": "fb92116396e89408e20e10df49ac83afb1b4771873990275dc5117e25f9acff933572dbe59a4130260cbaebd9dda7b21a2ec1c45bb07daa701dd88243e8cd991",
+  "csr_sha256": "8ab7b820314624f6d54ebe5d0723fbdac8b3100ad9642dd00d5f9438cea21253",
+  "evidence_bytes": 5989,
+  "evidence_media_type": "application/vnd.veraison.tsm-report+cbor",
+  "report_provider": "sev_guest",
+  "report_version": 5,
+  "report_measurement_hex": "f67900851e25a378f04b4d4b5f1ea4410c11deb74e97ddcc7e3363a33f6e1dbb7880d304005387bc98e9cbdceec4ea28",
+  "report_signer": "VCEK",
+  "spiffe_id": "spiffe://example.org/workload",
+  "hint": "internal",
+  "cert_serial": "333099923306912550740613536279726948063",
+  "cert_issuer": "SERIALNUMBER=196624598858686171720203944519561085446,O=SPIFFE,C=US",
+  "not_before": "2026-11-06T01:57:44Z",
+  "not_after": "2026-11-06T02:57:54Z",
+  "chain_verified": true,
+  "key_matches": true,
+  "initiate_ms": 102.488,
+  "enroll_ms": 537.112,
+  "started_at": "2026-11-06T01:57:54.281881815Z",
+  "finished_at": "2026-11-06T01:57:54.932710357Z"
+}

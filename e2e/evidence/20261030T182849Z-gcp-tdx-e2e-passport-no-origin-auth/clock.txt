@@ -1,0 +1,30 @@
+guest clock (UTC, seconds): 1793385018.866567596
+clocksource: tsc
+available clocksources: tsc acpi_pm 
+kernel command line: BOOT_IMAGE=/vmlinuz-7.0.0-1014-gcp root=PARTUUID=668bffdd-b002-4b46-9120-d69d230ce20b ro console=ttyS0,115200 panic=-1
+-- boot lines on SEV, TDX, the TSC and the clocksource (dmesg)
+[    0.000000] tdx: Guest detected
+[    0.000000] tdx: Attributes: SEPT_VE_DISABLE
+[    0.000000] tdx: TD_CTLS: PENDING_VE_DISABLE ENUM_TOPOLOGY VIRT_CPUID2 REDUCE_VE
+[    0.000000] tsc: Detected 2700.000 MHz processor
+[    0.010386] clocksource: refined-jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 1910969940391419 ns
+[    0.402308] clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 1911260446275000 ns
+[    1.528680] clocksource: tsc-early: mask: 0xffffffffffffffff max_cycles: 0x26eb3e3cc63, max_idle_ns: 440795236593 ns
+[    1.540355] process: using TDX aware idle routine
+[    1.540355] Memory Encryption Features active: Intel TDX
+[    1.540355] smpboot: CPU0: Intel TDX (family: 0x6, model: 0x8f, stepping: 0x8)
+[    1.900761] clocksource: Switched to clocksource tsc-early
+[    1.918486] clocksource: acpi_pm: mask: 0xffffff max_cycles: 0xffffff, max_idle_ns: 2085701024 ns
+[    1.935737] clocksource: tsc: mask: 0xffffffffffffffff max_cycles: 0x26eb3e3cc63, max_idle_ns: 440795236593 ns
+[    1.939204] clocksource: Switched to clocksource tsc
+[    2.199188] software IO TLB: Memory encryption is active and system is using DMA bounce buffers
+[    3.458002] systemd[1]: Detected confidential virtualization tdx.
+-- the time service
+active: chrony
+active: chronyd
+MS Name/IP address         Stratum Poll Reach LastRx Last sample               
+===============================================================================
+^* 169.254.169.254               2   6    17    27  +3223ns[+8331ns] +/-  223us
+Name/IP address             Mode KeyID Type KLen Last Atmp  NAK Cook CLen
+=========================================================================
+169.254.169.254                -     0    0    0    -    0    0    0    0

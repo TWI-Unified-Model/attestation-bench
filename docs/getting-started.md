@@ -19,14 +19,13 @@ for the hardware.
 - **For steps 7 to 9, a cloud account that can create confidential VMs:** a Google Cloud project (AMD SEV-SNP and
   Intel TDX) or an AWS account (AMD SEV-SNP), with its CLI signed in. How to set it up, the quotas and the cost:
   [hardware/](hardware/README.md).
-- Access to the repository. It is private: ask for an invitation for your GitHub account.
 
 `make doctor` (step 3) checks everything else and prints the command that installs what is missing.
 
 ## 2. Get the code
 
 ```bash
-git clone git@github.com:TWI-Unified-Model/attestation-bench.git    # or: gh repo clone TWI-Unified-Model/attestation-bench
+git clone https://github.com/TWI-Unified-Model/attestation-bench.git
 cd attestation-bench
 ```
 
@@ -38,7 +37,7 @@ Every command below runs from this directory.
 make doctor
 ```
 
-It lists each tool the bench needs with `ok`, or with `MISSING` and the command to install it, then the cloud tools
+It lists each tool the bench needs with `ok`, or with `MISSING` and the package that holds it, then the cloud tools
 the hardware runs use (from step 7), the ports and the disk. When everything is there it ends with:
 
 ```
@@ -47,7 +46,9 @@ the hardware runs use (from step 7), the ports and the disk. When everything is 
 Ready for make setup.
 ```
 
-Install what it asks for and run it again until it says `Ready for make setup.`
+When tools are missing, the last line is the one command that installs their packages. Run that command, then
+`make doctor` again, until it says `Ready for make setup.` A `warning` names a cloud CLI that only the hardware runs of
+that cloud use (from step 7); `make setup` does not need it.
 
 ## 4. Set the trust zone up
 
@@ -146,11 +147,12 @@ made. Veraison fetches AMD's revocation list and the TDX verifier Intel's collat
   ok  attest-initiate https://db-nonce.tacra.example: 200 application/est-attest-initiate+json, members acceptable_csk, acceptable_evidence, expires_in, freshness_kind, handle, mode; Handle 43 characters of unpadded base64url, 32 octets
   ok  /attest-enroll as application/json: 415 Content-Type must be application/est-attest-enroll+json; Accept application/est-attest-enroll+json
   ...
-  ok    20261008T160809Z-gcp-tdx       50 checks, 0 not as expected
-test-live: the EST wire format as expected; 40 committed runs appraised again, 2000 checks as expected
+  ok    20261110T225810Z-gcp-sev-snp   40 checks, 0 not as expected
+test-live: the EST wire format as expected; 62 committed runs appraised again, 2890 checks as expected
 ```
 
-That is on 8 October 2026; every attack run committed after it adds one run and 50 checks.
+The two numbers count the attack runs committed in this repository and their checks: every attack run committed later
+adds to both.
 
 ## 7. Run TACRA end to end, on real hardware
 
@@ -205,20 +207,20 @@ other kinds are taken at once; absent-timestamp made ahead is refused at once, t
 
 ```
 rrpverify-platform: 50 checks, 0 not as expected
-rrpverify-service: 50 checks, 0 not as expected
-rrpverify-veraison-fixed: 162 checks, 0 not as expected (a build the bench compares with: reported, not judged)
-rrpverify-veraison-fork: 142 checks, 60 not as expected (a build the bench compares with: reported, not judged)
-rrpverify-veraison-v015: 162 checks, 0 not as expected
+rrpverify-service: 40 checks, 0 not as expected
+rrpverify-veraison-fixed: 142 checks, 0 not as expected (a build the bench compares with: reported, not judged)
+rrpverify-veraison-fork: 122 checks, 50 not as expected (a build the bench compares with: reported, not judged)
+rrpverify-veraison-v015: 142 checks, 0 not as expected
 pre-play ahead enroll-absent-epoch: at once 200
 ...
-pre-play ahead enroll-absent-timestamp: at once 409; 286 s or more after it was made 200, 407 s 200, 411 s 409 (max_age 120 s, clock_skew 5 s)
+pre-play ahead enroll-absent-timestamp: at once 400; 283 s or more after it was made 200, 404 s 200, 408 s 400 (max_age 120 s, clock_skew 5 s)
 ...
-pre-play behind enroll-absent-timestamp: at once 409; 411 s or more after it was made 409
+pre-play behind enroll-absent-timestamp: at once 400; 408 s or more after it was made 400
 ...
 the platform rule's waiver: Milan bit 4: admitted without bit 4, AMD-SB-3034
-guest minus RRP: +1.283 s, within 1.416 s
-VERDICT PASS: 262 checks: the honest Evidence passed, every attack refused for its own reason; the honest Evidence admitted under the bench's waiver: Milan bit 4: admitted without bit 4, AMD-SB-3034; exposure, the guest's clock: https://db-time.tacra.example accepted Evidence 286 s old or more, and again 407 s old or more (max_age 120 s); https://ledger-time.tacra.example accepted Evidence 286 s old or more, and again 407 s old or more (max_age 120 s); absent-timestamp Evidence made with the clock behind refused; the other four kinds' Evidence made with it ahead taken at once
-== run directory: /Users/you/.attestation-bench/runs/20261007T212531Z-gcp-sev-snp
+guest minus RRP: +0.978 s, within 1.097 s
+VERDICT PASS: 232 checks: the honest Evidence passed, every attack refused for its own reason; the honest Evidence admitted under the bench's waiver: Milan bit 4: admitted without bit 4, AMD-SB-3034; exposure, the guest's clock: https://db-time.tacra.example accepted Evidence 283 s old or more, and again 404 s old or more (max_age 120 s); https://ledger-time.tacra.example accepted Evidence 283 s old or more, and again 404 s old or more (max_age 120 s); absent-timestamp Evidence made with the clock behind refused; the other four kinds' Evidence made with it ahead taken at once
+== run directory: /Users/you/.attestation-bench/runs/20261110T225810Z-gcp-sev-snp
 ```
 
 The catalogue of attacks and what stops each: [attacks.md](attacks.md).
@@ -230,18 +232,11 @@ make redirect PLATFORM=gcp-snp
 ```
 
 The workload produces Evidence for a Target of one Credential Authority, `ca1`. A hostile intermediary then offers
-the same Evidence to a second one, `ca2`. The bench does it twice: with the RRP identifier in the binding, and
-without it. Then the intermediary rewrites, one at a time, what it relays to `ca1`: a made-up Handle, the Freshness
-Kind, the credential type, another workload's Credential Hint. It ends with:
+the same Evidence to a second one, `ca2`. Then the intermediary rewrites, one at a time, what it relays to `ca1`: a
+made-up Handle, the Freshness Kind, the Credential Type, the Credential Hint of another Workload. It ends with:
 
 ```
-(a run of October 2026 before the 12th, with both passes; since 12 October the experiment makes the no-rrp-id pass alone)
 pass         kind               ca1      ca2
-with-rrp-id  present-nonce      ISSUED   refused
-with-rrp-id  present-epoch      ISSUED   refused
-with-rrp-id  absent-epoch       ISSUED   refused
-with-rrp-id  absent-timestamp   ISSUED   refused
-with-rrp-id  absent-none        ISSUED   refused
 no-rrp-id    present-nonce      ISSUED   refused
 no-rrp-id    present-epoch      ISSUED   ISSUED
 no-rrp-id    absent-epoch       ISSUED   ISSUED
@@ -250,7 +245,6 @@ no-rrp-id    absent-none        ISSUED   ISSUED
 rewrite at ca1                         kind               outcome
 made-up Handle                         present-nonce      refused freshness fresh: freshness element is not valid now: unknown or alread
 Freshness Kind absent-none             present-nonce      refused freshness-kind-mismatch not allowed by this RRP's policy for the Targe
-credential type not offered            present-nonce      refused unsupported-credential-type not allowed by this RRP's policy for the T
 Credential Hint of another workload    present-nonce      refused credential-hint the Credential Hint is not the identity the CA assigns
 ...
 the other credential type offered      present-nonce      refused freshness fresh: freshness element is not valid now: Handle was issued
@@ -258,16 +252,16 @@ the other credential type offered      present-epoch      ISSUED CN=payments.wor
 the other credential type offered      absent-epoch       ISSUED CN=payments.workload.tacra.example
 the other credential type offered      absent-timestamp   ISSUED CN=payments.workload.tacra.example
 the other credential type offered      absent-none        ISSUED CN=payments.workload.tacra.example
-guest minus RRP: +1.111 s, within 1.306 s
-VERDICT PASS: with the RRP identifier, ca2 refused all 5 Freshness Kinds; without it, all but present-nonce; of the conduit's 20 rewrites at ca1, the other credential type the Target offers was issued for every kind but present-nonce, and every other was refused for its own reason
-== run directory: /Users/you/.attestation-bench/runs/20261007T204444Z-gcp-snp-redirect
+guest minus RRP: +0.728 s, within 1.145 s
+VERDICT PASS: without the RRP identifier, ca2 issued for every Freshness Kind but present-nonce; of the conduit's 19 rewrites at ca1, the other credential type the Target offers was issued for every kind but present-nonce, and every other was refused for its own reason
+== run directory: /Users/you/.attestation-bench/runs/20261111T000543Z-gcp-snp-redirect
 ```
 
-With the RRP identifier in the binding, `ca2` refuses every Freshness Kind. Without it, only a nonce `ca2` never
-issued stops the redirection: here, where the two share one epoch marker and the Evidence is made for `ca1`. With
-`REDIRECT_VARIANT=own-epochs` `ca2` keeps an epoch marker of its own; with `REDIRECT_VARIANT=start-ca2` the conduit
-also starts the exchange at `ca2`, and without the identifier `ca2` issues on its own nonce; `REDIRECT_VARIANT=vault`
-runs the same on the two Secret Vaults ([attacks.md](attacks.md), section 2). This is the question of
+The binding carries no RRP identifier. Only a nonce that `ca2` never issued stops the redirection: here, where the two
+share one epoch marker and the Evidence is made for `ca1`. With `REDIRECT_VARIANT=own-epochs` `ca2` keeps an epoch
+marker of its own; with `REDIRECT_VARIANT=start-ca2` the conduit also starts the exchange at `ca2`, and `ca2` issues on
+its own nonce; `REDIRECT_VARIANT=vault` runs the same on the two Secret Vaults ([attacks.md](attacks.md), section 2).
+This is the question of
 [TACRA issue #20](https://github.com/TheBankster/rats-tacra/issues/20). Each rewrite is refused for its own reason,
 except the other credential type the Target offers: nothing binds the type, and only the present-nonce Handle, minted
 for one type, catches it ([attacks.md](attacks.md), section 2; [TACRA issue #19](https://github.com/TheBankster/rats-tacra/issues/19)).

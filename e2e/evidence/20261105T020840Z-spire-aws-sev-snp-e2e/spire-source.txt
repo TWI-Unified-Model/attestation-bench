@@ -1,0 +1,6 @@
+spire built from /Users/serhiinikolaichuk/dev/spire
+  commit a3d75a3047a1a10f7e9cd3e8a49a9fde529051fe Status codes of the Server by the EST profile: InvalidArgument, Unimplemented, Internal
+  replace github.com/spiffe/go-spiffe/v2 => github.com/TWI-Unified-Model/spiffe-go-spiffe/v2 v2.9.1-0.20261103185101-290df1d6b655
+  replace github.com/spiffe/spire-api-sdk => github.com/TWI-Unified-Model/spiffe-spire-api-sdk v1.2.5-0.20261103185608-6628d059ce2c
+go-spiffe: 11fed24c3d1008d26f707b725fbb452d22efed1a Credential Type in place of Credential Type token in the comments
+spire-api-sdk: 3d9a5099be48bfb366017ca828bba535b74560eb Credential Type in place of Credential Type token in the comments

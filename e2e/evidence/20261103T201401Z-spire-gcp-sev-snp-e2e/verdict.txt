@@ -1,0 +1,11 @@
+ADMITTED  workload ok
+ADMITTED  chain verified against the bundle
+ADMITTED  the SVID carries the workload's key
+ADMITTED  SPIFFE ID of the entry
+ADMITTED  launch measurement approved
+ADMITTED  server enrolled with the report's measurement
+ADMITTED  server audited the enrollment
+
+spiffe_id=spiffe://example.org/workload serial=284848560182352489464489687041608575844 not_after=2026-11-03T21:16:22Z
+measurement=e79ebb5b789ddb6b7a9897f663a655a65c69445aa482c4e1a5ff9fdeb4af1a2c8d5d30fcad5f4f0e04f1a13885eb984d report_version=5 signer=VCEK
+initiate_ms=47.474 enroll_ms=206.465 evidence_bytes=5989

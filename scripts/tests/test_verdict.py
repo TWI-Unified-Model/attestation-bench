@@ -936,6 +936,21 @@ class ChangedRuns(unittest.TestCase):
                 self.assertEqual(code, 1, last)
                 self.assertTrue(last.startswith(f"VERDICT FAIL: the pre-play check not as expected: {why}"), last)
 
+    def test_clock_preplay_refused_with_400(self):
+        # an RRP refuses a freshness element that is not valid now with 400; the committed run answered 409, and the
+        # verdict judges a run with either answer the same way
+        def every_409_is_400(d):
+            for r in d["results"]:
+                for edge in r.values():
+                    if isinstance(edge, dict) and edge.get("status") == 409:
+                        edge["status"] = 400
+
+        as_committed = verdict("attacks", self.clock_run(lambda d: None))
+        self.assertEqual(as_committed[0], 0, as_committed[1])
+        for f in self.tmp.iterdir():
+            shutil.rmtree(f) if f.is_dir() else f.unlink()
+        self.assertEqual(verdict("attacks", self.clock_run(every_409_is_400)), as_committed)
+
     def test_no_attack_results(self):
         # an attack run with only the results of the builds the bench compares with
         run = self.copy(HW / ATTACK_RUNS[0], "rrpverify-veraison-fork.json", "rrpverify-veraison-fixed.json")

@@ -43,6 +43,7 @@ E2E = re.compile(
     r"(?:-(?P<binding>no-rrp-id|bind-rrp-id))?"  # no-rrp-id: the runs of 8 October without the identifier; bind-rrp-id: the measured variant since 11 October
     r"(?:-(?P<scen>cas-outside|unapproved|other-platform))?"
     r"(?:-conduit-(?P<attack>seal|swap|hint|hint-group))?"  # the conduit's drills (docs/attacks.md, section 6)
+    r"(?:-(?P<origin>no-origin-auth))?"  # a run whose Secret Vault put no origin member into the container
 )
 ATTACKS = re.compile(r"(?P<hw>gcp-sev-snp|gcp-tdx|aws-sev-snp)(?:-(?P<binding>no-rrp-id|bind-rrp-id))?")
 REDIRECT = re.compile(
@@ -101,13 +102,14 @@ def rows(run):
         scen = e.group("scen") or ""
         model = MODELS.get(e.group("model") or "", "") or recorded_model(run, "Passport")
         binding = ", no RRP identifier bound" if e.group("binding") else ""
+        origin = ", no origin member" if e.group("origin") else ""
         if attack := e.group("attack"):
             v = judged(run, lambda: verdict.conduit(run, attack), ["results.json"])
-            yield run.name, f"the conduit's drill: {attack}{binding}", PLATFORMS[e.group("plat")], model, *v
+            yield run.name, f"the conduit's drill: {attack}{binding}{origin}", PLATFORMS[e.group("plat")], model, *v
             return
         expect = "refused" if scen in ("unapproved", "other-platform") else "admitted"
         v = judged(run, lambda: verdict.demo(run, expect, ""), ["results.json"])
-        yield run.name, SCENARIOS[scen] + binding, PLATFORMS[e.group("plat")], model, *v
+        yield run.name, SCENARIOS[scen] + binding + origin, PLATFORMS[e.group("plat")], model, *v
     elif name.startswith("bench-mtls"):
         model = recorded_model(run, "Background Check" if "background-check" in name else "Passport")
         yield (

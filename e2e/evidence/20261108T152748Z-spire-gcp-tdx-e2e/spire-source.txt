@@ -1,0 +1,6 @@
+spire built from /Users/serhiinikolaichuk/dev/spire
+  commit 53b768c87a6c2db7cf9125f66214be2c2fac33a8 The Workload API SDK at its merged main and the Server API SDK at its merge on next: the comments of the review in the generated stubs, no change of code
+  replace github.com/spiffe/go-spiffe/v2 => github.com/TWI-Unified-Model/spiffe-go-spiffe/v2 v2.9.1-0.20261108150357-afc10e7a7e9f
+  replace github.com/spiffe/spire-api-sdk => github.com/TWI-Unified-Model/spiffe-spire-api-sdk v1.2.5-0.20261108150641-5e09952350d9
+go-spiffe: be24f4efb3d3d154bf01958c181c111928c492e6 Workload API: a blank line before the banner of the attested credential acquisition calls
+spire-api-sdk: 7fdf940af4855bd3bbe65fcc5e75bc534f131688 Server API comments: the Attester-held key is bound to the Evidence; stubs regenerated

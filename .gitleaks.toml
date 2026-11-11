@@ -36,3 +36,51 @@ condition = "AND"
 regexTarget = "match"
 regexes = ['''^[A-Za-z0-9._~/-]+ v[0-9A-Za-z.+-]+(/go\.mod)? h1:[A-Za-z0-9+/]{43}=$''']
 paths = ['''(^|/)third_party/[^/]+/patches/[^/]+\.patch$''']
+
+[[allowlists]]
+description = "the record of the sources of a SPIRE run: the 40-hex commit hash of spire-api-sdk after the name of the module, which holds the word api; a commit, not a key"
+condition = "AND"
+regexTarget = "line"
+regexes = ['''spire-api-sdk: [0-9a-f]{40} ''']
+paths = [
+  '''(^|/)e2e/evidence/[^/]+-spire-[^/]+/spire-source\.txt$''',
+  # the run prints the same line, and the log and the recording of the demo keep the output of the run
+  '''(^|/)e2e/evidence/[^/]+-spire-demo-[^/]+/(run\.log|demo\.txt|demo\.typescript)$''',
+]
+
+[[allowlists]]
+description = "log lines of SPIRE Server: request_id is the UUID that the Server gives each RPC, beside method names and node attestor types that hold the words token and credential; an identifier, not a credential"
+condition = "AND"
+regexTarget = "line"
+regexes = [
+  '''request_id=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}''',
+  # the recording folds the audit lines at 160 columns: the UUID of the registration entry, beside the Credential Type
+  # api-key, can be on a line of its own; an identifier, not a credential
+  '''credential_type=api-key entry_id=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}''',
+]
+paths = [
+  '''(^|/)e2e/evidence/[^/]+-spire-[^/]+/server\.log$''',
+  # the recording and the walkthrough of the demo quote the same audit lines
+  '''(^|/)e2e/evidence/[^/]+-spire-demo-[^/]+/(demo\.txt|demo\.typescript|walkthrough\.md|run\.log)$''',
+]
+
+[[allowlists]]
+description = "the SHA-256 of the demo API key that the Workload of a SPIRE run retrieved: the record and the verdict keep the digest, not the key"
+condition = "AND"
+regexTarget = "line"
+regexes = [
+  '''secret_sha256["=: ]+"?[0-9a-f]{64}''',
+  # the walkthrough quotes the same digest, in the wording of the demo and in the wording of the kept demo run
+  '''not the credential: `[0-9a-f]{64}`''',
+  '''keeps only its SHA-256, `[0-9a-f]{64}`''',
+]
+paths = [
+  '''(^|/)e2e/evidence/[^/]+-spire-[^/]+/(workload-retrieve/result\.json|verdict\.txt)$''',
+  '''(^|/)e2e/evidence/[^/]+-spire-demo-[^/]+/(demo\.txt|demo\.typescript|walkthrough\.md|run\.log)$''',
+]
+
+[[allowlists]]
+description = "the identifier of a credential group of the Secret Vault (32 octets, hex), which the walkthrough of the demo names beside the word credential: an identifier of the group, not a secret"
+regexTarget = "line"
+regexes = ['''credential group: `[0-9a-f]{64}`''']
+paths = ['''(^|/)e2e/evidence/[^/]+-spire-demo-[^/]+/walkthrough\.md$''']

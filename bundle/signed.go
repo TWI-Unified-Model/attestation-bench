@@ -11,7 +11,7 @@ package bundle
 //
 //	suites        MLKEM768-P256 (0x0050), the bank profile's, or DHKEM(P-256, HKDF-SHA256) (0x0010), each with
 //	              HKDF-SHA256 (0x0001) and AES-256-GCM (0x0002); a Target names in acceptable_cek the ones it takes
-//	info          len32-prefixed: "tacra-est bundle v1", the Target, the freshness element
+//	info          len32-prefixed: "tacra hpke-base v1", the Target, the freshness element
 //	aad           Canonical({group_id, target, handle?, credential_hint?}), the JCS of RFC 8785
 //	origin        {alg: "ECDSA-P256-SHA256", signature}: ECDSA P-256 over the SHA-256 of the len32-prefixed
 //	              "tacra-est bundle signature v1", the HPKE suite_id of the suite in use, "ECDSA-P256-SHA256", CEKpub
@@ -59,7 +59,7 @@ const (
 )
 
 const (
-	infoLabel = "tacra-est bundle v1"
+	infoLabel = "tacra hpke-base v1"
 	sigLabel  = "tacra-est bundle signature v1"
 )
 
@@ -209,7 +209,7 @@ func SealBase(signKey *ecdsa.PrivateKey, cekPub []byte, aad AAD, content Content
 		return nil, err
 	}
 	kdf, aead := kdfAEAD()
-	info := InfoBase(aad.Target, aad.Handle)
+	info := InfoBase(string(aad.Target), aad.Handle)
 	enc, snd, err := hpke.NewSender(pk, kdf, aead, info)
 	if err != nil {
 		return nil, err
@@ -272,7 +272,7 @@ func OpenBase(b *Bundle, exp ExpectBase) (*Content, error) {
 	if _, ok := SuiteID(b.Suite); !ok {
 		return nil, ErrContainer
 	}
-	if b.AAD.Target != exp.Target || !bytes.Equal(b.AAD.Handle, exp.Handle) || b.AAD.CredentialHint != exp.CredentialHint {
+	if !bytes.Equal(b.AAD.Target, []byte(exp.Target)) || !bytes.Equal(b.AAD.Handle, exp.Handle) || b.AAD.CredentialHint != exp.CredentialHint {
 		return nil, ErrAAD
 	}
 	info := InfoBase(exp.Target, exp.Handle)
