@@ -51,13 +51,13 @@ jobs:
       - name: system packages (make doctor names them)
         run: |
           # The package mirror of the runner image does not always resolve, and apt-get update then ends with warnings
-          # and exit status 0: Error-Mode=any makes it fail. A try that fails moves apt to the archive of Ubuntu.
+          # and exit status 0: Error-Mode=any makes it fail. A try that fails moves apt to the Ubuntu archive.
           for try in 1 2 3; do
             if sudo apt-get update -qq -o APT::Update::Error-Mode=any &&
               sudo apt-get install -y -qq protobuf-compiler sqlite3 jq gettext-base netcat-openbsd unzip python3-venv; then
               exit 0
             fi
-            echo "try $try failed: apt uses the archive of Ubuntu from here on"
+            echo "try $try failed: apt uses the Ubuntu archive from here on"
             sudo find /etc/apt -name '*.sources' -o -name '*.list' |
               sudo xargs sed -i 's#mirror+file:/etc/apt/apt-mirrors.txt#http://archive.ubuntu.com/ubuntu/#'
             sleep 15

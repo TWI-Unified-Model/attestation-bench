@@ -9,7 +9,7 @@ again from AWS's published firmware (`trust/firmware-check.sh`).
 |---|---|---|---|
 | `approved-launches.json` | The launches the packs approve: SEV-SNP launch measurements and TDX MRTDs. Each entry names its launch, its endorsement and the record of the check; the AWS entry also pins the published firmware its measurement is computed from (`firmware`). | This repository's evidence, linked from each entry; for AWS, AWS's published firmware | `scripts/trustzone.py`: the policy of every Target, the TDX verifier's reference MRTDs |
 | `amd-kds-milan-cert_chain.pem` | AMD's ASK (`SEV-Milan`) and ARK (`ARK-Milan`) | `https://kdsintf.amd.com/vcek/v1/Milan/cert_chain` | `hwcheck` (`rrpverify -ark`) |
-| `veraison-corim-milan.cbor` | The CoRIM Veraison is provisioned with: the `ARK-Milan` trust anchor and a reference value for each approved SEV-SNP launch | Made with `hwcheck/cmd/mkcorim` from the AMD chain and SEV-SNP reports of the four launches (28.09.2026 for the first two, 25.10.2026 and 05.11.2026 for the newer builds of Google; `go run -modfile=go.patched.mod ./cmd/mkcorim`) | `scripts/setup.sh`, the trust zone of the Demo Bank |
+| `veraison-corim-milan.cbor` | The CoRIM Veraison is provisioned with: the `ARK-Milan` trust anchor and a reference value for each approved SEV-SNP launch | Made with `hwcheck/cmd/mkcorim` from the AMD chain and SEV-SNP reports of the four launches (28.09.2026 for the first two, 25.10.2026 and 05.11.2026 for Google's newer builds; `go run -modfile=go.patched.mod ./cmd/mkcorim`) | `scripts/setup.sh`, the trust zone of the Demo Bank |
 | `platform-policy.json` | The platform rule every RRP applies besides the verifier's verdict: the SEV-SNP product lines and minimum TCB, SMT, the refused TD attributes. `sources` says where each value comes from. | AMD's and Google's security bulletins, cited in the file; the hosts the hardware runs met | `scripts/trustzone.py`: the `platform` of every gateway |
 | `GCE-cc-tcb-root_1.crt` | Google's root for its signed launch endorsements (`GCE-cc-tcb-root`, valid until 2048) | `https://pki.goog/cloud_integrity/GCE-cc-tcb-root_1.crt` | `rrp/cmd/gce-endorsement`, the Demo Bank's `approve` |
 
@@ -26,12 +26,12 @@ e876bc6978bf4f3da445f98a0a82363c8c0bae5a1fc033c6df65846a6cb0f18c  GCE-cc-tcb-roo
 
 | Platform | Value | Endorsement |
 |---|---|---|
-| Google Cloud SEV-SNP, n2d-standard-2 | `ccdc5cf0…26fa` | the signature of Google, checked 28.09.2026 |
-| Google Cloud SEV-SNP, n2d-standard-2, the UEFI build met from 25.10.2026 | `e79ebb5b…984d` | the signature of Google (endorsement of 28.08.2026), checked 25.10.2026 |
-| Google Cloud SEV-SNP, n2d-standard-2, the UEFI build met from 05.11.2026 | `f6790085…ea28` | the signature of Google (endorsement of 16.10.2026), checked 05.11.2026 |
+| Google Cloud SEV-SNP, n2d-standard-2 | `ccdc5cf0…26fa` | Google's signature, checked 28.09.2026 |
+| Google Cloud SEV-SNP, n2d-standard-2, the UEFI build met from 25.10.2026 | `e79ebb5b…984d` | Google's signature (endorsement of 28.08.2026), checked 25.10.2026 |
+| Google Cloud SEV-SNP, n2d-standard-2, the UEFI build met from 05.11.2026 | `f6790085…ea28` | Google's signature (endorsement of 16.10.2026), checked 05.11.2026 |
 | AWS SEV-SNP, c6a.large | `7a89ccea…c766` | **None signed: AWS signs no launch endorsement.** The value is the measurement of AWS's published EC2 SEV-SNP firmware, release 20260814, as `sev-snp-measure` computes it for a c6a.large; `make trust-check` and the Demo Bank at start compute it again. Not reproduced from source (below). |
-| Google Cloud TDX, firmware build 1 | `c1ee9c16…70a5` | the signature of Google, checked 28.09 and 06.10.2026 |
-| Google Cloud TDX, firmware build 2 | `f21e6b48…e5d3` | the signature of Google, checked 28.09 and 06.10.2026 |
+| Google Cloud TDX, firmware build 1 | `c1ee9c16…70a5` | Google's signature, checked 28.09 and 06.10.2026 |
+| Google Cloud TDX, firmware build 2 | `f21e6b48…e5d3` | Google's signature, checked 28.09 and 06.10.2026 |
 
 A new Google Cloud VM may get either TDX firmware build; both were met on 06.10.2026.
 
