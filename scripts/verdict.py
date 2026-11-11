@@ -21,9 +21,9 @@ hwcheck/evidence included.
             reason. The builds of Veraison the bench compares with (rrpverify-veraison-fork and -fixed) are reported,
             not judged: what they get wrong is the reason the bench runs its own build. And, in a run that made it,
             the pre-play check (preplay.json, hwcheck/scripts/preplay.py): absent-timestamp Evidence made with the
-            guest's clock ahead, refused by each RRP at once for freshness (FRESHNESS_REFUSALS) and accepted later,
-            older than the Target's max_age. That is reported as an exposure, not as a pass; any other outcome fails
-            the run. The
+            clock of the guest ahead, refused by each RRP at once for freshness (FRESHNESS_REFUSALS) and accepted
+            later, older than the max_age of the Target. That is reported as an exposure, not as a pass; any other
+            outcome fails the run. The
             RRPs' platform rule on the honest Attestation Results is one of the files (rrpverify-platform.json); a
             SEV-SNP run that keeps the rule (platform-rule.json) names its waivers in the verdict, as a demo does.
   redirect  results.jsonl. ca1 issues for every Freshness Kind in both passes. With the RRP identifier in the binding,

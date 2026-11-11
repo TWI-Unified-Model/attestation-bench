@@ -3,7 +3,7 @@
 # recorded as a typescript, and written up from the run's record as a walkthrough the audience can read.
 #
 #   SPIRE_REPO=<checkout of the fork> e2e/scripts/spire-demo.sh [sev-snp|tdx|aws]   (default sev-snp: a Google
-#                                                        Cloud SEV-SNP guest; SPIRE_REPO as the run scripts take it)
+#                                                        Cloud SEV-SNP guest; SPIRE_REPO as the run scripts read it)
 #   DEMO_RUN=<run directory> e2e/scripts/spire-demo.sh   narrates an existing record instead of running (for checking)
 #
 # Roles, in the words of draft-novak-rats-tacra-03: the attested workload is the Attester, with the Credential
@@ -202,11 +202,12 @@ A walkthrough of one run of the SPIRE proof of concept of draft-novak-rats-tacra
 
 ## What runs where
 
-- On the bench machine: SPIRE Server (the TWI-Unified-Model fork of SPIRE{built_from}), Veraison, the Secret Vault.
+- On the computer that runs the bench: SPIRE Server (the TWI-Unified-Model fork of SPIRE{built_from}), Veraison, the
+  Secret Vault.
 - In a fresh confidential guest ({machine or platform}, kernel {kernel}): SPIRE Agent and the attested workload, which
   generates its keys and obtains its Evidence through the Linux configfs-tsm interface.
-- The guest reaches the server through an SSH reverse tunnel; the server reaches Veraison and the vault on the bench
-  machine over mutually authenticated TLS.
+- The guest reaches the server through an SSH reverse tunnel; the server reaches Veraison and the vault on that
+  computer over mutually authenticated TLS.
 
 ## 1. Initiate-Credential-Acquisition
 
