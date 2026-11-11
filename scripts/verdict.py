@@ -108,8 +108,8 @@ def redirect_variant_expected(variant):
 REWRITES = {
     "made-up Handle": ("refused", "freshness"),  # present-nonce only: the RRP knows its Handles
     "Freshness Kind absent-none": ("refused", "freshness-kind-mismatch"),  # the kind is the Target's, by policy
-    # 422, after the appraisal; not sent under present-nonce, where the binding of the Handle refuses first and consumes
-    # the Handle
+    # The gateway refuses with 422, after the appraisal. Under present-nonce the experiment does not send this rewrite:
+    # the binding of the Handle refuses first and consumes the Handle.
     "credential type not offered": ("refused", "unsupported-credential-type"),
     "Credential Hint of another workload": ("refused", "credential-hint"),  # the CA names the attested workload
     "the other credential type offered": ("issued", None),  # nothing binds it, but a present-nonce Handle: below

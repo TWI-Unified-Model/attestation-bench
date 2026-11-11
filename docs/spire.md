@@ -145,6 +145,6 @@ One run on each platform, made with the commands above:
   the Server are in memory, and the `credential_acquisition` block is under `experimental`. This arrangement is for
   testing, not for deployment.
 - On Google Cloud and AWS SEV-SNP the Server admits the host under the waiver of the bench for the mitigation bit that
-  AMD-SB-3034 names ([limits.md](limits.md)). `server.log` records the waiver; `verdict.txt` does not.
+  AMD-SB-3034 names ([limits.md](limits.md)). `server.log` records the waiver; `verdict.txt` does not record it.
 - The run script judges the run. `scripts/verdict.py` does not know this kind of run: `make report` lists it as "not a
   run of the make commands", and `make test-live` does not appraise its Evidence again.

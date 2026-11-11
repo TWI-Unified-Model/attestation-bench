@@ -1,34 +1,65 @@
 #!/usr/bin/env python3
 """Checks the messages of EST wire logs against the CDDL of the attest-* wire, with the cddl tool, and their media types.
 
-A wire log is the log of the EST Server (est-server.json, wire_log; a run keeps its part in bench-logs/est-wire.log):
-one JSON object for each exchange on an attest-* resource, the request and the response as they crossed the wire. The
-CDDL is e2e/est-attest.cddl: the CDDL of the EST profile, then the container of TACRA, then the container with the
-origin member that the Secret Vault of the bench adds when it signs. Each message is checked against its rule: the
-attest-initiate response, the attest-enroll and attest-retrieve requests, and the attest-retrieve response. Of every
-message the media type is checked: its own (one for each message type: application/est-attest-initiate+json,
--enroll+json, -retrieve+json and -bundle+json), application/pkcs7-mime for the certificate of an Enrollment, and
-text/plain for a refusal.
+A wire log is the log of the EST Server (est-server.json, wire_log). A run keeps its part of that log in
+bench-logs/est-wire.log. The log holds one JSON object for each exchange on an attest-* resource: the request and the
+response as they crossed the wire.
 
-Before that, for the first message of each kind (each rule, Freshness Kind and mode), the check shows that the tool
-refuses what the CDDL must refuse: the message without freshness_kind; with a member the CDDL does not define; with a
-byte string in standard base64; with a Handle under a Freshness Kind that has none, or without one under a kind that
-has one; a response of one mode with the algorithms of the other mode; a container whose origin member lacks its
-signature or names another algorithm, a container with another label, without its KEM, or with a suite member the
-CDDL does not define. The names of the suite are open text, because TACRA names the mandatory suite and allows
-others: the Attester, not the grammar, refuses a suite with another name.
+The CDDL is e2e/est-attest.cddl. It holds:
+
+- the CDDL of the EST profile;
+- the container of TACRA;
+- the container with the origin member that the Secret Vault of the bench adds when it signs.
+
+Each of these messages is checked against its CDDL rule:
+
+- the attest-initiate response;
+- the attest-enroll request;
+- the attest-retrieve request;
+- the attest-retrieve response.
+
+The media type of every message is checked:
+
+- application/est-attest-initiate+json for the attest-initiate response;
+- application/est-attest-enroll+json for the attest-enroll request;
+- application/est-attest-retrieve+json for the attest-retrieve request;
+- application/est-attest-bundle+json for the attest-retrieve response;
+- application/pkcs7-mime for the attest-enroll response, which is the certificate of an Enrollment;
+- text/plain for a refusal.
+
+The check also shows that the cddl tool refuses what the CDDL must refuse. It alters the first message of each kind
+(each rule, Freshness Kind and mode) in the ways below, and expects the tool to refuse every altered message:
+
+- the message without freshness_kind;
+- the message with a member that the CDDL does not define;
+- the message with a byte string in standard base64;
+- the message without a Handle, under a Freshness Kind that has one;
+- the message with a Handle, under a Freshness Kind that has none;
+- an attest-initiate response with a Handle shorter than the CDDL allows;
+- an attest-initiate response of one mode with the algorithms of the other mode;
+- a container whose origin member has no signature;
+- a container whose origin member names another algorithm;
+- a container with another label;
+- a container whose suite has no KEM;
+- a container whose suite has a member that the CDDL does not define;
+- a container whose associated data have no Target.
+
+The names in the suite of a container are open text in the CDDL. TACRA names the mandatory suite and allows others,
+so the Attester, not the grammar, refuses a suite with another name.
 
     e2e/scripts/est-wire-cddl.py [--cddl CDDL] WIRE_LOG...
 
-Use the wire log of a run whose requests are all as the Workload sent them: the refusals that make test-live provokes
-are not.
-The cddl tool is the Ruby gem `cddl` of Carsten Bormann, found as $CDDL_TOOL or in BENCH_HOME/gems. Ruby 4 does not
-bundle two libraries that the gem needs, so they are installed with it:
+Use the wire log of an end-to-end run: every request in that log is as the Workload sent it. Do not use the wire log
+of make test-live: that test sends requests that the EST Server must refuse.
+
+The cddl tool is the Ruby gem `cddl` by Carsten Bormann. The check runs the program that $CDDL_TOOL names, or
+BENCH_HOME/gems/bin/cddl. Ruby 4 does not bundle two libraries that the gem needs, so this command installs them with
+the gem:
 
     GEM_HOME="$BENCH_HOME/gems" gem install --no-document cddl:0.12.14 pstore:0.2.1 base64:0.3.0
 
-Prints one line for each message and exits 1 unless every message is valid with its media type and every altered
-message is refused.
+The check prints one line for each message and one line for each altered message. Its exit status is 1 unless every
+message is valid, every message has the media type of its place, and every altered message is refused.
 """
 
 import argparse

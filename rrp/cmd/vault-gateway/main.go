@@ -107,8 +107,8 @@ func (s *server) retrieve(req *RetrieveRequest) (*bundle.Bundle, []string, error
 	if validity == 0 {
 		validity = int(gateway.BankMaxValidity / time.Second)
 	}
-	// value is the unpadded base64url of the credential octets, as the profile encodes every byte string; format names
-	// another encoding of those octets when the policy for the secret sets one
+	// Value is the unpadded base64url of the credential octets: the profile encodes every byte string that way.
+	// Format names another encoding of those octets, when the policy for the secret sets one.
 	item := bundle.Item{
 		Type:       secret["type"],
 		Format:     secret["format"],
