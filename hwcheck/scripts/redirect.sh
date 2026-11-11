@@ -271,7 +271,7 @@ rewrite() {
 }
 
 # offer_rewrites PASS: the #19 rewrites on Evidence made for ca1. In "rewrites" those a gateway refuses before it
-# spends the freshness element come first, the Credential Hint last; "type-offered" sends the other credential type
+# consumes the freshness element come first, the Credential Hint last; "type-offered" sends the other Credential Type
 # the Target offers. A present-nonce Handle is minted for one Target and one Credential Type and is consumed once,
 # whatever the outcome. The binding of the Handle refuses a Credential Type that the Target does not offer and consumes
 # the Handle, so "rewrites" does not send that rewrite under present-nonce (the "type-offered" pass measures the
