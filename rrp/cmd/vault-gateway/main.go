@@ -37,6 +37,10 @@ import (
 	"github.com/TWI-Unified-Model/tacra/rrp/internal/mtls"
 )
 
+// kidLen is the length of the key identifier of an item: the first characters of the hexadecimal identifier of the
+// credential group.
+const kidLen = 16
+
 type fileConfig struct {
 	gateway.Config
 	Vault   vaultConfig `json:"vault"`
@@ -105,8 +109,17 @@ func (s *server) retrieve(req *RetrieveRequest) (*bundle.Bundle, []string, error
 	}
 	// value is the unpadded base64url of the credential octets, as the profile encodes every byte string; format names
 	// another encoding of those octets when the policy for the secret sets one
-	content := bundle.Content{CredentialItems: []bundle.Item{{Type: secret["type"], Format: secret["format"],
-		Value: base64.RawURLEncoding.EncodeToString([]byte(secret["value"])), Kid: gid[:16], Purpose: grp.Purpose, Algorithm: grp.Algorithm, Exportable: &no, Shared: shared}},
+	item := bundle.Item{
+		Type:       secret["type"],
+		Format:     secret["format"],
+		Value:      base64.RawURLEncoding.EncodeToString([]byte(secret["value"])),
+		Kid:        gid[:kidLen],
+		Purpose:    grp.Purpose,
+		Algorithm:  grp.Algorithm,
+		Exportable: &no,
+		Shared:     shared,
+	}
+	content := bundle.Content{CredentialItems: []bundle.Item{item},
 		Metadata: map[string]any{"secret_version": strconv.Itoa(version), "validity_seconds": validity}}
 	aad := bundle.AAD{GroupID: gid, Target: bundle.B64(req.Target), Handle: req.Handle, CredentialHint: req.CredentialHint}
 	// the origin authentication is the Target's policy: its signature key, unless the Target says "sign": false
@@ -240,7 +253,7 @@ func (s *server) routes() http.Handler {
 			return
 		}
 		log.Printf("released: target=%s kind=%s group=%s container=%s kem=%s origin=%t caller=%v%s", req.Target, req.FreshnessKind,
-			b.AAD.GroupID[:16], b.Container, b.Suite.KEM, b.Origin != nil, mtls.Names(r), gateway.WaiverNote(waived))
+			b.AAD.GroupID[:kidLen], b.Container, b.Suite.KEM, b.Origin != nil, mtls.Names(r), gateway.WaiverNote(waived))
 		gateway.WriteJSON(w, http.StatusOK, b)
 	})
 	// The Vault's origin keys, for provisioning Attesters' trust anchors out of band: its static KEM keys (hpke-auth)

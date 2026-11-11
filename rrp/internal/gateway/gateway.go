@@ -315,7 +315,9 @@ var (
 type InitiateRequest struct {
 	Target         string `json:"target"`
 	CredentialType string `json:"credential_type"`
-	CredentialHint string `json:"credential_hint,omitempty"` // the Credential Hint named at attest-initiate, forwarded by the EST Server; not correlated here
+	// CredentialHint is the Credential Hint named at attest-initiate, as the EST Server forwards it. The gateway does
+	// not correlate it with the second call.
+	CredentialHint string `json:"credential_hint,omitempty"`
 }
 
 // InitiateResponse carries the fields of the AttestationInitiationResponse this RRP originates.
@@ -350,11 +352,11 @@ func (g *Gateway) target(name string) (*Target, error) {
 	return t, nil
 }
 
-// supports refuses a Credential Type that this Relying Party does not support for the Target: 422, with the supported
-// ones in the body. At attest-initiate the check comes at once. At the second call it comes after the Attestation
-// Results are verified, so that a failed attestation is refused with 403 whatever the Credential Type. A Credential
-// Type that the profile does not define does not reach the RRP: the EST server refuses it with 400.
-func (t *Target) supports(credentialType string) error {
+// checkCredentialType refuses a Credential Type that this Relying Party does not support for the Target: 422, with
+// the supported ones in the body. At attest-initiate the check comes at once. At the second call it comes after the
+// Attestation Results are verified, so that a failed attestation is refused with 403 whatever the Credential Type. A
+// Credential Type that the profile does not define does not reach the RRP: the EST Server refuses it with 400.
+func (t *Target) checkCredentialType(credentialType string) error {
 	if slices.Contains(t.CredentialTypes, credentialType) {
 		return nil
 	}
@@ -368,7 +370,7 @@ func (g *Gateway) Initiate(req InitiateRequest) (*InitiateResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := t.supports(req.CredentialType); err != nil {
+	if err := t.checkCredentialType(req.CredentialType); err != nil {
 		return nil, err
 	}
 	resp := &InitiateResponse{FreshnessKind: t.FreshnessKind, Mode: g.Mode}
@@ -441,7 +443,7 @@ func (g *Gateway) Check(req *SecondLeg, subject []byte) (*ear.Result, *Target, e
 		res.Waived = waived
 	}
 	// the Credential Type after the attestation: 403 above comes first, 422 here
-	if err := t.supports(req.CredentialType); err != nil {
+	if err := t.checkCredentialType(req.CredentialType); err != nil {
 		return nil, nil, err
 	}
 	return res, t, nil
