@@ -1,22 +1,26 @@
 #!/usr/bin/env bash
-# End-to-end run of the SPIRE proof of concept of TACRA on a Google Cloud AMD SEV-SNP guest (TEE=tdx: a TDX guest).
-# On the test bench (this machine): SPIRE Server from the TWI-Unified-Model fork, the Credential Acquisition System
-# Server of TACRA, configured with the bench's Veraison as its verifier (the Credential Authority gateway's client
-# certificate and EAR key, the approved launch measurements of trust/approved-launches.json as the gateways hold them),
-# and Veraison itself (e2e/scripts/bench.sh start). In the guest: SPIRE Agent (join token node attestation, the server
-# reached through the SSH reverse tunnel on 127.0.0.1:8081) and the attested workload (support/attested-workload of the
-# fork: the Attester with the SEV-SNP or TDX plug-in), which enrolls an X509-SVID for a key of its own through the
-# attested credential acquisition calls of the Workload API.
+# End-to-end run of the SPIRE proof of concept of TACRA with a confidential VM in Google Cloud: AMD SEV-SNP, or Intel
+# TDX with TEE=tdx.
+#
+# On the computer that runs the bench: SPIRE Server built from the fork, the Server of the Credential Acquisition
+# System, and the services of the bench that the Server calls: the Verifier (Veraison for SEV-SNP, the TDX Verifier of
+# the bench for TDX) and the Secret Vault. The run writes the configuration of the Server from the configuration of the
+# bench: the Verifier and the key that signs its Attestation Results, the approved launch measurements, the platform
+# rule. The Server calls the Verifier with the client certificate of the Credential Authority gateway of the bench, and
+# the Secret Vault with the client certificate of the EST server of the bench.
+# In the VM: SPIRE Agent, which joins with a join token and reaches the Server through an SSH reverse tunnel on
+# 127.0.0.1:8081, and the attested Workload (support/attested-workload of the fork), the Attester. The Workload enrolls
+# an X509-SVID for a key that it generates, and retrieves a credential from the Secret Vault, through the attested
+# credential acquisition calls of the Workload API.
 #
 #   SPIRE_REPO=<checkout of the fork> e2e/scripts/spire-gcp-snp-e2e.sh            built from HEAD of the checkout
 #   SPIRE_REPO=<checkout of the fork> TEE=tdx e2e/scripts/spire-gcp-snp-e2e.sh
 #
 # SPIRE_REPO has no default (scripts/lib.sh, bench_spire_repo); docs/spire.md says what to clone and what a run keeps.
 #
-# The run directory (RUNS_DIR, default BENCH_HOME/runs) keeps the workload's record (result.json, the SVID and the
-# bundle, the Evidence), the server's and the agent's logs, Veraison's logs of the run, the configurations without
-# secrets, and the verdict: admitted when the workload's chain verifies, carries its key, and the server's audit
-# record names a launch measurement the bench approves.
+# The run directory (RUNS_DIR, default BENCH_HOME/runs) keeps the record of the Workload (result.json, the X509-SVID,
+# the bundle, the Evidence), the logs of the Server and of the Agent, the logs of the Verifier and of the Secret Vault
+# during the run, the configurations without secrets, and the verdict (docs/spire.md, "The verdict").
 set -euo pipefail
 # shellcheck source=SCRIPTDIR/../../scripts/lib.sh
 . "$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib.sh"
@@ -34,24 +38,24 @@ B="$BENCH_HOME"
 RUNS_DIR="${RUNS_DIR:-$B/runs}"
 OUT="$RUNS_DIR/${STAMP}-spire-gcp-${TEE}-e2e"
 BIN="$(mktemp -d)"
-S="$B/spire"   # the server's directory for this run: configuration, data, socket, log (outside git)
+S="$B/spire"   # the directory of the Server for this run: configuration, data, socket, log (outside git)
 mkdir -p "$OUT/bench-logs" "$OUT/config"
 case "$TEE" in sev-snp | tdx) ;; *) bench_die "TEE=$TEE: sev-snp or tdx" ;; esac
 make -s status >/dev/null 2>&1 || true
 nc -z 127.0.0.1 8443 || bench_die "Veraison is not up on 127.0.0.1:8443 (make start)"
-! nc -z 127.0.0.1 8081 2>/dev/null || bench_die "port 8081 is taken on this machine"
+! nc -z 127.0.0.1 8081 2>/dev/null || bench_die "port 8081 is in use on this computer"
 
-echo "== the fork's state"
+echo "== the checkout of the fork"
 bench_spire_source > "$OUT/spire-source.txt"
 cat "$OUT/spire-source.txt"
 
-echo "== build: spire-server (this machine), spire-agent and attested-workload (linux/amd64)"
+echo "== build: spire-server for this computer, spire-agent and attested-workload for linux/amd64"
 (cd "$SPIRE_REPO" && go build -trimpath -o "$BIN/spire-server" ./cmd/spire-server \
   && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -o "$BIN/spire-agent" ./cmd/spire-agent \
   && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -o "$BIN/attested-workload" ./support/attested-workload)
 shasum -a 256 "$BIN/spire-server" "$BIN/spire-agent" "$BIN/attested-workload" | sed "s#$BIN/##" > "$OUT/binaries.sha256"
 
-echo "== the server's configuration: the bench's verifier and approved launches"
+echo "== the configuration of the Server: the Verifier of the bench and the approved launch measurements"
 rm -rf "$S"; mkdir -p "$S/data"
 python3 - "$B" "$S" "$TRUST_DOMAIN" "$TEE" > "$S/server.conf" <<'PY'
 import json, sys
@@ -61,8 +65,8 @@ verifiers = {v["name"]: v for v in ca["verifiers"]}
 name = "veraison" if tee == "sev-snp" else "tdx"
 v = verifiers[name]
 measurements = sorted({m for t in ca["targets"].values() for i in t.get("identities", {}).values() for m in i.get("measurements", [])})
-est = json.load(open(f"{B}/config/est-server.json"))["tacra"]   # the conduit's client certificate: the Vault takes it
-vault = json.load(open(f"{B}/config/vault-gateway.json"))          # its RATS model: who asks the verifier for a Retrieval
+est = json.load(open(f"{B}/config/est-server.json"))["tacra"]   # the client certificate that the Secret Vault admits
+vault = json.load(open(f"{B}/config/vault-gateway.json"))          # the RATS model of the Secret Vault for a Retrieval
 q = lambda s: json.dumps(s)
 json.dump(ca["platform"], open(f"{S}/platform-rule.json", "w"), indent=1)
 print(f'''server {{
@@ -132,8 +136,9 @@ plugins {{
 PY
 cp "$S/server.conf" "$OUT/config/server.conf"
 cp "$S/platform-rule.json" "$OUT/config/platform-rule.json"
-# the vault's origin authentication: when its Targets sign their containers, the guest holds the vault's signature
-# key (public, from the vault's origin-keys resource) and requires the signature; the record keeps which
+# Origin authentication: when the Secret Vault signs the containers that it releases for the Target, the Workload
+# gets the public signature key of the Secret Vault, from its origin-keys resource, and requires the signature. The
+# record keeps which.
 ORIGIN_AUTH="$(python3 -c "import json,sys; v=json.load(open(sys.argv[1])); print('off' if v['targets']['https://ledger-nonce.tacra.example'].get('sign') is False else 'on')" "$B/config/vault-gateway.json")"
 VAULT_MODEL="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('rats_model') or 'passport')" "$B/config/vault-gateway.json")"
 echo "vault rats_model=$VAULT_MODEL origin_auth=$ORIGIN_AUTH" | tee "$OUT/config/vault-mode.txt"
@@ -150,7 +155,7 @@ python3 -c "import json,sys; ca=json.load(open(sys.argv[1])); print(json.dumps(s
 wc -l < "$VERAISON_DEPLOYMENT/logs/vts.log" > "$OUT/bench-logs/.vts.start"
 wc -l < "$VERAISON_DEPLOYMENT/logs/verification.log" > "$OUT/bench-logs/.verification.start"
 
-echo "== start the server"
+echo "== start the Server"
 SERVER_PID=""
 TUNNEL=""
 cleanup() {
@@ -167,8 +172,8 @@ trap cleanup EXIT
 "$BIN/spire-server" run -config "$S/server.conf" > "$S/server.stdout" 2>&1 &
 SERVER_PID=$!
 for _ in $(seq 1 30); do "$BIN/spire-server" healthcheck -socketPath "$S/server.sock" >/dev/null 2>&1 && break; sleep 1; done
-"$BIN/spire-server" healthcheck -socketPath "$S/server.sock" >/dev/null || { cat "$S/server.stdout"; bench_die "the server did not come up"; }
-AGENT_ID="spiffe://$TRUST_DOMAIN/agent/gcp-$TEE"   # the join token names the agent; /spire/agent/ is the reserved namespace
+"$BIN/spire-server" healthcheck -socketPath "$S/server.sock" >/dev/null || { cat "$S/server.stdout"; bench_die "SPIRE Server did not come up"; }
+AGENT_ID="spiffe://$TRUST_DOMAIN/agent/gcp-$TEE"   # the join token names the Agent; SPIRE reserves /spire/agent/
 TOKEN="$("$BIN/spire-server" token generate -socketPath "$S/server.sock" -spiffeID "$AGENT_ID" -ttl 1800 | awk '/Token:/{print $2}')"
 [ -n "$TOKEN" ] || bench_die "no join token"
 "$BIN/spire-server" bundle show -socketPath "$S/server.sock" -format pem > "$BIN/bundle.pem"
@@ -176,7 +181,7 @@ TOKEN="$("$BIN/spire-server" token generate -socketPath "$S/server.sock" -spiffe
   -selector unix:uid:0 -hint internal -x509SVIDTTL 3600 > "$OUT/entry.txt"
 cat "$OUT/entry.txt"
 
-echo "== the agent's configuration (the join token goes with the command line, not into the record)"
+echo "== the configuration of the Agent (the join token goes on the command line, not into the record)"
 cat > "$BIN/agent.conf" <<CONF
 agent {
     data_dir = "/root/spire-agent/data"
@@ -223,11 +228,11 @@ sudo modprobe sev-guest 2>/dev/null || sudo modprobe tdx_guest 2>/dev/null || tr
 mountpoint -q /sys/kernel/config || sudo mount -t configfs none /sys/kernel/config
 ls -ld /sys/kernel/config/tsm/report; uname -r' 2>>"$OUT/ssh.stderr" | tee "$OUT/provision.txt"
 
-echo "== copy the agent, the workload and the public configuration"
+echo "== copy the Agent, the Workload and the public configuration"
 bench_retry "$OUT/ssh.stderr" gcloud compute scp "$BIN/spire-agent" "$BIN/attested-workload" "$BIN/agent.conf" "$BIN/bundle.pem" "$BIN/vault-origin.pem" \
   "$HERE/hwcheck/scripts/guest-clock.sh" "$NAME:~/" --project="$PROJECT" --zone="$ZONE" >/dev/null
 
-echo "== reverse tunnel to the server (8081)"
+echo "== reverse tunnel to the Server (8081)"
 UP=""
 for try in 1 2 3; do
   "${SSH[@]}" -- -N -o ExitOnForwardFailure=yes -R 8081:127.0.0.1:8081 2>>"$OUT/ssh.stderr" &
@@ -241,9 +246,9 @@ for try in 1 2 3; do
   kill "$TUNNEL" 2>/dev/null || true
   echo "$(bench_now) the reverse tunnel is not up, try $try of 3" >>"$OUT/ssh.stderr"
 done
-[ -n "$UP" ] || bench_die "the reverse tunnel to the server never came up ($OUT/ssh.stderr)"
+[ -n "$UP" ] || bench_die "the reverse tunnel to the Server did not come up ($OUT/ssh.stderr)"
 
-echo "== run in the guest: the agent attests the node, the workload enrolls"
+echo "== run in the VM: the Agent joins, the Workload enrolls and retrieves"
 NB="$(date -u +%s)"
 GUEST_RC=0
 # shellcheck disable=SC2016
@@ -253,7 +258,7 @@ H="$HOME"
 sudo mkdir -p /root/spire-agent/data /tmp/spire-agent/public
 sudo cp "$H/agent.conf" "$H/bundle.pem" /root/spire-agent/
 sudo chmod +x "$H/spire-agent" "$H/attested-workload"
-# the agent runs as root: the Workload API socket, the unix attestor of a root workload, the data directory
+# the Agent runs as root: the socket of the Workload API, the unix attestor for a Workload of root, the data directory
 sudo bash -c "nohup $H/spire-agent run -config /root/spire-agent/agent.conf -joinToken '"$TOKEN"' > /root/spire-agent/agent.stdout 2>&1 &"
 for _ in $(seq 1 60); do sudo test -S /tmp/spire-agent/public/api.sock && break; sleep 1; done
 rc=0
@@ -277,14 +282,14 @@ tar czf "$H/out.tgz" -C "$H" out out-retrieve agent.log agent.stdout kernel.txt 
 exit "$rc"' "${SSH[@]}" --command | tee "$OUT/guest-stdout.txt" || GUEST_RC=$?
 NA="$(date -u +%s)"
 echo "$NB $NA" > "$OUT/run-window.txt"
-echo "guest script exit status: $GUEST_RC" | tee "$OUT/guest-rc.txt"
+echo "exit status of the script in the VM: $GUEST_RC" | tee "$OUT/guest-rc.txt"
 bench_clock_offset "$OUT/clock-offset.txt" "${SSH[@]}" --command || true
 bench_retry "$OUT/ssh.stderr" gcloud compute scp "$NAME:~/out.tgz" "$OUT/" --project="$PROJECT" --zone="$ZONE" >/dev/null || true
 if [ -f "$OUT/out.tgz" ]; then tar xzf "$OUT/out.tgz" -C "$OUT" && rm -f "$OUT/out.tgz" && mv "$OUT/out" "$OUT/workload" && mv "$OUT/out-retrieve" "$OUT/workload-retrieve"; fi
 cleanup
 trap 'rm -rf "$BIN"' EXIT
 
-echo "== the server's and Veraison's logs of the run"
+echo "== the logs of the Server, of the Verifier and of the Secret Vault during the run"
 cp "$S/server.log" "$OUT/server.log"
 tail -n +"$(( $(cat "$OUT/bench-logs/.vault-gateway.start") + 1 ))" "$B/vault-gateway.log" | grep -v "TLS handshake error" > "$OUT/bench-logs/vault-gateway.log" || true
 tail -n +"$(( $(cat "$OUT/bench-logs/.vts.start") + 1 ))" "$VERAISON_DEPLOYMENT/logs/vts.log" | grep -v DEBUG > "$OUT/bench-logs/veraison-vts.log" || true
@@ -299,7 +304,7 @@ out, td = sys.argv[1:3]
 try:
     r = json.load(open(f"{out}/workload/result.json"))
 except FileNotFoundError:
-    print("REFUSED   no result.json: the workload did not run (see guest-stdout.txt, agent.stdout)")
+    print("REFUSED   no result.json: the Workload did not run (guest-stdout.txt, agent.stdout)")
     sys.exit(1)
 approved = set(json.load(open(f"{out}/approved-measurements.json")))
 server = open(f"{out}/server.log", errors="replace").read()
@@ -313,27 +318,27 @@ audit_r = [l for l in server.splitlines() if "API accessed" in l and "method=Ret
 enrolled = [l for l in server.splitlines() if "Enrolled an attested X509-SVID" in l]
 m = r.get("report_measurement_hex")
 checks = {
-    "enroll: workload ok": r.get("ok") is True,
-    "enroll: chain verified against the bundle": r.get("chain_verified") is True,
-    "enroll: the SVID carries the workload's key": r.get("key_matches") is True,
-    "enroll: SPIFFE ID of the entry": r.get("spiffe_id") == f"spiffe://{td}/workload",
-    "enroll: launch measurement approved": m in approved,
-    "enroll: server enrolled with the report's measurement": any(f"measurement={m}" in l for l in enrolled),
-    "enroll: server audited the enrollment": any("status=success" in l and f"measurement={m}" in l for l in audit),
-    "retrieve: workload ok": rr.get("ok") is True,
-    "retrieve: a credential came back, opened by the workload's CEK": bool(rr.get("secret_sha256")) and rr.get("secret_bytes", 0) > 0,
-    "retrieve: the same launch measurement": rr.get("report_measurement_hex") == m,
-    "retrieve: server audited the retrieval": any("status=success" in l for l in audit_r),
-    "retrieve: the Secret Vault released for the Target": "released: target=https://ledger-nonce.tacra.example" in vault,
+    "Enrollment: the Workload completed without an error": r.get("ok") is True,
+    "Enrollment: the chain of the X509-SVID verifies against the bundle": r.get("chain_verified") is True,
+    "Enrollment: the X509-SVID certifies the key that the Workload generated": r.get("key_matches") is True,
+    "Enrollment: the X509-SVID names the SPIFFE ID of the registration entry": r.get("spiffe_id") == f"spiffe://{td}/workload",
+    "Enrollment: the launch measurement is approved": m in approved,
+    "Enrollment: SPIRE Server enrolled with the launch measurement of the Evidence": any(f"measurement={m}" in l for l in enrolled),
+    "Enrollment: SPIRE Server audited the call as a success with that launch measurement": any("status=success" in l and f"measurement={m}" in l for l in audit),
+    "Retrieval: the Workload completed without an error": rr.get("ok") is True,
+    "Retrieval: the Workload opened the credential with its Credential Encryption Key": bool(rr.get("secret_sha256")) and rr.get("secret_bytes", 0) > 0,
+    "Retrieval: the Evidence has the launch measurement of the Enrollment": rr.get("report_measurement_hex") == m,
+    "Retrieval: SPIRE Server audited the call as a success": any("status=success" in l for l in audit_r),
+    "Retrieval: the Secret Vault released the credential for the Target": "released: target=https://ledger-nonce.tacra.example" in vault,
 }
 mode = open(f"{out}/config/vault-mode.txt").read().strip() if os.path.exists(f"{out}/config/vault-mode.txt") else ""
 if "origin_auth=on" in mode:
-    checks["retrieve: the container's origin signature verified under the vault's key"] = rr.get("origin_verified") is True
+    checks["Retrieval: the Workload verified the origin signature of the container under the key of the Secret Vault"] = rr.get("origin_verified") is True
 for k, v in checks.items():
     print(("ADMITTED  " if v else "REFUSED   ") + k)
 print()
 print(f"enroll: spiffe_id={r.get('spiffe_id')} serial={r.get('cert_serial')} not_after={r.get('not_after')}")
-print(f"enroll: measurement={m} report_version={r.get('report_version')} signer={r.get('report_signer')} waived={r.get('waived','')}")
+print(f"enroll: measurement={m} report_version={r.get('report_version')} signer={r.get('report_signer')}")
 print(f"enroll: initiate_ms={r.get('initiate_ms')} enroll_ms={r.get('enroll_ms')} evidence_bytes={r.get('evidence_bytes')}")
 print(f"retrieve: item={rr.get('item_type')}/{rr.get('item_kid')} suite={rr.get('suite')} secret_bytes={rr.get('secret_bytes')} secret_sha256={rr.get('secret_sha256')} group={str(rr.get('group_id'))[:16]}…")
 print(f"retrieve: initiate_ms={rr.get('initiate_ms')} retrieve_ms={rr.get('retrieve_ms')} cek_pub_bytes={rr.get('cek_pub_bytes')} origin_verified={rr.get('origin_verified')} vault: {mode}")

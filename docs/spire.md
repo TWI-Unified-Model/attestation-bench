@@ -10,7 +10,7 @@ of the fork describes the roles, the three calls, the configuration and the refu
 proof of concept on the bench and how to read a run.
 
 Nothing in a run is mocked. The Evidence comes from the hardware of the VM. The Verifier is Veraison for SEV-SNP and the
-TDX verifier of the bench for TDX. The CA is the CA of SPIRE Server. The Secret Vault is the gateway of the bench in
+TDX Verifier of the bench for TDX. The CA is the CA of SPIRE Server. The Secret Vault is the gateway of the bench in
 front of HashiCorp Vault.
 
 ## What a run needs
@@ -65,19 +65,19 @@ the end and checks that the VM is gone. The exit status is 0 when the verdict ad
 
 | Check | Admitted when |
 |---|---|
-| `enroll: workload ok` | the Workload completes the Enrollment without an error |
-| `enroll: chain verified against the bundle` | the chain of the X509-SVID verifies against the bundle of the trust domain |
-| `enroll: the SVID carries the workload's key` | the public key of the certificate is the key that the Workload generated |
-| `enroll: SPIFFE ID of the entry` | the certificate names `spiffe://example.org/workload`, the SPIFFE ID of the registration entry |
-| `enroll: launch measurement approved` | the launch measurement in the Evidence is in `approved-measurements.json` |
-| `enroll: server enrolled with the report's measurement` | the log of SPIRE Server records the Enrollment with that measurement |
-| `enroll: server audited the enrollment` | the audit log of SPIRE Server records the call as a success with that measurement |
-| `retrieve: workload ok` | the Workload completes the Retrieval without an error |
-| `retrieve: a credential came back, opened by the workload's CEK` | the Workload opens the container; the record keeps the SHA-256 of the secret, not the secret |
-| `retrieve: the same launch measurement` | the Evidence of the Retrieval has the launch measurement of the Enrollment |
-| `retrieve: server audited the retrieval` | the audit log of SPIRE Server records the call as a success |
-| `retrieve: the Secret Vault released for the Target` | the log of the Secret Vault records the release for `https://ledger-nonce.tacra.example` |
-| `retrieve: the container's origin signature verified under the vault's key` | the Secret Vault signed the container and the Workload verified the signature; the verdict has this check when the Target of the Secret Vault signs, which is the default of the bench |
+| `Enrollment: the Workload completed without an error` | the Workload reports the Enrollment as done |
+| `Enrollment: the chain of the X509-SVID verifies against the bundle` | the Workload verified the chain against the bundle of the trust domain |
+| `Enrollment: the X509-SVID certifies the key that the Workload generated` | the public key of the certificate is the key that the Workload generated |
+| `Enrollment: the X509-SVID names the SPIFFE ID of the registration entry` | the certificate names `spiffe://example.org/workload` |
+| `Enrollment: the launch measurement is approved` | the launch measurement in the Evidence is in `approved-measurements.json` |
+| `Enrollment: SPIRE Server enrolled with the launch measurement of the Evidence` | the log of SPIRE Server records the Enrollment with that launch measurement |
+| `Enrollment: SPIRE Server audited the call as a success with that launch measurement` | the audit log of SPIRE Server has the line |
+| `Retrieval: the Workload completed without an error` | the Workload reports the Retrieval as done |
+| `Retrieval: the Workload opened the credential with its Credential Encryption Key` | the Workload opened the container; the record keeps the SHA-256 of the credential, not the credential |
+| `Retrieval: the Evidence has the launch measurement of the Enrollment` | the two launch measurements are equal |
+| `Retrieval: SPIRE Server audited the call as a success` | the audit log of SPIRE Server has the line |
+| `Retrieval: the Secret Vault released the credential for the Target` | the log of the Secret Vault records the release for `https://ledger-nonce.tacra.example` |
+| `Retrieval: the Workload verified the origin signature of the container under the key of the Secret Vault` | the Secret Vault signed the container and the Workload verified the signature; the verdict has this check when the Secret Vault signs for the Target, which is the default of the bench |
 
 ## The files of a run
 
